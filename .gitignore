@@ -1,0 +1,32 @@
+logs
+*.log
+npm-debug.log*
+
+# ai
+/.idea/
+/.claude/
+# 개발 이력 저장소로 가는 심볼릭 링크. 슬래시로 끝내면 디렉터리만 걸려
+# 링크는 빠져나간다 — 링크는 git 에게 디렉터리가 아니다.
+/ailog
+/AGENTS.md
+
+node_modules
+dist
+dist-demo
+dist-ssr
+.wrangler
+*.local
+
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+coverage
+*.tsbuildinfo
+.vite
+

@@ -1,0 +1,29 @@
+# NABI NOTE
+
+> Open-source WYSIWYG editor with zero runtime dependencies, extended through pure-function modules called "wings".
+
+NABI NOTE is a browser WYSIWYG editor written in plain vanilla JS, built for **zero runtime
+dependencies** - it drops into React, Vue, or any other stack, or no framework at all. Every
+feature (formatting, alignment, tables, uploads, and the rest) lives outside the core as an
+independent module called a **wing**, so a developer can extend it with custom features without
+limit. It carries its own JSON document format, **NABI TREE**; because HTML is rebuilt from an
+allowed vocabulary rather than patched or sanitized after the fact, **XSS is blocked at the
+root** with no separate sanitizer library. A CDN bundle ships alongside the npm package for
+projects with no build system. A DOM-free `nabi-note/ssr` entry point renders a stored document
+to HTML on the server - including the editor's own markup, for hydration on the client.
+
+## Docs
+
+- [Overview](https://nabi.saro.me/llms/overview.md): Layered architecture (registry, wing, editor state engine, surface/chrome mount) and design invariants
+- [Quickstart - npm](https://nabi.saro.me/llms/quickstart-npm.md): Install, assemble an editor, read and write documents
+- [Quickstart - CDN](https://nabi.saro.me/llms/quickstart-cdn.md): Start with two tags, `<link>` and `<script>`, no build tool
+- [Wings](https://nabi.saro.me/llms/wings.md): Every built-in wing - name, slot (`place`), key options
+- [Custom wings](https://nabi.saro.me/llms/custom-wing.md): The wing contract for building formatting that does not exist yet
+- [API reference](https://nabi.saro.me/llms/api-reference.md): Every public function - signature, options, return type
+- [SSR & hydrate](https://nabi.saro.me/llms/ssr.md): `renderStoredHtml`, `renderStoredEditorHtml`, and hydrating a server-rendered editor
+- [Styling](https://nabi.saro.me/llms/styling.md): `--nabi-*` CSS variables and the two ways to load the stylesheet
+
+## Optional
+
+- [Full docs site](https://nabi.saro.me/): The same docs for people, in 14 languages
+- [Source - nabi-npm](https://github.com/saro-lab/nabi-note/tree/master/nabi-npm): The package's source code

@@ -1,0 +1,449 @@
+@import 'tailwindcss';
+
+/* Colors are only ever used through variables, and dark mode is nothing but a variable redefinition */
+/* 색은 전부 변수로만 쓰고, 다크는 변수 재정의로만 만든다 */
+@theme {
+  --font-sans: 'Noto Sans', system-ui, sans-serif;
+}
+
+/* The editor never knows font names — it picks a family kind and the real font is supplied here */
+/* 에디터는 글꼴 이름을 모른다 — 갈래만 고르고 실제 글꼴은 여기서 얹는다 */
+/* 한 갈래에 여러 글꼴을 쌓는 이유는 한 글꼴이 모든 문자를 갖고 있지 않기 때문이다 — 브라우저는
+   글자마다 이 줄을 왼쪽부터 훑어 그 글자를 가진 첫 글꼴로 그린다. 그래서 라틴을 쥔 것이 맨 앞에
+   서고(라틴은 뒤쪽 CJK 글꼴에도 들어 있어, 순서가 뒤집히면 라틴이 CJK 글꼴의 얼굴로 나온다),
+   그 다음이 한국어다 — 한자는 한·중·일이 자형이 달라 앞에 선 쪽의 얼굴을 따른다.
+   실제 파일은 src/fonts.ts 가 데모를 띄울 때 불러온다 (head 에 두기엔 무겁다) */
+/* Several fonts per genus because no one font has every script: the browser walks this list
+   per character. Latin-carrying families lead; Korean next (Han forms differ by region) */
+:root {
+  --nabi-font:
+    'Noto Sans', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans Arabic', 'Noto Sans Hebrew',
+    'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Thai', system-ui, sans-serif;
+  --nabi-font-serif:
+    'Noto Serif', 'Noto Serif KR', 'Noto Serif JP', 'Noto Serif SC', 'Noto Naskh Arabic', 'Noto Serif Hebrew',
+    'Noto Serif Devanagari', 'Noto Serif Bengali', 'Noto Serif Thai', Georgia, serif;
+  /* 고정폭은 라틴에만 있는 개념이라 뒤는 고정폭이 아니다 — 글자가 빠지는 것보다는 낫다 */
+  /* Monospacing is a Latin notion; the tail is not monospaced, but a missing glyph is worse */
+  --nabi-font-mono:
+    'Noto Sans Mono', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', ui-monospace, SFMono-Regular, Consolas,
+    monospace;
+  /* 흘림만은 Noto 가 답을 주지 않는다 — 언어마다 손글씨 얼굴이 따로라 낱개로 골랐다.
+     벵골어처럼 손글씨 글꼴이 없는 문자는 여기서 안 걸리고 브라우저 기본 글꼴로 떨어진다 */
+  /* Only cursive has no Noto answer — handwriting is per-language, so these are picked one by one */
+  /* 언어마다 손글씨 얼굴이 하나씩이다 — 라틴 Caveat · 한국어 Gaegu(주인이 고른 얼굴,
+     2026-08-14) · 일본어 Yomogi · 중국어 Zhi Mang Xing · 데바나가리 Kalam ·
+     아랍/우르두 Noto Nastaliq Urdu(나스탈리크 자체가 흘림이다) */
+  /* One handwriting face per script; Korean is Gaegu */
+  --nabi-font-cursive:
+    'Caveat', 'Gaegu', 'Yomogi', 'Zhi Mang Xing', 'Kalam', 'Noto Nastaliq Urdu', 'Segoe Script',
+    'Snell Roundhand', cursive;
+}
+
+/* 편집기 안은 이 사이트가 입히지 않는다 — 크롬도 본문도 코어 시트가 그린다 */
+/* Nothing inside the editor is painted here — the core sheet does it all */
+
+:root {
+  --g-bg: #ffffff;
+  --g-fg: #16181d;
+  --g-muted: #6b7280;
+  --g-border: #e5e7eb;
+  /* Desaturated a step — the hero title and chips cover enough area that a pure blue glares */
+  /* 파랑은 한 톤 내린다 — 넓은 면적을 차지해서 원색에 가까우면 화면이 쨍하다 */
+  --g-accent: #4a63b8;
+  --g-panel: rgb(255 255 255 / 72%);
+  --g-shadow: 0 8px 24px rgb(16 24 40 / 8%);
+  /* Only the XSS guide uses these two — a diagram there has to say "this one runs" against "this one is stopped" */
+  /* XSS 가이드만 쓰는 둘 — 그 그림은 "도는 것" 과 "막힌 것" 을 색으로 갈라야 한다 */
+  --g-danger: #c0392f;
+  --g-safe: #1f7a4d;
+  color-scheme: light;
+}
+
+.dark {
+  --g-bg: #16181d;
+  --g-fg: #e6e8ec;
+  --g-muted: #9aa1ac;
+  --g-border: #333945;
+  /* A bright blue jumps harder on a dark ground, so lightness comes down too */
+  /* 다크에서는 밝은 파랑이 더 튄다 — 명도까지 낮춘다 */
+  --g-accent: #7e93c8;
+  --g-panel: rgb(28 31 38 / 72%);
+  --g-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+  --g-danger: #e57373;
+  --g-safe: #5fbf8c;
+  color-scheme: dark;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--g-bg);
+  color: var(--g-fg);
+  font-family: var(--font-sans);
+  line-height: 1.7;
+}
+
+.g-frame {
+  width: 100%;
+  max-width: 60rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+
+.g-frame-full {
+  max-width: 72rem;
+}
+
+/* No border — the shadow says it floats. Width is 0 but color and style stay, so a one-sided `border-b` still gets the right color */
+/* 테두리를 두르지 않는다 — 굵기만 0 이고 색·모양은 남겨서 한 변만 선이 필요한 곳이 제 색으로 그린다 */
+/* Every translucent surface on the site is this class — the header, the side menu, the language
+   list, the demo's panes, the page frame. The prefix is not decoration: WebKit still reads only
+   `-webkit-backdrop-filter`, so Safari and every iOS browser were showing the translucency with
+   no blur behind it — a wash, not glass. */
+/* 이 사이트의 반투명한 자리는 전부 이 클래스다 — 머리줄·옆 메뉴·언어 목록·데모의 판·페이지 틀.
+   접두사는 장식이 아니다. WebKit 은 아직 `-webkit-backdrop-filter` 만 읽으므로, 사파리와 모든
+   iOS 브라우저에서는 뒤가 안 흐려진 채 투명하기만 했다 — 유리가 아니라 그냥 옅은 막이었다. */
+.g-glass {
+  background: var(--g-panel);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  border: 0 solid color-mix(in srgb, var(--g-border) 55%, transparent);
+  box-shadow: var(--g-shadow);
+}
+
+.g-glass.drop-none {
+  box-shadow: none;
+}
+
+/* A layer that blurs becomes a *backdrop root*: anything inside it has nothing left behind to
+   sample. The header is glass and the language list lives inside it, so the list's own blur did
+   nothing — the page showed through it perfectly sharp. Moving the header's glass onto a pseudo
+   layer keeps the look and takes the trap away: the pseudo has no children to trap. */
+/* 흐리는 층은 **backdrop root** 가 된다 — 그 속의 것들은 뒤에 볼 것이 남지 않는다. 머리줄이
+   유리이고 언어 목록이 그 **안**에 살아서, 목록의 블러가 아무 일도 안 했다(뒤 글자가 또렷이
+   비쳤다). 머리줄의 유리를 가짜 층으로 옮기면 생김새는 그대로면서 그 덫이 없어진다 — 가짜
+   층에는 가둘 자식이 없다. */
+header.g-glass {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+header.g-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* 머리줄 제 내용보다 뒤 — 머리줄은 이미 제 쌓임 맥락(z-50)이라 이 값이 밖으로 새지 않는다. */
+  z-index: -1;
+  background: var(--g-panel);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+}
+
+.rd-box {
+  border-radius: 12px;
+}
+
+.g-link {
+  color: var(--g-accent);
+  text-decoration: none;
+}
+
+.g-link:hover {
+  text-decoration: underline;
+}
+
+.g-link-hover {
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 120ms ease;
+}
+
+.g-link-hover:hover {
+  background: color-mix(in srgb, var(--g-accent) 10%, transparent);
+}
+
+.hdr-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* A finger is not a cursor: 2rem is a comfortable click and a hard tap. Grown only where the
+   pointer is coarse, so the desktop header keeps its compact row. */
+/* 손가락은 커서가 아니다 — 2rem 은 마우스에게는 넉넉하고 손에게는 빠듯하다. 거친 포인터에서만
+   키워, 데스크톱 머리줄은 지금의 촘촘함을 지킨다. */
+@media (pointer: coarse) {
+  .hdr-btn {
+    min-width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+.md {
+  padding: 1.5rem;
+}
+
+.md h1 {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+}
+
+.md h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 2rem 0 0.75rem;
+  padding-top: 0.75rem;
+  /* Thin because it repeats at every section — the same hairline as the editor toolbar */
+  /* 절마다 서는 선이라 얇게 — 에디터 툴바의 그 한 올과 같은 굵기다 */
+  border-top: 1px solid color-mix(in srgb, var(--g-border) 55%, transparent);
+}
+
+.md h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.md p,
+.md ul,
+.md ol {
+  margin: 0.75rem 0;
+}
+
+.md ul,
+.md ol {
+  padding-left: 1.25rem;
+}
+
+.md ul { list-style: disc; }
+.md ol { list-style: decimal; }
+
+.md a {
+  color: var(--g-accent);
+}
+
+.md code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--g-fg) 8%, transparent);
+}
+
+.md pre {
+  margin: 1rem 0;
+  padding: 1rem;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--g-fg) 6%, transparent);
+}
+
+.md pre code {
+  padding: 0;
+  background: none;
+}
+
+.md table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+
+/* Table rules stay — a line dividing cells carries meaning, it isn't decoration */
+/* 표의 선은 남긴다 — 칸을 가르는 선은 장식이 아니라 뜻이다 */
+.md :where(th, td) {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--g-border) 75%, transparent);
+  text-align: left;
+}
+
+.md blockquote {
+  margin: 1rem 0;
+  padding-left: 1rem;
+  border-left: 2px solid color-mix(in srgb, var(--g-border) 80%, transparent);
+  color: var(--g-muted);
+}
+
+/* Shallow at the bottom because the demo picks up right below */
+/* 아래는 데모가 바로 이어받으므로 얕게 둔다 */
+.hero {
+  padding: 3.5rem 1.5rem 2rem;
+  text-align: center;
+}
+
+.hero-title {
+  font-size: 2.6rem;
+  font-weight: 800;
+}
+
+.hero-sub {
+  margin-top: 0.75rem;
+  color: var(--g-muted);
+}
+
+/* 편집기의 색은 이 사이트가 안 건드린다 — nabi-note 가 다크·라이트 CSS 를 다 들고 있고,
+   이 사이트는 그 기본만 쓴다. 그래야 빠뜨린 것이 있으면 여기서 드러난다.
+   여기 있던 두 규칙(`--nabi-accent` 를 사이트 색으로,
+   다크에서 `--nabi-on-accent` 를 뒤집기)은 걷었다 — 뒤집기는 코어가 원래 했어야 할 일이라
+   nabi.css 의 다크 토큰으로 옮겼고, 강조색을 사이트 색으로 맞추던 것은 덧칠이라 그냥 뺐다.
+   이 사이트가 편집기 안에 얹는 것은 이제 `--nabi-font*` 넷뿐이다. */
+/* This site does not tint the editor: the core ships both themes and the demo uses them as-is,
+   so anything the core forgot shows up here instead of being papered over. */
+
+/* Hand-written fences and runtime-built code share one wrapper (`div.language-*`), so one sheet covers both */
+/* 손으로 적은 펜스와 화면에서 만들어진 코드가 같은 껍데기를 써서 시트 한 벌로 둘 다 입는다 */
+/* Colors come from the two variables Shiki plants per token, so switching theme is CSS only, no repaint */
+/* 색은 Shiki 가 심어 둔 두 변수에서 온다 — 테마를 바꿀 때 다시 칠하지 않고 CSS 만으로 넘어간다 */
+div[class*='language-'] {
+  position: relative;
+  margin: 1rem 0;
+  max-width: 100%;
+}
+
+div[class*='language-'] pre {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--g-fg) 6%, transparent);
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+div[class*='language-'] code {
+  padding: 0;
+  background: none;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+html:not(.dark) div[class*='language-'] span {
+  color: var(--shiki-light);
+}
+
+html.dark div[class*='language-'] span {
+  color: var(--shiki-dark);
+}
+
+/* The language sits faint until hover, then yields its spot to the copy button */
+/* 언어 이름은 평소에 옅게 떠 있다가, 손이 올라오면 복사 버튼에 자리를 내준다 */
+div[class*='language-'] > .lang {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.7rem;
+  z-index: 2;
+  font-size: 0.7rem;
+  color: var(--g-muted);
+  opacity: 0.7;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+  user-select: none;
+}
+
+div[class*='language-'] > .copy {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.35rem;
+  z-index: 3;
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--g-muted);
+  opacity: 0;
+  cursor: pointer;
+  transition:
+    opacity 200ms ease,
+    background-color 120ms ease;
+}
+
+/* Laid on as a mask so the icon follows `currentColor` and stays legible in dark mode */
+/* 아이콘은 마스크로 얹는다 — 색이 `currentColor` 를 따라가 다크에서도 그대로 읽힌다 */
+div[class*='language-'] > .copy::before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='11' height='11' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E")
+    center / 0.95rem no-repeat;
+}
+
+div[class*='language-']:hover > .copy,
+div[class*='language-'] > .copy:focus-visible {
+  opacity: 1;
+}
+
+div[class*='language-']:hover > .lang {
+  opacity: 0;
+}
+
+div[class*='language-'] > .copy:hover {
+  background: color-mix(in srgb, var(--g-fg) 10%, transparent);
+}
+
+div[class*='language-'] > .copy:focus-visible {
+  outline: 2px solid var(--g-accent);
+  outline-offset: 1px;
+}
+
+/* Answers on the button itself, so no toast is needed */
+/* 누른 자리에서 답하므로 알림 상자가 필요 없다 */
+div[class*='language-'] > .copy.copied {
+  opacity: 1;
+  color: var(--g-accent);
+}
+
+div[class*='language-'] > .copy.copied::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}
+
+/* Three paddings stack on a doc page and eat 3.5rem on a phone, so all three shrink together */
+/* 여백이 세 겹으로 쌓여 좁은 화면에서 3.5rem 을 먹으므로 셋을 함께 줄인다 */
+/* This block must stay last in the file — media queries add no specificity, so later rules would win */
+/* 이 블록은 파일 맨 끝에 있어야 한다 — 미디어 쿼리는 특이도를 더하지 않아 뒤 규칙에 덮인다 */
+@media (max-width: 46rem) {
+  .g-frame {
+    padding-inline: 0.5rem;
+  }
+
+  .md {
+    padding: 1rem 0.75rem;
+  }
+
+  .hero {
+    padding: 2.5rem 0.75rem 1.5rem;
+  }
+
+  /* The demo's panels shrink too — chip and output boxes each add another 0.75rem */
+  /* 데모의 판들도 함께 좁힌다 — 칩 상자·출력 상자가 저마다 0.75rem 을 더 먹는다 */
+  .demo-pad {
+    padding: 0.5rem !important;
+  }
+}
+
+/* 폰 폭에서 좌우 여백을 한 번 더 줄인다 — 가로가 좁은 모바일 화면일수록 좌우 여백을 아낀다.
+   위 46rem 단계는 태블릿까지 아우르는 값이라 폰 하나만
+   놓고 보면 아직 여유가 있다. 이 블록도 파일 맨 끝에 있어야 한다(위와 같은 이유). */
+/* One more step down at phone widths, to minimize the side margins on a narrowed mobile
+   screen — the 46rem step above still covers tablets, so a phone alone still
+   has room to give up. This block must also stay last in the file, for the same reason as above. */
+@media (max-width: 26rem) {
+  .g-frame {
+    padding-inline: 0.25rem;
+  }
+
+  .md {
+    padding: 0.75rem 0.375rem;
+  }
+}

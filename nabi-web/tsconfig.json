@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "module": "esnext",
+    "moduleResolution": "Bundler",
+    // vitepress 설정과 로케일 사전이 서로를 `.ts` 로 문다 — 번들러가 그대로 읽으므로 허용한다.
+    "allowImportingTsExtensions": true,
+    "types": ["node"],
+    // 'nabi-note' 는 npm 의존성이 아니라 형제 저장소의 소스를 직접 문다(§ vite alias, config.mts) —
+    // 타입 체크도 같은 자리를 보게 여기서 맞춰 둔다. TypeScript 7 이 baseUrl 을 없애서
+    // 경로는 이 파일 기준 상대 경로로 적는다.
+    "paths": {
+      "nabi-note": ["./../nabi-npm/src/index.ts"],
+      "nabi-note/*": ["./../nabi-npm/src/*"]
+    },
+    "jsx": "preserve",
+    "strict": true,
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": true
+  },
+  // 예문을 굳히는 스크립트(scripts/)도 함께 본다 — 사이트가 안 무는 코드지만 굳히는 문이
+  // 맞는지를 여기서 잡는다.
+  "include": [
+    "docs/.vitepress/**/*.ts",
+    "docs/.vitepress/**/*.mts",
+    "docs/.vitepress/**/*.vue",
+    "scripts/**/*.ts",
+    "worker/**/*.ts"
+  ],
+  "exclude": ["node_modules", "docs/.vitepress/cache", "docs/.vitepress/dist"]
+}

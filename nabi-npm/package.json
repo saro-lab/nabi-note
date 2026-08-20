@@ -1,0 +1,68 @@
+{
+  "name": "nabi-note",
+  "version": "0.7.4",
+  "description": "open-source WYSIWYG editor",
+  "keywords": [
+    "wysiwyg",
+    "editor",
+    "dom-free",
+    "ssr",
+    "xss",
+    "upload",
+    "file-upload"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ssr": {
+      "types": "./dist/ssr.d.ts",
+      "default": "./dist/ssr.js"
+    },
+    "./viewer": {
+      "types": "./dist/viewer/index.d.ts",
+      "default": "./dist/viewer/index.js"
+    },
+    "./nabi.css": "./dist/nabi.css",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "unpkg": "./dist/browser/nabi-note.min.js",
+  "jsdelivr": "./dist/browser/nabi-note.min.js",
+  "files": [
+    "dist",
+    "!dist/**/*.map",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "browserslist": [
+    "chrome >= 120",
+    "edge >= 120",
+    "firefox >= 120",
+    "safari >= 17",
+    "not dead"
+  ],
+  "scripts": {
+    "demo": "vite demo --open --host 0.0.0.0",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/run-tests.mjs",
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsup && tsc -p tsconfig.build.json --emitDeclarationOnly && node scripts/build-css.mjs && npm run build:cdn",
+    "build:cdn": "tsx scripts/build-cdn.mjs",
+    "version": "node scripts/sync-version.mjs && git add src/wings/file/file.ts",
+    "cdn": "vite cdn/dist --open",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1"
+  }
+}

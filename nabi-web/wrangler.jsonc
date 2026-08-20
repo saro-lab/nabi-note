@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+
+  // 문서 사이트 — Cloudflare Workers 정적 자산으로 나간다.
+  // 플레이그라운드 데모는 이것이 아니라 별도 Pages 프로젝트로 배포한다 — 이름이 겹치면 서로 덮어쓴다.
+  "name": "nabi-note",
+  "compatibility_date": "2026-05-03",
+  "observability": {
+    "enabled": true
+  },
+  // 언어 없이 들어온 주소(`/intro`)를 엣지에서 제 언어로 302 시키는 워커다 — 까닭은 그 파일에.
+  // The worker 302s language-less URLs to the reader's language at the edge (see the file).
+  "main": "worker/index.ts",
+
+  "assets": {
+    "directory": "docs/.vitepress/dist",
+    "binding": "ASSETS",
+    // "404-page" 로 두면 자산 서버가 못 찾은 자리를 스스로 404 페이지로 닫아 **워커를 안 부른다**.
+    // 못 찾은 자리를 워커가 받아야 하므로 꺼 둔다 — 진짜 404 는 워커가 그 페이지로 답한다.
+    // "404-page" would close the miss itself and never call the worker; the worker answers instead.
+    "not_found_handling": "none"
+  },
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+}

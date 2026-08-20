@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- 겹친 채로 기울였다 — 겹침을 한 단계 키웠다.
+       아래 날개를 먼저 깔고 위 날개로 덮는다 — 겹친 자리에서 톤이 갈려 층이 보인다. -->
+  <g fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" transform="rotate(-8 16 16)">
+    <path d="M14.1 13.2 7.4 16.2 6.3 22.8 10.8 27.4 14.1 22.8z" opacity="0.78"/>
+    <path d="M17.9 13.2 24.6 16.2 25.7 22.8 21.2 27.4 17.9 22.8z" opacity="0.4"/>
+    <path d="M14.1 6.8 3 1.4 1.9 7.8 6.6 13.2 14.1 17.4z" opacity="1"/>
+    <path d="M17.9 6.8 29 1.4 30.1 7.8 25.4 13.2 17.9 17.4z" opacity="0.55"/>
+  </g>
+</svg>

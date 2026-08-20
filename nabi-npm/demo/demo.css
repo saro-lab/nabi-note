@@ -1,0 +1,169 @@
+/* 데모 페이지 자신의 옷 — 편집기의 시트(`nabi.css`)와 **결이 다른 것**이다.
+   `--g-*` 는 이 페이지의 토큰이고 `--nabi-*` 는 편집기의 토큰이다. 이름을 갈라 두는 까닭:
+   호스트가 자기 화면을 어떻게 칠하든 편집기는 자기 색을 들고 서야 하고, 그 둘이 같은 이름을
+   쓰면 어느 쪽이 이겼는지 아무도 모르게 된다. */
+
+:root {
+  --g-font: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --g-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --g-bg: #ffffff;
+  --g-bg-subtle: #f5f6f8;
+  --g-bg-hover: #eef1f6;
+  --g-fg: #1b1f27;
+  --g-muted: #6b7280;
+  --g-border: #e5e7eb;
+  --g-accent: #4a63b8;
+  --g-on-accent: #ffffff;
+  --g-danger: #e05638;
+
+  --g-radius: 12px;
+  --g-radius-sm: 8px;
+  --g-radius-xs: 3px;
+  /* 테두리를 안 두르고 그림자로 띄운다 — 떠 있음은 그림자가 말한다. */
+  --g-shadow: 0 8px 24px rgb(16 24 40 / 8%);
+  --g-panel: rgb(255 255 255 / 72%);
+
+  color-scheme: light;
+}
+
+html.dark {
+  --g-bg: #16181d;
+  --g-bg-subtle: #1c1f26;
+  --g-bg-hover: #262b34;
+  --g-fg: #e6e9ef;
+  --g-muted: #9aa1ac;
+  --g-border: #333945;
+  --g-accent: #7e93c8;
+  --g-on-accent: #16181d;
+  --g-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+  --g-panel: rgb(28 31 38 / 72%);
+
+  color-scheme: dark;
+}
+
+html, body {
+  margin: 0;
+  background: var(--g-bg);
+  color: var(--g-fg);
+  font-family: var(--g-font);
+  line-height: 1.7;
+  /* 브라우저 기본 악센트가 아니라 이 페이지의 색으로 톤을 맞춘다. */
+  accent-color: var(--g-accent);
+}
+
+body { padding: 2rem 1.25rem 4rem; max-inline-size: 62rem; margin-inline: auto; }
+
+h1 { margin: 0 0 1rem; font-size: 1.15rem; font-weight: 600; letter-spacing: 0.06em; }
+h2 { margin: 1.5rem 0 0.5rem; font-size: 0.9rem; font-weight: 600; color: var(--g-muted); }
+
+/* 떠 있는 판 — 테두리 없이 유리처럼. 뒤가 비쳐야 "얹혀 있다"가 읽힌다. */
+.panel {
+  background: var(--g-panel);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border-radius: var(--g-radius);
+  box-shadow: var(--g-shadow);
+  padding: 0.75rem;
+}
+
+.stack { display: grid; gap: 0.5rem; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; }
+.spacer { flex: 1; }
+
+.label { display: flex; align-items: baseline; gap: 0.75rem; font-size: 0.85rem; font-weight: 600; }
+.label .note { font-weight: 400; color: var(--g-muted); }
+
+/* 선이 아니라 면으로 그리고, 켠 것은 채우지 않고 물들인다 — 편집기의 눌린 단추와 같은 규칙이다.
+   고르는 것(언어·wing)과 누르는 것(되돌리기)이 여기서 같은 꼴을 쓴다: 둘 다 한 번에 하나씩
+   건드리는 작은 손잡이라서. */
+.chip {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  margin: 0; padding: 0.2rem 0.7rem;
+  border: 1px solid transparent; border-radius: 999px;
+  font: inherit; font-size: 0.8rem; line-height: 1.6;
+  color: var(--g-muted);
+  background: color-mix(in srgb, var(--g-fg) 6%, transparent);
+  cursor: pointer; user-select: none;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.chip:not(:disabled):hover { background: color-mix(in srgb, var(--g-fg) 11%, transparent); }
+.chip[aria-pressed='true'], .chip.is-on {
+  color: var(--g-accent);
+  background: color-mix(in srgb, var(--g-accent) 14%, transparent);
+}
+.chip[aria-pressed='true']:hover, .chip.is-on:hover {
+  background: color-mix(in srgb, var(--g-accent) 22%, transparent);
+}
+.chip:disabled { opacity: 0.4; cursor: default; }
+.chip:focus-visible { outline: 2px solid var(--g-accent); outline-offset: 2px; }
+
+/* 아이콘 폰트를 안 들인다 — 표식은 글자 하나로 낸다. */
+.chip .mark::before { content: '+'; display: inline-block; inline-size: 0.8em; font-weight: 600; }
+.chip.is-on .mark::before { content: '✓'; }
+
+.linky {
+  padding: 0; border: none; background: none; font: inherit; font-size: 0.8rem;
+  color: var(--g-muted); cursor: pointer; text-underline-offset: 2px;
+}
+.linky:hover { color: var(--g-accent); text-decoration: underline; }
+
+.icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  inline-size: 1.875rem; block-size: 1.875rem; padding: 0;
+  border: 1px solid var(--g-border); border-radius: var(--g-radius-sm);
+  background: var(--g-bg-subtle); color: inherit; cursor: pointer;
+}
+.icon:hover:not(:disabled) { background: var(--g-bg-hover); }
+.icon:disabled { opacity: 0.4; cursor: default; }
+.icon svg { inline-size: 1rem; block-size: 1rem; }
+
+/* **데모 자신의 조작부만 칠한다.** 그냥 `input`·`select` 로 적으면 편집기가 자기 판에 세운 칸까지
+   덮어써서, 편집기 시트가 정한 모양(각진 칸)이 데모 페이지의 둥근 모서리로 바뀐다 — 실제로
+   그랬다. 호스트의 옷이 편집기 속으로 새면 안 된다. */
+.panel label { font-size: 0.8rem; color: var(--g-muted); display: inline-flex; align-items: center; gap: 0.35rem; }
+.panel select,
+.panel input[type='number'],
+.panel input[type='text'] {
+  font: inherit; font-size: 0.8rem; color: inherit;
+  background: var(--g-bg-subtle); border: 1px solid var(--g-border);
+  border-radius: var(--g-radius-sm); padding: 0.15rem 0.4rem;
+}
+
+/* 편집기가 뜨는 자리 — 여기서는 **띄우기만** 정한다. 편집기 자신의 색과 모양은 nabi.css 가 쥔다.
+   **`overflow` 를 주면 안 된다.** 조상에 overflow 가 있으면 붙는 크롬(`position: sticky`)이 그
+   상자를 스크롤 컨테이너로 삼는데, 그 상자는 스크롤되지 않으므로 툴바가 영영 안 붙는다.
+   모서리를 깎는 일은 크롬과 쓰는 자리가 각자 자기 모서리로 한다. */
+#app, #app2 { border-radius: var(--g-radius); box-shadow: var(--g-shadow); }
+#app > .nabi-toolbar, #app2 > .nabi-toolbar {
+  border-start-start-radius: var(--g-radius); border-start-end-radius: var(--g-radius);
+}
+#content, #content2 {
+  border-end-start-radius: var(--g-radius); border-end-end-radius: var(--g-radius);
+}
+
+.status { display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.78rem; color: var(--g-muted); }
+.status .is-active { color: var(--g-accent); }
+
+.panes { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); }
+.pane { display: grid; gap: 0.4rem; }
+.pane.wide { grid-column: 1 / -1; }
+.pane header { display: flex; align-items: baseline; gap: 0.6rem; }
+.pane h2 { margin: 0; }
+.dirty { font-size: 0.7rem; color: transparent; }
+.dirty.on { color: var(--g-danger); }
+
+textarea {
+  inline-size: 100%; box-sizing: border-box; resize: vertical;
+  min-block-size: 7rem; padding: 0.6rem 0.7rem;
+  border: none; border-radius: var(--g-radius-sm);
+  background: color-mix(in srgb, var(--g-fg) 4%, transparent);
+  color: var(--g-fg); font-family: var(--g-font-mono); font-size: 0.75rem; line-height: 1.6;
+  outline: none;
+}
+textarea:focus-visible { outline: 2px solid var(--g-accent); outline-offset: 1px; }
+
+#selection {
+  font-family: var(--g-font-mono); font-size: 0.72rem; line-height: 1.6;
+  color: var(--g-muted); white-space: pre-wrap;
+}

@@ -1,0 +1,34 @@
+{
+  "name": "nabi-web",
+  "description": "NABI NOTE",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev docs --host 0.0.0.0",
+    "build": "vitepress build docs",
+    "typecheck": "tsc --noEmit",
+    "pack:note": "node scripts/pack-note.mjs",
+    "build:trees": "node ../nabi-npm/node_modules/tsx/dist/cli.mjs scripts/build-trees.ts",
+    "check:frozen": "node ../nabi-npm/node_modules/tsx/dist/cli.mjs scripts/build-trees.ts --check",
+    "build:full": "npm run pack:note && npm run build:trees && npm run build",
+    "preview": "vitepress preview docs",
+    "cf:preview": "npm run build && wrangler dev",
+    "cf:deploy": "npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "@shikijs/langs": "^4.4.3",
+    "@shikijs/themes": "^4.4.3",
+    "minisearch": "^7.2.0",
+    "nabi-note": "file:nabi-note-0.7.4.tgz",
+    "shiki": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.2.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vitepress": "^2.0.0-alpha.19",
+    "vue": "^3.6.0-rc.4",
+    "wrangler": "^4.123.0"
+  }
+}
