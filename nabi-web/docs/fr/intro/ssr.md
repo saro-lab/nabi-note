@@ -35,7 +35,9 @@ dans `nabi-note` : une page qui charge déjà l'éditeur peut simplement s'en se
 
 - **Aucune des deux n'utilise le DOM** — elles tournent telles quelles côté serveur.
 - **Si ce n'est pas un nabi-tree, la réponse est `null`** — la règle de rejet est celle de
-  `setJson()` (le document entier doit être un tableau). Elles ne lèvent jamais d'exception.
+  `setJson()` (le document entier doit être un tableau). Elles ne lèvent jamais d'exception — une
+  valeur qui provoque une exception pendant la lecture devient elle aussi `null`, avec un
+  signalement via `console.error`.
 - **Ne diffère pas d'un seul caractère de ce que rend l'éditeur.** Comme elles traversent la même
   étape (normalisation puis assemblage), le filtrage du XSS s'y fait au même endroit — le côté
   affichage n'est jamais moins nettoyé.

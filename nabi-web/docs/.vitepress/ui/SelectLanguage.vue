@@ -27,14 +27,22 @@
       <span translate="no" class="@max-[32rem]:hidden!">{{ langName }}</span>
     </button>
 
-    <!-- Roomy on purpose: fourteen names in a tight list read as a wall, and each one is a
-         different script — Devanagari and Arabic need the air that Latin can do without.
+    <!-- Sized by its longest name, not by a number picked in advance: a fixed 11rem box left a
+         gutter of empty glass beside `한국어` and still had to be argued about for `Português`.
+         `max-content` lets the fourteen names decide the width together, and the row padding is the
+         only air that is actually spelled out.
          No height cap and no scroller of its own: the page already scrolls, and a list that has to
          be scrolled inside itself reads as a list that is missing languages. -->
-    <!-- 일부러 넓게 잡는다 — 이름 열넷이 촘촘하면 벽처럼 읽히고, 문자마다 결이 달라
-         데바나가리·아랍 문자는 라틴 문자가 없어도 되는 여백이 필요하다.
+    <!-- 폭은 가장 긴 이름이 정한다 — 미리 고른 11rem 은 `한국어` 옆에 빈 유리를 남기면서도
+         `Português` 앞에서는 여전히 아슬아슬했다. `max-content` 는 이름 열넷이 함께 폭을 정하게
+         두고, 손으로 적어 넣는 여백은 줄의 좌우 안쪽 하나뿐이다.
          높이를 자르지 않고 제 스크롤도 안 만든다 — 쪽이 이미 스크롤되고, 목록 안에서 또
-         굴려야 하는 것은 언어가 모자란 것으로 읽힌다 (주인 지시 2026-08-19). -->
+         굴려야 하는 것은 언어가 모자란 것으로 읽힌다. -->
+    <!-- Hung on the button's own bottom edge (`top-full`), not at a measured height: `hdr-btn` grows
+         to 2.75rem where the pointer is coarse, and a fixed `top` that cleared the 2rem desktop
+         button slid up underneath the taller touch one. -->
+    <!-- 높이를 재어 적지 않고 단추의 아래 모서리(`top-full`)에 건다 — `hdr-btn` 은 거친 포인터에서
+         2.75rem 로 자라서, 2rem 데스크톱 단추에 맞춰 적어둔 `top` 은 커진 단추 밑으로 파고들었다. -->
     <!-- Anchored on the inline edge, not the right one: on an RTL page the button sits at the other
          end of the bar, and a physical `right-0` grew the list leftwards straight through the frame
          (Urdu, 94px outside). `inset-inline-end` flips with the text direction, and the clamp below
@@ -47,19 +55,21 @@
       ref="panel"
       role="menu"
       :style="shift ? { transform: `translateX(${shift}px)` } : undefined"
-      class="lang-menu g-glass absolute top-[2.6rem] z-50 min-w-[11rem] rounded-lg py-2 text-center"
+      class="lang-menu g-glass absolute top-full z-50 mt-1 w-max rounded-xl py-1.5 text-center"
     >
-      <!-- 2.75rem tall, the smallest target a finger hits reliably — a 0.9rem line of text alone is
-           about half that, and the list was hard to tap on a phone. -->
-      <!-- 높이 2.75rem — 손가락이 확실히 닿는 가장 작은 크기다. 0.9rem 글줄 하나는 그 절반쯤이라
-           폰에서 누르기가 어려웠다. -->
+      <!-- A row is a line of text plus a little air, the same measure the header's own buttons use;
+           the finger-sized 2.75rem is asked for only where the pointer is coarse (see `<style>`),
+           so a mouse gets a list it can read in one glance instead of one it has to travel. -->
+      <!-- 한 줄은 글줄에 숨 한 모금을 더한 크기다 — 머리줄의 단추들과 같은 자를 쓴다. 손가락에
+           맞춘 2.75rem 은 포인터가 거친 곳에서만 부른다(아래 `<style>`). 마우스는 훑어 내려가는
+           목록 대신 한눈에 담기는 목록을 받는다. -->
       <button
         v-for="[code, name] in languages"
         :key="code"
         role="menuitem"
         type="button"
         translate="no"
-        class="flex min-h-[2.75rem] w-full items-center justify-center px-6 text-[0.95rem] g-link-hover"
+        class="lang-item flex w-full items-center justify-center px-6 py-1.5 text-[0.875rem] g-link-hover"
         :class="code === lang ? 'font-semibold' : ''"
         @click="pick(code)"
       >
@@ -154,7 +164,31 @@ function pick(code: string): void {
 <style scoped>
 /* 방향을 따라 뒤집히는 모서리 — LTR 이면 오른쪽, RTL 이면 왼쪽에 걸린다 */
 /* The edge that flips with the text direction: right in LTR, left in RTL */
+/* 폭은 이름이 정하되(`w-max`) 바닥은 두어, 짧은 이름만 있는 언어에서도 단추보다 좁아지지 않는다 */
+/* The width is the names' (`w-max`), with a floor so short names never make it narrower than the button */
 .lang-menu {
   inset-inline-end: 0;
+  min-width: 7rem;
+}
+
+/* 머리줄은 제 안의 **모든** 것에 `line-height: 1` 을 건다(`theme/Layout.vue` 의 `.header-content *`)
+   — 한 줄짜리 단추들을 위한 자다. 목록은 그 안에 살면서 여러 줄이라, 그대로 두면 글줄이
+   글자 높이까지 눌려 이름들이 서로 달라붙는다(실측 14px, dat 은 20px). 여기서 되돌린다.
+   선택자를 셋(`.lang-menu .lang-item`)으로 세우는 것이 그 규칙을 이기는 유일한 길이다. */
+/* The header presses `line-height: 1` onto *everything* inside it (`.header-content *` in
+   `theme/Layout.vue`) — a measure meant for its one-line buttons. The list lives inside the header
+   but is many lines, so the names were squeezed to the glyph height (measured 14px against dat's
+   20px). Three classes deep is what it takes to outrank that rule. */
+.lang-menu .lang-item {
+  line-height: 1.25rem;
+}
+
+/* 손가락은 커서가 아니다 — 거친 포인터에서만 줄을 손에 맞게 키운다(`.hdr-btn` 과 같은 값) */
+/* A finger is not a cursor: the rows grow to the hand only where the pointer is coarse,
+   the same 2.75rem the header buttons take */
+@media (pointer: coarse) {
+  .lang-item {
+    min-height: 2.75rem;
+  }
 }
 </style>

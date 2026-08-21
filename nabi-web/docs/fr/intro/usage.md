@@ -113,6 +113,35 @@ sort dans la même langue. Un endroit sans barre d'outils la donne par l'option 
 `createNabiWith`. Pour dessiner un sélecteur, servez-vous de `LOCALES` (la liste des codes)
 exportée par le paquet.
 
+### Le texte d'invite d'un éditeur vide
+
+Un éditeur sans rien dedans dresse, sur sa première ligne, un texte d'invite en grisé. Il
+disparaît dès qu'un seul caractère entre, et revient dès que tout est effacé de nouveau. **Il
+s'affiche sans rien faire de plus** — le texte vient du dictionnaire du cœur et suit donc la
+langue de ce mount. C'est **la direction du texte** qui décide de sa place (à gauche en LTR, à
+droite en RTL) — même si la ligne elle-même est centrée ou alignée à droite, le texte d'invite ne
+la suit pas.
+
+```ts
+mountSurface({ nabi, registry, root: surface, placeholder: 'Laissez une note ici' })
+mountSurface({ nabi, registry, root: surface, placeholder: 'Première ligne\nDeuxième ligne' })   // plusieurs lignes
+mountSurface({ nabi, registry, root: surface, placeholder: '' })   // sans texte d'invite
+```
+
+Un retour à la ligne (`\n`) devient une vraie ligne. Mais comme le texte d'invite se tient **hors
+du flux** (pour ne pas repousser le caret), un texte d'invite à plusieurs lignes déborde vers le
+bas si la zone d'édition n'a la hauteur que d'une seule ligne — donnez-lui la hauteur minimale
+qu'il faut si vous comptez écrire plusieurs lignes.
+
+Le texte entre par `--nabi-placeholder`, à la racine de la zone d'édition, et c'est la feuille de
+style qui le dessine. Pour changer sa couleur ou son allure, réécrivez cette règle.
+
+```css
+.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before {
+  color: #999;
+}
+```
+
 | Pièce | Obligatoire | Ce qu'elle fait |
 |---|---|---|
 | `createNabiWith(wings, options?)` | oui | renvoie `{ nabi, registry }`. N'a pas besoin du DOM |
@@ -239,13 +268,33 @@ d'exception, et en cas d'échec laissent le document intact.
 
 | Là où la réponse est `false` | |
 |---|---|
-| `setJson` | ce n'est pas la forme d'un nabi-tree |
-| `setHtml` | l'adaptateur `parseHtml` n'est pas branché (ci-dessous), ou l'édition est verrouillée |
+| `setJson` | ce n'est pas la forme d'un nabi-tree (sauf les valeurs vides — voir plus bas) |
+| `setHtml` | l'adaptateur `parseHtml` n'est pas branché (ci-dessous), ou l'édition est verrouillée (sauf les valeurs vides) |
 | `applyCommand` | cette commande n'existe pas, ou **rien ne change** |
+
+**Un document vide n'a qu'une seule forme — `[{"w":"p","ch":[]}]`.** Après un tout-sélectionner
+puis supprimer, qui efface le texte entièrement, le titre ou l'alignement du premier bloc ne
+survit pas. Vider une seule ligne parmi plusieurs est différent — comme l'intention est d'y
+récrire, les attributs de ce paragraphe restent en place.
+
+**Une valeur vide n'est pas une erreur de format, c'est un document vide.** Donner `null`,
+`undefined`, une chaîne vide (même faite seulement d'espaces) ou un tableau vide n'est pas
+rejeté — l'éditeur **s'installe sur un écran vide et répond `true`**, pour `setJson` comme pour
+`setHtml` ; « vider » réussit donc toujours. Comme il n'y a rien à lire, `setHtml` n'a même pas
+besoin de son adaptateur (ci-dessous) dans ce cas. Une valeur dont la forme est fausse reste
+rejetée — vide et fausse sont deux choses différentes.
 
 Cette dernière ligne est une règle à part entière — **quand rien ne change, c'est silencieux.**
 Poser `setHeading` sur un paragraphe déjà titre de niveau 2 répond `false`, sans laisser ni point
 d'annulation ni signal derrière soi.
+
+Le troisième argument d'`applyCommand` est **la main qui appelle** — le `by` de
+`applyCommand(name, args?, by?)` vaut `'keyboard' | 'pointer'` (le type `CommandHand`), et vaut
+clavier si rien n'est précisé. Un seul endroit change selon ce choix : une commande de marque
+posée sur un caret replié est mise en réserve si elle vient du clavier (elle s'applique à partir
+du prochain caractère), mais répond `false` sans réserve si elle vient du pointeur, avec un toast
+disant qu'il n'y a rien à appliquer. Si vous bâtissez votre propre interface pour appeler des
+commandes, précisez `'pointer'` depuis la poignée du clic.
 
 ### `setHtml` a besoin d'un adaptateur
 

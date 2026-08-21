@@ -154,14 +154,16 @@ header.g-glass::before {
   text-decoration: underline;
 }
 
+/* 짚는 자리는 **글자색만** 바뀐다 — 바탕을 칠하지 않는다(주인 지시 2026-08-21, dat 과 같은 결).
+   칠한 바탕은 제 크기를 가져서, 줄마다 네모가 떴다 사라지는 것이 목록을 시끄럽게 만들었다.
+   글자색만 움직이면 글이 그대로 있는 채로 "여기"만 말한다. */
 .g-link-hover {
   cursor: pointer;
-  border-radius: 6px;
-  transition: background-color 120ms ease;
+  transition: color 0.2s;
 }
 
 .g-link-hover:hover {
-  background: color-mix(in srgb, var(--g-accent) 10%, transparent);
+  color: var(--g-accent);
 }
 
 .hdr-btn {

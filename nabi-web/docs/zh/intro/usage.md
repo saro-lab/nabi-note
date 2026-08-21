@@ -105,6 +105,32 @@ mountToolbar({ nabi, registry, surface, root: toolbar, locale: 'ar' })   // 工�
 语言。不用工具栏的地方，用 `createNabiWith` 选项里的 `locale` 来给。要画一个
 语言选择器，用包导出的 `LOCALES`（代码清单）。
 
+### 空编辑器里的占位提示
+
+什么都没有的编辑器会在第一行浅浅地立起一句占位提示。一个字打进来的瞬间它就消失，
+删空了又会重新出现。**什么都不用做它就会自己出现**——这句话来自内核自带的词典，
+跟着那个 mount 的语言走。位置由**文字的方向**决定（LTR 靠左，RTL 靠右）——就算这一
+行本身是居中或靠右对齐，占位提示也不会跟着挪。
+
+```ts
+mountSurface({ nabi, registry, root: surface, placeholder: '在这里记点什么' })
+mountSurface({ nabi, registry, root: surface, placeholder: '第一行\n第二行' })   // 多行
+mountSurface({ nabi, registry, root: surface, placeholder: '' })   // 不要占位提示
+```
+
+换行（`\n`）会照样变成一行。不过占位提示立在**排版流之外**（为了不推动光标），所以
+编辑区域只有一行高的话，多行的占位提示会往下溢出——要用多行就给编辑区域留够那么多
+的最小高度。
+
+这句话进的是编辑区域根节点上的 `--nabi-placeholder`，画出来的是样式表。要换颜色或
+质感，改这条规则就行。
+
+```css
+.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before {
+  color: #999;
+}
+```
+
 | 装配件 | 是否必须 | 做什么 |
 |---|---|---|
 | `createNabiWith(wings, options?)` | 是 | 返回 `{ nabi, registry }`。不需要 DOM。翅膀数组、挑选构建器（`wings()`，参见 [{{ t('menu_intro_cdn') }}](./cdn#挑翅膀)）都照单全收 |
@@ -217,11 +243,26 @@ nabi.applyCommand('setHeading', { value: 2 })  // 编辑命令（翅膀走的就
 
 四个都**用 `boolean` 回答成败。** 不会抛出异常，失败时就不碰文档。
 
+有点偏差的值不会被拒绝，而是**边读边纠正**——空的表格单元格、不是行的表格
+子节点、超出范围的合并都是这样，危险的地址被过滤掉也是同一步做的。拒绝是
+完全读不懂的形状才有的待遇。而且哪个值在读的过程中抛出异常，编辑器也不会
+停下来——会变成拒绝（`false`），并用 `console.error` 说清楚被拒绝的是什么。
+
 | 答 `false` 的情形 | |
 |---|---|
-| `setJson` | 不是 nabi-tree 的形状 |
-| `setHtml` | 没插 `parseHtml` 适配器（见下）或编辑被锁着 |
+| `setJson` | 不是 nabi-tree 的形状（不算空值——见下） |
+| `setHtml` | 没插 `parseHtml` 适配器（见下）或编辑被锁着（不算空值） |
 | `applyCommand` | 没有这个命令，或者**什么都没改变** |
+
+**空文档只有一种形状——`[{"w":"p","ch":[]}]`。** 像全选后删除那样把文字整个
+删掉的地方，不会留下第一个块的标题、对齐这些属性。只清空多行里的某一行则
+不一样——因为是想接着在那一行写下去，那个段落的属性会照样留着。
+
+**空值不算格式错误，是空文档。** 给 `null`·`undefined`·空字符串（只有空格
+的也算）·空数组的话，不会被拒绝，而是**落成空画面并答 `true`**——`setJson`·
+`setHtml` 都是这样，所以"清空"永远会成功。空值没有什么可读的，所以这时候
+`setHtml` 也不需要适配器（见下）。形状错误的值照样会被拒绝——空的和错的是
+两回事。
 
 最后一行是一条规矩——**没有变化就保持安静。** 对已经是二级标题的段落再挂一次
 `setHeading`，会答 `false`，既不留撤销点也不留信号。

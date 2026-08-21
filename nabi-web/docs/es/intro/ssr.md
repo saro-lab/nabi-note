@@ -36,7 +36,9 @@ ya carga el editor puede seguir usando esa.
 
 - **Ninguna de las dos usa DOM** — corren igual en el servidor.
 - **Si no es un árbol de nabi, es `null`** — la regla de rechazo es la misma que en
-  `setJson()` (el documento entero debe ser un arreglo). No lanzan excepción.
+  `setJson()` (el documento entero debe ser un arreglo). No lanzan excepción — incluso un
+  valor que provoca una excepción durante la lectura se convierte en `null`, y se avisa
+  con `console.error`.
 - **No difieren ni un carácter del valor que produce el editor.** Como pasan por los
   mismos pasos (normalización → ensamblaje), el filtrado de XSS ocurre en el mismo
   lugar — el lado que solo muestra no queda menos protegido.

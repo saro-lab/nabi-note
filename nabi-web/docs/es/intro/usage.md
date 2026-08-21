@@ -114,6 +114,35 @@ dice el núcleo (los toast, etc.) también sale en el mismo idioma. Un lugar que
 editor sin barra de herramientas lo da con el `locale` de la opción de `createNabiWith`.
 Para dibujar un selector, use `LOCALES` (la lista de códigos) que exporta el paquete.
 
+### El texto guía del editor vacío
+
+Un editor sin nada muestra en la primera línea un texto guía atenuado. Desaparece en el
+momento en que entra un solo carácter, y vuelve a aparecer si se borra todo y queda vacío
+de nuevo. **Aparece sin que haga falta hacer nada** — el texto viene del diccionario del
+núcleo, así que sigue el idioma de ese `mount`. El lugar donde se para lo decide **la
+dirección del texto** (a la izquierda si es LTR, a la derecha si es RTL) — aunque esa
+línea esté alineada al centro o a la derecha, el texto guía no la sigue.
+
+```ts
+mountSurface({ nabi, registry, root: surface, placeholder: 'Deja aquí tu nota' })
+mountSurface({ nabi, registry, root: surface, placeholder: 'Primera línea\nSegunda línea' })   // varias líneas
+mountSurface({ nabi, registry, root: surface, placeholder: '' })   // sin texto guía
+```
+
+El salto de línea (`\n`) se convierte tal cual en una línea. Sin embargo, como el texto
+guía se coloca **fuera del flujo** (para no empujar el cursor), si el área de edición
+mide solo una línea de alto, un texto guía de varias líneas se desborda hacia abajo — si
+va a usar varias líneas, déle al área de edición esa misma altura mínima.
+
+El texto entra por `--nabi-placeholder` en la raíz del área de edición, y quien lo dibuja
+es la hoja de estilos. Para cambiar el color o el aspecto, reescriba esta regla.
+
+```css
+.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before {
+  color: #999;
+}
+```
+
 | Ensamblaje | Obligatorio | Qué hace |
 |---|---|---|
 | `createNabiWith(wings, options?)` | Sí | Devuelve `{ nabi, registry }`. No necesita DOM. También acepta el arreglo de wings o el constructor de selección (`wings()`, vea [{{ t('menu_intro_cdn') }}](./cdn#elegir-wings)) |
@@ -240,13 +269,31 @@ nabi.applyCommand('setHeading', { value: 2 })  // comando de edición (la misma 
 ```
 
 Las cuatro **responden éxito o fracaso como `boolean`.** No lanzan excepción, y si
-fallan no tocan el documento.
+fallan no tocan el documento. Un valor un poco torcido no se rechaza — se **corrige
+mientras se lee**: una celda de tabla vacía, un hijo de tabla que no es una fila, una
+fusión que se desborda, cosas así, y el filtrado de direcciones peligrosas sigue el mismo
+paso. El rechazo es solo para las formas que de plano no se pueden leer. Y si un valor
+provoca una excepción durante la lectura, el editor no se detiene por eso — se convierte
+en rechazo (`false`), y `console.error` avisa qué fue lo que se rechazó.
 
 | Cuándo la respuesta es `false` | |
 |---|---|
-| `setJson` | no tiene la forma de un árbol de nabi |
-| `setHtml` | no se conectó el adaptador `parseHtml` (ver abajo), o la edición está bloqueada |
+| `setJson` | no tiene la forma de un árbol de nabi (sin contar los valores vacíos — ver abajo) |
+| `setHtml` | no se conectó el adaptador `parseHtml` (ver abajo), o la edición está bloqueada (sin contar los valores vacíos) |
 | `applyCommand` | ese comando no existe, o **no cambia nada** |
+
+**La forma de un documento vacío es una sola — `[{"w":"p","ch":[]}]`.** En un lugar donde
+se borró todo el texto de una vez, como al seleccionar todo y suprimir, no queda ni el
+encabezado ni la alineación del primer bloque. Vaciar solo una línea entre varias es
+distinto — como la intención es volver a escribir esa línea, el atributo de ese párrafo
+se conserva.
+
+**Un valor vacío no es un error de forma, sino un documento vacío.** Si se da `null`,
+`undefined`, una cadena vacía (también una que solo tiene espacios) o un arreglo vacío,
+no se rechaza — se **queda en una pantalla vacía y responde `true`** — así es tanto en
+`setJson` como en `setHtml`, así que "vaciar" siempre tiene éxito. Como en un valor vacío
+no hay nada que leer, `setHtml` tampoco necesita el adaptador (ver abajo) en ese caso. Un
+valor con la forma equivocada sí se rechaza — vacío y equivocado no son lo mismo.
 
 La última línea es una sola regla — **si no cambia nada, queda en silencio.** Si a un
 párrafo que ya es encabezado de nivel 2 se le vuelve a aplicar `setHeading`, responde
