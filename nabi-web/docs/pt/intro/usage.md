@@ -107,11 +107,38 @@ mountToolbar({ nabi, registry, surface, root: toolbar, locale: 'ar' })   // a ba
 
 A língua de exibição se define por `locale` em cada mount — o texto do documento continua igual
 e só os nomes da barra de ferramentas e da linha de contexto mudam. **O host só precisa declarar
-o locale uma vez** — como no exemplo acima, colocando-o no objeto compartilhado (`shared`) e
+o locale uma vez** — como no exemplo acima, colocando-o no objeto compartilhado (shared) e
 passando para os mounts: quando a barra de ferramentas se monta, ela também prende o próprio
 `locale` no núcleo (`nabi.$bindLocale`), então o que o núcleo fala (toast etc.) sai no mesmo
 idioma. Num lugar sem barra de ferramentas, passe `locale` pela opção de `createNabiWith`. Para
 desenhar um seletor, use o `LOCALES` (lista de códigos) que o pacote exporta.
+
+### O texto de exemplo do editor vazio
+
+Um editor sem nada dentro mostra um texto de exemplo apagado na primeira linha. Ele desaparece no
+instante em que um caractere chega, e volta quando o último é apagado. **Aparece sem que nada
+precise ser feito** — a palavra vem do dicionário do núcleo, então segue o idioma daquele mount.
+Onde ele fica é decidido pela **direção do texto** (esquerda em LTR, direita em RTL) — mesmo que a
+linha esteja alinhada ao centro ou à direita, o texto de exemplo não a acompanha.
+
+```ts
+mountSurface({ nabi, registry, root: surface, placeholder: 'Deixe uma nota aqui' })
+mountSurface({ nabi, registry, root: surface, placeholder: 'Primeira linha\nSegunda linha' })   // várias linhas
+mountSurface({ nabi, registry, root: surface, placeholder: '' })   // sem texto de exemplo
+```
+
+A quebra de linha (`\n`) se torna uma linha de fato. Só que o texto de exemplo fica **fora do
+fluxo** (para não empurrar o cursor), então numa área de edição de uma linha de altura um texto de
+várias linhas derrama para fora por baixo — dê essa altura mínima à área se for usar várias linhas.
+
+A palavra entra na raiz da área de edição como `--nabi-placeholder`, e quem desenha é a folha de
+estilos. Para mudar a cor ou o traço, sobrescreva esta regra.
+
+```css
+.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before {
+  color: #999;
+}
+```
 
 | Montagem | Obrigatório | O que faz |
 |---|---|---|
@@ -124,7 +151,7 @@ desenhar um seletor, use o `LOCALES` (lista de códigos) que o pacote exporta.
 | `mountSticky({ root, surface })` | Não | Desfaz o quanto a barra fixa foi empurrada pelo teclado do celular |
 | `mountPickedMark({ nabi, surface })` | Não | A marca de seleção de imagem/vídeo (o navegador não desenha isso sozinho) |
 | `mountFile({ nabi, store, name? })` | Ao usar save/open | Salvar e abrir como arquivo `.nabi` |
-| `mountLocalHistory({ nabi, storage })` | Ao usar localHistory | Grava no navegador em intervalos definidos |
+| `mountLocalHistory({ nabi, storage })` | Ao usar localHistory | Grava no navegador em intervalos definidos. Monta mesmo que `storage` seja `null` (lugares bloqueados como `file://`) — assim o botão explica por toast por que não funciona |
 | `mountUpload({ … })` + `mountUploadView({ … })` | Ao usar upload | O progresso de envio de arrastar-e-soltar, colar e escolher arquivo, e a sua exibição |
 
 **Não há mount separado para imagem, checkbox, arrastar célula de tabela ou realce de código**

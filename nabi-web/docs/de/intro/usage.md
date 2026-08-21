@@ -106,16 +106,45 @@ mountToolbar({ nabi, registry, surface, root: toolbar, locale: 'ar' })   // die 
 
 Die Anzeigesprache wird pro Mount mit `locale` festgelegt — der Text des Dokuments bleibt, wie er
 ist, nur die Namen auf Werkzeugleiste und Kontextzeile wechseln. **Der Host muss die Locale nur
-einmal deklarieren** — packen Sie sie wie im Beispiel oben in ein gemeinsames Objekt (`shared`) und
+einmal deklarieren** — packen Sie sie wie im Beispiel oben in ein gemeinsames Objekt (shared) und
 reichen Sie es an die Mounts weiter; sobald die Werkzeugleiste aufsteht, hängt sie ihre `locale`
 auch an den Kern (`nabi.$bindLocale`), sodass auch das, was der Kern selbst sagt (etwa toast), in
 derselben Sprache herauskommt. Für einen Platz ohne Werkzeugleiste geben Sie sie über die
 `locale`-Option von `createNabiWith`. Um eine Auswahl zu zeichnen, verwenden Sie `LOCALES` (die
 Liste der Codes), das das Paket exportiert.
 
+### Der Hinweistext des leeren Editors
+
+Ein Editor, in dem noch nichts steht, stellt in der ersten Zeile blass einen Hinweistext auf.
+Sobald das erste Zeichen eintrifft, verschwindet er, und leeren Sie die Zeile wieder, steht er
+erneut da. **Er erscheint, ohne dass Sie etwas dafür tun müssen** — der Text stammt aus dem
+Wörterbuch des Kerns und folgt der Sprache dieses Mounts. Seinen Platz bestimmt **die
+Textrichtung** (links bei LTR, rechts bei RTL) — ist die Zeile selbst zentriert oder rechtsbündig
+ausgerichtet, folgt der Hinweistext dem nicht.
+
+```ts
+mountSurface({ nabi, registry, root: surface, placeholder: 'Hinterlassen Sie hier eine Notiz' })
+mountSurface({ nabi, registry, root: surface, placeholder: 'Erste Zeile\nZweite Zeile' })   // mehrzeilig
+mountSurface({ nabi, registry, root: surface, placeholder: '' })   // ohne Hinweistext
+```
+
+Ein Zeilenumbruch (`\n`) wird unverändert zu einer Zeile. Der Hinweistext steht allerdings
+**außerhalb des Flusses** (damit er den Caret nicht verschiebt), und ist der Schreibbereich nur
+eine Zeile hoch, läuft ein mehrzeiliger Hinweistext nach unten über den Rand hinaus — wollen Sie
+mehrere Zeilen verwenden, geben Sie dem Schreibbereich eine entsprechende Mindesthöhe.
+
+Der Text geht in `--nabi-placeholder` an der Wurzel des Schreibbereichs ein, gezeichnet wird er
+vom Stylesheet. Wollen Sie Farbe oder Struktur ändern, schreiben Sie diese Regel um.
+
+```css
+.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before {
+  color: #999;
+}
+```
+
 | Stück | Erforderlich | Was es tut |
 |---|---|---|
-| `createNabiWith(wings, options?)` | ja | liefert `{ nabi, registry }`. Braucht kein DOM |
+| `createNabiWith(wings, options?)` | ja | liefert `{ nabi, registry }`. Braucht kein DOM. Nimmt das Flügel-Array unverändert an, ebenso den Auswahl-Baukasten (`wings()`, siehe [{{ t('menu_intro_cdn') }}](./cdn#flügel-auswählen)) |
 | `mountSurface({ nabi, registry, root })` | ja | passt Caret, IME und Eingabe wieder auf den Nabi-Baum. Heftet auch das `attach` jedes registrierten Flügels an |
 | `mountToolbar({ nabi, registry, root, surface?, locale? })` | nein | die Haupt-Werkzeugleiste. Ohne sie können Sie noch immer direkt über `applyCommand()` bearbeiten |
 | `mountContextToolbar({ nabi, registry, root, surface? })` | nein | die caret-abhängige Kontextzeile (Tabellenzeilen und -spalten, Code-Sprache, Adresse und Name eines Links und so weiter) |
@@ -240,11 +269,31 @@ nabi.applyCommand('setHeading', { value: 2 })  // ein Bearbeitungs-Command (dass
 Alle vier **antworten mit einem `boolean`, ob es geklappt hat.** Sie werfen nicht, und bei Fehlschlag
 lassen sie das Dokument unangetastet.
 
+Einen leicht abweichenden Wert weisen sie nicht zurück, sondern **korrigieren ihn beim Einlesen** —
+das gilt für leere Tabellenzellen, Kinder einer Tabelle, die keine Zeile sind, oder übergreifende
+Verbindungen, und im selben Schritt werden auch gefährliche Adressen herausgefiltert. Zurückgewiesen
+wird nur eine Gestalt, die sich überhaupt nicht lesen lässt. Und löst ein Wert beim Einlesen eine
+Ausnahme aus, bleibt der Editor trotzdem nicht stehen — es wird daraus eine Zurückweisung (`false`),
+und `console.error` meldet, was zurückgewiesen wurde.
+
 | Wo die Antwort `false` ist | |
 |---|---|
-| `setJson` | es hat nicht die Gestalt eines Nabi-Baums |
-| `setHtml` | der Adapter `parseHtml` ist nicht eingesteckt (unten), oder die Bearbeitung ist gesperrt |
+| `setJson` | es hat nicht die Gestalt eines Nabi-Baums (leere Werte ausgenommen — siehe unten) |
+| `setHtml` | der Adapter `parseHtml` ist nicht eingesteckt (unten), oder die Bearbeitung ist gesperrt (leere Werte ausgenommen) |
 | `applyCommand` | es gibt kein solches Command, oder **es ändert sich nichts** |
+
+**Ein leeres Dokument hat genau eine Gestalt — `[{"w":"p","ch":[]}]`.** Löschen Sie den gesamten
+Text, etwa nach „Alles auswählen" und Entfernen, bleiben Überschrift und Ausrichtung des ersten
+Blocks nicht erhalten. Anders ist es, wenn Sie von mehreren Zeilen nur eine leeren — dort wollen Sie
+diese Zeile weiterschreiben, deshalb bleiben ihre Absatzattribute erhalten.
+
+**Ein leerer Wert ist kein Formatfehler, sondern ein leeres Dokument.** Geben Sie `null`,
+`undefined`, eine leere Zeichenkette (auch eine, die nur aus Leerraum besteht) oder ein leeres
+Array, weisen sie das nicht zurück, sondern setzen sich als **leerer Bildschirm und antworten mit
+`true`** — das gilt für `setJson` und `setHtml` gleichermaßen, weshalb „Leeren" immer gelingt. Weil
+ein leerer Wert nichts zu lesen gibt, braucht `setHtml` dafür auch keinen Adapter (unten). Eine
+Gestalt, die schlicht falsch ist, bleibt zurückgewiesen — leer und falsch sind zwei verschiedene
+Dinge.
 
 Die letzte Zeile ist eine Regel für sich — **ändert sich nichts, bleibt es still.** Setzen Sie
 `setHeading` auf einen Absatz, der schon eine Überschrift Stufe 2 ist, antwortet es `false` und

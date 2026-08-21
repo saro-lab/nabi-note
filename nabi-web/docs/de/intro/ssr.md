@@ -35,7 +35,8 @@ unter `nabi-note` — eine Seite, die den Editor ohnehin schon lädt, kann einfa
 
 - **Beide brauchen kein DOM** — sie laufen unverändert auf dem Server.
 - **Ist es kein Nabi-Baum, ist die Antwort `null`** — die Ablehnungsregel ist dieselbe wie bei
-  `setJson()` (das ganze Dokument muss ein Array sein). Sie werfen nicht.
+  `setJson()` (das ganze Dokument muss ein Array sein). Sie werfen nicht — auch ein Wert, der beim
+  Lesen eine Ausnahme auslöst, wird zu `null` und über `console.error` gemeldet.
 - **Unterscheidet sich um kein einziges Zeichen von dem, was der Editor liefert.** Beide durchlaufen
   denselben Weg (Normalisierung → Zusammenbau), also ist auch die Stelle, an der XSS herausgefiltert
   wird, exakt dieselbe — die anzeigende Seite wird nie weniger gründlich gewaschen.
