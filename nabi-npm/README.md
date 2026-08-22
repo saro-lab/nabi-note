@@ -2,12 +2,16 @@
 
 Open-source WYSIWYG editor.
 
-It supports SSR, DOM-less rendering, file uploads, and allows you to easily create custom features.
-If you're looking for a flexible and clean rich-text editor, check it out!
+A lightweight, highly extensible WYSIWYG editor designed for modern web applications. If you are looking for a clean, secure, and developer-friendly rich-text editor, NABI NOTE is the perfect fit.
 
-
-> **Beta.** Every `0.x` release is a beta — the API and the stored format may still change.
-> `1.0.0` is the first release that promises to hold still.
+* **Free & Open Source**: 100% free to use and modify forever.
+* **Zero Dependencies**: Framework-agnostic with no external libraries.
+* **DOM-less Architecture**: Powered by a pure, lightweight JavaScript object model.
+* **SSR Ready**: Flawless server-side rendering without a DOM environment.
+* **Built-in Security**: Automatic XSS prevention built directly into the core.
+* **Infinite Extensibility**: Easily build and attach custom features via the 'Wing' plugin system.
+* **AI-Optimized**: Fully equipped with `llms.txt` for seamless AI vibe coding.
+* **Multilingual Support**: Supports diverse global languages (English, 中文, हिन्दी, Español, العربية, Français, বাংলা, Português, Русский, اردو, Indonesia, Deutsch, 日本語, 한국어...), including both LTR and RTL layouts.
 
 ```sh
 npm install nabi-note
