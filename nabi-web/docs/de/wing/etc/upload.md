@@ -16,6 +16,17 @@ Der Upload zerfällt in drei Stücke — mit der bloßen Registrierung des Flüg
 2. **`mountUpload({ … })`** — die Seite, die die Dateien tatsächlich entgegennimmt und `uploader`
    laufen lässt. Drop, Einfügen und die Auswahl-Schaltfläche fließen alle hierher. **Lassen Sie dieses
    Mounten aus, steht zwar die Schaltfläche da, aber es geschieht nichts.**
+
+::: warning Einfügen kommt nur zur Hälfte hier an
+Wenn Einfügen **Text enthält** (ob `text/html` oder `text/plain`), lädt Upload überhaupt nicht —
+stattdessen werden die Zeichen zu Kandidaten und gehen zum
+[Einfügen-Panel](../../intro/usage). Nur ein **Einfügen ohne Text** fließt zu Upload.
+
+Wenn Sie ein Feld aus Excel kopieren und einfügen, kommen Tabelle und Text zusammen, daher ist das
+Ergebnis **eine Tabelle, kein Bild**. Wenn Sie uploaden möchten, kopieren Sie nur das Bild allein.
+Drop (Dateien ziehen und ablegen) ist von dieser Regel unabhängig und fließt immer zum Upload.
+:::
+
 3. **`mountUploadView({ … })`** — die Seite, die Fortschritts-Platzhalter auf dem Bildschirm
    aufstellt. Ohne sie funktioniert der Upload trotzdem, nur sagt der Bildschirm während des Laufs
    nichts.

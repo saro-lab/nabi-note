@@ -231,6 +231,7 @@ const { nabi, registry } = createNabiWith(wings, {
   ask: {
     message: (text) => window.alert(text),
     confirm: (text) => window.confirm(text),
+    choose: (question, options) => { /* pilih satu dari beberapa */ },
   },
 })
 ```
@@ -238,6 +239,9 @@ const { nabi, registry } = createNabiWith(wings, {
 `confirm` menerima `boolean` maupun `Promise<boolean>` — boleh langsung
 menyambungkan `confirm` bawaan browser, boleh juga menampilkan panel buatan
 sendiri dan menjawabnya belakangan.
+
+`choose` menerima pertanyaan dan daftar opsi (`ChooseOption[]` dengan `{label, icon?}`), dan
+menjawab indeks pilihan (default `0`). Jawabannya `number | Promise<number>`.
 
 ::: warning Jika tidak dipasang, jawabannya selalu "tidak"
 Jika `ask` tidak dipasang, bawaan yang senyap yang berlaku. `message` tidak pergi

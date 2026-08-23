@@ -129,30 +129,40 @@ mountSurface({ nabi, registry, root: surface, placeholder: '' })   // ohne Hinwe
 ```
 
 Ein Zeilenumbruch (`\n`) wird unverändert zu einer Zeile. Der Hinweistext steht allerdings
-**außerhalb des Flusses** (damit er den Caret nicht verschiebt), und ist der Schreibbereich nur
-eine Zeile hoch, läuft ein mehrzeiliger Hinweistext nach unten über den Rand hinaus — wollen Sie
-mehrere Zeilen verwenden, geben Sie dem Schreibbereich eine entsprechende Mindesthöhe.
+**außerhalb des Flusses** (damit er den Caret nicht verschiebt), so dass ein mehrzeiliger
+Hinweistext unter einem flachen Schreibbereich überläuft. Ein leerer Schreibbereich steht von
+Natur aus `12.5rem` hoch, daher lassen Sie ihn meistens einfach stehen; wenn Sie mehr brauchen,
+erhöhen Sie ihn mit `--nabi-content-min-height`. Dieser Wert gilt **nur für die Editieroberfläche**
+— bei einem veröffentlichten oder vorschauenden Dokument ist der Text selbst die Höhe.
+
+**Der Hinweistext ist eine Schicht für sich.** Er hat sich auf das `::before` der Wurzel des
+Schreibbereichs nach oben bewegt, so dass er **unberührt von der Dokumentformatierung** ist —
+ob die erste Zeile eine Überschrift, zentriert oder mit einer Initiale versehen ist. Nur die
+Schreibrichtung entscheidet, wo er steht.
 
 Der Text geht in `--nabi-placeholder` an der Wurzel des Schreibbereichs ein, gezeichnet wird er
 vom Stylesheet. Wollen Sie Farbe oder Struktur ändern, schreiben Sie diese Regel um.
 
 ```css
-.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before {
+.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before {
   color: #999;
 }
 ```
+
+Um nur die Farbe zu ändern, müssen Sie die Regel nicht überschreiben — eine Zeile
+`--nabi-placeholder-color` genügt.
 
 | Stück | Erforderlich | Was es tut |
 |---|---|---|
 | `createNabiWith(wings, options?)` | ja | liefert `{ nabi, registry }`. Braucht kein DOM. Nimmt das Flügel-Array unverändert an, ebenso den Auswahl-Baukasten (`wings()`, siehe [{{ t('menu_intro_cdn') }}](./cdn#flügel-auswählen)) |
 | `mountSurface({ nabi, registry, root })` | ja | passt Caret, IME und Eingabe wieder auf den Nabi-Baum. Heftet auch das `attach` jedes registrierten Flügels an |
-| `mountToolbar({ nabi, registry, root, surface?, locale? })` | nein | die Haupt-Werkzeugleiste. Ohne sie können Sie noch immer direkt über `applyCommand()` bearbeiten |
+| `mountToolbar({ nabi, registry, root, surface?, locale?, file? })` | nein | die Haupt-Werkzeugleiste. Ohne sie können Sie noch immer direkt über `applyCommand()` bearbeiten. Stecken Sie die Antwort von `mountFile()` in `file` ein und **die Speicherplatte steht mit keiner Verdrahtung** — die Schaltfläche Speichern und <kbd>⌘</kbd><kbd>S</kbd> öffnen sie. Lassen Sie ihn aus und der Druck kommt zum Host durch `onHost('save')` wie zuvor. `surface` ist auch **der Grund, auf dem Beschleuniger stehen** (siehe [Wo Beschleuniger gehört werden](#wo-beschleuniger-gehört-werden)) |
 | `mountContextToolbar({ nabi, registry, root, surface? })` | nein | die caret-abhängige Kontextzeile (Tabellenzeilen und -spalten, Code-Sprache, Adresse und Name eines Links und so weiter) |
 | `mountHints({ toolbar, context?, root, surface? })` | nein | die Kürzel-Abzeichen, die bei doppeltem Tippen von Shift erscheinen |
 | `mountViewTools({ nabi, surface, root, container, onBody? })` | nein | die beiden Schaltflächen Vorschau und Vollbild. `root` ist der `.nabi`-Kasten, den Vollbild anpinnt, `onBody` ist der Hook, der der Vorschau die Leseseiten-Laufzeit anheftet (unten) |
-| `mountSticky({ root, surface })` | nein | gibt so viel zurück, wie eine mobile Tastatur die sticky Werkzeugleiste hochgeschoben hat |
+| `mountSticky({ root, surface, chrome?, nabi? })` | nein | gibt so viel zurück, wie eine mobile Tastatur die sticky Werkzeugleiste hochgeschoben hat. Übergeben Sie `nabi` und **nach einer Bearbeitung schiebt es den Caret selbst aus dem Schatten der Werkzeugleiste heraus** — lassen Sie ihn weg und es funktioniert wie zuvor, nur wenn der Host `aim()` aufruft (siehe [Die mobile Tastatur und die sticky Werkzeugleiste](#die-mobile-tastatur-und-die-sticky-werkzeugleiste)) |
 | `mountPickedMark({ nabi, surface })` | nein | die Markierung für ein gewähltes Bild oder Video (der Browser zeichnet sie nicht) |
-| `mountFile({ nabi, store, name? })` | bei save und open | Speichern und Öffnen einer `.nabi`-Datei |
+| `mountFile({ nabi, store, registry, parse?, name? })` | bei save und open | speichert in **drei** Formaten — `.nabi`, `.nhtml`, `.md` — und öffnet **vier**, diese drei plus ein einfaches `.html` von anderswo. **`registry` ist erforderlich** — die Formatenliste und die md- und HTML-Montage kommen alle von dort. `parse` ist die Tür, die HTML liest; in einem Browser können Sie ihn weglassen und `parseNodes` steht darin, aber an einem kopflosen Ort (Server, Tests) müssen Sie ihn für `.nhtml` und `.html` durchreichen, um ihn zu öffnen. Das `FileMount` ist **die kanonische Weise, ohne Flügel zu speichern und zu öffnen** (`file.save()` · `file.saveAs(id, name)` · `file.formats()` · `await file.open()`) |
 | `mountLocalHistory({ nabi, storage })` | bei localHistory | ein Datensatz, der in festen Abständen im Browser abgelegt wird. Auch mit `storage` als `null` (etwa unter `file://`) wird er aufgestellt — nur so kann er per toast sagen, warum die Schaltfläche nicht geht |
 | `mountUpload({ … })` + `mountUploadView({ … })` | bei upload | Uploads aus Drop, Einfügen oder Dateiauswahl laufen lassen und anzeigen |
 
@@ -160,6 +170,37 @@ vom Stylesheet. Wollen Sie Farbe oder Struktur ändern, schreiben Sie diese Rege
 zu mounten** — die Flügel tragen das alles in `attach`, und `mountSurface` heftet es mit ihnen
 zusammen an. Nur beim Einfärben von Code will jemand eingesteckt werden, der das Färben übernimmt
 (`makeCodeAttach`, siehe [{{ t('menu_block_code') }}](../wing/block/code)).
+
+### Wo Beschleuniger gehört werden
+
+Ein Platz hört auf Beschleuniger wie <kbd>⌘</kbd><kbd>S</kbd>, und das ist die Werkzeugleiste. Wie weit sein Ohr reicht, wird durch `mountToolbar({ surface })` gezogen — **nur ein Schlüssel, der in dieser Oberfläche oder den Werkzeugleistenreihen aufgestanden wird**, gehört diesem Editor.
+
+- **Mit zwei Editoren auf einer Seite müssen Sie `surface` durchreichen.** Ohne ihn fällt die Werkzeugleiste auf das Abhören des ganzen Dokuments zurück, und dann speichert <kbd>⌘</kbd><kbd>S</kbd>, das im unteren Editor eingegeben wird, den Text des oberen Editors. Sogar ein Schlüssel, der in einem einfachen Input des Hosts selbst eingegeben wird, wird genommen.
+- **Kein Flügel registrieren und der Schlüssel existiert überhaupt nicht.** Speichern und Öffnen leben im Kern (`mountFile`), aber die Schaltfläche und der Beschleuniger gehören dem Flügel — also hat ein Editor, der nur mit `wings().allBasic()` gebaut wird, kein <kbd>⌘</kbd><kbd>S</kbd> und kein <kbd>⌘</kbd><kbd>O</kbd>. Der einzige Weg zurück ist `.use('save').use('open')`.
+- **Mit nirgendwo zum Landen wird der Schlüssel nicht geschluckt.** In einer Anordnung, in der die Speicherschaltfläche nirgendwohin reicht (weder `file` noch `onHost` in die Werkzeugleiste eingesteckt), fließt der Schlüssel an den Browser als sein eigener. Wir nehmen einen Beschleuniger nicht weg für Arbeit, die wir nicht leisten — ihn stumm zu schlucken und der Leser denkt, sein Browser ist kaputt.
+
+Um ohne Flügel zu speichern und zu öffnen, verwenden Sie die Handhabe, die `mountFile` antwortet — in einem Editor ohne Schaltfläche und ohne Beschleuniger ruft der Host `file.save()` und `file.open()` selbst auf.
+
+### Die mobile Tastatur und die sticky Werkzeugleiste
+
+`mountSticky` macht jetzt mehr auf dem Mobilgerät — es beobachtet die Tastatur, die auf- und abfällt, und bringt den Caret
+**unterhalb der Werkzeugleiste und oberhalb der Tastatur**. Drei Dinge, die der Host wissen sollte.
+
+- **Es bewegt sich nur, während der Editor den Fokus hält.** Mit dem Fokus anderswo bewegt er sich keine einzige Strecke — die Seite darf nicht springen, während der Host einen Wert durch `setHtml()` hinein drückt.
+- **Während eine Hand scrollt, bewegt sie sich keine einzige Pixel.** Sie bleibt 250ms nach einem Scroll gesperrt: den Bildschirm einer beweglichen Hand wegzunehmen ist, was Schütteln tatsächlich ist.
+- **Nur eine tastaturgroße Änderung öffnet das Tor.** Ein Adressenleisten-Zusammenbruch (dutzende Pixel) bewegt nichts; das Tor öffnet sich erst dann `max(120px, 15% der Fensterhöhe)`.
+
+Das Tippen schiebt **nur so weit wie nötig** — den Bildschirm auf jedes Zeichen bis zur Werkzeugleiste zu ziehen wäre unbrauchbar. In dem Moment, in dem die Tastatur aufsteht, richtet es die Ansicht aus, damit **die Werkzeugleiste am oberen Rand des Fensters sitzt**, und sobald der Viewport sich niedergelassen hat, richtet es ihn einmal mehr aus.
+
+`--nabi-bar-height` ist der Wert, mit dem dieser Schritt funktioniert — `mountSticky` schreibt die **gemessene Höhe** des Chrome, das es anheftet, auf die `.nabi`-Wurzel, und die Geltungsbereich's `.nabi-content > *` fügt diesem Wert `scroll-margin-block-start` hinzu. **Es ist kein Wert für den Host zum Einstellen, sondern die Erklärung, warum der Caret sich nie unter der Werkzeugleiste versteckt** — ohne die Mount steht eine Schätzung von `3.5rem` statt, und das fällt weit kurz, wenn sich die Werkzeugleiste zu zwei Reihen wickelt oder die Kontextzeile oben ist.
+
+::: warning Blockieren Sie das Zoomen nicht mit dem Viewport-Meta
+iOS Safari vergrößert die ganze Seite, wenn der Fokus auf einem Formularfeld landet, dessen Text kleiner als 16px ist.
+Der Kern stoppt das, indem er **den Text größer macht** — `--nabi-touch-font-size` (Standard `16px`). Wir
+**nicht** die andere Straße gegangen, das Zoomen selbst mit `user-scalable=no` oder
+`maximum-scale=1` zu blockieren: das nimmt einem Leser das Recht, hereinzuzoomen. Wenn der Host dieses Meta auf
+seiner eigenen Seite schreibt, wird der Boden, den der Kern setzte, bedeutungslos — schreiben Sie ihn also nicht.
+:::
 
 ### Der Vorschau die Leseseiten-Laufzeit anheften
 
@@ -324,6 +365,21 @@ JSON auf einem Server zu lesen und das daraus gebaute HTML hinauszusenden.
 
 ---
 
+## Einfügen, Speichern und Öffnen
+
+**Einfügen liest eine Zwischenablage durch mehrere Augen** — `HTML`, `MARKDOWN`, `TEXT` und das
+eigene Nabi-Format (`NABI`). Wenn mehr als eine Lesart steht, fragt eine kleine Platte, welche
+eingefügt wird; wenn nur eine tut, fügt sie ohne Frage ein. Ein Einfügen, das keinen Text trägt
+(nur Dateien) springt die Platte über und geht zu [{{ t('menu_etc_upload') }}](../wing/etc/upload).
+
+**Drei Formate speichern** — `.nabi` (das Original), `.nhtml` (eine eigenständige HTML-Seite) und
+`.md` (Markdown; was dort keinen Platz hat, wird als HTML gemischt, sodass es möglicherweise nicht
+zurückkommt). **Vier öffnen** — diese drei plus ein einfaches `.html` von anderswo. Die Tür
+benötigt den `mountFile()` der Tabelle oben, und das Einstecken eines weiteren Formats ist in
+[{{ t('menu_wing_custom') }}](../wing/custom#io-filter-einstecken) abgedeckt.
+
+---
+
 ## Benachrichtigungen kommen über toast heraus
 
 Upload-Fehler, Hinweise des lokalen Verlaufs, ein kurzer Satz wie „es gibt nichts, worauf das
@@ -375,14 +431,23 @@ const { nabi } = createNabiWith(wings, {
 |---|---|
 | `message` | `(text: string) => void` — eine Nachricht, keine Antwort wird entgegengenommen |
 | `confirm` | `(text: string) => boolean \| Promise<boolean>` — synchron oder asynchron, beides wird angenommen |
+| `choose` | `(question: string, options: ChooseOption[]) => number \| Promise<number>` — einer aus mehreren. Die Antwort ist **ein Index**, und `-1` (oder alles außerhalb des Bereichs) ist ein Abbruch. `ChooseOption` ist `{ label, icon? }`, wobei `icon` das **Innere** eines 16×16 svg ist — lassen Sie ihn weg und der Name steht allein |
 
 **Der Kern greift nie von sich aus zu dem des Browsers.** Ein grauer Kasten darf nicht in eine Seite
 hineinplatzen, die ihre eigenen Dialoge hat, und ein Plugin-Host (IntelliJ, VS Code) hat überhaupt
-kein `window.confirm`. Diese drei Zeilen zu bauen ist Sache des Hosts.
+kein `window.confirm`. Diese Zeilen zu bauen ist Sache des Hosts.
 
 **Nur die eingesteckten Felder gewinnen** — Sie können auch nur `message` oder nur `confirm`
 einstecken. Ein nicht eingestecktes `message` kommt über den obigen core-toast (`info`) heraus, und
 die Antwort eines nicht eingesteckten `confirm` ist „nein".
+
+**`choose` wird normalerweise weggelassen.** Die Einfügeplatte hängt sich an den Kern an, wenn die
+Werkzeugleiste aufsteht (dasselbe Körnung wie die Toast-Box), daher bekommt eine Seite, die eine
+Werkzeugleiste aufstellt, die Platte ohne jede Arbeit. Stecken Sie diesen Slot nur ein, wenn Sie
+eine eigene Platte eintauschen. Ohne eine hängende Platte und ohne einen eingesteckten Slot ist
+**die Antwort 0 (die oberste)** — eine andere Richtung von `confirm`'s „nein". Hier Abbrechen zu
+antworten würde das Einfügen ganz verschwinden lassen, und der erste Kandidat in der Liste ist
+immer „die wahrscheinlichste Lesart", also ist das, wenn niemand zu fragen ist, die richtige Antwort.
 
 ::: warning Fehlt sie, ist die Antwort „nein"
 Eine Frage, die niemand beantwortet hat, ist kein „ja" — sie bedeutet dasselbe wie Abbrechen,
@@ -421,6 +486,14 @@ nabi.$markSaved(savedDoc)   // nachdem ein Speichern gelungen ist — übergeben
 jetzt dasteht). Buchstaben, die während eines langsamen Speicherns getippt wurden, müssen weiterhin
 „geändert" bleiben. Der Speicher-Flügel (`save`) ruft dies auf, sobald die Datei tatsächlich
 geschrieben ist, sodass das Speichern nach `.nabi` `isChanged()` zu `false` macht.
+
+::: warning Nur `.nabi` verschiebt die Grundlinie
+Was als `.nhtml` oder `.md` hinausgeht, ist eine **Kopie**, und eine Kopie verschiebt nicht die
+Grundlinie — nach dem Speichern bleibt `isChanged()` `true`. Behandeln Sie eine Kopie als „gespeichert"
+und das Fenster schließt sich ohne Nachfrage und nimmt die echte Schrift mit sich. Wenn das Speichern
+asynchron ist, verschiebt sich die Grundlinie **nur, wenn es erfolgreich ist** — ein fehlgeschlagenes
+Speichern lässt es allein.
+:::
 
 **Rückgängig bis zum Ausgangspunkt, und es ist wieder `false`** — der Nabi-Baum ist unveränderlich
 und wird bei jeder Bearbeitung als Ganzes ersetzt, deshalb ist dies an Ort und Stelle bekannt, ohne

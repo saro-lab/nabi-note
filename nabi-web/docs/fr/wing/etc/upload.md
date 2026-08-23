@@ -16,6 +16,19 @@ Le téléversement se répartit en trois morceaux — enregistrer seulement la w
 2. **`mountUpload({ … })`** — le côté qui reçoit réellement les fichiers et exécute `uploader`.
    Les dépôts, les collages et le bouton de sélection affluent tous ici. **Omettez ce mount et le
    bouton est là, mais rien ne se passe.**
+
+::: warning Seulement la moitié du collage vient par cette voie
+Si un collage porte **un seul morceau de texte** (`text/html` ou `text/plain`), l'envoi ne se fait
+du tout pas — le texte devient une candidate et va à la [plate-forme de collage](../../intro/usage)
+à la place. Les fichiers ne coulent dans l'envoi que depuis **un collage sans un seul caractère de
+texte dedans**.
+
+Copier des cellules d'un classeur et à la fois un tableau et du texte y arrivent, si bien que le
+résultat est **un tableau, pas une image.** Pour la téléverser comme une image, copiez l'image
+toute seule. Un dépôt (traîner un fichier dessus) vient toujours à l'envoi, peu importe cette
+règle.
+:::
+
 3. **`mountUploadView({ … })`** — le côté qui dresse les substituts de progression à l'écran. Le
    téléversement fonctionne quand même sans lui, mais l'écran ne dit rien pendant qu'il tourne.
 

@@ -227,13 +227,14 @@ const { nabi, registry } = createNabiWith(wings, {
   ask: {
     message: (text) => window.alert(text),
     confirm: (text) => window.confirm(text),
+    choose: (question, options) => user_choose_panel(question, options),
   },
 })
 ```
 
 `confirm` `boolean`-ও `Promise<boolean>`-ও নেয় — ব্রাউজারের `confirm`
 সরাসরি গুঁজে দেওয়া যায়, অথবা নিজে বানানো প্যানেল তুলে পরে উত্তর দিলেও
-চলে।
+চলে। `choose` হলো একাধিক বাছাই থেকে একটি চুনতে হলে — `(question: string, options: ChooseOption[]) => number | Promise<number>`, `ChooseOption` হলো `{ label, icon? }`।
 
 ::: warning না দিলে উত্তর সবসময় "না"
 `ask` না গুঁজলে চুপচাপ একটি ডিফল্ট বসে। `message` কোথাও যায় না আর

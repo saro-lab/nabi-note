@@ -157,7 +157,7 @@ nabi.applyCommand('insertStamp', { text: 'Ok' })   // boolean
 
 ## Todas las casillas que se pueden llenar
 
-`Wing` tiene veinticinco casillas y **solo dos son obligatorias** (`w` y `place`).
+`Wing` tiene treinta y uno (31) campos y **solo dos son obligatorios** (`w` y `place`).
 
 ### Qué es
 
@@ -165,10 +165,12 @@ nabi.applyCommand('insertStamp', { text: 'Ok' })   // boolean
 |---|---|
 | `w` | El nombre de este wing. Se convierte en el `w` del valor guardado. No se pueden usar las palabras reservadas (`p`, `br`) |
 | `place` | `'mark'` sobre el texto · `'void'` un objeto sin contenido · `'container'` un objeto con texto dentro · `'attr'` un atributo de párrafo · `'tool'` una herramienta que no deja huella en el documento |
+| `basic` | **¿Corre tal cual sin cableado?** Sin especificar es `false` — lo que no conoce no lo toma. `wings().allBasic()` recoge solo los que tienen esta marca, y **una wing personalizada se mide igual**. `allBasic()` recorre el catálogo oficial, así que una wing pasada directamente por `.use(objeto)` se carga independientemente de este valor |
 | `holds` | Cómo alberga su contenido — `'blocks'` o `'inline'` |
 | `singleParagraph` | Su contenido queda fijo en **un solo** párrafo (la celda de una tabla) |
 | `boolAttrs` | Los nombres de atributos booleanos cuyo único valor es `1` |
 | `allows` | Los nombres de los wings que pueden entrar aquí dentro. Sin escribirlo, entran todos |
+| `noAlign` | **Solo en objetos.** Llévalo y el **párrafo envoltorio que viste este objeto no recibe alineación** — los botones de alineación se esconden en la barra, el comando rechaza como sin cambio, y los valores ya horneados en un documento guardado viejo se despegan al pasar por el cocoon. La caja de código es el primer usuario: `pre` hereda `text-align`, así que en vez de que la caja se mueva, **las líneas de código se corren**. Ponlo en una marca, una herramienta o un atributo de párrafo y **el registro muere** |
 | `requiresAnyOf` | Al menos uno de estos debe registrarse junto con él |
 | `parts` | La estructura sin botón que trae consigo — la fila y la celda de una tabla, la línea de resumen de un plegable |
 
@@ -184,6 +186,9 @@ nabi.applyCommand('insertStamp', { text: 'Ok' })   // boolean
 | Casilla | Sentido |
 |---|---|
 | `toHtml` · `partHtml` | El dibujo de salida |
+| `toMd` | La salida hacia markdown. **Opcional — sin especificar el nodo cae a `toHtml`** (subrayado, YouTube y Detalles son los tipos que no tienen lugar en markdown, y esto es lo que "md con HTML mezclado" en realidad es) |
+| `partMd` | La parte en markdown de las `parts` de esa wing |
+| `ioFilter` | Esta wing **se trae el pegar, guardar y abrir de su propio formato junto con ella** (el archivo `.nabi` es ese lugar). Un filtro no es una wing sino conocimiento pegado a una, así que cualquier cosa que el host enchufe por `ioFilters` se para adelante — vea [«IO 筛选过滤器 끼우기»](#io-筛选过滤器-끼우기) abajo |
 | `claim` | Decide de quién es esta etiqueta en el HTML que entra |
 | `repair` · `partRepair` | Pule este nodo en la entrada de JSON. Si responde `null`, se retira junto con su envoltura |
 
@@ -194,6 +199,7 @@ nabi.applyCommand('insertStamp', { text: 'Ok' })   // boolean
 | `commands` | Los comandos que aporta este wing |
 | `onKey` | Intercepta primero la tecla cuando el cursor está dentro del nodo de este wing |
 | `escapeKeys` | Las teclas que hacen que el próximo carácter escrito salga de esta marca |
+| `doubleKeys` | `{ nombre de tecla: nombre de comando }` — toca esa tecla **dos veces dentro de 350ms** y el comando corre. El nombre se parece a `escapeKeys` pero quiere decir otra cosa: ese es "salir de la marca y seguir escribiendo", este es "un comando de un gesto". Su prioridad es **la más baja**, así que toma su turno después de que todo lo demás en esa tecla ha pasado. En el registro **verifica choques de teclado y la existencia del comando**, así que dos wings reclamando la misma tecla, o un nombre sin comando, mata el registro |
 | `inputRules` | Conversiones automáticas que ocurren solo con escribir |
 | `attach` | Para cuando hay que tocar la pantalla — arrastrar celdas de una tabla, colorear código, eso es esto |
 
@@ -222,6 +228,33 @@ El `w` del valor guardado es justamente ese nombre, así que cambiarlo hace que
 **los documentos ya guardados no se puedan volver a leer.** Si hay que cambiarlo, deje
 un período de transición aceptando también el nombre viejo con `claim`.
 :::
+
+---
+
+## Enchufar un filtro de E/S
+
+**Un filtro de E/S no es un wing.** Solo se para en las puertas por las que pasa el documento — pegar,
+guardar y abrir — toma cargo de un formato y no levanta nodo propio en el documento. El
+contrato es un solo `IoFilter`.
+
+| Casilla | Sentido |
+|---|---|
+| `id` · `label` | El nombre del filtro, y el nombre que se muestra en el panel. Un `id` en colisión **muere justo donde lo registra** |
+| `paste` | Mira el portapapeles (`PasteData`) y ofrece un candidato. `null` si no es suyo, y `build()` solo cava una vez que la persona elige ese lugar |
+| `save` | `{ extension, write, lossy?, mime? }` — `write` recibe un `DocSource` y toma lo que necesita de `json()`, `html()` y `md()`. `lossy` es lo que pone "(lossy)" en el panel de guardado |
+| `read` | Toma un nombre y una cadena y las lee en un árbol de nabi. **`null` si no es suyo**, y pasa al siguiente filtro |
+
+**Las tres puertas son opcionales** — un filtro que solo sabe pegar, u solo lee, está bien. Los
+lugares donde enchufar uno son `ioFilters` en `mountSurface` y `mountFile`,
+`createNabiWith(wings, { ioFilters })`, y el campo `ioFilter` en la tabla de arriba, y
+**quien se para primero gana** — montaje → host → wing → incorporado (`nabi`, `html`, `html-open`,
+`markdown`). La lista de apertura viene de `readExtensions(filters)`, que **no puede contar un filtro
+sin casilla de guardado** (el `.html` incorporado es tal lugar, así que el almacén por defecto lo suma a mano para
+hacer cuatro).
+
+Markdown solo un filtro no puede hacer por su cuenta — qué caracteres se escribe un nodo es conocido por
+**el wing** que lleva `toMd` y `partMd` de arriba. Déjalos fuera y el nodo retrocede a
+`toHtml`, mezclado en el md como HTML; y el analizador de md también solo levanta **la sintaxis que un wing registrado puede tomar**.
 
 ---
 

@@ -69,6 +69,10 @@ CDN 就是一行 `<link>`。挂上之后，剩下的只要覆盖变量就行。
 | `--nabi-cursive-adjust` | 手写体的 `font-size-adjust`。手写体字形的 x-高度偏低，同样的 px 看起来会更小，这个值按 x-高度重新配平 | `0.4` |
 | `--nabi-sticky-top` | 贴住的行要往下让多少。站点上有固定头部的话就是它的高度 | `0px` |
 | `--nabi-preview-width` | 预览卡片的宽度。**`openPreview` 打开时会量出编辑区域的宽度直接写在卡片上**，宿主从外面覆盖也拗不过那个内联值 | `720px` |
+| `--nabi-placeholder` | 空编辑器显示的那句提示，是个带引号的字符串。**`mountSurface` 会把自己 `placeholder` 选项里的话（或者核心词典里的话）写到编辑根节点上**，宿主从外面覆盖也拗不过那个内联值——要改它的质感，覆盖 `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` | （没有提示） |
+| `--nabi-placeholder-color` | 那句提示的颜色。核心**不声明**这个标记，背后站着的是 `--nabi-placeholder-color-fallback`——它认得浅色、深色（浅色 `#6b6b76aa` · 深色 `#9a9aa6aa`）。把这个标记写在 `:root` 上，浅色深色都会赢 | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | 空编辑器立着的最小高度。**只作用在编辑表面上**（`.nabi-content.nabi-editing`）——发布出去或者预览的 `.nabi-content` 上，高度就是文字本身的高度，所以短文字下面不会留空 | `12.5rem` |
+| `--nabi-touch-font-size` | 核心画的输入框（`.nabi-input`——链接地址、保存名字、提示框）在手指设备（`pointer: coarse` **或者**宽度 `40rem` 以下）上的字号。**iOS 上的 Safari 在焦点落进字号小于 16px 的表单框时会把整个页面放大**，这个值就是挡住这件事的底线。鼠标屏幕上一个像素都不会变 | `16px` |
 
 `--nabi-typeface-base` 不属于这一类——**是核心声明的**（默认跟着 `--nabi-font`
 走）。字体翅膀没有选项能定这个值，想改就覆盖这个标记。
@@ -238,11 +242,34 @@ const drop = injectSheets(document, collectSheets(registry))
 | 选择器 | 是什么 | 谁 |
 |---|---|---|
 | `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | 文档预览浮层 | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | 单张图片放大看的盒子 | `openImageLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | 单张图片放大看的盒子 | `openLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | 挑粘贴候选的面板 | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | 保存面板——名字框、扩展名标记、格式格子 | `openSavePanel()` |
 | `.nabi.is-fullscreen` | 全屏——把 `.nabi` 容器固定到整个画面 | `setFullscreen()`（类名是 `FULLSCREEN_CLASS`） |
 
+::: tip 两个面板共用**同一套规则**
+粘贴面板和保存面板是从同一个格子部件搭出来的，所以选择器成对出现——
+`.nabi-choose-list`/`.nabi-save-list` · `.nabi-choose-row`/`.nabi-save-row` ·
+`.nabi-choose-icon`/`.nabi-save-icon` · `.nabi-choose-label`/`.nabi-save-label`。**两边**
+都用 `[aria-selected="true"]` 标记瞄准的格子，标记本身只是一道 `--nabi-accent`
+边框——两个面板都不会给格子填色。
+
+只属于保存面板的有三样：`.nabi-save-name`（名字行）、`.nabi-save-ext`（扩展名
+标记）、`.nabi-save-note`（有损提示——字比名字小，也不用警告色）。
+
+`--nabi-grid-cols` 是格子的列数，但**立起面板的那只手会写它**——面板数好自己的
+格子，最多写三列内联到列表本身，所以不是给宿主从外面设的值。`--nabi-save-ext-len`
+（扩展名标记的字宽）也是同一类值。
+:::
+
+::: warning `.nabi-save-format` 没了
+那是保存面板还是竖排列表时候的名字。宿主要是用它覆盖悬停填色，会**悄悄失效**——
+格子现在是 `.nabi-save-row`（和粘贴面板里的位置同名），悬停、瞄准都没有内部
+填色这回事了。
+:::
+
 挂上 `mountViewTools()`，那两个按钮就会自己开关这些。想自己手动开，就调用
-`openPreview({ nabi, editor })` · `openImageLightbox({ editor, src, alt?, locale })` ·
+`openPreview({ nabi, surface })` · `openLightbox({ surface, src, alt?, locale? })` ·
 `setFullscreen(root, on)` · `isFullscreen(root)`。
 
 ::: tip 工具的位置是自己立起来的

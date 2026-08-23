@@ -158,7 +158,7 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 
 ## Tous les champs que vous pouvez remplir
 
-`Wing` a vingt-cinq champs et **seuls deux sont requis** (`w` et `place`).
+`Wing` a trente-et-un champs et **seuls deux sont requis** (`w` et `place`).
 
 ### Ce que c'est
 
@@ -166,10 +166,12 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 |---|---|
 | `w` | Le nom de cette wing. Il devient le `w` de la valeur enregistrée. Les mots réservés (`p`, `br`) ne sont pas permis |
 | `place` | `'mark'` sur des caractères · `'void'` un bloc sans intérieur · `'container'` un bloc avec du texte à l'intérieur · `'attr'` un attribut de paragraphe · `'tool'` un outil qui ne laisse aucune trace dans le document |
+| `basic` | **Tourne-t-elle comme elle est, sans câblage ?** Non précisé, c'est `false` — ce qu'elle ne connaît pas, elle ne le prend pas. `wings().allBasic()` rassemble seulement celles portant ce signe, et **une wing personnalisée se mesure au même aune**. `allBasic()` marche dans le catalogue officiel, cependant, si bien qu'une wing apportée en direct par `.use(objet)` se charge peu importe cette valeur |
 | `holds` | Comment il contient son intérieur — `'blocks'` ou `'inline'` |
 | `singleParagraph` | L'intérieur est fixé à **un seul** paragraphe (une cellule de tableau) |
 | `boolAttrs` | Noms des attributs booléens dont la seule valeur est `1` |
 | `allows` | Les noms de wings permis à l'intérieur. Non précisé, tout est permis |
+| `noAlign` | **Objets seuls.** La porter et le **paragraphe enveloppe portant cet objet ne reçoit plus d'alignement** — les boutons d'alignement se cachent à la barre d'outils, la commande refuse comme une non-variation, et une valeur déjà cuite dans un document enregistré ancien se lave en passant par le cocoon. La boîte de code est la première à l'utiliser : un `pre` hérite de `text-align`, si bien qu'au lieu que la boîte se déplace, **les lignes de code se décalent**. La poser sur une marque, un outil ou un attribut de paragraphe et **l'enregistrement meurt** |
 | `requiresAnyOf` | L'une de celles-ci doit être enregistrée à ses côtés |
 | `parts` | Structure sans bouton amenée avec elle — les lignes et cellules d'un tableau, le résumé d'un bloc dépliant |
 
@@ -185,6 +187,9 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 | Champ | Sens |
 |---|---|
 | `toHtml` · `partHtml` | Le chemin de sortie |
+| `toMd` | Le chemin de sortie vers la markdown. **Facultatif — ne le poser pas et le nœud retombe à `toHtml`** (le souligné, YouTube et Détails sont la sorte sans place en markdown, et c'est ce que « md avec HTML mélangé » veut vraiment dire) |
+| `partMd` | La part markdown des `parts` de cette wing |
+| `ioFilter` | Cette wing **apporte le collage, l'enregistrement et l'ouverture de son propre format avec elle** (le fichier `.nabi` est cette place). Un filtre n'est pas une wing mais savoir attaché à l'une, si bien que tout ce que l'hôte branche par `ioFilters` se dresse en tête de lui — voir [Brancher un filtre IO](#brancher-un-filtre-io) ci-dessous |
 | `claim` | Décide qui possède cette balise dans le HTML entrant |
 | `repair` · `partRepair` | Remet ce nœud en ordre à la porte du JSON. Répondre `null` le retire, enveloppe comprise |
 
@@ -195,6 +200,7 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 | `commands` | Les commandes que pose cette wing |
 | `onKey` | Intercepte les touches en premier tant que le caret est à l'intérieur du nœud de cette wing |
 | `escapeKeys` | Touches qui font sortir de cette marque le prochain caractère tapé |
+| `doubleKeys` | `{ nom de touche : nom de commande }` — tape cette touche **deux fois dans les 350ms** et la commande tourne. Le mot ressemble à `escapeKeys` mais veut dire autre chose : celui-ci c'est « sortir la marque et continuer à écrire », celui-ci c'est « une commande d'un geste ». Sa priorité est **la plus basse**, si bien qu'elle prend son tour une fois tous les autres travaux sur cette touche passés. À l'enregistrement il **vérifie les collisions de touche et l'existence de la commande**, si bien que deux wings réclamant la même touche, ou un nom qui ne pointe à aucune commande, tue l'enregistrement |
 | `inputRules` | Conversion automatique déclenchée par la seule frappe |
 | `attach` | Pour quand il faut toucher à l'écran — le glisser d'une cellule de tableau, la coloration du code |
 
@@ -223,6 +229,48 @@ Le `w` de la valeur enregistrée *est* ce nom, donc le renommer signifie que **l
 enregistrés ne peuvent plus être lus.** Si vous devez le faire, continuez à accepter l'ancien nom
 via `claim` en parallèle pendant une période de transition.
 :::
+
+---
+
+## Brancher un filtre IO
+
+Un **filtre IO n'est pas une wing** — c'est une prise de savoir attachée à une wing, l'emplacement
+où elle cogne sur le collage, l'enregistrement et l'ouverture. Un filtre ne dresse aucun nœud,
+n'ajoute rien à la barre d'outils, ne branche aucune commande. L'`ioFilter` qu'une wing pose dit
+seulement comment entrer et sortir **au format de ce wing**.
+
+```ts
+type IoFilter = {
+  id: string
+  label: string
+  paste: (clipboard: ClipboardData) => Promise<DocumentFragment | string | null>
+  save: { extension: string, write: (nabi: Wing[], html: string) => string | Blob, lossy?: boolean, mime?: string }
+  read: (file: Blob | string) => Promise<DocumentFragment | string | null>
+}
+```
+
+| Câble | Ce que c'est |
+|---|---|
+| `id` · `label` | Le nom court et le nom lisible du filtre |
+| `paste` | Lit une candidate au collage ; répond avec ce qu'il en sort |
+| `save` | Les trois choses : le suffixe du fichier, l'écriture (HTML → fichier), et une note sur la perte |
+| `read` | Lit un fichier ; répond avec ce qui en sort — du HTML ou un fragment |
+
+**Tous les quatre se déclarent.** Un filtre sans porte de lecture, par exemple, ne se dresse pas.
+
+La marche vaut ainsi : `mount` → l'hôte → les wings enregistrées → les filtres internes pour `.nabi` ·
+`.html` · `html-ouvert` · `.md`. L'hôte branche avant les wings, donc tout filtre apporté par
+`mountFile({ ioFilters })` prend son tour avant le filtre `.nabi` interne.
+
+`readExtensions` énumère les suffixes qu'accepte le formulaire qui ouvre un fichier. C'est les
+`save` qui en déclarent les extensions, donc **un filtre sans porte `save` ne s'ajoute pas à cette
+liste**, même s'il lit dix formats. Le formulaire de base (browserFileStore) offre donc les trois
+que fournit la wing de base, plus `.html` ordinaire.
+
+La markdown se construit de deux mains — une wing apporte une porte `toMd` qui passe l'un de ses
+nœuds, et l'hôte qui l'enregistre dresse la grille qui croise ses `toMd` avec les `partMd` des
+autres wings. Un filtre tout seul ne peut donc pas fabriquer la markdown — il doit y avoir une
+wing qui le supporte.
 
 ---
 

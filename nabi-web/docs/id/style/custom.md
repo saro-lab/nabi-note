@@ -74,6 +74,11 @@ bentuk di atas (yang dideklarasikan pada `.nabi`, tempat pewarisan tidak bisa me
 | `--nabi-font` · `--nabi-font-serif` · `--nabi-font-mono` · `--nabi-font-cursive` | jenis huruf yang sungguh dipasang ke empat cabang sayap jenis huruf | jenis huruf sistem |
 | `--nabi-cursive-adjust` | `font-size-adjust` untuk sambung. Muka tulisan tangan punya x-height rendah sehingga tampak lebih kecil pada px yang sama, dan nilai ini mengukur ulang berdasarkan x-height | `0.4` |
 | `--nabi-sticky-top` | seberapa jauh baris yang menempel turun. Jika situs punya header tetap, tingginya | `0px` |
+| `--nabi-content-min-height` | tinggi minimum area edit. **Hanya berlaku di permukaan edit** (`.nabi-editing`), bukan di dokumen yang diterbitkan atau ditinjau | `12.5rem` |
+| `--nabi-bar-height` | tinggi chrome (toolbar) yang dipasang. **`mountSticky()` menulis tinggi terukur** di sini, dan `.nabi-content > *` menambahkannya ke `scroll-margin-block-start` agar caret tidak tersembunyi di bawah toolbar | `3.5rem` |
+| `--nabi-touch-font-size` | ukuran huruf untuk bidang input di perangkat sentuh (`pointer: coarse` atau lebar di bawah 40rem). iOS Safari memperbesar halaman saat focus mendarat di kolom form dengan teks lebih kecil dari 16px — inti menggunakan nilai ini sebagai nilai dasar untuk mencegahnya | `16px` |
+| `--nabi-placeholder` | teks antekan yang tampil di area edit kosong, sebagai string yang dikutip. **`mountSurface()` menulis kata dari opsi `placeholder`-nya sendiri (atau kamus core) ke akar edit**, jadi nilai inline mengalahkan apa pun yang ditimpa dari luar | tidak ada (tanpa antekan) |
+| `--nabi-placeholder-color` | warna antekan. **Core tidak mendeklarasikan** nama ini; di baliknya ada `--nabi-placeholder-color-fallback`, yang tahu terang dan gelap (terang `#6b6b76aa` · gelap `#9a9aa6aa`) — tulis token ini di `:root` dan ia menang di kedua tema | `--nabi-placeholder-color-fallback` |
 | `--nabi-preview-width` | lebar kartu pratinjau. **`openPreview` mengukur lebar area edit saat dibuka dan menuliskannya langsung ke kartu**, sehingga nilai inline itu mengalahkan apa pun yang ditimpa dari luar | `720px` |
 
 `--nabi-typeface-base` bukan dari golongan ini — **inti yang mendeklarasikannya** (bawaannya

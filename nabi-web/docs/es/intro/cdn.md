@@ -51,7 +51,7 @@ así que pasarle la barra de herramientas tal cual no desordena la fila de boton
 ### Elegir los wings
 
 Elegir wings es una sola línea con el constructor. El archivo de arriba parte de los
-veintinueve wings por defecto, quita la subida y limita la tipografía a dos.
+**veintiséis wings sin cableado**, agrega guardar y abrir, y limita la tipografía a dos.
 
 ```js
 var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
@@ -59,6 +59,7 @@ var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['s
 
 - `all()` arranca con todos los wings oficiales. **Si no se llama, empieza con las manos
   vacías** — solo se cargan los que se agregan con `use()`.
+- **`allBasic()`** arranca con solo los wings que corren sin cableado (26). Guardar, abrir y subida necesitan cableado del host, así que faltan.
 - `use('nombre', opciones?)` agrega uno más. Si se llama sobre un wing que ya está,
   solo le pone las opciones — así es `use('tf', { values: [...] })` de arriba. Si hace
   falta un wing del que depende (la subida necesita que haya imagen o enlace), se trae
@@ -97,6 +98,8 @@ conecta, la respuesta a la pregunta es "no", y un mensaje que no necesita respue
 muestra el recipiente de toast que ya trae el núcleo, debajo de la barra de
 herramientas — no hay nada aparte que conectar para avisos como un error de subida. Los
 detalles están en [{{ t('menu_intro_usage') }}](./usage).
+
+- `choose(question, options: ChooseOption[]) → number | Promise<number>` — una pregunta de "elige uno". El panel de guardado se levanta si está conectado el toolbar (no hay que cablearlo por aparte).
 
 ### Sacar el valor
 

@@ -50,8 +50,9 @@ quelle, la rangée de boutons ne se dérange pas.
 
 ### Choisir les wings
 
-Choisir les wings tient en une ligne de builder. Le fichier ci-dessus part des vingt-neuf wings
-standard, retire l'upload et restreint la police à deux choix.
+Choisir les wings tient en une ligne de builder. Le fichier ci-dessus part des vingt-six qui
+tournent sans câblage, ajoute l'enregistrement et l'ouverture par-dessus, puis restreint la
+police à deux choix.
 
 ```js
 var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
@@ -59,6 +60,11 @@ var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['s
 
 - `all()` part de toutes les wings officielles. **Sans cet appel, la liste est vide** — seul ce
   qui passe par `use()` est chargé.
+- `allBasic()` prend seulement celles qui **tournent comme elles sont, sans câblage** (vingt-six).
+  Les trois du reste sont l'envoi, l'enregistrement et l'ouverture — elles ne s'éveillent que si
+  l'hôte fournit un serveur d'envoi ou un magasin de fichiers, donc les dresse par défaut
+  remettrait au lecteur un bouton qui ne fait rien quand on l'appuie. C'est pour cela que
+  l'exemple ci-dessus rajoute l'enregistrement et l'ouverture par `use()`.
 - `use('nom', options?)` ajoute une wing. Appelé sur une wing déjà présente, il ne fait qu'ajouter
   des options — c'est le cas de `use('tf', { values: [...] })` ci-dessus. Si la wing a besoin
   d'une autre wing pour tenir debout (l'upload a besoin d'une image ou d'un lien), celle-ci est
@@ -95,6 +101,12 @@ Le fichier ci-dessus branche `alert`/`confirm` du navigateur par `ask` — une q
 réponse à la question est « non », et un mot qui n'attend pas de réponse est affiché sous la barre
 d'outils par la boîte toast que le cœur tient déjà — rien à brancher pour une alerte comme une
 erreur de téléversement. Les détails sont dans [{{ t('menu_intro_usage') }}](./usage).
+
+`ask` porte aussi **`choose`, pour en choisir une parmi plusieurs.** La plate-forme de collage,
+cependant, **se dresse sans être branchée** — dès que la barre d'outils monte, elle y accroche sa
+plate-forme au cœur (le même grain que la boîte toast), si bien qu'une page qui dresse une barre
+d'outils, comme le fichier ci-dessus, reçoit la plate-forme pour rien. Ne branchage `ask.choose`
+que si vous avez envie d'y échanger pour une plate-forme qui soit la vôtre.
 
 ### Faire sortir la valeur
 

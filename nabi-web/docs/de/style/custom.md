@@ -75,6 +75,9 @@ Form-Token oben (die sind auf `.nabi` deklariert, wo Vererbung nicht gewinnen ka
 | `--nabi-cursive-adjust` | das `font-size-adjust` der Schreibschrift. Eine Handschrift-Schriftart hat eine niedrige x-Höhe und wirkt bei gleichem px kleiner, und dieser Wert misst sie anhand der x-Höhe neu | `0.4` |
 | `--nabi-sticky-top` | wie weit unten die sticky Zeile sitzt. Hat die Website eine feste Kopfzeile, deren Höhe | `0px` |
 | `--nabi-preview-width` | die Breite der Vorschau-Karte. **`openPreview` misst beim Öffnen die Editier-Oberfläche und schreibt diese Breite direkt auf die Karte**, sodass ein von außen gesetzter Wert von diesem Inline-Wert geschlagen wird | `720px` |
+| `--nabi-content-min-height` | die Mindesthöhe des Schreibbereichs **nur auf der Editieroberfläche** — bei veröffentlichten oder vorgezeigten Dokumenten bestimmt der Text selbst die Höhe | `12.5rem` |
+| `--nabi-placeholder-color` · `--nabi-placeholder-color-fallback` | die Farbe des Hinweistexts. Der Kern definiert diese nicht, sondern ruft sie nur als Fallback auf, so dass die Übersteuerung auf `:root` gewinnt. Geben Sie beide Versionen an (hell und dunkel) an, sonst wissen Hosts nicht, warum die Farbe sich ändert | Licht `#6b6b76aa` · Dunkel `#9a9aa6aa` |
+| `--nabi-touch-font-size` | die Schriftgröße der Eingabefelder (`.nabi-input`: Link-Adresse, Speichername, Eingabeaufforderung) auf Touch-Geräten (`pointer: coarse` oder Breite ≤ 40rem). **iOS Safari vergrößert die gesamte Seite, wenn der Fokus auf einem Formularfeld mit Text kleiner als 16px liegt.** Der Kern setzt diese Mindestgröße, um das zu verhindern. Der Kern ruft sie nur als Fallback auf, so dass der Host gewinnt. Maus-Bildschirme ändern sich überhaupt nicht | `16px` |
 
 `--nabi-typeface-base` gehört nicht zu dieser Sorte — **der Kern deklariert es** (unangetastet folgt
 es `--nabi-font`). Der Schriftart-Flügel hat keine Option dafür, überschreiben Sie also dieses Token,

@@ -189,7 +189,6 @@ di situ.
 
 <script setup lang="ts">
 import FlowHub from '../.vitepress/ui/FlowHub.vue'
-import LayerStack from '../.vitepress/ui/LayerStack.vue'
 import { useTranslate } from '../.vitepress/src/langs.ts'
 
 const { t } = useTranslate()
@@ -206,19 +205,4 @@ const hubTargets = [
   { label: 'getJson()', note: 'Output JSON', kind: 'out' },
   { label: 'getEditorHtml()', note: 'HTML untuk editor', kind: 'out' },
 ];
-
-const layers = [
-  { name: 'locale', what: 'Bahasa' },
-  { name: 'code', what: 'Tokenizer murni yang dipakai bersama oleh layar edit dan sisi baca' },
-  { name: 'schema', what: 'Bentuk NABI TREE dan definisi Cocoon' },
-  { name: 'doc', what: 'Sisip · hapus · pisah · rentang. Tanpa DOM' },
-  { name: 'caret', what: 'Posisi, seleksi, dan batas kursor' },
-  { name: 'html', what: 'NABI TREE ↔ HTML' },
-  { name: 'editor', what: 'Instance dengan antarmuka command' },
-  { name: 'wing', what: 'Pemeriksaan Wings saat pendaftaran' },
-  { name: 'wings', what: 'Wing resmi (bold, italic … table, upload…)' },
-  { name: 'surface', what: 'Menyelaraskan caret · IME · input ke tree' },
-  { name: 'ui', what: 'Lapisan UI' },
-  { name: 'viewer', what: 'Hanya-baca' },
-]
 </script>

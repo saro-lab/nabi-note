@@ -223,6 +223,7 @@ const { nabi, registry } = createNabiWith(wings, {
   ask: {
     message: (text) => window.alert(text),
     confirm: (text) => window.confirm(text),
+    choose: (question, options) => user_callback(question, options),   // la réponse est un indice
   },
 })
 ```
@@ -230,11 +231,30 @@ const { nabi, registry } = createNabiWith(wings, {
 `confirm` accepte un `boolean` ou une `Promise<boolean>` — branchez le `confirm` du navigateur
 lui-même, ou levez votre propre panneau et répondez plus tard.
 
-::: warning Sans elle, la réponse est toujours « non »
+Une troisième place, `choose`, est **une parmi plusieurs** — cette porte s'ouvre quand un collage
+compte deux candidates ou plus.
+
+La liste qu'elle reçoit est un tableau de `ChooseOption`, qui porte deux champs.
+
+| | |
+|---|---|
+| `label` | le nom qui se dresse sur cet emplacement |
+| `icon?` | l'**intérieur** d'un SVG 16×16 (quelques chemins). La plate-forme pose la coque, et **sans lui le nom se dresse seul** |
+
+La réponse est **un indice** — `0` est celui du haut, et `-1` (ou tout ce qui sort de la plage) est
+une annulation, auquel cas rien ne se colle. `number` et `Promise<number>` sont acceptés.
+
+::: warning Laisser de côté, `confirm` répond « non » et `choose` répond le haut
 Ne fournissez aucun `ask` et une valeur par défaut silencieuse entre en jeu. `message` ne va nulle
 part et `confirm` répond `false`. Le raisonnement est qu'**un « demander puis supprimer » qui ne
 fonctionne tranquillement pas** vaut mieux que le voir arriver tranquillement. Le « vraiment
 supprimer ceci ? » de l'historique local passe par cette porte.
+
+`choose` seul tourne l'autre sens — son défaut est **0 (celui du haut)**. Répondre annulation ici
+ferait que le collage disparaisse entièrement, et la première candidate de la liste est toujours
+« la lecture la plus probable », si bien que sans quelqu'un pour demander c'est la bonne réponse.
+Et `choose` n'a généralement besoin d'aucun branchement du tout — dès que la barre d'outils se
+dresse, elle y accroche sa propre plate-forme au cœur.
 :::
 
 ::: tip Les commandes ne peuvent pas demander

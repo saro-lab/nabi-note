@@ -179,14 +179,17 @@ obter o lugar dentro do documento.
 
 ## Colagem e HTML inicial
 
-Colar, `setHtml()` e carregar um valor salvo passam todos pela **mesma porta.** A única tarefa
-do wing aqui é `claim` — está descrita em [`claim` na página de inline](./inline#claim).
+Todos os três passam pela **mesma porta** no fim. A única tarefa do wing ali é `claim` — está escrito em [`claim` na página de inline](./inline#claim). **Colar sozinho tem um passo na frente**, porém: antes de chegar a `claim` passa pelos filtros de E/S e o painel de candidatos.
 
 ```
-Colar          ─┐
-setHtml        ─┼→ parse → o claim dos wings → o tratamento de tag padrão do núcleo → repair → cocoon → documento
-HTML inicial   ─┘
+Colar          ─→ Filtros de E/S ─→ painel de candidatos (só quando há dois ou mais) ─┐
+setHtml        ───────────────────────────────────────────────────────────────────────┼→ parse → o claim dos wings → o tratamento de tag padrão do núcleo → repair → cocoon → documento
+HTML inicial   ───────────────────────────────────────────────────────────────────────┘
 ```
+
+**`setHtml()` e HTML inicial não passam pelo painel.** Esse é um lugar onde o host empurra um valor para dentro, então não há nada a perguntar — sem filtros, sem candidatos, direto para análise.
+
+Um candidato só é de verdade montado (e `claim` só é chamado) **depois que a pessoa escolhe um no painel**. Montar todos os quatro candidatos para usar um seria desperdício. Construir um filtro do seu próprio é coberto em [Plugando um filtro de E/S](../custom#plugging-in-an-io-filter).
 
 Sem um `claim`, **essa tag tem a casca retirada, e só o texto de dentro sobrevive.** Essa regra
 é o motivo pelo qual marcação desconhecida, copiada do editor de outra pessoa, não vai parar

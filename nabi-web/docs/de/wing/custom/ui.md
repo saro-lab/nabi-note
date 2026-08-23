@@ -225,12 +225,15 @@ const { nabi, registry } = createNabiWith(wings, {
   ask: {
     message: (text) => window.alert(text),
     confirm: (text) => window.confirm(text),
+    choose: (question, options) => number | Promise<number>,
   },
 })
 ```
 
 `confirm` nimmt ein `boolean` oder ein `Promise<boolean>` — stecken Sie das `confirm` des Browsers
-selbst ein, oder heben Sie ein eigenes Panel an und antworten Sie später.
+selbst ein, oder heben Sie ein eigenes Panel an und antworten Sie später. `choose` wählt eine aus
+mehreren Optionen (`ChooseOption{label, icon?}`) und antwortet mit dem Index — eine Option ohne
+Bild zeigt nur den Namen.
 
 ::: warning Lassen Sie es weg, ist die Antwort immer „nein"
 Liefern Sie kein `ask`, geht ein stiller Standard ein. `message` geht nirgendwohin, und `confirm`

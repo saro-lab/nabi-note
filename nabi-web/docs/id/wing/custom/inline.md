@@ -168,6 +168,8 @@ diketik, reservasi terpakai lalu hilang.
 <kbd>Ctrl</kbd>(kursor)  →  Escape  →  ketik "+"  →  <kbd>Ctrl</kbd>+
 ```
 
+**Tekan Escape dua kali dan mark itu hilang selamanya** — bahkan jika Escape pertama sudah memesan keluar. Penghitung double-tap independen dari branch sebelumnya. Highlight di tengah teks adalah contohnya.
+
 Beberapa wing boleh memasang tombol yang sama — reservasi hanya terpasang
 saat kursor benar-benar berada di dalam mark itu, jadi di antara mark yang
 bertumpuk hanya yang relevan yang sama-sama terlepas. <kbd>Escape</kbd> juga

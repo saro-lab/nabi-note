@@ -230,12 +230,15 @@ const { nabi, registry } = createNabiWith(wings, {
   ask: {
     message: (text) => window.alert(text),
     confirm: (text) => window.confirm(text),
+    choose: (question, options) => /* responder un número */,
   },
 })
 ```
 
 `confirm` acepta tanto `boolean` como `Promise<boolean>` — se puede enchufar tal cual el
 `confirm` del navegador, o abrir un panel propio y dar la respuesta más tarde.
+
+`choose` elige uno de varios. Recibe la pregunta y un arreglo de `ChooseOption`, donde cada opción es `{label, icon?}`. Sin icono la opción muestra solo el nombre. Responde un número (el índice de la opción elegida, o 0 si no se especifica ninguno). **El panel de guardado se levanta automáticamente si está conectado el toolbar** — no hay que cablearlo por aparte.
 
 ::: warning Si no se da, la respuesta es siempre "no"
 Si no se conecta `ask`, entra un valor por defecto silencioso. `message` no va a

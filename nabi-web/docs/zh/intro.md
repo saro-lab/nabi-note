@@ -108,14 +108,33 @@ nabi.redo()
 
 ## 代码的分层
 
-**不是说值按这个顺序流动。** 这是从下往上垒起来的**依赖方向**，规矩只有一条
-——**下层不认识上层。** 所以下面的几层（`schema`·`doc`·`html`）不碰 DOM，这也是
-它们能在服务器上原样跑起来的原因。值进出的路径是上面那张 nabi-tree 图。
+**不是说值按这个顺序流动。** 这是打开 `src` 看到的**十四个文件夹**，一个文件夹
+一层，规矩只有一条——**下层不认识上层。** 所以写在上面的几层（`schema`·`doc`·
+`html`）不碰 DOM，这也是它们能在服务器上原样跑起来的原因。值进出的路径是上面
+那张 nabi-tree 图。
 
-<LayerStack
-  :layers="layers"
-  caption=""
-/>
+```
+src/
+├── style/     核心样式表——编辑画面和发布文字共用的 CSS
+├── locale/    语言
+├── code/      编辑画面和阅读侧共用的纯粹分词器
+├── schema/    nabi-tree 的形状与 cocoon 定义
+├── doc/       插入·删除·拆分·范围——不碰 DOM
+├── caret/     光标的位置、选择、边界
+├── html/      nabi-tree ↔ HTML
+├── io/        进出的门——粘贴候选、保存、打开、markdown
+├── editor/    带命令接口的实例
+├── wing/      注册时刻对翅膀的检查
+├── wings/     官方翅膀们（bold、italic……table、upload）
+├── surface/   把光标、输入法、输入对齐到树上
+├── ui/        UI 层
+├── viewer/    只读
+├── index.ts   核心入口——`nabi-note`
+└── ssr.ts     SSR 入口——`nabi-note/ssr`（一个 surface、ui 的文件都不碰）
+```
+
+**行的顺序就是层的顺序**——不是按字母排的，而是**下层写在最前面。** `style`
+是地板，`viewer` 是最上面那层。
 
 这个方向不是写在文档里的约定，而是**有网用机器守着**——只要出现一处逆着层走的
 import，检查当场就不通过。
@@ -131,6 +150,7 @@ import，检查当场就不通过。
 | **包装段落** | 把表格、列表、图片这类单一段落对象包起来的段落 |
 | **归属（claim）** | 判定一段标记归哪只翅膀所有的裁决 |
 | **部件（parts）** | 翅膀内部的功能，例如表格的行和格、折叠块的摘要行 |
+| **IO 过滤器** | 把粘贴（进来的门）和保存、打开（出去的门）合成一套来管的扩展点。它站在**翅膀契约之外**，所以不在文档里立自己的节点 |
 
 ### 编辑画面
 
@@ -156,7 +176,6 @@ import，检查当场就不通过。
 
 <script setup lang="ts">
 import FlowHub from '../.vitepress/ui/FlowHub.vue'
-import LayerStack from '../.vitepress/ui/LayerStack.vue'
 import { useTranslate } from '../.vitepress/src/langs.ts'
 
 const { t } = useTranslate()
@@ -174,18 +193,4 @@ const hubTargets = [
   { label: 'getEditorHtml()', note: '编辑器用的 HTML', kind: 'out' },
 ];
 
-const layers = [
-  { name: 'locale', what: '语言' },
-  { name: 'code', what: '编辑画面和阅读侧共用的纯粹分词器' },
-  { name: 'schema', what: 'nabi-tree 的形状与 Cocoon 定义' },
-  { name: 'doc', what: '插入·删除·拆分·范围，Dom-less' },
-  { name: 'caret', what: '光标的位置、选择、边界' },
-  { name: 'html', what: 'nabi-tree ↔ HTML' },
-  { name: 'editor', what: '带命令接口的实例' },
-  { name: 'wing', what: '注册时刻的 Wings 检查' },
-  { name: 'wings', what: '官方翅膀们（bold、italic……table、upload……）' },
-  { name: 'surface', what: '把光标、输入法、输入对齐到树上' },
-  { name: 'ui', what: 'UI 层' },
-  { name: 'viewer', what: '只读' },
-]
 </script>

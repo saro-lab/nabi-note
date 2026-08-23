@@ -30,6 +30,25 @@ comando (`clearFormat`) y un botón de barra de herramientas.
 - Si no hay nada que despojar, el comando responde `null`. No se apila un punto de
   deshacer.
 
+## Esc 2連打
+
+Además del botón de la barra de herramientas, hay **una vía por teclado** — pulsar <kbd>Esc</kbd>
+dos veces seguidas. Ni una pista de una letra ni un atajo <kbd>⌘</kbd> podían contener este gesto, así
+que entró en la declaración de 2連打 (`doubleKeys`).
+
+- **Hace exactamente lo mismo que pulsar el botón.** Con un tramo seleccionado, ese tramo; **con
+  solo cursor**, una capa en ese lugar — el comando ya sabe qué despojar, así que el lado de la tecla
+  no se ramifica según el estado del cursor.
+- **Se dispara en la segunda pulsación, exactamente.** Cuatro pulsaciones siguen siendo un disparo, y si pasan más de 350ms
+  entre dos pulsaciones el contador se reinicia. Las repeticiones de mantener presionada la tecla (`repeat`) y
+  las pulsaciones durante la composición de IME no se cuentan.
+- **Su prioridad es la más baja.** Solo toma su turno después de que todo lo demás en <kbd>Esc</kbd>
+  haya pasado (deshacer un armado, salir de una marca) — pulsa <kbd>Esc</kbd> en medio de un
+  resaltado y la primera pulsación arma la salida de marca, y la segunda aún se lleva a cabo en borrar formato.
+- **Hay solo cinco lugares donde no funciona** — un panel abierto, una superposición, pantalla completa, las
+  insignias de pistas, y un bloqueo de subida.
+- El tooltip del botón lo dice — **«Quitar formato (Esc Esc)»**, el mismo patrón que las insignias de Shift.
+
 ## Ejemplo de uso
 
 ```ts

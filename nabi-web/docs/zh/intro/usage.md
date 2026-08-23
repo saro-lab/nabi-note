@@ -119,14 +119,19 @@ mountSurface({ nabi, registry, root: surface, placeholder: '' })   // 不要占�
 ```
 
 换行（`\n`）会照样变成一行。不过占位提示立在**排版流之外**（为了不推动光标），所以
-编辑区域只有一行高的话，多行的占位提示会往下溢出——要用多行就给编辑区域留够那么多
-的最小高度。
+编辑区域只有一行高的话，多行的占位提示会往下溢出。空的编辑区域默认已经立着
+`12.5rem` 高，大多数时候不用管；要更高的话用 `--nabi-content-min-height` 加上去。
+这个值**只作用在编辑表面上**——发布出去或者预览的文档，高度就是文字本身的高度。
+
+**占位提示是独立的一层。** 它挂到了编辑根节点的 `::before` 上，所以**不受文档格式
+影响**——第一行是不是标题、居中还是带首字下沉都不管它。只有文字方向决定它站在
+哪边。
 
 这句话进的是编辑区域根节点上的 `--nabi-placeholder`，画出来的是样式表。要换颜色或
 质感，改这条规则就行。
 
 ```css
-.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before {
+.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before {
   color: #999;
 }
 ```
@@ -135,19 +140,69 @@ mountSurface({ nabi, registry, root: surface, placeholder: '' })   // 不要占�
 |---|---|---|
 | `createNabiWith(wings, options?)` | 是 | 返回 `{ nabi, registry }`。不需要 DOM。翅膀数组、挑选构建器（`wings()`，参见 [{{ t('menu_intro_cdn') }}](./cdn#挑翅膀)）都照单全收 |
 | `mountSurface({ nabi, registry, root })` | 是 | 把光标、输入法、输入重新对齐到 nabi-tree 上。也一并挂上已注册翅膀的 `attach` |
-| `mountToolbar({ nabi, registry, root, surface?, locale? })` | 否 | 主工具栏。没有它也能用 `applyCommand()` 直接编辑 |
+| `mountToolbar({ nabi, registry, root, surface?, locale?, file? })` | 否 | 主工具栏。没有它也能用 `applyCommand()` 直接编辑。把 `mountFile()` 答出来的东西插进 `file`，**保存面板就不用另外布线能立起来**——保存按钮和 <kbd>⌘</kbd><kbd>S</kbd> 都会打开它。不给的话，按下去还是照旧经 `onHost('save')` 传给宿主。`surface` 也是**加速键听得见的地界**（见[加速键听得见的地方](#加速键听得见的地方)） |
 | `mountContextToolbar({ nabi, registry, root, surface? })` | 否 | 按光标位置显示的上下文工具栏（表格行列、代码语言、链接地址和名字等） |
 | `mountHints({ toolbar, context?, root, surface? })` | 否 | 连按两下 Shift 弹出的快捷键提示 |
 | `mountViewTools({ nabi, surface, root, container, onBody? })` | 否 | 预览、全屏两个按钮。`root` 是全屏时要固定的那个 `.nabi` 容器，`onBody` 是给预览正文挂阅读侧运行时的钩子（见下）|
-| `mountSticky({ root, surface })` | 否 | 把手机键盘顶起画面挤走的那段贴住的工具栏退回去 |
+| `mountSticky({ root, surface, chrome?, nabi? })` | 否 | 把手机键盘顶起画面挤走的那段贴住的工具栏退回去。给了 `nabi` 的话，**编辑之后它会自己把光标从工具栏底下推出来**——不给就还是老样子，只有宿主自己调用 `aim()` 才会动（见[手机键盘与贴住的工具栏](#手机键盘与贴住的工具栏)） |
 | `mountPickedMark({ nabi, surface })` | 否 | 选中图片、视频时的标记（浏览器不会自己画） |
-| `mountFile({ nabi, store, name? })` | 用 save·open 时 | 存成、打开 `.nabi` 文件 |
+| `mountFile({ nabi, store, registry, parse?, name? })` | 用 save·open 时 | 能存成**三种**格式——`.nabi`·`.nhtml`·`.md`——能打开**四种**，这三种再加上外面来的普通 `.html`。**`registry` 是必需的**——格式清单、md 和 HTML 的组装全靠它。`parse` 是读 HTML 的门；在浏览器里可以不给，会用 `parseNodes` 顶上，但在没有头的地方（服务器、测试）要打开 `.nhtml`·`.html` 就必须传它。它答出来的 `FileMount` 是**不用翅膀也能存、开的正规做法**（`file.save()` · `file.saveAs(id, name)` · `file.formats()` · `await file.open()`） |
 | `mountLocalHistory({ nabi, storage })` | 用 localHistory 时 | 按固定间隔往浏览器里记录。就算 `storage` 是 `null`（像 `file://` 这种被挡住的地方）也照样搭起来——这样按钮才能用 toast 说清楚自己为什么不能用 |
 | `mountUpload({ … })` + `mountUploadView({ … })` | 用 upload 时 | 拖放、粘贴、选文件的上传进度和它的显示 |
 
 **图片、勾选框、表格拖拽调格、代码上色不需要单独 mount**——全都由翅膀自己拿着
 `attach`，`mountSurface` 会一并挂上。只有代码上色需要接一个上色的人进来
 （`makeCodeAttach`，参见 [{{ t('menu_block_code') }}](../wing/block/code)）。
+
+### 加速键听得见的地方
+
+<kbd>⌘</kbd><kbd>S</kbd> 这类加速键只有**一个地方**在听，就是工具栏。它的耳朵伸多远
+由 `mountToolbar({ surface })` 划定——**只有这个编辑表面或者工具栏那几行里按出来的
+键**才算这个编辑器的。
+
+- **一个页面上有两个编辑器，就必须传 `surface`。** 不传的话工具栏会退回去听整个
+  文档，这样下面那个编辑器里敲的 <kbd>⌘</kbd><kbd>S</kbd> 会存上面那个编辑器的文字。
+  连宿主自己一个普通输入框里敲的键都会被接走。
+- **不注册翅膀，键就根本不存在。** 存、开这两件事活在核心里（`mountFile`），但
+  按钮和加速键是翅膀的东西——所以只用 `wings().allBasic()` 搭的编辑器没有
+  <kbd>⌘</kbd><kbd>S</kbd>，也没有 <kbd>⌘</kbd><kbd>O</kbd>。唯一找回来的路是
+  `.use('save').use('open')`。
+- **没地方可去的话，键不会被吞掉。** 保存按钮什么都不连（`file`、`onHost` 都没插进
+  工具栏）的搭法里，键会照旧流给浏览器自己处理。我们不做的事，不该把它的快捷键从
+  浏览器手里抢走——悄悄吞掉的话，读者会以为自己的浏览器坏了。
+
+不用翅膀也想存、开的话，用 `mountFile` 答出来的那个把手——没有按钮也没有加速键的
+编辑器，宿主自己调用 `file.save()`、`file.open()` 就行。
+
+### 手机键盘与贴住的工具栏
+
+`mountSticky` 在手机上现在做得更多——它盯着键盘升起、落下，把光标带到**工具栏下面、
+键盘上面**。有三件事宿主要知道。
+
+- **只有编辑器拿着焦点时才会动。** 焦点在别处的话它一步都不会走——宿主用
+  `setHtml()` 塞值进来的时候，页面不该跟着跳。
+- **手在滚动的时候它一个像素都不推。** 滚动之后它会锁住 250ms——正在被手拖着走的
+  画面还硬要挪位置，那就是画面在抖了。
+- **只有键盘级的变化才会开这道门。** 地址栏收起来（也就几十像素）不会推动任何东西；
+  要过了 `max(120px, 窗口高度的 15%)` 这道槛才会开。
+
+打字的时候只推**刚好不够的那一点**——每敲一个字都把画面拖到工具栏底下，那没法用。
+不过键盘升起的那一刻，它会把画面对齐一次，让**工具栏贴在窗口最上面**，等视口稳下来
+之后再对一次。
+
+`--nabi-bar-height` 是这一步用的值——`mountSticky` 会把它接上的那圈工具条**实测出来
+的高度**写到 `.nabi` 根节点上，样式表里 `.nabi-content > *` 会把这个值加进
+`scroll-margin-block-start`。**这不是给宿主设的值，而是解释光标为什么不会藏到工具栏
+底下**——没挂这个 mount 的话，会用一个 `3.5rem` 的估计值顶替，工具栏折成两行或者
+上下文工具栏冒出来的时候，这个估计值就远远不够了。
+
+::: warning 不要用视口 meta 挡住缩放
+iOS 上的 Safari 在焦点落进字号小于 16px 的表单框时，会把整个页面放大。核心挡住这件
+事的办法是**把字变大**——`--nabi-touch-font-size`（默认 `16px`）。我们**没有**走
+另一条路，用 `user-scalable=no` 或者 `maximum-scale=1` 直接挡住缩放本身——那样会
+夺走读者放大画面的权利。要是宿主自己的页面上写了这条 meta，核心设的这道底线就没
+意义了——所以不要写它。
+:::
 
 ### 给预览接上阅读侧运行时
 
@@ -290,6 +345,20 @@ const { nabi } = createNabiWith(wings, { parseHtml: parseNodes })
 
 ---
 
+## 粘贴与保存、打开
+
+**粘贴用好几只眼睛读同一份剪贴板**——`HTML`·`MARKDOWN`·`TEXT`，还有 nabi 自己的
+格式（`NABI`）。读法有两种以上时，一个小面板会问粘贴哪一种；只有一种的话就不问，
+直接粘贴。完全不带文字的粘贴（只有文件）会跳过面板，走
+[{{ t('menu_etc_upload') }}](../wing/etc/upload) 那条路。
+
+**能存成三种格式**——`.nabi`（原本）、`.nhtml`（自立成一张 HTML 页面）、`.md`
+（markdown；装不下的东西会掺成 HTML，所以可能读不回来）。**能打开四种**——这三种
+再加上外面来的普通 `.html`。这道门需要上面表格里的 `mountFile()`，再插一种格式的
+做法见 [{{ t('menu_wing_custom') }}](../wing/custom#插入io过滤器)。
+
+---
+
 ## 提醒走 toast 这一条路
 
 上传出错、本地记录的提示、"没有可以应用的对象"这类一句话，全都从 **toast 这
@@ -337,6 +406,7 @@ const { nabi } = createNabiWith(wings, {
 |---|---|
 | `message` | `(text: string) => void`——说一句话，不接收回答 |
 | `confirm` | `(text: string) => boolean \| Promise<boolean>`——同步、异步都接受 |
+| `choose` | `(question: string, options: ChooseOption[]) => number \| Promise<number>`——从好几个里选一个。答案是**一个下标**，`-1`（或者超出范围）代表取消。`ChooseOption` 是 `{ label, icon? }`，`icon` 是 16×16 svg 的**内容**——不给的话就只显示名字 |
 
 **内核不会自动用浏览器自带的那套。** 有自己对话框的页面不该被弹出灰色系统框
 打断，而且插件环境（IntelliJ、VS Code）里根本没有 `window.confirm`。上面这三行
@@ -345,7 +415,13 @@ const { nabi } = createNabiWith(wings, {
 **只插上的那一格才生效**——可以只插 `message`，也可以只插 `confirm`。没插的
 `message` 会走上面说的内核 toast（info）；没插的 `confirm` 的答案是"不"。
 
-::: warning 不给 confirm 的话答案就是"不"
+**`choose` 通常不用插。** 只要工具栏立起来，粘贴面板就会自己把自己挂到核心上（和
+toast 那套一个道理），所以立了工具栏的页面什么都不用做就有这个面板。只有想换成
+自己的面板时才插这一格。没有挂起来的面板，也没插这一格的话，**答案是 0（最上面
+那个）**——和 `confirm` 的"不"是反过来的方向。这里要是答取消，粘贴就会整个消失，
+而列表里第一个候选永远是"最像的那种读法"，没人可问的时候答它就是对的。
+
+::: warning 不给的话，`confirm` 答"不"
 没人回答的问题不算"是"——和取消、按 Escape、关掉窗口的意思一样。这个答案落在
 "要不要丢掉正在写的内容打开新文件"这个地方，没人能回答不代表就该往丢弃那边走。
 在服务器（Node）上也会用这个值悄悄跳过去。
@@ -379,6 +455,12 @@ nabi.$markSaved(savedDoc)   // 保存成功之后 —— 把当时保存的那�
 **要传的是保存那一刻的树**（不是现在的树）。因为保存花时间的这段里敲的字，
 仍然要算作"变了"。保存翅膀（`save`）是在文件真正写完之后才调用这个的，所以存成
 `.nabi` 之后 `isChanged()` 就会变成 `false`。
+
+::: warning 只有 `.nabi` 会移动基准线
+存成 `.nhtml` 或 `.md` 出去的是一份**副本**，副本不会移动基准线——存完之后
+`isChanged()` 还是 `true`。把副本当成"已保存"，关窗口时就不会问一句，正稿也就跟着
+丢了。保存是异步的话，基准线**只在成功之后**才会移动——失败的保存不会碰它。
+:::
 
 **撤销回到最初的位置就又是 `false`**——因为 nabi-tree 是不可变的，每次编辑都是
 整个换掉，判断是不是同一份文档不用扫描或者哈希，当场就知道。

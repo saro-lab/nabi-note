@@ -16,6 +16,16 @@ O envio se divide em três peças — só registrar o wing não faz nada acontec
 2. **`mountUpload({ … })`** — é o lado que de fato recebe os arquivos e roda o `uploader`.
    Arrastar-e-soltar, colar e o botão de escolher arquivo, tudo flui para cá. **Sem este mount,
    o botão fica ali sem que nada aconteça.**
+
+::: warning Só metade da cola vem por aqui
+Se uma cola carrega **nem que seja um pedaço de texto** (`text/html` ou `text/plain`), o envio não é
+chamado de jeito nenhum — o texto vira um candidato e vai para o [painel de cola](../../intro/usage)
+em vez disso. Arquivos entram no envio só de uma cola **sem texto algum nela.**
+
+Copie células de uma planilha e tanto uma tabela quanto texto vêm junto, então o resultado é
+**uma tabela, não uma imagem.** Para enviar como imagem, copie a imagem sozinha. Um arrastar-e-soltar (puxar um arquivo) vem para o envio sempre, independentemente dessa regra.
+:::
+
 3. **`mountUploadView({ … })`** — é o lado que exibe o marcador de progresso na tela. Sem ele o
    envio ainda funciona, mas a tela fica muda enquanto o arquivo sobe.
 

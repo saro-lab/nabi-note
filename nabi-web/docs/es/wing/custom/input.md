@@ -186,14 +186,14 @@ Buscando el `[data-key]` más cercano al elemento pulsado y pasándolo a
 
 ## Pegado y HTML inicial
 
-Pegar, `setHtml()` y cargar un valor guardado **pasan todos por la misma puerta.** Lo
-único que el wing tiene que hacer aquí es `claim` — está descrito en
-[el `claim` del documento de marca en línea](./inline#claim).
+Pegar, `setHtml()` y cargar un valor guardado llegan por vías distintas. El pegado pasa por un filtro y un panel de candidatos antes de `claim`, mientras que `setHtml()` y el HTML inicial siguen directamente al análisis sin panel. Lo único que el wing tiene que hacer aquí es `claim` — está descrito en [el `claim` del documento de marca en línea](./inline#claim).
 
 ```
-Pegar     ─┐
-setHtml   ─┼→ análisis → claim del wing → correspondencia de etiquetas básicas del núcleo → repair → cocoon → documento
-HTML inicial ─┘
+Pegar     → filtro → panel de candidatos → análisis ┐
+                                                      ├→ claim del wing → correspondencia de etiquetas básicas del núcleo → repair → cocoon → documento
+setHtml   ────────────────────────────────────────── análisis ┤
+                                                      │
+HTML inicial ───────────────────────────────────────→ análisis ┘
 ```
 
 Sin `claim`, **esa etiqueta se despoja y solo queda el texto de dentro.** Gracias a esta

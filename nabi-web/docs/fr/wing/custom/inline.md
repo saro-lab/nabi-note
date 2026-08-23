@@ -170,6 +170,14 @@ est réellement à l'intérieur de cette marque, donc parmi les marques superpos
 seules celles qui correspondent sortent ensemble. <kbd>Échap</kbd> sert aussi à **annuler** un
 armement déjà en place.
 
+::: tip Taper Échap deux fois le porte plus loin
+Le compteur de double-tap tourne **peu importe si la branche avant lui a consommé la touche.** Si
+le premier <kbd>Échap</kbd> défit un armement ou en arma une sortie de marque, le deuxième
+<kbd>Échap</kbd> porte jusqu'au [nettoyage de la mise en forme](../etc/clear-format) — un caret
+au milieu d'un surlignage en est l'exemple. `escapeKeys` et `doubleKeys` se ressemblent comme
+des mots, mais ils ne se bloquent pas mutuellement.
+:::
+
 ---
 
 ## Les marques ne peuvent pas posséder de touches

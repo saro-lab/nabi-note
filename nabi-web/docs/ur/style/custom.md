@@ -77,6 +77,10 @@ theme کے لیے میزبان کو اوپر لکھنے والا کوئی ٹوک
 | `--nabi-cursive-adjust` | ہاتھ کی تحریر کی طرز کا `font-size-adjust`۔ ہاتھ کی تحریر جیسے فونٹ کی x-height کم ہوتی ہے، اس لیے وہی px پر بھی چھوٹا لگتا ہے، یہ قدر x-height کی بنیاد پر دوبارہ ناپتی ہے | `0.4` |
 | `--nabi-sticky-top` | چپکنے والی سطر کتنا نیچے آ کر بیٹھے۔ سائٹ پر مقررہ ہیڈر ہو تو اس کی اونچائی | `0px` |
 | `--nabi-preview-width` | پیش نظارے کے کارڈ کی چوڑائی۔ **چونکہ `openPreview` کھلتے وقت ترمیمی حصے کی چوڑائی ناپ کر کارڈ پر خود لکھ دیتا ہے،** میزبان باہر سے اوپر لکھے تب بھی وہ inline قدر جیت جاتی ہے | `720px` |
+| `--nabi-placeholder` | خالی ایڈیٹر کی رہنما تحریر، quote میں لپٹا string۔ **`mountSurface` اپنے `placeholder` آپشن (یا کور کی لغت) کا لفظ خود ترمیمی جڑ پر لکھ دیتا ہے،** اس لیے میزبان باہر سے اوپر لکھے تب بھی وہ inline قدر جیت جاتی ہے — رنگ یا وزن بدلنا ہو تو `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` کو دوبارہ لکھیں | نہیں (رہنما تحریر نہیں) |
+| `--nabi-placeholder-color` | اس رہنما تحریر کا رنگ۔ کور اس نام کو **اعلان نہیں کرتا**؛ اس کے پیچھے `--nabi-placeholder-color-fallback` کھڑا ہے، جو لائٹ اور ڈارک دونوں جانتا ہے (لائٹ `#6b6b76aa` · ڈارک `#9a9aa6aa`) — یہ ٹوکن `:root` پر لکھیں تو دونوں تھیم میں جیتتا ہے | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | خالی ایڈیٹر کی کم از کم اونچائی۔ **صرف ترمیمی سطح** (`.nabi-content.nabi-editing`) پر لگتا ہے — شائع شدہ یا پیش نظارے والے `.nabi-content` پر متن خود ہی اونچائی ہے، اس لیے مختصر متن کے نیچے خالی جگہ نہیں چھوڑتا | `12.5rem` |
+| `--nabi-touch-font-size` | کور کے بنائے ان پٹ خانوں (`.nabi-input` — لنک کا پتہ، محفوظ کرنے کا نام، prompt) کا متن سائز، انگلی سے چھونے والے آلے پر (`pointer: coarse` **یا** چوڑائی `40rem` یا کم)۔ **iOS سفاری فوکس 16px سے چھوٹے فارم خانے پر جائے تو پورا صفحہ زوم کر دیتا ہے،** اور یہی وہ بنیادی قدر ہے جو اسے روکتی ہے۔ ماؤس والی سکرین پر ایک پکسل بھی نہیں بدلتا | `16px` |
 
 `--nabi-typeface-base` اس گروہ میں نہیں — **کور خود اسے اعلان کرتا ہے** (default
 `--nabi-font` کی پیروی کرتا ہے)۔ typeface wing میں یہ قدر طے کرنے کا آپشن نہیں،
@@ -260,11 +264,36 @@ HTML دکھاتا ہے اس میں ایڈیٹر نہیں ہوتا، اس لیے 
 | selector | کیا | کون |
 |---|---|---|
 | `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | دستاویز کے پیش نظارے کی تہہ | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | ایک تصویر بڑی دیکھنے کا ڈبہ | `openImageLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | ایک تصویر بڑی دیکھنے کا ڈبہ | `openLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | پیسٹ کا candidate چننے کا panel | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | محفوظ کرنے کا panel — نام کا خانہ، extension کا نشان، فارمیٹ کے خانے | `openSavePanel()` |
 | `.nabi.is-fullscreen` | مکمل سکرین — `.nabi` ڈبے کو سکرین پر جما دیتا ہے | `setFullscreen()` (کلاس کا نام `FULLSCREEN_CLASS`) |
 
+::: tip دونوں panel **ایک ہی قاعدے** کے ہیں
+پیسٹ کا panel اور محفوظ کرنے کا panel ایک ہی grid کے پرزے سے بنے ہیں، اس لیے ان کے selector
+جوڑوں میں آتے ہیں — `.nabi-choose-list`/`.nabi-save-list` · `.nabi-choose-row`/`.nabi-save-row`
+· `.nabi-choose-icon`/`.nabi-save-icon` · `.nabi-choose-label`/`.nabi-save-label`۔ **دونوں**
+نشانہ بنے خانے کو `[aria-selected="true"]` سے دکھاتے ہیں، اور وہ نشان صرف ایک
+`--nabi-accent` بارڈر ہے — کوئی بھی panel خانے کے اندر رنگ نہیں بھرتا۔
+
+تین چیزیں صرف محفوظ کرنے والے panel کی ہیں: `.nabi-save-name` (نام کی سطر)، `.nabi-save-ext`
+(extension کا نشان)، اور `.nabi-save-note` (نقصان دہ ہونے کا نوٹ — نام سے چھوٹا، اور کسی
+warning رنگ میں نہیں)۔
+
+`--nabi-grid-cols` grid کے کالموں کی تعداد ہے، مگر **panel کھڑا کرنے والا ہاتھ خود لکھتا ہے** —
+panel اپنے خانے گن کر تین تک inline خود فہرست پر لکھ دیتا ہے، اس لیے یہ میزبان کے باہر سے طے
+کرنے کی قدر نہیں۔ `--nabi-save-ext-len` (extension کے نشان کی حرفی چوڑائی) بھی اسی طرح کی قدر
+ہے۔
+:::
+
+::: warning `.nabi-save-format` ختم ہو گیا ہے
+یہ نام اس وقت کا تھا جب محفوظ کرنے کا panel عمودی فہرست تھا۔ اس نام سے hover کا رنگ اوپر لکھنے
+والا میزبان **خاموشی سے ناکام ہوتا ہے** — grid کا ایک خانہ اب `.nabi-save-row` ہے (پیسٹ کے
+panel جیسی ہی جگہ کا نام)، اور hover یا نشانہ بننے پر اندر کوئی رنگ بھرتا ہی نہیں۔
+:::
+
 `mountViewTools()` لگا لیں تو دونوں بٹن خود انہیں کھولتے اور بند کرتے ہیں۔ خود
-کھولنا ہو تو `openPreview({ nabi, editor })` · `openImageLightbox({ editor, src,
+کھولنا ہو تو `openPreview({ nabi, surface })` · `openLightbox({ surface, src,
 alt?, locale })` · `setFullscreen(root, on)` · `isFullscreen(root)` بلائیں۔
 
 ::: tip آلات کی جگہ خود کھڑی ہو جاتی ہے

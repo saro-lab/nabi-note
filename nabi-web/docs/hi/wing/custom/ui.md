@@ -225,13 +225,16 @@ const { nabi, registry } = createNabiWith(wings, {
   ask: {
     message: (text) => window.alert(text),
     confirm: (text) => window.confirm(text),
+    choose: (question, options) => window.confirm(question) ? 0 : -1,
   },
 })
 ```
 
-`confirm` `boolean` और `Promise<boolean>` दोनों लेता है — ब्राउज़र का `confirm`
-ज्यों का त्यों लगाया जा सकता है, या अपना पैनल खोलकर बाद में जवाब दिया जा सकता
-है।
+| | शक्ल |
+|---|---|
+| `message` | `(text: string) => void` — एक बात, जवाब नहीं लेता |
+| `confirm` | `(text: string) => boolean \| Promise<boolean>` — सिंक्रोनस या असिंक्रोनस |
+| `choose` | `(question: string, options: ChooseOption[]) => number \| Promise<number>` — कई में से एक। जवाब **एक सूचकांक** है, `-1` (या सीमा बाहर) रद्दी है। `ChooseOption` है `{label, icon?}`, जहाँ `icon` 16×16 svg का भीतरी भाग है |
 
 ::: warning न दें तो जवाब हमेशा "नहीं" है
 `ask` न जोड़ें तो एक चुप डिफ़ॉल्ट लग जाता है। `message` कहीं नहीं जाता और

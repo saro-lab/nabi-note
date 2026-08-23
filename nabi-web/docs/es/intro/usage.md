@@ -147,6 +147,10 @@ es la hoja de estilos. Para cambiar el color o el aspecto, reescriba esta regla.
 
 **El texto guía es una capa aparte.** Se ha movido hacia el `::before` de la raíz de edición, así que está **intacto a la disposición del documento** — sin importar si la primera línea es un encabezado, está centrada o lleva una letra capital. Solo la dirección del texto decide dónde se para.
 
+### No bloquees el zoom con la meta viewport
+
+iOS Safari amplía la página entera cuando el foco llega a un campo de formulario cuyo texto es menor que 16px. El núcleo detiene eso **haciendo el texto más grande** — `--nabi-touch-font-size` (`16px` por defecto). **No** tomamos el otro camino de bloquear el zoom mismo con `user-scalable=no` o `maximum-scale=1`: eso quita el derecho de quien lee a hacer zoom. Si el host escribe esa meta en su propia página, el piso que el núcleo fijó se vuelve sin sentido — así que no lo escribas.
+
 | Ensamblaje | Obligatorio | Qué hace |
 |---|---|---|
 | `createNabiWith(wings, options?)` | Sí | Devuelve `{ nabi, registry }`. No necesita DOM. También acepta el arreglo de wings o el constructor de selección (`wings()`, vea [{{ t('menu_intro_cdn') }}](./cdn#elegir-wings)) |
@@ -328,6 +332,21 @@ vía de leer el JSON en el servidor y generar el HTML de salida ahí mismo.
 
 ---
 
+## Pegar, guardar y abrir
+
+**Pegar lee el portapapeles de varias maneras** — `HTML`, `MARKDOWN`, `TEXT` y el formato propio de nabi
+(`NABI`). Cuando más de una lectura se sostiene, un panel pequeño pregunta cuál pegar; cuando solo una
+lo hace, pega sin preguntar. Un pegado que no lleve nada de texto (solo archivos) se salta el panel
+y va a [{{ t('menu_etc_upload') }}](../wing/etc/upload).
+
+**Guardar en tres formatos** — `.nabi` (el original), `.nhtml` (una página HTML autocontenida) y `.md`
+(markdown; todo lo que no tiene lugar aquí se mezcla como HTML, así que podría no volver).
+**Abrir en cuatro** — esos tres más un `.html` simple de afuera. La puerta necesita el `mountFile()` de
+la tabla de arriba, y enchufar un formato más se cubre en
+[{{ t('menu_wing_custom') }}](../wing/custom#enchufar-un-filtro-de-e-s).
+
+---
+
 ## Las notificaciones salen por toast
 
 Los errores de subida, los avisos del registro local, un mensaje como "no hay nada que
@@ -379,6 +398,7 @@ const { nabi } = createNabiWith(wings, {
 |---|---|
 | `message` | `(text: string) => void` — un solo mensaje, no espera respuesta |
 | `confirm` | `(text: string) => boolean \| Promise<boolean>` — acepta tanto síncrono como asíncrono |
+| `choose` | `(question: string, options: ChooseOption[]) => number \| Promise<number>` — uno entre varios. La respuesta es **un índice**, y `-1` (o cualquier cosa fuera de rango) es cancelar. `ChooseOption` es `{ label, icon? }`, donde `icon` es el **interior** de un svg de 16×16 — déjalo fuera y solo el nombre se queda |
 
 **El núcleo no usa por su cuenta los diálogos del navegador.** Es porque en una página
 con sus propios diálogos no debería colarse una caja gris ajena, y porque en un plugin

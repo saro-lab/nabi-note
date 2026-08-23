@@ -60,6 +60,14 @@ vista previa es hijo de `body` y no le llega la herencia desde `.nabi`, y porque
 `.nabi-content` que se para solo fuera del editor también necesita recibir los tokens
 directamente.
 
+El selector `--nabi-placeholder` pinta el guía de texto vacío del editor:
+
+```css
+.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before
+```
+
+Se aplica cuando un párrafo o encabezado es el único hijo y contiene una sola línea rota (`<br>`), lo cual marca el estado vacío editable.
+
 La misma lista aparece escrita tres veces (el valor por defecto claro, `.dark` y el
 `.light` explícito). **Quien sobrescribe no necesita ver las tres** — con solo ganar en
 especificidad, un valor sobrescrito una vez se aplica en los tres casos. Solo si se
@@ -80,6 +88,10 @@ declarados en `.nabi`, así que la herencia no los puede vencer).
 | `--nabi-cursive-adjust` | El `font-size-adjust` de la manuscrita. Las fuentes de mano tienen una x-height baja, así que con el mismo tamaño en px se ven más pequeñas — este valor las vuelve a ajustar según la x-height | `0.4` |
 | `--nabi-sticky-top` | Cuánto baja la fila pegada. Si el sitio tiene una barra fija arriba, esa altura | `0px` |
 | `--nabi-preview-width` | El ancho de la tarjeta de vista previa. **Como `openPreview` mide el ancho del área de edición al abrirse y lo escribe directamente en la tarjeta**, aunque el host lo sobrescriba desde fuera, gana ese valor en línea | `720px` |
+| `--nabi-content-min-height` | La altura mínima de la superficie de edición. Por defecto `12.5rem`, y aplica **solo a la edición** (publicado y vista previa usan la altura del texto) | `12.5rem` |
+| `--nabi-placeholder-color` | Color del texto guía. Por defecto claro `#6b6b76aa` · oscuro `#9a9aa6aa`. El núcleo solo referencia, sin declarar, así que si lo escribes en `:root` ganas. Escribe también **`--nabi-placeholder-color-fallback`** (dos versiones claro y oscuro) — sin ellas el host no sabe por qué el color cambia en modo oscuro | Claro y oscuro |
+| `--nabi-touch-font-size` | Tamaño de fuente de los campos de entrada en dispositivos táctiles (`.nabi-input`: dirección de enlace, nombre de guardado, pregunta). Safari en iOS amplía la página si el foco cae en un campo menor a 16px — este es el valor mínimo que lo previene. Solo afecta dispositivos táctiles; en pantallas con ratón no cambia | `16px` |
+| `--nabi-bar-height` | La altura medida de la barra pegada que `mountSticky` conecta. El núcleo la escribe en la raíz `.nabi`, y `.nabi-content > *` la lee como `scroll-margin-block-start` para no quedar bajo la barra. **No es un valor para el host — es la explicación de por qué el cursor nunca desaparece bajo la barra** | — |
 
 `--nabi-typeface-base` no pertenece a este grupo — **lo declara el núcleo** (por defecto
 sigue a `--nabi-font`). El wing de tipografía no tiene ninguna opción para fijar este
@@ -286,6 +298,8 @@ recipiente que recibió. El host no tiene que poner un `<span>` antes de la barr
 herramientas — si ya deja preparado ese lugar, lo único que pasa es que quedan dos
 cajas.
 :::
+
+**El token `--nabi-grid-cols`** controla la cantidad de columnas en las rejillas de paneles (como los de guardar y abrir). Por defecto se calcula automáticamente, pero se puede fijar escribiendo este token en `:root` o en `.nabi` — el host lo refencia directamente sin necesidad de repetir la clase.
 
 También se pueden apuntar marcas exclusivas de la pantalla de edición —
 `[data-nabi-token]` (color de token de un bloque de código), `[data-nabi-lang]` (lenguaje

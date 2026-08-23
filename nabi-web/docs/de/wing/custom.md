@@ -156,7 +156,7 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 
 ## Jedes Feld, das Sie ausfüllen können
 
-`Wing` hat fünfundzwanzig Felder, und **nur zwei sind Pflicht** (`w` und `place`).
+`Wing` hat einunddreißig Felder, und **nur zwei sind Pflicht** (`w` und `place`).
 
 ### Was es ist
 
@@ -164,10 +164,12 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 |---|---|
 | `w` | Der Name dieses Flügels. Er wird zum `w` im gespeicherten Wert. Reservierte Wörter (`p`, `br`) sind nicht erlaubt |
 | `place` | `'mark'` über Zeichen · `'void'` ein Klotz ohne Inneres · `'container'` ein Klotz mit Text darin · `'attr'` ein Absatzattribut · `'tool'` ein Werkzeug, das keine Spur im Dokument hinterlässt |
+| `basic` | "Läuft es verdrahtet oder nicht?" — `false` standardmäßig. **Benutzerdefiniert auch**: Wenn eingestellt, passt es durch die `allBasic()`-Tür, aber was durch `.use(object)` kommt, das außerhalb der Liste steht, passt sich auch an |
 | `holds` | Wie es sein Inneres hält — `'blocks'` oder `'inline'` |
 | `singleParagraph` | Das Innere ist auf **einen** Absatz festgelegt (eine Tabellenzelle) |
 | `boolAttrs` | Namen boolescher Attribute, deren einziger Wert `1` ist |
 | `allows` | Die Namen der Flügel, die darin erlaubt sind. Weggelassen, alle |
+| `noAlign` | Nur für Blöcke. Wenn gesetzt, empfängt der Wrapper-Absatz, der diesen Block trägt, keine Ausrichtung — die Ausrichtung ist in der Werkzeugleiste verborgen, der Befehl lehnt mit "keine Änderung" ab, bereits gesetzte Werte werden von `undo` gelöscht. Der Code-Block ist der erste Benutzer — `pre` erbt `text-align`, was den Kasten bewegt, statt die Zeilen zu verschieben. Wenn Mark, Tool oder Absatzattribut eingestellt ist, **stirbt die Registrierung** |
 | `requiresAnyOf` | Einer davon muss daneben registriert sein |
 | `parts` | Schaltflächenlose Struktur, die mitgebracht wird — Zeilen und Zellen einer Tabelle, eine Klappbox-Zusammenfassung |
 
@@ -183,7 +185,10 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 | Feld | Bedeutung |
 |---|---|
 | `toHtml` · `partHtml` | Der Weg hinaus |
+| `toMd` | Optional. **Ohne Fallback zu `toHtml`**, die "HTML-gemischte Markdown"-Gestalt ist dort. Sie müssen ihn nur dann definieren, wenn Sie Markdown direkt schreiben können |
+| `partMd` | Optional, wie `toMd` aber für Teile — Zeilen und Zellen einer Tabelle |
 | `claim` | Entscheidet, wem dieses Tag in hereinkommendem HTML gehört |
+| `ioFilter` | Dieser Flügel **bringt die Einfügen, Speichern und Öffnen seines eigenen Formats mit** (`.nabi` ist die eingebaute Stelle). Die Details sind in [IO-Filter einstecken](#io-filter-einstecken) unten |
 | `repair` · `partRepair` | Glättet diesen Knoten an der JSON-Tür. Antworten Sie mit `null`, wird er samt Hülle entfernt |
 
 ### Hände und Tasten
@@ -193,6 +198,7 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 | `commands` | Die Commands, die dieser Flügel aufsetzt |
 | `onKey` | Fängt Tasten zuerst ab, während der Caret im Knoten dieses Flügels steht |
 | `escapeKeys` | Tasten, die das als Nächstes getippte Zeichen aus diesem Mark heraustreten lassen |
+| `doubleKeys` | `{ keyname: commandname }` — die angegebene Taste zweimal **innerhalb von 350ms** tippen führt den Command aus. Die Priorität ist am niedrigsten — er wartet, bis alle anderen Arbeiten mit dieser Taste vorbei sind. Bei der Registrierung **wird überprüft auf Tastenkollisionen und Real-Command** — bei Verletzung stirbt die Registrierung. Bedeutung ist getrennt von `escapeKeys` (das ist "die nächste Eingabe aus dem Mark heraustreten lassen") |
 | `inputRules` | Automatische Umwandlung, allein durch Tippen angetrieben |
 | `attach` | Für wenn der Bildschirm angefasst werden muss — das Ziehen einer Tabellenzelle, das Einfärben von Code |
 
@@ -203,6 +209,34 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 | `button` · `buttons` | Eine Werkzeugleisten-Schaltfläche oder mehrere |
 | `context` | Die Deklaration der Kontextzeile |
 | `styles` | Das CSS, das dieser Flügel trägt |
+
+---
+
+## IO-Filter einstecken
+
+**Ein IO-Filter ist kein Flügel.** Er steht nur an den Türen, durch die das Dokument geht — Einfügen,
+Speichern und Öffnen — übernimmt ein Format und erhebt keinen eigenen Knoten im Dokument. Der
+Vertrag ist ein einziges `IoFilter`.
+
+| Feld | Bedeutung |
+|---|---|
+| `id` · `label` | Der Name des Filters und der im Fenster gezeigte Name. Ein kollidierendes `id` **stirbt genau dort, wo Sie es registrieren** |
+| `paste` | Schaut sich die Zwischenablage (`PasteData`) an und bietet einen Kandidaten an. `null`, wenn es nicht das eigene ist, und `build()` gräbt nur, wenn die Person diesen Platz wählt |
+| `save` | `{ extension, write, lossy?, mime? }` — `write` bekommt ein `DocSource` und nimmt, was von `json()`, `html()` und `md()` es braucht. `lossy` ist, was "(Verlust)" auf dem Speicherfenster setzt |
+| `read` | Nimmt einen Namen und eine Zeichenkette und liest sie in einen Nabi-Baum. **`null`, wenn es nicht sein eigenes ist**, und es geht zum nächsten Filter über |
+
+**Alle drei Türen sind optional** — ein Filter, der nur Einfügen kennt, oder nur liest, ist
+in Ordnung. Die Stellen zum Einstecken sind `ioFilters` auf `mountSurface` und `mountFile`,
+`createNabiWith(wings, { ioFilters })`, und das `ioFilter`-Feld in der Tabelle oben, und
+**wer zuerst steht, gewinnt** — mount → Host → Flügel → eingebaut (`nabi`, `html`, `html-open`,
+`markdown`). Die Öffnungsliste kommt von `readExtensions(filters)`, das **einen Filter ohne
+Speicherkammer nicht zählen kann** (die eingebaute `.html` ist eine solche Stelle, daher fügt der
+Standardspeicher sie von Hand hinzu, um vier zu machen).
+
+Markdown allein kann ein Filter nicht machen — welche Zeichen ein Knoten geschrieben wird, ist
+von **dem Flügel** bekannt, der `toMd` und `partMd` oben trägt. Lassen Sie sie weg und der Knoten
+fällt auf `toHtml` zurück, gemischt in das md als HTML; und der md-Parser hebt auch **nur die
+Syntax auf, die ein registrierter Flügel aufnehmen kann**.
 
 ---
 

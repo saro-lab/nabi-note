@@ -74,6 +74,10 @@ CDN なら `<link>` の一行です。そのあとは変数を上書きするだ
 | `--nabi-cursive-adjust` | 筆記体の `font-size-adjust`。手書きの顔立ちは x ハイトが低く、同じ px でも小さく見えるので、この値が x ハイト基準で測り直します | `0.4` |
 | `--nabi-sticky-top` | 貼り付く行がどれだけ下がって座るか。サイトに固定のヘッダがあればその高さ | `0px` |
 | `--nabi-preview-width` | プレビューカードの幅。**`openPreview` が開くときに編集領域の幅を測ってカードへ直接書き込むため**、ホストが外から上書きしてもそのインライン値が勝ちます | `720px` |
+| `--nabi-placeholder` | 空のエディタが見せる案内文で、引用符に包まれた文字列です。**`mountSurface` が自分の `placeholder` オプション(またはコア辞書)の言葉を編集ルートに書き込むため**、ホストが外から上書きしてもそのインライン値が勝ちます — 見た目を変えたければ `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` を上書きします | なし(案内文なし) |
+| `--nabi-placeholder-color` | その案内文の色。この名前を **コアは宣言していません** — その裏には `--nabi-placeholder-color-fallback` が立っていて、ライト・ダークを知っています(ライト `#6b6b76aa` · ダーク `#9a9aa6aa`)。このトークンを `:root` に書けば両方のテーマで勝ちます | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | 空のエディタが立つ最小の高さです。掛かるのは **編集表面だけ**(`.nabi-content.nabi-editing`)— 発行・プレビューの `.nabi-content` では文字の長さがそのまま高さになるので、短い文章の下に空白は残りません | `12.5rem` |
+| `--nabi-touch-font-size` | コアが描く入力欄(`.nabi-input` — リンクの住所・保存名・プロンプト)の文字サイズで、指で操作する機器(`pointer: coarse` **または**幅 `40rem` 以下)にだけ掛かります。**iOS Safari は 16px 未満のフォーム欄に狙いが入るとページ全体を拡大します**、この値はそれを止める下限です。マウスの画面は一ピクセルも変わりません | `16px` |
 
 `--nabi-typeface-base` はこの分類ではありません — **コアが宣言します**(既定は
 `--nabi-font` に従います)。書体の翼にはこの値を決めるオプションがないので、変えたければ
@@ -251,12 +255,37 @@ const drop = injectSheets(document, collectSheets(registry))
 | セレクタ | 何 | 誰が |
 |---|---|---|
 | `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | ドキュメントのプレビューのオーバーレイ | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | 絵をひとつだけ大きく見る箱 | `openImageLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | 絵をひとつだけ大きく見る箱 | `openLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | 貼り付け候補を選ぶパネル | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | 保存パネル — 名前欄・拡張子の印・形式のセル | `openSavePanel()` |
 | `.nabi.is-fullscreen` | 全画面 — `.nabi` の箱を画面に固定します | `setFullscreen()` (クラス名は `FULLSCREEN_CLASS`) |
 
+::: tip 二つのパネルは **一組の規則**を共有します
+貼り付け候補パネルと保存パネルは同じ格子の部品から組み立てられているので、セレクタは
+対になっています — `.nabi-choose-list`/`.nabi-save-list` ·
+`.nabi-choose-row`/`.nabi-save-row` · `.nabi-choose-icon`/`.nabi-save-icon` ·
+`.nabi-choose-label`/`.nabi-save-label`。**どちらも**狙われたセルには
+`[aria-selected="true"]` が付き、その印は `--nabi-accent` の枠線ひとつです — どちらの
+パネルもセルの中を塗りつぶしません。
+
+保存パネルだけのものは三つです — `.nabi-save-name`(名前の行)・`.nabi-save-ext`
+(拡張子の印)・`.nabi-save-note`(損失の注記。名前より小さく、警告色でもありません)。
+
+`--nabi-grid-cols` は格子の列数ですが、**パネルを立てる手がこれを書きます** — パネルが
+自分のセルを数えて最大3までをリスト自身にインラインで書き込むので、ホストが外から
+セットする値ではありません。`--nabi-save-ext-len`(拡張子の印の文字幅)も同じ種類の
+値です。
+:::
+
+::: warning `.nabi-save-format` はなくなりました
+これは保存パネルが縦一列だった頃の名前です。ホバー時の塗りをこの名前で上書きしていた
+ホストは **黙って失敗します** — 格子のセルひとつはいまや `.nabi-save-row`(貼り付け候補
+パネルと同じ場所の名前)で、ホバー時にも狙われたときにも中を塗る仕組みはありません。
+:::
+
 `mountViewTools()` を付ければ、二つのボタンが自分でこれらを開いたり閉じたりします。
-自分で開きたければ `openPreview({ nabi, editor })` ·
-`openImageLightbox({ editor, src, alt?, locale })` · `setFullscreen(root, on)` ·
+自分で開きたければ `openPreview({ nabi, surface })` ·
+`openLightbox({ surface, src, alt?, locale })` · `setFullscreen(root, on)` ·
 `isFullscreen(root)` を呼んでください。
 
 ::: tip 道具の場所は自分で立ちます

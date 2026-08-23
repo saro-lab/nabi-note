@@ -14,8 +14,11 @@ Unggah terbagi tiga bagian — mendaftarkan sayapnya saja tidak berbuat apa-apa.
    bersamanya** agar hasilnya tersimpan di dokumen. Tanpa salah satunya, **kesalahan langsung
    muncul di tempat pendaftarannya** (tidak meledak belakangan).
 2. **`mountUpload({ … })`** — sisi yang sungguh menerima berkas dan menjalankan `uploader`.
-   Drop, tempel, dan pilihan berkas semuanya mengalir ke sini. **Lewatkan mount ini dan
-   tombolnya ada tetapi tidak terjadi apa-apa.**
+   Drop dan pilihan berkas semuanya mengalir ke sini — **tempel hanya sampai di sini kalau hanya
+   berkas tanpa teks**. Jika tempel membawa teks (HTML atau plain) apa pun, `fileSink` tidak
+   dipanggil dan alur tempel biasa berjalan. Untuk tempel gambar saja, salin gambar secara terpisah
+   tanpa teks (spreadsheet adalah tempat itu). **Lewatkan mount ini dan tombolnya ada tetapi tidak
+   terjadi apa-apa.**
 3. **`mountUploadView({ … })`** — sisi yang menegakkan placeholder progres di layar. Tanpanya
    unggahan tetap berjalan, tetapi layar tidak berkata apa-apa selama proses berlangsung.
 

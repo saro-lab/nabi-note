@@ -78,6 +78,10 @@ l'héritage ne peut pas l'emporter).
 | `--nabi-cursive-adjust` | Le `font-size-adjust` de la cursive. Les visages manuscrits ont une hauteur d'x basse et paraissent plus petits à px égal ; cette valeur les remesure à partir de la hauteur d'x | `0.4` |
 | `--nabi-sticky-top` | De combien la ligne collée s'assoit plus bas. La hauteur de votre bandeau fixe, si le site en a un | `0px` |
 | `--nabi-preview-width` | La largeur de la carte d'aperçu. **`openPreview` mesure la largeur de la zone d'édition à l'ouverture et l'écrit directement sur la carte**, donc même redéfinie par l'hôte, cette valeur en ligne l'emporte | `720px` |
+| `--nabi-placeholder` | le texte d'invite qu'affiche un éditeur vide, comme une chaîne citée. **`mountSurface` écrit le mot de sa propre option `placeholder` (ou du dictionnaire du cœur) sur la racine d'édition**, donc une valeur en ligne l'emporte sur tout ce que vous fixeriez de dehors — pour en changer l'allure, redéfinissez le sélecteur `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` | aucun (pas d'invite) |
+| `--nabi-placeholder-color` | la couleur de ce texte d'invite. Le cœur **ne déclare pas** ce nom ; en arrière-plan se tient `--nabi-placeholder-color-fallback`, qui connaît le clair et le sombre (clair `#6b6b76aa` · sombre `#9a9aa6aa`) — écrivez ce jeton sur `:root` et il l'emporte dans les deux thèmes | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | la hauteur minimale qu'un éditeur vide se dresse à. Elle s'applique **à la surface d'édition seule** (`.nabi-content.nabi-editing`) — sur une `.nabi-content` publiée ou en aperçu, c'est le texte lui-même qui en fait la hauteur, si bien qu'un texte court ne laisse aucune place vide au-dessous | `12.5rem` |
+| `--nabi-touch-font-size` | la taille de texte des champs de saisie que le cœur dessine (`.nabi-input` — une adresse de lien, un nom d'enregistrement, un prompt) sur un appareil à doigts (`pointer: coarse` **ou** une largeur de `40rem` ou moins). **Safari sur iOS agrandit la page entière quand le foyer tombe sur un champ de saisie plus petit que 16px**, et c'est l'étage qui l'arrête. Un écran à la souris ne bouge pas d'un seul pixel | `16px` |
 
 `--nabi-typeface-base` n'appartient pas à ce groupe — **c'est le cœur qui le déclare** (il suit
 `--nabi-font` par défaut). La wing Police n'a pas d'option pour fixer cette valeur : pour la
@@ -264,8 +268,35 @@ L'aperçu et le plein écran aussi, **c'est le cœur qui les bâtit.**
 | Sélecteur | Quoi | Qui |
 |---|---|---|
 | `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | La surimpression d'aperçu du document | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | La boîte qui montre une seule image en grand | `openImageLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | La boîte qui montre une seule image en grand | `openLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | la plate-forme pour en choisir une parmi les candidates au collage | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | la plate-forme d'enregistrement — champ de nom, marqueur d'extension, cases de format | `openSavePanel()` |
 | `.nabi.is-fullscreen` | Le plein écran — fixe la boîte `.nabi` à l'écran | `setFullscreen()` (le nom de classe est `FULLSCREEN_CLASS`) |
+
+::: tip Les deux plates-formes partagent **un même ensemble de règles**
+La plate-forme de collage et celle d'enregistrement se bâtissent à partir du même morceau de
+grille, si bien que leurs sélecteurs viennent par paires — `.nabi-choose-list`/`.nabi-save-list` ·
+`.nabi-choose-row`/`.nabi-save-row` · `.nabi-choose-icon`/`.nabi-save-icon` ·
+`.nabi-choose-label`/`.nabi-save-label`. **Les deux** marquent la cellule visée par
+`[aria-selected="true"]`, et ce marquage est un seul trait `--nabi-accent` — ni l'une ni l'autre ne
+remplit une cellule.
+
+Trois choses appartiennent à la plate-forme d'enregistrement seule : `.nabi-save-name` (la ligne
+de nom), `.nabi-save-ext` (le marqueur d'extension), et `.nabi-save-note` (la note de perte —
+plus petite que le nom, et pas en couleur d'alerte).
+
+`--nabi-grid-cols` est le nombre de colonnes de la grille, mais **c'est la main qui dresse la
+plate-forme qui l'écrit** — la plate-forme compte ses cellules et en écrit jusqu'à trois en ligne
+sur la liste elle-même, si bien que ce n'est pas une valeur que l'hôte fixe de dehors.
+`--nabi-save-ext-len` (la largeur en caractères du marqueur d'extension) est du même grain.
+:::
+
+::: warning `.nabi-save-format` s'en est allé
+C'était le nom d'époque où la plate-forme d'enregistrement était une liste verticale. Un hôte qui
+l'a utilisée pour redéfinir le remplissage au survol **échoue en silence** — une cellule de la
+grille est maintenant `.nabi-save-row` (le même nom d'emplacement que sur la plate-forme de
+collage), et il n'y a aucun remplissage intérieur au survol ni au visage du tout.
+:::
 
 Si vous montez `mountViewTools()`, les deux boutons ouvrent et ferment tout cela d'eux-mêmes. Pour
 ouvrir vous-même, appelez `openPreview({ nabi, editor })` ·

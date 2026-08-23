@@ -50,8 +50,8 @@ baris tombolnya tidak berantakan.
 
 ### Memilih wing
 
-Memilih wing hanyalah satu baris builder. Berkas di atas mengambil dua puluh sembilan
-wing bawaan, menghapus upload, dan mempersempit typeface jadi dua pilihan.
+Memilih wing hanyalah satu baris builder. Berkas di atas memulai dari dua puluh enam yang
+berjalan tanpa kabel, menambahkan save dan open, kemudian mempersempit typeface menjadi dua pilihan.
 
 ```js
 var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
@@ -59,6 +59,11 @@ var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['s
 
 - `all()` memulai dari semua wing resmi. **Kalau tidak dipanggil, mulai dari tangan
   kosong** — hanya yang dipanggil lewat `use()` yang termuat.
+- `allBasic()` mengambil hanya yang di antara mereka **berjalan tanpa kabel** (dua puluh enam).
+  Tiga yang ditinggalkan adalah upload, save dan open — mereka hidup hanya saat host menyediakan
+  server untuk unggah atau penyimpanan berkas, jadi menyebutnya secara default akan memberi pembaca
+  tombol yang tidak melakukan apa-apa saat ditekan. Itulah sebabnya contoh di atas menambahkan save
+  dan open kembali dengan `use()`.
 - `use('nama', opsi?)` menambahkan satu. Kalau dipanggil pada wing yang sudah ada,
   hanya opsinya yang ditumpuk — seperti `use('tf', { values: [...] })` di atas. Kalau
   ada wing yang jadi tumpuannya (upload butuh salah satu dari gambar atau tautan
@@ -97,6 +102,12 @@ tidak dipasang, jawaban pertanyaan itu adalah "tidak", dan pesan singkat yang ti
 butuh jawaban ditampilkan wadah toast bawaan core di bawah toolbar — tidak perlu
 memasang apa pun sendiri untuk notifikasi seperti galat upload. Lebih lanjut ada di
 [{{ t('menu_intro_usage') }}](./usage).
+
+`ask` juga membawa **`choose`, untuk memilih satu dari beberapa pilihan.** Panel tempel,
+walaupun, **berdiri tanpa perlu dipasang** — saat toolbar naik ia menggantung panelnya sendiri ke
+core (butir yang sama seperti kotak toast), jadi halaman yang menyebutkan toolbar, seperti berkas di
+atas, mendapat panel tanpa perlu kerja apa-apa. Pasang slot ini hanya saat ingin menukar dengan panel
+buatan sendiri.
 
 ### Mengeluarkan nilai
 

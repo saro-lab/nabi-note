@@ -48,8 +48,8 @@ passando a barra de ferramentas inteira a linha de botões não se desarruma.
 
 ### Escolher os wings
 
-Escolher os wings é uma única linha de construtor. O arquivo acima parte dos vinte e nove wings
-padrão, tira o upload e restringe o tipo de letra a dois.
+Escolher os wings é uma única linha de construtor. O arquivo acima começa dos vinte e seis wings
+que rodam sem nenhuma fiação, acrescenta save e open por cima, depois restringe o tipo de letra a dois.
 
 ```js
 var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
@@ -57,6 +57,9 @@ var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['s
 
 - `all()` começa com todos os wings oficiais. **Sem chamar, a mão fica vazia** — só o que entrar
   por `use()` é carregado.
+- `allBasic()` pega só os que **rodam do jeito que são, sem nenhuma fiação** (vinte e seis).
+  Os três que ficam de fora são upload, save e open — só ganham vida quando o host providencia um servidor
+  para upload ou uma loja de arquivo, então colocá-los por padrão entregaria ao leitor um botão que não faz nada quando é apertado. Por isso o exemplo acima recoloca save e open com `use()`.
 - `use('nome', opções?)` acrescenta um. Chamado num wing que já está dentro, só troca as opções —
   é o que `use('tf', { values: [...] })` faz acima. Se um wing depende de outro para funcionar
   (upload precisa de imagem ou link), esse outro é puxado junto, silenciosamente.
@@ -90,6 +93,8 @@ texto em andamento. Abrir mesmo assim?" vão para essa caixa. Sem encaixar, a re
 é "não", e um aviso que não precisa de resposta é mostrado pelo recipiente de toast que o núcleo
 já mantém, logo abaixo da barra de ferramentas — não é preciso encaixar nada à parte para avisos
 como erro de upload. Os detalhes estão em [{{ t('menu_intro_usage') }}](./usage).
+
+`ask` também carrega **`choose`, para escolher um dentre vários.** A barra de ferramentas, porém, **já traz o painel de cola consigo** — quando a barra se monta, ela prende seu próprio painel ao núcleo (o mesmo jeito que o toast), então uma página que se monta com barra de ferramentas, como a do arquivo acima, ganha o painel sem nenhuma fiação. Encaixe `ask.choose` só quando quiser colocar um painel todo seu no lugar.
 
 ### Tirar o valor
 

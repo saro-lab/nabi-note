@@ -15,8 +15,19 @@ La subida se reparte en tres piezas — registrar el wing por sí solo no hace n
    no hay ninguno de los dos, **salta una excepción en el mismo momento del registro**
    (no revienta más tarde).
 2. **`mountUpload({ … })`** — es la parte que realmente recibe los archivos y hace girar
-   el `uploader`. Por aquí llega todo: arrastre, pegado y selección de archivo. **Si se
+   el `uploader`. Por aquí llega todo: arrastre y selección de archivo. **Si se
    olvida este montaje, el botón estará ahí pero no ocurrirá nada.**
+
+::: warning Solo la mitad del pegado viene por aquí
+Si un pegado lleva **aunque sea un solo fragmento de texto** (`text/html` o `text/plain`), la subida no
+se llama en absoluto — el texto se convierte en candidato y va al
+[panel de pegado](../../intro/usage) en su lugar. Los archivos solo fluyen hacia la subida desde
+**un pegado sin ningún texto en absoluto.**
+
+Copiar celdas de una hoja de cálculo trae consigo tanto una tabla como texto, así que el resultado es
+**una tabla, no una imagen.** Para subirla como imagen, copia la imagen por sí sola. Un arrastre (arrastrar un archivo dentro)
+llega a la subida siempre, sin importar esta regla.
+:::
 3. **`mountUploadView({ … })`** — es la parte que levanta en pantalla el marcador de
    progreso. Sin él la subida funciona igual, pero mientras sube la pantalla no dice
    nada.

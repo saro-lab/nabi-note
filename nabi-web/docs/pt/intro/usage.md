@@ -127,15 +127,21 @@ mountSurface({ nabi, registry, root: surface, placeholder: 'Primeira linha\nSegu
 mountSurface({ nabi, registry, root: surface, placeholder: '' })   // sem texto de exemplo
 ```
 
-A quebra de linha (`\n`) se torna uma linha de fato. Só que o texto de exemplo fica **fora do
-fluxo** (para não empurrar o cursor), então numa área de edição de uma linha de altura um texto de
-várias linhas derrama para fora por baixo — dê essa altura mínima à área se for usar várias linhas.
+A quebra de linha (`\n`) se torna uma linha de fato. O texto de exemplo fica **fora do fluxo** —
+é uma camada à parte e não sofre o efeito da formatação do documento (título, alinhamento, capitular).
+Por padrão a área já tem `12.5rem` de altura mínima; quando precisar de mais, levante-a com
+`--nabi-content-min-height`. Esse valor se aplica **só à superfície de edição** — num documento
+publicado ou em prévia a altura é do próprio texto.
+
+**O texto de exemplo é uma camada à parte.** Fica na `::before` da raiz de edição, então não sofre
+o efeito de formatação do documento — seja a primeira linha um título, alinhada ou com capitular —
+a posição dela depende só da direção do texto.
 
 A palavra entra na raiz da área de edição como `--nabi-placeholder`, e quem desenha é a folha de
 estilos. Para mudar a cor ou o traço, sobrescreva esta regra.
 
 ```css
-.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before {
+.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before {
   color: #999;
 }
 ```
@@ -144,13 +150,13 @@ estilos. Para mudar a cor ou o traço, sobrescreva esta regra.
 |---|---|---|
 | `createNabiWith(wings, options?)` | Sim | Devolve `{ nabi, registry }`. Não precisa de DOM. Aceita tanto um array de wings quanto o construtor de seleção (`wings()`, veja [{{ t('menu_intro_cdn') }}](./cdn#escolher-os-wings)) |
 | `mountSurface({ nabi, registry, root })` | Sim | Reconcilia cursor, IME e entrada com a árvore nabi. Prende junto o `attach` dos wings registrados |
-| `mountToolbar({ nabi, registry, root, surface?, locale? })` | Não | A barra de ferramentas principal. Sem ela, ainda dá para editar direto via `applyCommand()` |
+| `mountToolbar({ nabi, registry, root, surface?, locale?, file? })` | Não | A barra de ferramentas principal. Sem ela, ainda dá para editar direto via `applyCommand()`. Encaixe a resposta de `mountFile()` em `file` e **o painel de salvar se coloca sem nenhuma fiação** — o botão salvar e <kbd>⌘</kbd><kbd>S</kbd> o abrem. Deixe vazio e o pressionamento chega ao host por `onHost('save')`, como antes. `surface` também é **o terreno onde vivem os atalhos** (veja [Onde os aceleradores são ouvidos](#onde-os-aceleradores-são-ouvidos)) |
 | `mountContextToolbar({ nabi, registry, root, surface? })` | Não | Linha de contexto por lugar do cursor (linha/coluna de tabela, linguagem de código, endereço/nome de link, etc.) |
 | `mountHints({ toolbar, context?, root, surface? })` | Não | O selo de atalhos que aparece ao apertar Shift duas vezes seguidas |
 | `mountViewTools({ nabi, surface, root, container, onBody? })` | Não | Os dois botões de prévia e tela cheia. `root` é a caixa `.nabi` que a tela cheia fixa, `onBody` é o hook que prende o runtime do lado da leitura no corpo da prévia (abaixo) |
-| `mountSticky({ root, surface })` | Não | Desfaz o quanto a barra fixa foi empurrada pelo teclado do celular |
+| `mountSticky({ root, surface, chrome?, nabi? })` | Não | Desfaz o quanto a barra fixa foi empurrada pelo teclado do celular. Passe `nabi` e **depois de uma edição o cursor se empurra para fora de baixo a barra por si mesmo** — deixe de fora e funciona como antes, só quando o host chama `aim()` (veja [O teclado móvel e a barra fixa](#o-teclado-móvel-e-a-barra-fixa)) |
 | `mountPickedMark({ nabi, surface })` | Não | A marca de seleção de imagem/vídeo (o navegador não desenha isso sozinho) |
-| `mountFile({ nabi, store, name? })` | Ao usar save/open | Salvar e abrir como arquivo `.nabi` |
+| `mountFile({ nabi, store, registry, parse?, name? })` | Ao usar save/open | salva em **três** formatos — `.nabi`, `.nhtml`, `.md` — e abre **quatro**, esses três mais um `.html` simples de fora. **`registry` é obrigatório** — a lista de formatos e a montagem de md e HTML vêm dele. `parse` é a porta que lê HTML; num navegador pode deixar de fora e `parseNodes` entra no lugar, mas num lugar sem DOM (servidor, testes) precisa passar para `.nhtml` e `.html` abrirem. O `FileMount` que ele devolve é **o jeito canônico de salvar e abrir sem wings** (`file.save()` · `file.saveAs(id, name)` · `file.formats()` · `await file.open()`) |
 | `mountLocalHistory({ nabi, storage })` | Ao usar localHistory | Grava no navegador em intervalos definidos. Monta mesmo que `storage` seja `null` (lugares bloqueados como `file://`) — assim o botão explica por toast por que não funciona |
 | `mountUpload({ … })` + `mountUploadView({ … })` | Ao usar upload | O progresso de envio de arrastar-e-soltar, colar e escolher arquivo, e a sua exibição |
 
@@ -287,6 +293,14 @@ gerar HTML para enviar continua aberto.
 
 ---
 
+## Colar, salvar e abrir
+
+**Colar lê uma área de transferência através de vários olhos** — `HTML`, `MARKDOWN`, `TEXT` e o formato próprio do nabi (`NABI`). Quando há mais de uma leitura, um painel pequeno pergunta qual colar; quando há só uma, cola sem perguntar. Uma cola sem texto algum (só arquivos) pula o painel e vai para [{{ t('menu_etc_upload') }}](../wing/etc/upload).
+
+**Três formatos salvam** — `.nabi` (o original), `.nhtml` (uma página HTML independente) e `.md` (markdown; o que não cabe ali vira HTML, então pode não voltar como era). **Quatro abrem** — esses três mais um `.html` simples de fora. Essa porta precisa do `mountFile()` da tabela acima, e encaixar um formato a mais está em [{{ t('menu_wing_custom') }}](../wing/custom#plugging-in-an-io-filter).
+
+---
+
 ## Os avisos saem como toast
 
 Erro de upload, aviso do histórico local, um "nada para aplicar aqui" — tudo isso sai por **um
@@ -336,6 +350,7 @@ const { nabi } = createNabiWith(wings, {
 |---|---|
 | `message` | `(text: string) => void` — uma única fala, sem receber resposta |
 | `confirm` | `(text: string) => boolean \| Promise<boolean>` — aceita síncrono ou assíncrono |
+| `choose` | `(question: string, options: ChooseOption[]) => number \| Promise<number>` — uma dentre várias. A resposta é **um índice**, e `-1` (ou qualquer coisa fora do intervalo) é um cancelamento. `ChooseOption` é `{ label, icon? }`, onde `icon` é o **interior** de um svg 16×16 — deixe de fora e o nome fica sozinho |
 
 **O núcleo não usa o do navegador automaticamente.** Uma caixa cinza não deve invadir uma
 página que já tem seu próprio diálogo, e plugins (IntelliJ, VS Code) nem sequer têm

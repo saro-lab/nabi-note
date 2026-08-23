@@ -31,6 +31,12 @@ perintah (`clearFormat`) dan satu tombol bilah alat adalah semuanya.
   — menghapus format tidak boleh membuat gambarnya melompat kembali ke kiri.
 - Jika tidak ada apa pun yang bisa dilucuti, perintah ini menjawab `null`, jadi
   tidak ada titik undo yang menumpuk.
+- **Tekan Escape dua kali untuk menjalankan perintah ini** — itu adalah kunci pertama ke perintah
+  ini. Prioritasnya paling rendah, sehingga pekerjaan Escape lainnya (melepas reservasi, melarikan
+  tanda) terjadi terlebih dahulu. **Hanya karet pun sudah cukup** — tidak perlu seleksi. Dua ketukan
+  harus dalam 350ms, dan hanya ketukan kedua yang menghitung — tekan empat kali tetap satu perintah.
+  **Tidak berlaku** saat panel terbuka, dialog terbuka, layar penuh, lencana hint, atau kunci unggah.
+  Keterangan alat adalah "Hapus format (Esc Esc)".
 
 ## Contoh penggunaan
 

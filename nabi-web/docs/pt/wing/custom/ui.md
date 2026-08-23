@@ -228,6 +228,12 @@ const { nabi, registry } = createNabiWith(wings, {
 `confirm` aceita um `boolean` ou um `Promise<boolean>` — encaixe o `confirm` do próprio
 navegador, ou levante um painel próprio e responda depois.
 
+Um terceiro lugar, `choose`, é **um dentre vários** — essa porta se abre quando uma cola tem dois ou mais candidatos.
+
+```ts
+choose: (question, options) => user_callback(question, options),   // a resposta é um índice
+```
+
 ::: warning Sem isso, a resposta é sempre "não"
 Sem fornecer `ask`, entra um padrão silencioso. `message` não vai para lugar nenhum, e
 `confirm` responde `false`. A lógica é que é melhor **um perguntar-e-então-apagar falhar

@@ -75,6 +75,10 @@ description: تُستبدَل الألوان والأشكال بمتغيرات C
 | `--nabi-cursive-adjust` | قيمة `font-size-adjust` للخط المخطوطي. ارتفاع الحرف الصغير x-height منخفض في الخطوط اليدوية فتبدو أصغر بنفس البكسل، وهذه القيمة تعيد ضبطها على أساس x-height | `0.4` |
 | `--nabi-sticky-top` | كم ينزل الشريط الملتصق. إن كان في الموقع شريط رأس ثابت فضع ارتفاعه هنا | `0px` |
 | `--nabi-preview-width` | عرض بطاقة المعاينة. **بما أن `openPreview` يقيس عرض منطقة التحرير عند الفتح ويكتبه مباشرة على البطاقة**، فإن استبدال المضيف من الخارج يُغلَب بتلك القيمة المضمَّنة | `720px` |
+| `--nabi-placeholder` | النص النائب الذي يظهره محرر فارغ، كسلسلة محاطة بعلامتَي اقتباس. **يكتب `mountSurface` الكلمة من خيار `placeholder` الخاص به (أو من قاموس النواة) مباشرة على جذر التحرير**، فتُغلَب أي قيمة تكتبها من الخارج بتلك القيمة المضمَّنة — لتغيير طابعه استبدل `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` | لا شيء (بلا نص نائب) |
+| `--nabi-placeholder-color` | لون ذلك النص النائب. **لا تُعلِن** النواة هذا الاسم؛ خلفه يقف `--nabi-placeholder-color-fallback`، الذي يعرف الفاتح والداكن (فاتح `#6b6b76aa` · داكن `#9a9aa6aa`) — اكتب هذا الرمز في `:root` ليغلب في الوضعين معًا | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | أدنى ارتفاع يقفه محرر فارغ. يسري **على سطح التحرير فقط** (`.nabi-content.nabi-editing`) — أما `.nabi-content` منشورة أو معاينة فالنص نفسه هو ارتفاعها، فلا يترك نص قصير فراغًا تحته | `12.5rem` |
+| `--nabi-touch-font-size` | حجم نص خانات الإدخال التي ترسمها النواة (`.nabi-input` — عنوان رابط، اسم حفظ، سؤال) على جهاز باللمس (`pointer: coarse` **أو** عرض `40rem` فأقل). **يُكبِّر سفاري iOS الصفحة كلها إن حطّ التركيز على خانة نموذج أصغر من 16px**، وهذا هو الحد الذي يمنع ذلك. لا يتغيّر شاشة الفأرة ولو بكسل واحد | `16px` |
 
 `--nabi-typeface-base` ليس من هذا الصنف — **النواة هي من تُعلِنه** (والافتراضي
 يتبع `--nabi-font`). لا يملك جناح نوع الخط خيارًا لتحديد هذه القيمة، فإن أردت
@@ -253,12 +257,37 @@ const drop = injectSheets(document, collectSheets(registry))
 | المُحدِّد | ماذا | من |
 |---|---|---|
 | `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | طبقة معاينة المستند | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | صندوق تكبير صورة واحدة | `openImageLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | صندوق تكبير صورة واحدة | `openLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | لوحة اختيار مرشَّح اللصق | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | لوحة الحفظ — خانة الاسم، شارة الامتداد، خلايا الصيغة | `openSavePanel()` |
 | `.nabi.is-fullscreen` | ملء الشاشة — يثبّت صندوق `.nabi` على الشاشة | `setFullscreen()` (اسم الصنف هو `FULLSCREEN_CLASS`) |
 
+::: tip اللوحتان تشتركان في **طقم قواعد واحد**
+لوحة اللصق ولوحة الحفظ تُبنَيان من نفس جزء الشبكة، فمُحدِّداتهما تأتي أزواجًا —
+`.nabi-choose-list`/`.nabi-save-list` · `.nabi-choose-row`/`.nabi-save-row` ·
+`.nabi-choose-icon`/`.nabi-save-icon` · `.nabi-choose-label`/`.nabi-save-label`.
+**كلتاهما** تعلّم الخلية المستهدَفة بـ`[aria-selected="true"]`، وتلك العلامة حدّ
+`--nabi-accent` وحده — لا تملأ أي لوحة الخلية بلون.
+
+ثلاثة تخص لوحة الحفظ وحدها: `.nabi-save-name` (صف الاسم)، و`.nabi-save-ext`
+(شارة الامتداد)، و`.nabi-save-note` (ملاحظة الفقد — أصغر من الاسم، وبلا لون
+تحذير).
+
+`--nabi-grid-cols` هو عدد أعمدة الشبكة، لكن **اليد التي تقيم اللوحة هي من
+تكتبه** — تعدّ اللوحة خلاياها وتكتب حتى ثلاثة أعمدة مضمَّنة على القائمة نفسها،
+فليست قيمة يضبطها المضيف من الخارج. `--nabi-save-ext-len` (عرض شارة الامتداد
+بالحرف) من نفس الصنف.
+:::
+
+::: warning `.nabi-save-format` لم يعد موجودًا
+كان هذا اسم لوحة الحفظ حين كانت قائمة عمودية. المضيف الذي استعمله لاستبدال تلوين
+الحوم (hover) **يفشل بصمت** — خلية الشبكة الآن `.nabi-save-row` (اسم الموضع
+نفسه في لوحة اللصق)، ولا يوجد أي تلوين داخلي عند الحوم أو الاستهداف إطلاقًا.
+:::
+
 إن علّقت `mountViewTools()` تولّى الزرّان فتح هذه وإغلاقها بنفسيهما. لفتحها يدويًّا
-استدعِ `openPreview({ nabi, editor })` أو
-`openImageLightbox({ editor, src, alt?, locale })` أو `setFullscreen(root, on)` أو
+استدعِ `openPreview({ nabi, surface })` أو
+`openLightbox({ surface, src, alt?, locale? })` أو `setFullscreen(root, on)` أو
 `isFullscreen(root)`.
 
 ::: tip موضع الأدوات يُقام بنفسه

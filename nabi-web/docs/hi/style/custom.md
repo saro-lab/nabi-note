@@ -75,6 +75,10 @@ description: रंग और आकार CSS वेरिएबल से ब�
 | `--nabi-cursive-adjust` | हस्तलिपि (cursive) का `font-size-adjust`। हस्तलेख वाले फ़ॉन्ट की x-height कम होती है, जिससे वही px भी छोटा दिखता है — यह मान x-height के हिसाब से फिर सेट करता है | `0.4` |
 | `--nabi-sticky-top` | चिपकी पंक्ति कितना नीचे बैठती है। साइट पर ऊपर स्थिर हेडर हो तो उसकी ऊँचाई | `0px` |
 | `--nabi-preview-width` | पूर्वावलोकन कार्ड की चौड़ाई। **`openPreview` खुलते समय संपादन क्षेत्र की चौड़ाई नापकर सीधे कार्ड पर लिख देता है**, इसलिए होस्ट बाहर से बदले तो भी वह इनलाइन मान जीतता है | `720px` |
+| `--nabi-placeholder` | खाली एडिटर दिखाने वाला संकेत-पाठ, उद्धृत स्ट्रिंग के रूप में। **`mountSurface` अपने `placeholder` विकल्प (या कोर शब्दावली) से संपादन जड़ पर लिख देता है**, इसलिए इनलाइन मान बाहर से बदले हुए को जीतता है — रूप बदलना हो तो `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` नियम बदलें | कोई नहीं (बिना संकेत-पाठ) |
+| `--nabi-placeholder-color` | उस संकेत-पाठ का रंग। कोर **इस नाम को घोषित नहीं करता**, पीछे `--nabi-placeholder-color-fallback` है जो लाइट·डार्क दोनों जानता है (लाइट `#6b6b76aa` · डार्क `#9a9aa6aa`) — इस टोकन को `:root` में लिखें तो दोनों थीम में जीतता है | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | खाली एडिटर कम से कम कितना ऊँचा खड़ा हो। **सिर्फ़ संपादन सतह** (`.nabi-content.nabi-editing`) पर लागू होता है — प्रकाशित या पूर्वावलोकन किए `.nabi-content` में अक्षर की ऊँचाई ही बनती है, इसलिए छोटे पाठ के नीचे खाली जगह नहीं रहती | `12.5rem` |
+| `--nabi-touch-font-size` | कोर जिन input कक्षों को खींचता है (`.nabi-input` — लिंक पता, सहेज नाम, प्रॉम्प्ट) उनका अक्षर-आकार finger device पर (`pointer: coarse` **या** चौड़ाई `40rem` या उससे कम)। **iOS सफ़ारी पूरे पेज को ज़ूम करता है जब 16px से छोटी कक्ष में फ़ोकस आता है**, यह बिछाई उसे रोकती है। mouse screen पर एक पिक्सल भी नहीं बदलता | `16px` |
 
 `--nabi-typeface-base` इस समूह में नहीं है — इसे **कोर घोषित करता है** (डिफ़ॉल्ट
 `--nabi-font` का अनुसरण करता है)। टाइपफ़ेस wing में यह मान तय करने का कोई विकल्प
@@ -260,17 +264,40 @@ const drop = injectSheets(document, collectSheets(registry))
 | चयनकर्ता | क्या है | कौन |
 |---|---|---|
 | `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | दस्तावेज़ पूर्वावलोकन ओवरले | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | सिर्फ़ एक छवि को बड़ा दिखाने वाला बक्सा | `openImageLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | सिर्फ़ एक छवि को बड़ा दिखाने वाला बक्सा | `openLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | पेस्ट उम्मीदवार चुनने वाला पैनल | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | सहेजना पैनल — नाम कक्ष, आगम निशान, फ़ॉर्मेट कक्ष | `openSavePanel()` |
 | `.nabi.is-fullscreen` | फ़ुल-स्क्रीन — `.nabi` बक्से को स्क्रीन पर जकड़ता है | `setFullscreen()` (क्लास का नाम `FULLSCREEN_CLASS`) |
 
 `mountViewTools()` जोड़ें तो दोनों बटन इन्हें खुद खोलते-बंद करते हैं। खुद खोलना
-हो तो `openPreview({ nabi, editor })` · `openImageLightbox({ editor, src, alt?, locale })`
-· `setFullscreen(root, on)` · `isFullscreen(root)` बुलाएँ।
+हो तो `openPreview({ nabi, surface })`, `openLightbox({ surface, src, alt?, locale })`,
+`setFullscreen(root, on)` या `isFullscreen(root)` बुलाएँ।
+
+::: tip दोनों पैनल **एक ही नियम** इस्तेमाल करते हैं
+पेस्ट पैनल और सहेजना पैनल दोनों grid-part से बनते हैं, इसलिए उनके चयनकर्ता जोड़ों में आते हैं —
+`.nabi-choose-list`/`.nabi-save-list` · `.nabi-choose-row`/`.nabi-save-row` ·
+`.nabi-choose-icon`/`.nabi-save-icon` · `.nabi-choose-label`/`.nabi-save-label`। **दोनों**
+लक्षित कक्ष को `[aria-selected="true"]` से निशान करते हैं, और वह निशान सिर्फ़ `--nabi-accent` सीमा है
+— न तो पैनल कक्ष भरता है।
+
+सहेजना पैनल के तीन अकेले हैं: `.nabi-save-name` (नाम पंक्ति), `.nabi-save-ext` (आगम निशान),
+और `.nabi-save-note` (हानि का नोट — नाम से छोटा, warning रंग बिना)।
+
+`--nabi-grid-cols` ग्रिड की पंक्ति-संख्या है, पर **पैनल खुद लिख देता है** — पैनल अपनी कोशिकाएँ
+गिनकर तीन तक सीधे list पर लिख देता है, इसलिए होस्ट बाहर से लिखने वाला मान नहीं है।
+`--nabi-save-ext-len` (आगम निशान की character चौड़ाई) इसी किस्म का है।
+:::
+
+::: warning `.nabi-save-format` खत्म हो गया
+वह नाम तब की बात थी जब सहेजना पैनल खड़ी सूची था। जो होस्ट यह नाम hover भरने को बदलने में
+इस्तेमाल करता था **चुप रहकर असफल** होता है — grid की एक कक्ष अब `.nabi-save-row` है
+(पेस्ट पैनल जैसा ही slot नाम), और hover या लक्ष्य पर कोई भीतरी भरना है ही नहीं।
+:::
 
 ::: tip टूल की जगह खुद खड़ी होती है
-`mountViewTools` `.nabi-tools` बक्सा खुद बनाकर मिले पात्र के सबसे आगे डाल देता
-है। होस्ट को टूलबार से पहले `<span>` रखने की ज़रूरत नहीं — जगह पहले से बनाकर
-रखी हो तो सिर्फ़ दो बक्से बन जाते हैं।
+`mountViewTools()` **अपना बक्सा खुद उठाता है** और दिए गए पात्र के सामने जोड़ देता है — उस
+पात्र को `.nabi-tools` नहीं बनाता। इसलिए टूलबार खुद दे दीजिए, कुछ टूटता नहीं — दाईं ओर तैरने
+वाली क्लास कोर की अपनी पहली चीज़ पर है, और बाक़ी पंक्ति उसके चारों ओर बहती है।
 :::
 
 संपादन स्क्रीन के लिए ख़ास निशान भी पकड़े जा सकते हैं — `[data-nabi-token]`

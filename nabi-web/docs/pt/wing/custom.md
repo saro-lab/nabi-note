@@ -154,7 +154,7 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 
 ## Todos os campos que se pode preencher
 
-`Wing` tem vinte e cinco campos, e **só dois são obrigatórios** (`w` e `place`).
+`Wing` tem trinta e um campos, e **só dois são obrigatórios** (`w` e `place`).
 
 ### O que é
 
@@ -162,10 +162,12 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 |---|---|
 | `w` | O nome deste wing. Vira o `w` no valor salvo. Palavras reservadas (`p`, `br`) não são permitidas |
 | `place` | `'mark'` sobre caracteres · `'void'` um bloco sem interior · `'container'` um bloco com texto dentro · `'attr'` um atributo de parágrafo · `'tool'` uma ferramenta sem rastro no documento |
+| `basic` | Só para objetos. Se declarado, este wing passa na peneira do `allBasic()`. Sem declarar, é `false`. **Um wing customizado também segue a mesma régua**: se declarado, passa no peneiro do `allBasic()`, mas fora da lista, tudo que entra via `.use(objeto)` passa igual |
 | `holds` | Como guarda o seu interior — `'blocks'` ou `'inline'` |
 | `singleParagraph` | O interior é fixado a **um único** parágrafo (a célula de uma tabela) |
 | `boolAttrs` | Nomes de atributos booleanos cujo único valor é `1` |
 | `allows` | Os nomes de wings permitidos ali dentro. Sem isso, todos |
+| `noAlign` | Só para objetos. Se declarado, o parágrafo wrapper deste objeto não recebe alinhamento — a barra de ferramentas esconde alinhamento · o comando o rejeita como mudança nenhuma · um valor já gravado é removido quando o caminho de leitura passa. Blocos, ferramentas e atributos de parágrafo que declaram isso causam o registro a falhar |
 | `requiresAnyOf` | Um destes precisa estar registrado junto |
 | `parts` | Estrutura sem botão trazida junto — linhas e células de uma tabela, a linha de resumo de um bloco recolhível |
 
@@ -181,6 +183,9 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 | Campo | Significado |
 |---|---|
 | `toHtml` · `partHtml` | O caminho de saída |
+| `toMd` | Saída — escolher, **sem isso cai para `toHtml`** = o que "html misturado em md" faz de verdade |
+| `partMd` | Saída — partes sem botão |
+| `ioFilter` | Wing traz seu filtro junto — a tabela de wing tem os exemplos em TSV |
 | `claim` | Decide a quem pertence esta tag no HTML que entra |
 | `repair` · `partRepair` | Apara este nó na porta do JSON. Responder `null` remove tudo, casca incluída |
 
@@ -191,6 +196,7 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 | `commands` | Os comandos que este wing acrescenta |
 | `onKey` | Intercepta a tecla primeiro enquanto o cursor está dentro de um nó deste wing |
 | `escapeKeys` | Teclas que fazem o próximo caractere digitado sair deste mark |
+| `doubleKeys` | `{ nome da tecla: nome do comando }`, quando essa tecla é **apertada duas vezes em 350ms** aquele comando roda. A prioridade é a mais baixa, então recebe depois que todos os outros usos daquela tecla terminam. O registro **verifica sobreposição de tecla e realidade de comando** no momento da entrada, então infração mata o registro. Diferencie do sentido de `escapeKeys` («marca se despindo e voltando a escrever») por causa da confusão |
 | `inputRules` | Conversão automática disparada só pela digitação |
 | `attach` | Para quando é preciso tocar a tela — arrastar célula de tabela, colorir código |
 
@@ -201,6 +207,31 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 | `button` · `buttons` | Um botão da barra de ferramentas, ou vários |
 | `context` | A declaração da linha de contexto |
 | `styles` | O CSS que este wing carrega |
+
+---
+
+## Plugando um filtro de E/S
+
+Um filtro de E/S é **um wing?** Não. Wing tem seus nós no documento, um filtro **não tem.** É o ponto de extensão que cuida de colar (a porta dentro) e salvar e abrir (a porta fora) como um conjunto só. Fica **fora do contrato wing**, e por isso não estabelece nó próprio no documento.
+
+```ts
+interface IoFilter {
+  id: string              // único entre os filtros registrados — uma pequena string
+  label: string           // título que aparece num painel de escolha
+  paste: (candidato: string, formato: string) => object | null    // HTML · MARKDOWN · TEXT · NABI → árvore nabi
+  save: {
+    extension: string     // como `.html`, o sufixo do nome do arquivo
+    write: (doc) => string    // árvore nabi → string
+    lossy?: boolean       // sai alguma coisa em volta?
+    mime?: string         // padrão `text/plain`
+  }
+  read: (string) => object | null    // lê aí — arquivo aberto em formato registrado neste filtro
+}
+```
+
+**As três portas são todas obrigatórias.** O caminho para encaixá-lo é: `mount` → host → wing → embutidos de dentro (`nabi`·`html`·`html-open`·`markdown`). `readExtensions` **não consegue contar** um filtro que não tem porta `save`. Markdown é **um filtro e um wing de uma vez** — um precisa trabalhar junto (`toMd`·`partMd`) para que aquele funcione.
+
+**Não entra num menu.** `nav.ts` não é afetado neste turno.
 
 ---
 

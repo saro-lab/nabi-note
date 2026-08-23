@@ -75,6 +75,10 @@ estão declarados em `.nabi`, e a herança não consegue vencer isso).
 | `--nabi-cursive-adjust` | o `font-size-adjust` da cursiva. Fontes manuscritas têm x-height baixo e por isso parecem menores no mesmo px; este valor reajusta com base no x-height | `0.4` |
 | `--nabi-sticky-top` | o quanto a linha fixa desce ao se assentar. Se o site tem um cabeçalho fixo, use a altura dele | `0px` |
 | `--nabi-preview-width` | a largura do cartão de prévia. **Como `openPreview` mede a largura da área de edição ao abrir e a escreve direto no cartão**, mesmo que o host sobrescreva por fora, esse valor inline vence | `720px` |
+| `--nabi-placeholder` | o texto de exemplo que o editor vazio mostra, como string entre aspas. **`mountSurface` escreve a palavra de sua própria opção `placeholder` (ou do dicionário do núcleo) na raiz de edição**, então um valor inline vence qualquer coisa que você defina de fora — para mudar o traço, sobrescreva `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` | nenhum (sem texto de exemplo) |
+| `--nabi-placeholder-color` | a cor daquele texto de exemplo. O núcleo **não declara** este nome; atrás dele está `--nabi-placeholder-color-fallback`, que conhece claro e escuro (claro `#6b6b76aa` · escuro `#9a9aa6aa`) — escreva este token em `:root` e ele vence nos dois temas | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | a altura mínima que um editor vazio ocupa. Aplica-se **só à superfície de edição** (`.nabi-content.nabi-editing`) — num `.nabi-content` publicado ou em prévia o próprio texto é a altura, então texto curto deixa nenhum espaço vazio embaixo | `12.5rem` |
+| `--nabi-touch-font-size` | o tamanho do texto dos campos de entrada que o núcleo desenha (`.nabi-input` — endereço de link, nome de salvar, prompt) num dispositivo de toque (`pointer: coarse` **ou** largura de `40rem` ou menos). **Safari do iOS amplia a página inteira quando o cursor pousa num campo de formulário menor que 16px**, e este é o piso que o impede. Uma tela de mouse não muda em nenhum pixel | `16px` |
 
 `--nabi-typeface-base` não é deste grupo — **o núcleo o declara** (o padrão segue
 `--nabi-font`). O wing de tipo de letra não tem uma opção para definir esse valor, então, para
@@ -248,6 +252,16 @@ O que não se resolve por variável, mira direto numa classe que de fato existe.
 | `.nabi-hints [data-hint]` | o selo de atalhos que aparece ao apertar Shift duas vezes seguidas — o selo é `::before`, o rótulo é `::after`, e os dois aparecem juntos | `mountHints()` |
 | `[data-nabi-tip]` | o rótulo (tooltip) — desenhado só com `::after` em CSS | o núcleo, de forma geral |
 | `.nabi-content.nabi-dropping` | a área de edição enquanto um arquivo é arrastado sobre ela. O texto de aviso vai no atributo `data-nabi-drop` | `mountUpload()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | o painel para escolher um candidato de cola | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | o painel de salvar — campo de nome, marcador de extensão, células de formato | `openSavePanel()` |
+
+O painel de cola e o de salvar são construídos da mesma parte de grade, então os seletores deles vêm em pares — `.nabi-choose-list`/`.nabi-save-list` · `.nabi-choose-row`/`.nabi-save-row` · `.nabi-choose-icon`/`.nabi-save-icon` · `.nabi-choose-label`/`.nabi-save-label`. **Os dois** marcam a visibilidade com `--nabi-accent` na borda (sem preenchimento dentro).
+
+Três coisas pertencem só ao painel de salvar: `.nabi-save-name` (a linha de nome), `.nabi-save-ext` (o marcador de extensão) e `.nabi-save-note` (a nota de perda — menor que o nome, e em dois pontos). As duas linhas de nome ficam numa única coluna de `1fr`, a extensão fica `auto`, e o resto é grade livre. Não é um espaçamento que exista antes — é desenhado por CSS só durante a abertura. **Um tamanho mínimo é `--nabi-grid-cell`** — é o mesmo que `mountContextToolbar()` usa para seletor e amostra, e crescem junto — mas `--nabi-save-ext-len` mede em caracteres de `1ex` do campo de entrada, porque a fonte dele é a da edição.
+
+::: warning `.nabi-save-format` desapareceu
+Esse era o nome de quando o painel de salvar era uma lista vertical. Um host que usava para sobrescrever o preenchimento de passar do mouse **falha silenciosamente** — uma célula da grade agora é `.nabi-save-row` (o mesmo nome de espaço que o painel de cola), e o preenchimento de passar do mouse é `--nabi-accent`.
+:::
 
 Prévia e tela cheia também são **construídas pelo núcleo.**
 

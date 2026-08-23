@@ -50,8 +50,8 @@ wenn Sie ihm die Werkzeugleiste selbst übergeben.
 
 ### Flügel auswählen
 
-Flügel auswählen ist eine einzige Builder-Zeile. Die Datei oben nimmt aus den neunundzwanzig
-Standard-Flügeln das Upload heraus und schränkt die Schriftart auf zwei ein.
+Flügel auswählen ist eine einzige Builder-Zeile. Die Datei oben beginnt mit den sechsundzwanzig
+drahtierten und fügt Speichern und Öffnen hinzu, dann schränkt die Schriftart auf zwei ein.
 
 ```js
 var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
@@ -59,6 +59,11 @@ var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['s
 
 - `all()` beginnt mit allen offiziellen Flügeln. **Rufen Sie es nicht, sind die Hände leer** — es
   lädt nur, was Sie über `use()` hinzufügen.
+- `allBasic()` nimmt nur die unter ihnen, die **ohne Verdrahtung laufen, wie sie sind** (sechsundzwanzig).
+  Die drei, die übrig bleiben, sind Upload, Speichern und Öffnen — sie kommen erst dann zum Leben,
+  wenn der Host einen Server zum Hochladen oder einen Dateispeicher bereitstellt, sodass diese
+  standardmäßig stehen zu lassen dem Leser eine Schaltfläche geben würde, die beim Drücken nichts tut.
+  Deshalb fügt das obige Beispiel Speichern und Öffnen mit `use()` zurück hinzu.
 - `use('name', optionen?)` fügt einen hinzu. Rufen Sie es für einen bereits enthaltenen Flügel,
   legt es nur Optionen darauf — genau das tut das obige `use('tf', { values: [...] })`. Braucht ein
   Flügel einen anderen, auf dem er steht (Upload lebt nur, wenn es entweder Bild oder Link gibt),
@@ -97,6 +102,12 @@ ist die Antwort auf die Frage „nein", und ein kurzer Satz, der keine Antwort b
 toast-Kasten, den der Kern selbst mitbringt, unterhalb der Werkzeugleiste — für eine
 Benachrichtigung wie einen Upload-Fehler müssen Sie nichts extra einstecken. Näheres steht unter
 [{{ t('menu_intro_usage') }}](./usage).
+
+`ask` trägt auch **`choose`, um eines aus mehreren zu wählen.** Die Einfügeplatte steht allerdings
+**ohne angeschlossen zu werden** — wenn die Werkzeugleiste aufgeht, hängt sie ihre eigene Platte an
+den Kern an (dieselbe Körnung wie die Toast-Box), daher bekommt eine Seite, die eine Werkzeugleiste
+aufstellt wie die Datei oben, die Platte umsonst. Stecken Sie `ask.choose` nur ein, wenn Sie eine
+Platte der Ihren eintauschen wollen.
 
 ### Den Wert herausholen
 

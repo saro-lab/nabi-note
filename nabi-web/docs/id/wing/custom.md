@@ -160,7 +160,7 @@ nabi.applyCommand('insertStamp', { text: 'Oke' })   // boolean
 
 ## Semua kolom yang bisa diisi
 
-`Wing` punya dua puluh lima kolom dan **yang wajib hanya dua** (`w`·`place`).
+`Wing` punya tiga puluh satu kolom dan **yang wajib hanya dua** (`w`·`place`).
 
 ### Apa itu
 
@@ -168,10 +168,12 @@ nabi.applyCommand('insertStamp', { text: 'Oke' })   // boolean
 |---|---|
 | `w` | Nama wing ini. Menjadi `w` pada nilai simpanan. Kata cadangan (`p`·`br`) tidak boleh dipakai |
 | `place` | `'mark'` di atas huruf · `'void'` benda tanpa isi · `'container'` benda berisi tulisan · `'attr'` atribut paragraf · `'tool'` alat tanpa jejak di dokumen |
+| `basic` | **Berjalan tanpa kabel.** Jika tidak ditulis, `false`. `wings().allBasic()` mengumpulkan hanya yang memiliki tanda ini, dan **custom mengikuti standar yang sama**: jika diatur, ia lewat gerbang `allBasic()`, tetapi yang langsung masuk lewat `.use(object)` tetap dimuat. |
 | `holds` | Bagaimana isinya ditampung — `'blocks'` atau `'inline'` |
 | `singleParagraph` | Isinya dipatok menjadi **satu** paragraf (sel tabel) |
 | `boolAttrs` | Nama-nama atribut boolean yang nilainya hanya `1` |
 | `allows` | Nama-nama wing yang boleh masuk ke dalamnya. Jika tidak ditulis, semua boleh |
+| `noAlign` | **Khusus untuk benda.** Jika diatur, **paragraf pembungkus benda ini tidak menerima perataan** — tombol perataan menghilang dari toolbar, command menolak tanpa perubahan, dan nilai lama dalam simpanan sudah tersimpan melalui perbaikan. Kotak kode adalah pengguna pertama: `pre` mewarisi `text-align` sehingga kotak bergeser bukan kode yang bergeser. Gagal saat didaftar jika diatur pada mark, tool, atau atribut paragraf. |
 | `requiresAnyOf` | Salah satu dari ini harus ikut terdaftar |
 | `parts` | Struktur tanpa tombol yang dibawa serta — baris/sel tabel, baris ringkasan pada details |
 
@@ -187,6 +189,9 @@ nabi.applyCommand('insertStamp', { text: 'Oke' })   // boolean
 | Kolom | Arti |
 |---|---|
 | `toHtml` · `partHtml` | Gambar saat keluar |
+| `toMd` | Gambar ke markdown. **Opsional** — jika tidak ada, node jatuh ke `toHtml` (itu adalah identitas "markdown yang tercampur HTML") |
+| `partMd` | Bagian markdown untuk `parts` wing ini |
+| `ioFilter` | **Wing membawa filter I/O-nya sendiri** — lihat [Plugging in an IO filter](#io-filter) di bawah |
 | `claim` | Menentukan pemilik tag ini dari HTML yang masuk |
 | `repair` · `partRepair` | Merapikan node ini di pintu masuk JSON. Jika jawab `null`, dilucuti sekaligus kulitnya |
 
@@ -197,6 +202,7 @@ nabi.applyCommand('insertStamp', { text: 'Oke' })   // boolean
 | `commands` | Command-command yang ditambahkan wing ini |
 | `onKey` | Mencegat tombol lebih dulu saat kursor berada di dalam node wing ini |
 | `escapeKeys` | Tombol yang membuat huruf berikutnya keluar dari mark ini |
+| `doubleKeys` | `{ nama-tombol: nama-command }` — tekan tombol itu **dua kali dalam 350ms** dan command itu berjalan. Prioritasnya **paling rendah**, menerima setelah pekerjaan lain dari tombol itu selesai. Saat registrasi memeriksa tumpang-tindih tombol dan keberadaan command; jika keduanya gagal, registrasi mati. Jangan bingung dengan `escapeKeys` — itu "buka mark dan lanjut", ini "satu gesture satu command" |
 | `inputRules` | Transformasi otomatis yang terjadi hanya dari huruf |
 | `attach` | Saat perlu menyentuh layar — drag sel tabel, pewarnaan kode adalah contohnya |
 
@@ -225,6 +231,21 @@ Tidak perlu sama dengan nama tag HTML — tag yang keluar ditentukan oleh `toHtm
 **dokumen yang sudah tersimpan tidak bisa dibaca lagi.** Jika harus diganti,
 sediakan masa transisi dengan menerima nama lama juga lewat `claim`.
 :::
+
+---
+
+## IO filter
+
+**IO filter bukan wing.** Ia berdiri hanya di pintu masuk-keluar dokumen — tempel, simpan, buka — dan menangani satu format, tanpa menetapkan node-nya sendiri di dokumen. Kontrak adalah satu `IoFilter`.
+
+| Kolom | Arti |
+|---|---|
+| `id` · `label` | Nama filter dan nama yang muncul di panel. Jika `id` bertabrakan, mati di tempat registrasi |
+| `paste` | Lihat clipboard dan berikan candidate. Jika bukan miliknya, jawab `null`, `build()` datang setelah orang memilih kolom itu |
+| `save` | `{ extension, write, lossy?, mime? }` — `write` menerima `DocSource` tempat Anda menulis dari `json()` · `html()` · `md()` yang Anda butuhkan. `lossy` adalah "(loss-save)" di panel simpan |
+| `read` | Terima nama dan string, baca menjadi nabi-tree. **Jika bukan miliknya, jawab `null`** lanjutkan ke filter berikutnya |
+
+**Tiga pintu semuanya opsional** — filter yang hanya tahu tempel, atau hanya baca. Tempat memasang adalah host (`ioFilters` option di `createNabiWith`), lalu host yang memasang, lalu wing, kemudian built-in `nabi`·`html`·`html-open`·`markdown`. Saat membaca, `readExtensions(filters)` menjawab hanya **ekstension yang punya `save`** — dokumen dari luar harus dinyatakan manual.
 
 ---
 

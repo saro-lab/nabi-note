@@ -186,14 +186,20 @@ node. Cari `[data-key]` terdekat dari elemen yang ditekan, lalu berikan ke
 ## Tempel dan HTML awal
 
 Tempel · `setHtml()` · memuat nilai simpanan — **semuanya melewati pintu yang
-sama.** Yang perlu dilakukan wing di sini hanya `claim` —
-tertulis di [dokumen inline pada `claim`](./inline#claim).
+sama.** Yang perlu dilakukan wing di sini hanya `claim`.
 
 ```
-Tempel      ─┐
-setHtml     ─┼→ parsing → claim milik wing → pemetaan tag bawaan core → repair → cocoon → dokumen
-HTML awal   ─┘
+Tempel      ─→ IO filter ─→ candidate panel ─┐
+setHtml     ──────────────────────────────────┼→ parse → claim milik wing → pemetaan tag bawaan core → repair → cocoon → dokumen
+HTML awal   ──────────────────────────────────┘
 ```
+
+**`setHtml()` dan HTML awal tidak lewat panel.** Itu adalah tempat host mendorong nilai, jadi tidak
+ada yang ditanya — tanpa filter, tanpa calon, langsung ke parsing.
+
+Calon hanya benar-benar dibangun (dan `claim` hanya dipanggil) **setelah orang memilih satu di
+panel**. Membangun keempat calon untuk pakai satu adalah pemborosan. Membuat filter sendiri dibahas
+di [IO filter](../custom#io-filter).
 
 Jika tidak ada `claim`, **tag itu terlucuti kulitnya dan hanya tulisan di
 dalamnya yang tersisa.** Berkat aturan ini, markup asing yang disalin dari

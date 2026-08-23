@@ -186,15 +186,25 @@ place dans le document.
 
 ## Le collage et le HTML initial
 
-Coller, `setHtml()`, et charger une valeur enregistrée passent tous par **la même porte**. Le
-seul travail de la wing ici est `claim` — c'est écrit sous
-[`claim` sur la page des marques en ligne](./inline#claim).
+Les trois — coller, `setHtml()`, et charger une valeur enregistrée — passent tous par **la même
+porte** à la fin. Le seul travail de la wing ici est `claim` — c'est écrit sous
+[`claim` sur la page des marques en ligne](./inline#claim). **Le collage seul a une étape avant**,
+cependant : avant d'atteindre `claim`, il passe les filtres IO et la plate-forme de candidates.
 
 ```
-collage        ─┐
-setHtml        ─┼→ analyse → le claim des wings → la gestion par défaut des balises du cœur → repair → cocoon → document
-HTML initial   ─┘
+collage        ─→ filtres IO ─→ plate-forme de candidates (seulement s'il y en a deux ou plus) ─┐
+setHtml        ───────────────────────────────────────────────────────────────────────────────┼→ analyse → le claim des wings → la gestion par défaut des balises du cœur → repair → cocoon → document
+HTML initial   ───────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**`setHtml()` et le HTML initial ne passent pas la plate-forme.** C'est là que l'hôte pousse une
+valeur, si bien qu'il n'y a rien à demander — pas de filtres, pas de candidates, droit à
+l'analyse.
+
+Une candidate n'est réellement bâtie (et `claim` appelé) **qu'une fois que la personne en choisit
+une sur la plate-forme**. Bâtir les quatre candidates pour n'en utiliser qu'une serait gaspiller.
+Bâtir un filtre du vôtre est couvert par
+[Brancher un filtre IO](../custom#brancher-un-filtre-io).
 
 Sans `claim`, **cette balise perd son enveloppe et seul le texte à l'intérieur survit.** Cette
 règle est ce qui empêche un balisage inconnu, copié depuis l'éditeur de quelqu'un d'autre, de se

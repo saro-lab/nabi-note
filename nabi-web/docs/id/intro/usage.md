@@ -129,31 +129,38 @@ mountSurface({ nabi, registry, root: surface, placeholder: 'Baris pertama\nBaris
 mountSurface({ nabi, registry, root: surface, placeholder: '' })   // tanpa placeholder
 ```
 
-Baris baru (`\n`) langsung menjadi baris. Namun placeholder berdiri **di luar aliran
-dokumen** (agar tidak mendorong caret), sehingga kalau area edit hanya setinggi satu
-baris, placeholder beberapa baris akan meluber ke bawah — kalau mau memakai beberapa
-baris, beri area edit tinggi minimum yang cukup.
+Baris baru (`\n`) langsung menjadi baris. Area edit yang benar-benar kosong sudah memiliki
+tinggi minimum bawaan `12.5rem`, jadi sebagian besar waktu Anda bisa membiarkannya begitu saja;
+kalau butuh lebih tinggi, naikkan dengan `--nabi-content-min-height`. Nilai ini hanya berlaku
+**di permukaan edit** — di dokumen yang diterbitkan atau ditinjau, teksnya sendiri yang menentukan
+tingginya.
 
-Teksnya masuk lewat `--nabi-placeholder` di akar area edit, dan yang menggambarnya
-adalah sheet. Untuk mengganti warna atau gaya, ubah aturan ini.
+**Placeholder adalah lapisan tersendiri.** Sekarang telah naik ke `::before` di akar edit, sehingga
+**tidak terpengaruh oleh pemformatan dokumen** — apakah baris pertama adalah judul, rata tengah,
+atau memiliki drop cap. Hanya arah teks yang menentukan di mana ia berdiri.
+
+Teksnya masuk lewat `--nabi-placeholder` di akar area edit, dan yang menggambarnya adalah sheet.
+Untuk mengganti warna atau gaya, ubah aturan ini.
 
 ```css
-.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before {
+.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before {
   color: #999;
 }
 ```
+
+Untuk mengganti hanya warna, Anda tidak perlu menulis aturan baru — cukup `--nabi-placeholder-color`.
 
 | Perakitan | Wajib | Yang dikerjakan |
 |---|---|---|
 | `createNabiWith(wings, options?)` | Ya | Mengembalikan `{ nabi, registry }`. Tidak butuh DOM. Menerima array wing, juga builder pemilih (`wings()`, lihat [{{ t('menu_intro_cdn') }}](./cdn#memilih-wing)) |
 | `mountSurface({ nabi, registry, root })` | Ya | Menyelaraskan caret · IME · input ke NABI TREE. Juga memasang `attach` dari wing yang terdaftar |
-| `mountToolbar({ nabi, registry, root, surface?, locale? })` | Tidak | Toolbar utama. Tanpa ini pun edit langsung lewat `applyCommand()` tetap bisa |
+| `mountToolbar({ nabi, registry, root, surface?, locale?, file? })` | Tidak | Toolbar utama. Tanpa ini pun edit langsung lewat `applyCommand()` tetap bisa. Colokkan jawaban `mountFile()` ke `file` dan **panel simpan berdiri tanpa kabel** — tombol simpan dan <kbd>⌘</kbd><kbd>S</kbd> membukanya. Abaikan dan pesan datang ke host lewat `onHost('save')`, seperti sebelumnya. `surface` juga **tempat akselerator hidup** (lihat [Mana akselerator didengar](#tempat-akselerator-hidup)) |
 | `mountContextToolbar({ nabi, registry, root, surface? })` | Tidak | Baris konteks per posisi caret (baris/kolom tabel, bahasa kode, alamat/nama tautan, dst.) |
 | `mountHints({ toolbar, context?, root, surface? })` | Tidak | Badge pintasan yang muncul saat Shift ditekan dua kali |
 | `mountViewTools({ nabi, surface, root, container, onBody? })` | Tidak | Dua tombol pratinjau dan layar penuh. `root` adalah kotak `.nabi` yang dikunci layar penuh, `onBody` adalah hook untuk memasang runtime sisi-baca ke badan pratinjau (di bawah) |
-| `mountSticky({ root, surface })` | Tidak | Mengembalikan toolbar yang terdorong sejumlah keyboard mobile mendorong layar |
+| `mountSticky({ root, surface, chrome?, nabi? })` | Tidak | Mengembalikan toolbar yang terdorong sejumlah keyboard mobile mendorong layar. Berikan `nabi` dan **setelah edit ia mendorong caret keluar dari bawah toolbar dengan sendirinya** — abaikan dan ia bekerja seperti sebelumnya, hanya saat host memanggil `aim()` (lihat [Keyboard mobile dan toolbar tempel](#keyboard-mobile-dan-toolbar-tempel)) |
 | `mountPickedMark({ nabi, surface })` | Tidak | Tanda saat gambar/video terpilih (browser tidak menggambarnya sendiri) |
-| `mountFile({ nabi, store, name? })` | Kalau memakai save·open | Simpan·buka lewat berkas `.nabi` |
+| `mountFile({ nabi, store, registry, parse?, name? })` | dengan save dan open | menyimpan dalam **tiga** format — `.nabi`, `.nhtml`, `.md` — dan membuka **empat**, ketiga itu ditambah `.html` biasa dari tempat lain. **`registry` wajib ada** — daftar format dan perakitan md serta HTML semuanya dari sini. `parse` adalah pintu pembaca HTML; di browser bisa diabaikan dan `parseNodes` otomatis berdiri, tetapi di tempat tanpa kepala (server, test) harus diberikan agar `.nhtml` dan `.html` bisa dibuka. `FileMount` yang dikembalikan adalah **jalan yang benar untuk simpan-buka tanpa wing** (`file.save()` · `file.saveAs(id, name)` · `file.formats()` · `await file.open()`) |
 | `mountLocalHistory({ nabi, storage })` | Kalau memakai localHistory | Mencatat ke browser tiap selang waktu tertentu. Tetap dirikan meski `storage` bernilai `null` (tempat terkunci seperti `file://`) — agar tombolnya bisa memberi tahu lewat toast kenapa tidak berfungsi |
 | `mountUpload({ … })` + `mountUploadView({ … })` | Kalau memakai upload | Progres dan tampilan upload untuk drop · tempel · pilih berkas |
 
@@ -161,6 +168,36 @@ adalah sheet. Untuk mengganti warna atau gaya, ubah aturan ini.
 — semuanya dipegang wing lewat `attach`, dan `mountSurface` memasangnya sekaligus.
 Untuk pewarnaan kode, cukup pasang siapa yang mewarnai
 (`makeCodeAttach`, lihat [{{ t('menu_block_code') }}](../wing/block/code)).
+
+### Keyboard mobile dan toolbar tempel
+
+`mountSticky` melakukan lebih banyak di mobile — menonton keyboard naik dan turun,
+membawa caret **di bawah toolbar dan di atas keyboard**. Tiga hal yang host harus tahu.
+
+- **Bergerak hanya saat editor memegang focus.** Tanpa focus tidak bergerak satu langkah pun —
+  halaman tidak boleh melompat saat host mendorong nilai lewat `setHtml()`.
+- **Saat tangan menggulung tidak bergerak satu pixel pun.** Tetap terkunci selama 250ms setelah
+  gulung — mengambil layar dari tangan yang bergerak adalah apa yang disebut gemetar.
+- **Hanya perubahan sebesar keyboard yang membuka pintu.** Bilah alamat yang terlipat (puluhan
+  pixel) tidak menggerakkan apa-apa; pintu hanya terbuka di atas `max(120px, 15% tinggi jendela)`.
+
+Edit mendorong **hanya sejauh yang perlu** — menyeret layar ke toolbar di setiap karakter tidak bisa
+dipakai. Saat keyboard naik, ia menyelaraskan tampilan sehingga **toolbar duduk di puncak jendela**,
+dan setelah viewport menetap ia menyelaraskan sekali lagi.
+
+`--nabi-bar-height` adalah nilai yang langkah ini gunakan — `mountSticky` menulis **tinggi terukur**
+dari chrome yang ditempelkan ke akar `.nabi`, dan lembar `.nabi-content > *` menambahkan nilai itu ke
+`scroll-margin-block-start`. **Ini bukan nilai untuk host atur, melainkan penjelasan mengapa caret
+tidak pernah tersembunyi di bawah toolbar** — tanpa mount, perkiraan `3.5rem` berdiri sebagai ganti,
+dan itu jatuh jauh pendek saat toolbar membungkus dua baris atau baris konteks naik.
+
+::: warning Jangan blokir zoom dengan viewport meta
+iOS Safari memperbesar seluruh halaman saat focus mendarat di bidang form dengan teks lebih kecil dari
+16px. Core menghentikannya dengan **membuat teks lebih besar** — `--nabi-touch-font-size` (default
+`16px`). Kami **tidak** mengambil jalan lain memblokir zoom itu sendiri dengan `user-scalable=no` atau
+`maximum-scale=1` — itu mengambil hak pembaca untuk memperbesar. Jika host menulis meta itu di
+halamannya sendiri, nilai dasar yang core tetapkan menjadi sia-sia — jadi jangan tulis.
+:::
 
 ### Memasang runtime sisi-baca ke pratinjau
 
@@ -255,6 +292,18 @@ Tree yang berjalan di dalam punya satu kolom tambahan per node, `_id` — **alam
 internal tempat caret menunjuk node** — yang dinomori ulang pada kebanyakan edit dan
 dilepas saat keluar (pada contoh di atas: 470 → 323 byte). Nilai yang keluar bisa
 langsung dimasukkan lagi ke `setJson()`.
+
+## Tempel, simpan, dan buka
+
+**Tempel membaca satu clipboard dengan beberapa mata** — `HTML` · `MARKDOWN` · `TEXT` · `NABI`.
+Kalau ada lebih dari satu cara baca, muncul panel kecil untuk memilih format; kalau hanya satu,
+langsung ditempel tanpa bertanya. Tempel yang tidak ada teks sama sekali (hanya file) lewati panel
+dan pergi ke [{{ t('menu_etc_upload') }}](../wing/etc/upload).
+
+**Tiga format simpan** — `.nabi` (asli) · `.nhtml` (halaman HTML mandiri) · `.md` (markdown;
+yang tidak ada tempatnya tercampur sebagai HTML jadi mungkin tidak kembali). **Empat buka** —
+ketiga itu ditambah `.html` biasa dari tempat lain. Pintu ini butuh `mountFile()` dari tabel
+di atas.
 
 ---
 
@@ -377,6 +426,7 @@ const { nabi } = createNabiWith(wings, {
 |---|---|
 | `message` | `(text: string) => void` — satu pesan, tanpa menerima jawaban |
 | `confirm` | `(text: string) => boolean \| Promise<boolean>` — menerima sinkron maupun asinkron |
+| `choose` | `(question: string, options: ChooseOption[]) => number \| Promise<number>` — satu dari beberapa pilihan. Jawabannya adalah **indeks**, dan `-1` (atau apa pun di luar jangkauan) adalah batal. `ChooseOption` adalah `{ label, icon? }`, tempat `icon` adalah **isi** dari svg 16×16 — abaikan dan nama saja yang tampil |
 
 **Core tidak otomatis memakai punya browser.** Kotak abu-abu bawaan browser tidak
 boleh menyela halaman yang sudah punya dialognya sendiri, dan plugin (IntelliJ, VS
@@ -386,6 +436,14 @@ oleh host.
 **Hanya yang dipasang yang berlaku** — bisa memasang `message` saja, atau `confirm`
 saja. `message` yang tidak dipasang keluar lewat core toast (info) di atas, dan
 jawaban `confirm` yang tidak dipasang adalah "tidak".
+
+**`choose` biasanya dibiarkan kosong.** Panel tempel menggantung dirinya ke core saat
+toolbar berdiri (butir yang sama seperti kotak toast), jadi halaman yang punya toolbar
+otomatis mendapat panel tanpa perlu kerja apa-apa. Colokkan slot ini hanya saat Anda
+menukar panel sendiri. Tanpa panel yang menggantung dan slot yang dicolok, **jawabannya
+0 (yang teratas)** — arah berbeda dari "tidak" milik `confirm`. Menjawab batal di sini
+akan menghilangkan tempel seluruhnya, dan kandidat pertama dalam daftar selalu "bacaan
+yang paling mungkin", jadi tanpa siapa yang bertanya itu jawaban yang benar.
 
 ::: warning Kalau confirm tidak diberi, jawabannya "tidak"
 Pertanyaan yang tidak dijawab siapa pun bukan berarti "ya" — sama seperti arti
@@ -424,6 +482,13 @@ nabi.$markSaved(savedDoc)   // Setelah penyimpanan berhasil — oper dokumen yan
 huruf yang diketik selama proses simpan yang lama harus tetap dianggap "berubah".
 Wing save (`save`) memanggil ini setelah berkas benar-benar tertulis, jadi kalau
 disimpan sebagai `.nabi`, `isChanged()` menjadi `false`.
+
+::: warning Hanya `.nabi` yang menggerakkan garis dasar
+Apa yang dikeluarkan sebagai `.nhtml` atau `.md` adalah **salinan**, dan salinan tidak
+menggerakkan garis dasar — setelah simpan, `isChanged()` tetap `true`. Anggap salinan
+sebagai "tersimpan" dan tutup jendela, ambil tulisan aslinya. Saat simpan asinkron,
+garis dasar bergerak **hanya setelah berhasil** — simpan gagal biarkan saja.
+:::
 
 **Kembali ke posisi awal membuatnya `false` lagi** — karena NABI TREE bersifat
 immutable dan berganti total di setiap edit, editor tahu itu dokumen yang sama tanpa

@@ -167,6 +167,10 @@ Vários wings podem reivindicar a mesma tecla — a armação só se ativa enqua
 fato dentro daquele mark, então, entre marks sobrepostos ali, só os que se aplicam saem juntos.
 <kbd>Escape</kbd> também serve para **desarmar** uma armação já colocada.
 
+::: tip Apertar <kbd>Esc</kbd> duas vezes vai adiante disso
+A contagem de duas batidas roda **independente de a ramificação anterior ter consumido a tecla.** Então, mesmo quando o primeiro <kbd>Esc</kbd> desarmou uma armação ou armou uma fuga de mark, o segundo <kbd>Esc</kbd> vai tudo o caminho até [limpar formatação](../etc/clear-format) — um cursor no meio de um marca-texto é o exemplo. `escapeKeys` e `doubleKeys` só parecem nomes semelhantes; eles não se bloqueiam um ao outro.
+:::
+
 ---
 
 ## Marks não podem ter teclas

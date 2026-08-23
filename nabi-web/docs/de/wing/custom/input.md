@@ -182,15 +182,25 @@ um den Platz innerhalb des Dokuments zu bekommen.
 
 ## Einfügen und anfängliches HTML
 
-Einfügen, `setHtml()` und das Laden eines gespeicherten Werts gehen alle durch **dieselbe Tür**. Die
-einzige Aufgabe des Flügels ist hier `claim` — es steht unter [`claim` auf der
-Inline-Seite](./inline#claim).
+Alle drei gehen durch **dasselbe Tor** am Ende durch. Die einzige Aufgabe des Flügels ist dort
+`claim` — sie ist unter [`claim` auf der Inline-Seite](./inline#claim) aufgeschrieben. **Einfügen
+allein hat einen Schritt davor**, allerdings: bevor es zu `claim` kommt, passiert es die IO-Filter
+und das Kandidaten-Panel.
 
 ```
-Einfügen        ─┐
-setHtml         ─┼→ parsen → das claim der Flügel → die Standard-Tag-Behandlung des Kerns → repair → cocoon → Dokument
-anfängliches HTML ─┘
+Einfügen        ─→ IO-Filter ─→ Kandidaten-Panel (nur wenn es zwei oder mehr gibt) ─┐
+setHtml         ──────────────────────────────────────────────────────────────────┼→ parsen → das claim der Flügel → die Standard-Tag-Behandlung des Kerns → repair → cocoon → Dokument
+anfängliches HTML ───────────────────────────────────────────────────────────────────┘
 ```
+
+**`setHtml()` und anfängliches HTML passieren das Panel nicht.** Das ist die Stelle, an der der
+Host einen Wert hineindrückt, also gibt es nichts zu fragen — keine Filter, keine Kandidaten,
+direkt zum Parsen.
+
+Ein Kandidat wird tatsächlich gebaut (und so wird `claim` nur aufgerufen) **nachdem die Person
+einen im Panel wählt**. Den Aufbau aller vier Kandidaten für die Verwendung eines wäre Verschwendung.
+Einen eigenen Filter zu bauen ist in [IO-Filter einstecken](../custom#io-filter-einstecken)
+abgedeckt.
 
 Ohne ein `claim` wird **diesem Tag die Hülle abgestreift, und nur der Text darin überlebt.** Diese
 Regel ist der Grund, warum unbekanntes Markup, das aus dem Editor eines anderen kopiert wurde, nicht

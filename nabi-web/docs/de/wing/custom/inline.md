@@ -41,7 +41,10 @@ mountSurface({ nabi, registry, root: surface })
 ```
 
 Was `simpleMark` für Sie ausfüllt, sind zwei Dinge: `place: 'mark'` und `escapeKeys: ['Escape']`.
-Alles andere geht unverändert durch.
+Alles andere geht unverändert durch. **Beim Drücken von Esc mehrmals in Folge geht selbst dann die
+zweite Taste zur Formatierung löschen, wenn die erste Esc eine Reservierung aufgelöst hat** — das
+Zählen der Doppeldrücke funktioniert unabhängig davon, ob der vorherige Zweig verbraucht wurde.
+Eine Glyphenbürste mitten im Caret ist das Beispiel dafür.
 
 ---
 

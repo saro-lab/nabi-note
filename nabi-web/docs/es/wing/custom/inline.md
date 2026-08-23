@@ -171,6 +171,8 @@ verdad dentro de esa marca en ese momento, así que entre marcas superpuestas so
 sale de las que correspondan. <kbd>Escape</kbd> también sirve para **deshacer** una
 reserva ya puesta.
 
+Si se pulsa Esc dos veces seguidas, el primer Esc cumple la reserva aunque ya esté reservada, pero el segundo sigue con la remoción de formato.
+
 ---
 
 ## Una marca no puede tener tecla propia

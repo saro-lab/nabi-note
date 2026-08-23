@@ -30,6 +30,28 @@ terminé — il n'y a aucune option à transmettre.
 - Quand il n'y a rien à retirer, la commande répond `null`, donc aucun point d'annulation ne
   s'empile.
 
+## <kbd>Échap</kbd> deux fois
+
+En plus du bouton de barre d'outils il y a **une seule route par le clavier** — taper
+<kbd>Échap</kbd> deux fois d'affilée. Ni une indication d'une seule lettre ni un accélérateur
+`⌘` ne pouvait tenir ce geste, si bien qu'il est allé à la déclaration de double-tap
+(`doubleKeys`).
+
+- **Il fait exactement ce que fait appuyer sur le bouton.** Avec une plage sélectionnée, cette
+  étendue ; **avec seulement un caret**, une couche à cette place — la commande sait déjà ce qu'il
+  faut retirer, si bien que le côté touche ne se branche pas sur l'état du caret.
+- **Il se déclenche au deuxième tap, exactement.** Quatre taps sont toujours un seul déclenchement,
+  et si plus de 350ms s'écoulent entre deux taps le compte recommence. Les répétitions depuis tenir
+  la touche enfoncée (`repeat`) et les taps pendant la composition IME ne sont pas comptés.
+- **Sa priorité est la plus basse.** Elle prend son tour seulement une fois tous les autres travaux
+  qu'<kbd>Échap</kbd> avait (défaire un armement, s'échapper d'une marque) passés — appuyez sur
+  <kbd>Échap</kbd> au milieu d'un surlignage et le premier tap arme la sortie de marque, et le
+  deuxième porte toujours jusqu'à effacer la mise en forme.
+- **Il y a seulement cinq endroits où il ne marche pas** — une plate-forme ouverte, une surimpression,
+  le plein écran, les badges d'indication, et un verrouillage d'envoi.
+- Le bouton le dit dans son étiquette — **« Effacer la mise en forme (Échap Échap) »**, le même
+  motif que les badges Maj.
+
 ## Exemple d'utilisation
 
 ```ts

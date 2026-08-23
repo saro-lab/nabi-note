@@ -28,6 +28,16 @@ Como `place: 'tool'`, ele não constrói seu próprio nó no documento. É só u
   salte para a esquerda ao tentar limpar a formatação.
 - Sem nada para remover, o comando responde `null`. Nenhum ponto de desfazer se acumula.
 
+## <kbd>Esc</kbd> duas vezes
+
+Além do botão da barra de ferramentas há **um caminho pelo teclado** — apertar <kbd>Esc</kbd> duas vezes seguidas. Nem uma dica de uma letra nem um acelerador `⌘` conseguiam conter esse gesto, então ele foi para a declaração de toque duplo (`doubleKeys`).
+
+- **Faz exatamente o que pressionar o botão faz.** Com um intervalo selecionado, aquele trecho; **com só um cursor**, uma camada naquele ponto — o comando já sabe o que remover, então o lado da tecla não se ramifica no estado do cursor.
+- **Dispara no segundo toque, exatamente.** Quatro toques ainda são um disparo, e se mais de 350ms passam entre dois toques a contagem recomeça. Repeats do segurar a tecla (`repeat`) e toques durante composição IME não são contados.
+- **Sua prioridade é a mais baixa.** Toma sua vez só depois que todo outro trabalho que <kbd>Esc</kbd> tinha (desfazer uma armação, escapar de um mark) passou — aperte <kbd>Esc</kbd> no meio de um marca-texto e o primeiro toque arma a fuga de mark, e o segundo ainda leva tudo o caminho até limpar formatação.
+- **Há só cinco lugares onde não funciona** — um painel aberto, um scrim, tela cheia, os badges de dica, e um travamento de upload.
+- A dica do botão diz — **"Limpar formatação (Esc Esc)"**, o mesmo padrão que os badges de Shift.
+
 ## Exemplo de uso
 
 ```ts
