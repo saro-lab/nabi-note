@@ -56,6 +56,12 @@ const USER_QUIET = 250;
 // `vv:scroll` 이 이어져 이 창이 함께 밀리므로, 애니메이션 전체가 한 덩어리로 걸러진다.
 // 015 규칙 1(**나가려고 굴리면 안 돌아온다**)은 그대로 산다: 그때는 키보드가 이미 서 있고
 // 뷰포트가 조용하다.
+//
+// **020 이 "움직였다"의 뜻을 좁혔다.** 015 3차는 아무 뷰포트 사건이나 자국으로 삼았는데,
+// 아이폰에서는 사람이 손가락으로 굴리는 것만으로 `vv:scroll` 이 계속 나서 **사람이 굴리는
+// 내내 이 창이 열려 있었다** — 사람의 스크롤이 영영 사람의 것이 못 됐다. 이제 자국은
+// **뷰포트의 키가 달라진 때만** 찍는다(`follow`). 키보드가 서고 눕는 것은 키를 바꾸고,
+// 사람의 스크롤은 세로 자리만 바꾼다.
 const VIEW_QUIET = 300;
 
 // --- 눈에 안 보이는 보정은 보정이 아니다 (015 2차) ----------------------------------------------
@@ -154,14 +160,16 @@ export function mountSticky(options: StickyOptions): Sticky {
   // 언제나 안전하다.
   let userAt = 0;
   let mine = -1;
-  let viewAt = 0; // 시각 뷰포트가 마지막으로 움직인 때 — `follow()` 가 찍는다
+  let viewAt = 0; // 뷰포트의 **키가** 마지막으로 달라진 때 — `follow()` 가 찍는다 (020 규칙 B)
+  let viewHeight = -1; // 그때 본 키. 이것이 안 달라지면 뷰포트가 "움직인" 것이 아니다
   // 브라우저가 화면을 옮기는 중인가 (015 3차). 참이면 지금 온 스크롤은 사람 것이 아니다.
   const viewMoving = (): boolean => Date.now() - viewAt < VIEW_QUIET;
   const onScroll = (): void => {
     if (view && mine >= 0 && Math.abs(view.scrollY - mine) <= 1) return; // 방금 우리가 민 그 자리
-    // **뷰포트가 움직이는 중이면 브라우저가 민 것이다** (015 3차, 위 `VIEW_QUIET`). 아이폰에서
-    // 키보드가 서며 사파리가 스스로 굴리는 수백 px 이 여기서 걸러진다 — 그것을 사람으로 세면
-    // 정작 우리가 맞춰야 할 그 순간에 세션이 꺼진다.
+    // **뷰포트의 키가 방금 달라졌으면 브라우저가 민 것이다** (015 3차 + 020 규칙 B, 위
+    // `VIEW_QUIET`). 아이폰에서 키보드가 서며 사파리가 스스로 굴리는 수백 px 이 여기서
+    // 걸러진다 — 그것을 사람으로 세면 정작 우리가 맞춰야 할 그 순간에 세션이 꺼진다.
+    // 키가 그대로인 채 온 스크롤은 **언제나 사람의 것이다.**
     if (viewMoving()) return;
     userAt = Date.now();
     // **사람이 굴리면 푼다** (015 규칙 1). 이 겨눔 세션의 아래 변·제자리 보정은 여기서 끝나고,
@@ -182,13 +190,22 @@ export function mountSticky(options: StickyOptions): Sticky {
   //   선다   ① 겨눔이 새로 들어올 때(`start`) ② 문서가 바뀔 때(편집 문 — 사람이 돌아왔다)
   //          ③ 키보드 급 큰 변화가 올 때(`follow` 의 8차 문턱을 넘은 자리 — 주소줄이 접혔다
   //             펴지는 정도로는 안 선다)
-  //   내려간다 ① **뷰포트가 조용한데** 사람이 굴린 그 순간(`onScroll`) ② `stop()`
+  //   내려간다 ① **자리잡기가 끝나는 그 순간**(가라앉은 뒤의 마지막 걸음 — 020 규칙 A)
+  //          ② 사람이 굴린 그 순간(`onScroll`) ③ `stop()`
   //
   // 3차에서 "세션당 한 번"의 뜻을 고쳤다. 예전에는 가라앉음 걸음 하나로 표식을 내렸는데,
   // 아이폰에서는 창이 **여러 번** 움직인다(011 실측: `377/377 → 377/142 → 377/31`) — 한 번으로는
-  // 모자라 캐럿이 키보드 뒤에 잠긴 채 남았다. 이제 "한 번"은 **사람이 굴리기 전까지**다.
-  // 타이핑이 야금야금 미는 것과는 다른 문이다 — 그것은 편집 문이고 규칙 2 가 이미 막았다.
+  // 모자라 캐럿이 키보드 뒤에 잠긴 채 남았다. 그래서 "한 번"을 **사람이 굴리기 전까지**로 늘렸다.
+  //
+  // 020 이 그것을 **"자리잡기가 끝날 때까지"** 로 다시 좁힌다. 여러 번 움직이는 창은 그대로
+  // 받는다 — 창이 움직이는 동안은 `settle` 이 계속 밀리므로 마지막 걸음이 그만큼 늦게 오고,
+  // 그 걸음이 곧 자리잡기의 끝이다. 끝난 뒤에는 보정이 **죽어 있다**: 사람이 아무리 굴려도
+  // 싸울 상대가 없다(주인: *"커서가 한번 자리잡은 뒤에는 사용자가 스크롤 같은 거 움직여도
+  // 그건 정상 동작이야."*). 사람이 돌아오는 길(탭·타이핑·키보드)만 이것을 다시 세운다 —
+  // **사람의 스크롤은 어떤 경우에도 다시 못 켠다.**
   let armed = false;
+  // 지금 걷는 걸음이 이 자리잡기의 **마지막**인가 — `afterQuiet` 이 세우고 `reveal` 이 끈다.
+  let closing = false;
 
   // --- 야금야금 빗장 — "나아지지 않으면 멎는다"를 **세션이 기억한다** (015 2차) -----------------
   //
@@ -208,11 +225,23 @@ export function mountSticky(options: StickyOptions): Sticky {
 
   const follow = (): void => {
     if (!view) return;
-    // **뷰포트가 방금 움직였다** — 이 자국이 사람 스크롤과 브라우저 스크롤을 가른다 (015 3차).
-    // 문턱(`big`)을 넘든 안 넘든 찍는다: 주소줄이 접히는 정도의 작은 움직임에도 브라우저는
-    // 페이지를 함께 굴리고, 그것도 사람이 민 것은 아니다.
-    viewAt = Date.now();
     const visual = view.visualViewport;
+    // **뷰포트가 방금 움직였다** — 이 자국이 사람 스크롤과 브라우저 스크롤을 가른다 (015 3차).
+    //
+    // 020: 자국은 **키(height)가 정말 달라진 때만** 찍는다. 예전에는 `follow()` 가 불릴 때마다
+    // 찍었는데, 이 함수는 `vv:resize` 와 `vv:scroll` **둘 다**에 걸려 있고 아이폰에서는
+    // **사람이 손가락으로 굴리는 것만으로 `vv:scroll` 이 계속 난다.** 그래서 사람이 굴리는
+    // 내내 `viewMoving()` 이 참이었고, 그 스크롤은 영영 사람의 것으로 안 세어졌다 — 세션이
+    // 안 꺼지니 우리가 화면을 되끌어오고, 사람이 다시 굴리고, **무한 루프**였다(주인: "글쓰기
+    // 완료 버튼 자체를 못 누르게 하는 건 버그지").
+    //
+    // 키보드가 서고 눕는 것은 **키**를 바꾸고, 사람의 스크롤은 **세로 자리**만 바꾼다. 015 3차가
+    // 걸러 내려던 것(키보드가 서는 동안 사파리가 스스로 굴리는 599px)은 앞의 것이라 그대로 걸러진다.
+    const seeing = Math.round(visual ? visual.height : view.innerHeight);
+    if (seeing !== viewHeight) {
+      viewHeight = seeing;
+      viewAt = Date.now();
+    }
     const top = visual ? visual.offsetTop : 0;
     const bottom = visual ? Math.max(0, view.innerHeight - (visual.offsetTop + visual.height)) : 0;
 
@@ -235,7 +264,6 @@ export function mountSticky(options: StickyOptions): Sticky {
     // 다만 **문턱이 있다**(8차). 주소줄이 접혔다 펴지는 것은 키보드가 아니다 — 손으로 굴리는
     // 내내 수십 px 씩 오간다. 그 변화에 문을 열어 두면 사람이 굴리는 동안 우리가 화면을 밀어
     // **떨린다.** 키보드는 수백 px 다. 그 둘을 키로 가른다.
-    const seeing = Math.round(visual ? visual.height : view.innerHeight);
     const jump = Math.max(KEYBOARD_JUMP, owner.documentElement.clientHeight * KEYBOARD_RATIO);
     const big = sighted
       ? Math.abs(Math.round(top) - seenTop) >= jump || Math.abs(seeing - seenHeight) >= jump
@@ -417,6 +445,9 @@ export function mountSticky(options: StickyOptions): Sticky {
       return;
     }
     // 뷰포트 문은 세션 표식이 선 동안만이다 — 사람이 굴려 끝낸 세션에서는 **아무것도 안 민다.**
+    // 이 걸음이 가라앉은 뒤의 **마지막** 걸음이면, 걷고 나서 세션을 스스로 닫는다 (020 규칙 A).
+    const last = closing;
+    closing = false;
     if (!armed) return;
     // **키보드가 서 있을 때만** 아래 변까지 본다 (011 3차). 시각 뷰포트가 레이아웃 뷰포트보다
     // 낮으면 그 차가 곧 키보드다 — 안드로이드(아래를 깎는다)도 iOS(창을 아래로 민다)도 참이 된다.
@@ -425,6 +456,7 @@ export function mountSticky(options: StickyOptions): Sticky {
     const standing = visual !== null && visual.height < owner.documentElement.clientHeight - 1;
     if (!standing) {
       revealWalk(REVEAL_STEPS, look, push);
+      if (last) armed = false;
       return;
     }
     // 먼저 최소 넛지로 **가림·창 밖**을 고치고(그것이 옳고 그름이다), 그다음 **빈자리를
@@ -432,6 +464,8 @@ export function mountSticky(options: StickyOptions): Sticky {
     // 둘 다 재고 → 밀고 → **다시 재는** 걸음이라 앞 걸음이 민 뒤의 자리를 뒤 걸음이 다시 본다.
     underWalk(KEYBOARD_STEPS, look, push);
     placeWalk(KEYBOARD_STEPS, lookAim, push);
+    // **자리잡기가 여기서 끝난다** (020 규칙 A). 이 뒤로는 사람의 화면이다.
+    if (last) armed = false;
   };
   const afterEdit = (by: 'edit' | 'view' = 'edit'): void => {
     // 겨눔이 편집기에 없으면 안 민다 — 호스트가 `setHtml()` 로 값을 밀어 넣는 동안 페이지가
@@ -464,6 +498,11 @@ export function mountSticky(options: StickyOptions): Sticky {
       if (!armed) return;
       // 크롬은 우리가 민 뒤에도 더 판다(011 6차의 안드로이드: −115 뒤에 창이 201 → 322 로 더
       // 밀려 19px 어긋났다). 그래서 **즉시 걸음 + 이 마지막 걸음**이 한 벌이다.
+      //
+      // 그리고 **이 걸음이 마지막이다** (020 규칙 A). 걷고 나면 `reveal` 이 세션을 닫는다 —
+      // 그 뒤의 스크롤은 전부 사람의 것이고, 우리는 아무것도 안 민다. 창이 또 크게 움직이면
+      // (키보드가 눕거나 다시 서면) `follow` 의 문턱이 세션을 새로 연다.
+      closing = true;
       afterEdit('view');
     });
   };
@@ -560,8 +599,11 @@ export function mountSticky(options: StickyOptions): Sticky {
     seenHeight = 0;
     sighted = false;
     mine = -1;
+    // 뷰포트의 키도 잊는다 — 다음 겨눔의 첫 `follow()` 가 그 자리에서 다시 재고 자국을 찍는다.
+    viewHeight = -1;
     // 세션 표식도 함께 내린다 — 겨눔이 빠진 뒤에 남은 걸음이 남의 화면을 밀면 안 된다 (015).
     armed = false;
+    closing = false;
     stuck = Number.NaN;
   };
 
