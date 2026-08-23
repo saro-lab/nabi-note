@@ -156,7 +156,7 @@ mountSurface({ nabi, registry, root: surface, placeholder: '' })   // নির�
 **ছবি·চেকবক্স·টেবিল-ঘর টানা·কোড রং বসাতে আলাদা mount করার কিছু নেই** —
 সবই wing নিজেই `attach` দিয়ে ধরে রাখে, `mountSurface` একসঙ্গে জুড়ে দেয়।
 কোড রং বসাতে কেবল যে রং বসাবে তাকে গুঁজে দিলেই হয়
-(`makeCodeAttach`, [{{ t('menu_wing_code') }}](../wing/block/code) দেখুন)।
+(`makeCodeAttach`, [{{ t('menu_block_code') }}](../wing/block/code) দেখুন)।
 
 ### প্রিভিউতে দেখার পক্ষের রানটাইম জোড়া
 

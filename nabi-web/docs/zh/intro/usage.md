@@ -147,7 +147,7 @@ mountSurface({ nabi, registry, root: surface, placeholder: '' })   // 不要占�
 
 **图片、勾选框、表格拖拽调格、代码上色不需要单独 mount**——全都由翅膀自己拿着
 `attach`，`mountSurface` 会一并挂上。只有代码上色需要接一个上色的人进来
-（`makeCodeAttach`，参见 [{{ t('menu_wing_code') }}](../wing/block/code)）。
+（`makeCodeAttach`，参见 [{{ t('menu_block_code') }}](../wing/block/code)）。
 
 ### 给预览接上阅读侧运行时
 

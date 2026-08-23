@@ -159,7 +159,7 @@ style qui le dessine. Pour changer sa couleur ou son allure, réécrivez cette r
 **Les images, les cases à cocher, le glisser de cellules de tableau et la coloration du code
 n'ont rien à monter séparément** — tout cela, les wings le tiennent dans `attach` et
 `mountSurface` l'attache avec elles. Seule la coloration du code demande qu'on branche quelqu'un
-pour colorer (`makeCodeAttach`, voir [{{ t('menu_wing_code') }}](../wing/block/code)).
+pour colorer (`makeCodeAttach`, voir [{{ t('menu_block_code') }}](../wing/block/code)).
 
 Pour remplacer une wing, démontez toutes ces pièces (`unmount()`) et refaites-les — le balisage
 que tenait la wing ôtée retombe en texte brut sur place. La démo de ce site fonctionne

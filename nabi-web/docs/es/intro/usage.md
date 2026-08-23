@@ -134,26 +134,30 @@ guía se coloca **fuera del flujo** (para no empujar el cursor), si el área de 
 mide solo una línea de alto, un texto guía de varias líneas se desborda hacia abajo — si
 va a usar varias líneas, déle al área de edición esa misma altura mínima.
 
+Un editor vacío ya se levanta `12.5rem` de alto por defecto, así que la mayoría de las veces lo dejas tal cual; cuando necesites más, súbelo con `--nabi-content-min-height`. Ese valor aplica **solo a la superficie de edición** — en un documento publicado o visto en vista previa, la altura es el texto en sí.
+
 El texto entra por `--nabi-placeholder` en la raíz del área de edición, y quien lo dibuja
 es la hoja de estilos. Para cambiar el color o el aspecto, reescriba esta regla.
 
 ```css
-.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before {
+.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before {
   color: #999;
 }
 ```
+
+**El texto guía es una capa aparte.** Se ha movido hacia el `::before` de la raíz de edición, así que está **intacto a la disposición del documento** — sin importar si la primera línea es un encabezado, está centrada o lleva una letra capital. Solo la dirección del texto decide dónde se para.
 
 | Ensamblaje | Obligatorio | Qué hace |
 |---|---|---|
 | `createNabiWith(wings, options?)` | Sí | Devuelve `{ nabi, registry }`. No necesita DOM. También acepta el arreglo de wings o el constructor de selección (`wings()`, vea [{{ t('menu_intro_cdn') }}](./cdn#elegir-wings)) |
 | `mountSurface({ nabi, registry, root })` | Sí | Ajusta cursor, IME y entrada al árbol de nabi. También conecta el `attach` de los wings registrados |
-| `mountToolbar({ nabi, registry, root, surface?, locale? })` | No | La barra de herramientas principal. Sin ella se puede editar igual con `applyCommand()` |
+| `mountToolbar({ nabi, registry, root, surface?, locale? })` | No | La barra de herramientas principal. Sin ella se puede editar igual con `applyCommand()`. Enchufa la respuesta de `mountFile()` en `file` y **el panel de guardado se levanta sin cableado** — el botón de guardar y <kbd>⌘</kbd><kbd>S</kbd> lo abren. Déjalo fuera y la pulsación llega al host por `onHost('save')`, como antes. |
 | `mountContextToolbar({ nabi, registry, root, surface? })` | No | Barra contextual según el lugar del cursor (fila/columna de tabla, lenguaje de código, dirección/nombre de enlace, etc.) |
 | `mountHints({ toolbar, context?, root, surface? })` | No | La insignia de atajos que aparece al pulsar Shift dos veces seguidas |
 | `mountViewTools({ nabi, surface, root, container, onBody? })` | No | Los botones de vista previa y pantalla completa. `root` es la caja `.nabi` que fija la pantalla completa, y `onBody` es el gancho para conectar el runtime del lado de lectura al cuerpo de la vista previa (ver abajo) |
-| `mountSticky({ root, surface })` | No | Compensa la barra pegada por lo que el teclado móvil empujó la pantalla |
+| `mountSticky({ root, surface })` | No | Compensa la barra pegada por lo que el teclado móvil empujó la pantalla. Da el `nabi` y **después de editar empuja el cursor fuera de bajo la barra sin que se lo pidas** — déjalo fuera y funciona como antes, solo cuando el host llama `aim()` |
 | `mountPickedMark({ nabi, surface })` | No | La marca al seleccionar una imagen o un video (el navegador no la dibuja solo) |
-| `mountFile({ nabi, store, name? })` | Al usar save·open | Guardar y abrir como archivo `.nabi` |
+| `mountFile({ nabi, store, name? })` | Al usar save·open | Guardar y abrir como archivo `.nabi`, `.html`, `.nhtml` |
 | `mountLocalHistory({ nabi, storage })` | Al usar localHistory | Registro en el navegador a intervalos fijos. Se levanta también cuando `storage` es `null` (un lugar bloqueado como `file://`) — así puede avisar por toast por qué el botón no funciona |
 | `mountUpload({ … })` + `mountUploadView({ … })` | Al usar upload | El progreso de subida por arrastre, pegado o selección de archivo, y su indicador |
 
@@ -161,7 +165,7 @@ es la hoja de estilos. Para cambiar el color o el aspecto, reescriba esta regla.
 imagen no necesitan un `mount` aparte** — todos los trae el wing con `attach`, y
 `mountSurface` los conecta junto con el resto. Para el coloreado de código solo hace
 falta enchufar quién colorea
-(`makeCodeAttach`, vea [{{ t('menu_wing_code') }}](../wing/block/code)).
+(`makeCodeAttach`, vea [{{ t('menu_block_code') }}](../wing/block/code)).
 
 ### Se conecta el runtime del lado de lectura a la vista previa
 

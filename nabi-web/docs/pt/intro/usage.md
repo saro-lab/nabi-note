@@ -157,7 +157,7 @@ estilos. Para mudar a cor ou o traço, sobrescreva esta regra.
 **Não há mount separado para imagem, checkbox, arrastar célula de tabela ou realce de código**
 — tudo isso os wings carregam via `attach`, e `mountSurface` prende tudo junto. Só o realce de
 código precisa de alguém para colorir (`makeCodeAttach`, veja
-[{{ t('menu_wing_code') }}](../wing/block/code)).
+[{{ t('menu_block_code') }}](../wing/block/code)).
 
 ### Prendendo o runtime do lado da leitura na prévia
 

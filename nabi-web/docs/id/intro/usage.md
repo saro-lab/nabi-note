@@ -160,7 +160,7 @@ adalah sheet. Untuk mengganti warna atau gaya, ubah aturan ini.
 **Gambar · centang · drag kolom tabel · pewarnaan kode tidak butuh mount tersendiri**
 — semuanya dipegang wing lewat `attach`, dan `mountSurface` memasangnya sekaligus.
 Untuk pewarnaan kode, cukup pasang siapa yang mewarnai
-(`makeCodeAttach`, lihat [{{ t('menu_wing_code') }}](../wing/block/code)).
+(`makeCodeAttach`, lihat [{{ t('menu_block_code') }}](../wing/block/code)).
 
 ### Memasang runtime sisi-baca ke pratinjau
 

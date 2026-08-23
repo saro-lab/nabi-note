@@ -119,16 +119,34 @@ jawabannya `false` dan tidak meninggalkan riwayat atau mengubah apa pun.
 
 ## Lapisan kode
 
-**Ini bukan urutan aliran nilai.** Ini adalah **arah dependensi** yang disusun dari
-bawah ke atas, dan aturannya satu — **lapisan bawah tidak tahu lapisan atas.** Karena
-itu lapisan bawah (`schema`·`doc`·`html`) tidak menyentuh DOM, dan itulah sebabnya ia
-bisa berjalan langsung di server. Jalur nilai masuk-keluar ada di diagram NABI TREE
-di atas.
+**Ini bukan urutan aliran nilai.** Ini adalah **enam belas lapisan** yang terlihat saat
+membuka `src`, satu folder untuk tiap lapisan, dan aturannya satu — **lapisan bawah
+tidak tahu lapisan atas.** Karena itu lapisan yang ditulis di atas (`schema`·`doc`·`html`)
+tidak menyentuh DOM, dan itulah sebabnya bisa berjalan langsung di server. Jalur nilai
+masuk-keluar ada di diagram NABI TREE di atas.
 
-<LayerStack
-  :layers="layers"
-  caption=""
-/>
+```
+src/
+├── style/     Lembaran inti — CSS yang dipakai bersama oleh layar edit dan teks yang diterbitkan
+├── locale/    Bahasa
+├── code/      Tokenizer murni yang dipakai bersama oleh layar edit dan sisi baca
+├── schema/    Bentuk NABI TREE dan definisi cocoon
+├── doc/       Sisip · hapus · pisah · rentang — Tanpa DOM
+├── caret/     Posisi, seleksi, dan batas kursor
+├── html/      NABI TREE ↔ HTML
+├── io/        Pintu masuk-keluar — kandidat tempel · simpan · buka · markdown
+├── editor/    Instance dengan antarmuka command
+├── wing/      Pemeriksaan wings saat pendaftaran
+├── wings/     Wing resmi (bold · italic … tabel · unggah)
+├── surface/   Menyelaraskan caret · IME · input ke tree
+├── ui/        Lapisan UI
+├── viewer/    Hanya-baca
+├── index.ts   Entry inti — `nabi-note`
+└── ssr.ts     Entry SSR — `nabi-note/ssr` (tidak menyentuh satu file pun dari surface atau ui)
+```
+
+**Urutan baris adalah urutan lapisan** — bukan abjad melainkan **dari lapisan terbawah**.
+`style` adalah dasar dan `viewer` adalah puncak.
 
 Arah ini bukan janji yang ditulis di dokumen, melainkan **dijaga oleh pengujian
 otomatis** — begitu ada import yang melawan arah lapisan, pengujian langsung gagal
@@ -145,6 +163,7 @@ di situ.
 | **paragraf pembungkus** | Paragraf yang membungkus objek satu-paragraf seperti tabel · daftar · gambar. |
 | **claim** | Penentuan markup tertentu milik wing yang mana. |
 | **parts** | Fungsi di dalam sebuah wing, contoh: baris/kolom tabel, baris ringkasan pada lipatan |
+| **IO filter** | Titik perluasan yang menangani tempel (pintu masuk) dan simpan serta buka (pintu keluar) sebagai satu set. Terletak **di luar kontrak wing**, sehingga tidak berdiri dengan node sendiri di dokumen |
 
 ### Layar edit
 

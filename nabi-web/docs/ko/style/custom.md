@@ -253,7 +253,7 @@ const drop = injectSheets(document, collectSheets(registry))
 | 선택자 | 무엇 | 누가 |
 |---|---|---|
 | `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | 문서 미리보기 오버레이 | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | 그림 하나만 크게 보는 상자 | `openImageLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | 그림 하나만 크게 보는 상자 | `openLightbox()` |
 | `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | 붙여넣기 후보를 고르는 판 | `openChoosePanel()` |
 | `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | 저장 판 — 이름 칸·확장자 표식·형식 칸들 | `openSavePanel()` |
 | `.nabi.is-fullscreen` | 전체화면 — `.nabi` 상자를 화면에 고정합니다 | `setFullscreen()` (클래스 이름은 `FULLSCREEN_CLASS`) |
@@ -280,7 +280,7 @@ const drop = injectSheets(document, collectSheets(registry))
 :::
 
 `mountViewTools()` 를 붙이면 두 단추가 알아서 이것들을 열고 닫습니다. 직접 열고 싶으면
-`openPreview({ nabi, editor })` · `openImageLightbox({ editor, src, alt?, locale })` ·
+`openPreview({ nabi, surface })` · `openLightbox({ surface, src, alt?, locale })` ·
 `setFullscreen(root, on)` · `isFullscreen(root)` 를 부르세요.
 
 ::: tip 도구 자리는 스스로 섭니다

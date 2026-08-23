@@ -118,16 +118,34 @@ El comando **devuelve si tuvo éxito como `boolean`.** Si no cambia nada, respon
 
 ## Capas del código
 
-No significa que el valor fluya en este orden. Es la **dirección de dependencia**
-apilada de abajo hacia arriba, y la regla es una sola — **la capa de abajo no conoce la
-de arriba.** Por eso las capas de abajo (`schema`·`doc`·`html`) no tocan el DOM, y esa es
-la razón por la que corren igual en el servidor. El camino por donde entra y sale el
-valor es el diagrama del árbol de nabi de arriba.
+**No significa que el valor fluya en este orden.** Estas son las **catorce carpetas** que ves
+cuando abres `src`, una carpeta por capa, y la regla es una sola — **la capa de abajo no conoce
+la de arriba.** Por eso las capas escritas cerca de la cima (`schema`, `doc`, `html`) no tocan
+el DOM, y por eso corren igual en el servidor. El camino por donde entra y sale el valor es el
+diagrama del árbol de nabi de arriba.
 
-<LayerStack
-  :layers="layers"
-  caption=""
-/>
+```
+src/
+├── style/     la hoja principal — el CSS que comparten la pantalla de edición y el texto publicado
+├── locale/    idioma
+├── code/      el tokenizador puro que comparten la pantalla de edición y el lado de lectura
+├── schema/    la forma del árbol de nabi y la definición de Cocoon
+├── doc/       insertar · borrar · dividir · rango — sin DOM
+├── caret/     la posición del cursor, la selección y los bordes
+├── html/      árbol de nabi ↔ HTML
+├── io/        las puertas de entrada y salida — candidatos de pegado, guardar, abrir, markdown
+├── editor/    la instancia con la interfaz de comandos
+├── wing/      verificación de los wings en el momento del registro
+├── wings/     los wings oficiales (negrita · cursiva … tabla · carga)
+├── surface/   ajusta el caret, el IME y la entrada al árbol
+├── ui/        la capa de UI
+├── viewer/    solo lectura
+├── index.ts   el punto de entrada principal — `nabi-note`
+└── ssr.ts     el punto de entrada del SSR — `nabi-note/ssr` (no toca ni un solo archivo de surface o ui)
+```
+
+**El orden de las líneas es el orden de las capas** — no alfabético sino **la capa de abajo
+primero.** `style` es el suelo y `viewer` es la cima.
 
 Este orden no es una promesa escrita — **una red lo vigila mecánicamente.** Si aparece un
 solo import que vaya contra la capa, la prueba falla en el acto.
@@ -142,6 +160,7 @@ solo import que vaya contra la capa, la prueba falla en el acto.
 | **párrafo envoltorio** | El párrafo que envuelve objetos de un solo párrafo como tablas, listas o imágenes |
 | **posesión (claim)** | El juicio de a qué wing pertenece un marcado dado |
 | **piezas (parts)** | Una pieza interna de un wing, p. ej. las filas y celdas de una tabla, la línea de resumen de un plegable |
+| **filtro IO (IO filter)** | el punto de extensión que maneja la entrada (pegar) y la salida (guardar y abrir) como un conjunto. Se ubica **fuera del contrato de wing**, así que no levanta su propio nodo en el documento |
 
 ### Pantalla de edición
 

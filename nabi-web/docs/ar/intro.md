@@ -117,10 +117,25 @@ nabi.redo()
 الطبقات السفلى (`schema`·`doc`·`html`) الـ DOM، وهذا سبب عملها كما هي على الخادم.
 مسار دخول القيمة وخروجها هو رسم شجرة نابي أعلاه.
 
-<LayerStack
-  :layers="layers"
-  caption=""
-/>
+```
+src/
+├── style/     الصفحة النمطية الأساسية — CSS يشترك فيه شاشة التحرير والنص المنشور
+├── locale/    اللغة
+├── code/      مُجزِّئ صرف تشترك فيه شاشة التحرير وجانب القراءة
+├── schema/    شكل شجرة نابي وتعريف cocoon
+├── doc/       إدراج · حذف · تقسيم · مدى — بلا DOM
+├── caret/     موضع المؤشر وتحديده وحدوده
+├── html/      شجرة نابي ↔ HTML
+├── io/        الأبواب الداخلة والخارجة — مرشِّحات اللصق · الحفظ · الفتح · ماركداون
+├── editor/    نسخة تحمل واجهة الأوامر
+├── wing/      فحص الأجنحة عند التسجيل
+├── wings/     الأجنحة الرسمية (bold · italic … table · upload)
+├── surface/   يوفّق المؤشر وIME والإدخال مع الشجرة
+├── ui/        طبقة الواجهة
+├── viewer/    للقراءة فقط
+├── index.ts   المدخل الأساسي — `nabi-note`
+└── ssr.ts     مدخل SSR — `nabi-note/ssr` (لا يلمس ملفًا واحدًا من surface أو ui)
+```
 
 هذا الاتجاه ليس وعدًا مكتوبًا بل **تفرضه الشبكة آليًّا** — أي استيراد يخالف الطبقات
 يُسقِط الاختبار في مكانه.
@@ -136,6 +151,7 @@ nabi.redo()
 | **الفقرة الحاضنة** | فقرة تلفّ كائن فقرة واحدة كالجدول والقائمة والصورة |
 | **الحيازة (claim)** | الحكم في أي جناح يملك ترميزًا معيَّنًا |
 | **الأجزاء (parts)** | وظيفة داخل الجناح، مثل صفوف الجدول وخلاياه، وسطر ملخّص الطي |
+| **مرشِّح IO (io filter)** | نقطة التوسّع التي تتولى اللصق (الباب الداخل) والحفظ والفتح (الباب الخارج) كطقم واحد. يقف **خارج عقد الجناح**، فلا يُقيم عقدته الخاصة في المستند |
 
 ### شاشة التحرير
 
@@ -161,7 +177,6 @@ nabi.redo()
 
 <script setup lang="ts">
 import FlowHub from '../.vitepress/ui/FlowHub.vue'
-import LayerStack from '../.vitepress/ui/LayerStack.vue'
 import { useTranslate } from '../.vitepress/src/langs.ts'
 
 const { t } = useTranslate()
@@ -178,19 +193,4 @@ const hubTargets = [
   { label: 'getJson()', note: 'Output JSON', kind: 'out' },
   { label: 'getEditorHtml()', note: 'HTML لشاشة المحرر', kind: 'out' },
 ];
-
-const layers = [
-  { name: 'locale', what: 'اللغة' },
-  { name: 'code', what: 'مُجزِّئ صرف تشترك فيه شاشة التحرير وجانب القراءة' },
-  { name: 'schema', what: 'شكل شجرة نابي وتعريف Cocoon' },
-  { name: 'doc', what: 'إدراج · حذف · تقسيم · مدى، بلا DOM' },
-  { name: 'caret', what: 'موضع المؤشر وتحديده وحدوده' },
-  { name: 'html', what: 'شجرة نابي ↔ HTML' },
-  { name: 'editor', what: 'نسخة تحمل واجهة الأوامر' },
-  { name: 'wing', what: 'فحص Wings عند التسجيل' },
-  { name: 'wings', what: 'الأجنحة الرسمية (bold, italic ... table, upload...)' },
-  { name: 'surface', what: 'يوفّق المؤشر وIME والإدخال مع الشجرة' },
-  { name: 'ui', what: 'طبقة الواجهة' },
-  { name: 'viewer', what: 'للقراءة فقط' },
-]
 </script>

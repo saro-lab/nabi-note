@@ -252,7 +252,7 @@ The preview and full screen are **built by the core** too.
 | Selector | What | Who |
 |---|---|---|
 | `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | the document preview overlay | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | the box showing one picture alone, large | `openImageLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | the box showing one picture alone, large | `openLightbox()` |
 | `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | the panel for picking a paste candidate | `openChoosePanel()` |
 | `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | the save panel — name field, extension marker, format cells | `openSavePanel()` |
 | `.nabi.is-fullscreen` | full screen — pins the `.nabi` box to the screen | `setFullscreen()` (the class name is `FULLSCREEN_CLASS`) |
@@ -281,8 +281,8 @@ in the paste panel), and there is no inner fill on hover or on aim at all.
 :::
 
 Attach `mountViewTools()` and the two buttons open and close these by themselves. To open them
-yourself, call `openPreview({ nabi, editor })`,
-`openImageLightbox({ editor, src, alt?, locale })`, `setFullscreen(root, on)` or
+yourself, call `openPreview({ nabi, surface })`,
+`openLightbox({ surface, src, alt?, locale })`, `setFullscreen(root, on)` or
 `isFullscreen(root)`.
 
 ::: tip The tools slot builds itself

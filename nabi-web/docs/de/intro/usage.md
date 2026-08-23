@@ -159,7 +159,7 @@ vom Stylesheet. Wollen Sie Farbe oder Struktur ändern, schreiben Sie diese Rege
 **Bilder, Checkboxen, das Ziehen von Tabellenzellen und das Einfärben von Code haben nichts separat
 zu mounten** — die Flügel tragen das alles in `attach`, und `mountSurface` heftet es mit ihnen
 zusammen an. Nur beim Einfärben von Code will jemand eingesteckt werden, der das Färben übernimmt
-(`makeCodeAttach`, siehe [{{ t('menu_wing_code') }}](../wing/block/code)).
+(`makeCodeAttach`, siehe [{{ t('menu_block_code') }}](../wing/block/code)).
 
 ### Der Vorschau die Leseseiten-Laufzeit anheften
 

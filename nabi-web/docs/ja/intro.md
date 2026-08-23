@@ -110,15 +110,33 @@ nabi.redo()
 
 ## コードの層
 
-**値がこの順序で流れるという意味ではありません。** 下から上へ積み上げた **依存の向き**で、
-規則はひとつです — **下の層は上の層を知りません。** だから下側の層(`schema`・`doc`・
-`html`)は DOM を踏まず、それがサーバーでそのまま動く理由です。値が出入りする道は上の
-ナビツリーの図のとおりです。
+**値がこの順序で流れるという意味ではありません。** `src` を開くとそのまま見える
+**フォルダ十四個**で、そのフォルダ一つが層一つです。規則はひとつです — **下の層は上の層を
+知りません。** だから上側に書いた層(`schema`・`doc`・`html`)は DOM を踏まず、それが
+サーバーでそのまま動く理由です。値が出入りする道は上のナビツリーの図のとおりです。
 
-<LayerStack
-  :layers="layers"
-  caption=""
-/>
+```
+src/
+├── style/     コアシート — 編集画面と発行された文章が一緒に使う CSS
+├── locale/    言語
+├── code/      編集画面と読む側が一緒に使う純粋なトークナイザー
+├── schema/    ナビツリーの形と cocoon の定義
+├── doc/       挿入・削除・分割・範囲 — DOM なし
+├── caret/     カーソルの位置・選択・境界
+├── html/      ナビツリー ↔ HTML
+├── io/        出入りの扉 — 貼り付け候補・保存・開く・マークダウン
+├── editor/    コマンドインターフェースを持つインスタンス
+├── wing/      登録時点の翼検査
+├── wings/     公式の翼たち(bold · italic … table · upload)
+├── surface/   キャレット・IME・入力をツリーに合わせる
+├── ui/        UI レイヤー
+├── viewer/    読み取り専用
+├── index.ts   コアエントリ — `nabi-note`
+└── ssr.ts     SSR エントリ — `nabi-note/ssr`(surface・ui を一つのファイルも踏みません)
+```
+
+**行の並びがそのまま層の順序です** — アルファベット順ではなく **下の層から**書きました。
+`style` が一番下で `viewer` が一番上です。
 
 この順序は文章で交わした約束ではなく **網が機械的に守ります** — 層に逆らう import が
 一つでも生まれれば、その場でテストが壊れます。
@@ -134,6 +152,7 @@ nabi.redo()
 | **ラッパー段落** | 表・リスト・画像のような単一段落オブジェクトを包む段落。 |
 | **所有(claim)** | あるマークアップがどの翼のものかを見分ける判定。 |
 | **部品(parts)** | 翼内の機能 例)表の行・セル、折りたたみの要約行 |
+| **IO フィルタ(io filter)** | 貼り付け(入る扉)と保存・開く(出る扉)を一組で扱う拡張点です。**翼の契約の外**にあるので、ドキュメントに自分のノードを持ちません |
 
 ### 編集画面
 
@@ -159,7 +178,6 @@ nabi.redo()
 
 <script setup lang="ts">
 import FlowHub from '../.vitepress/ui/FlowHub.vue'
-import LayerStack from '../.vitepress/ui/LayerStack.vue'
 import { useTranslate } from '../.vitepress/src/langs.ts'
 
 const { t } = useTranslate()
@@ -177,18 +195,4 @@ const hubTargets = [
   { label: 'getEditorHtml()', note: 'エディタ用 HTML', kind: 'out' },
 ];
 
-const layers = [
-  { name: 'locale', what: '言語' },
-  { name: 'code', what: '編集画面と読む側が一緒に使う純粋なトークナイザー' },
-  { name: 'schema', what: 'ナビツリーの形と Cocoon の定義' },
-  { name: 'doc', what: '挿入・削除・分割・範囲。DOM なし' },
-  { name: 'caret', what: 'カーソルの位置・選択・境界' },
-  { name: 'html', what: 'ナビツリー ↔ HTML' },
-  { name: 'editor', what: 'コマンドインターフェースを持つインスタンス' },
-  { name: 'wing', what: '登録時点の Wings 検査' },
-  { name: 'wings', what: '公式の翼たち(bold, italic … table, upload…)' },
-  { name: 'surface', what: 'キャレット・IME・入力をツリーに合わせる' },
-  { name: 'ui', what: 'UI レイヤー' },
-  { name: 'viewer', what: '読み取り専用' },
-]
 </script>

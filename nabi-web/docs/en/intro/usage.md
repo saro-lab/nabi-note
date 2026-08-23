@@ -161,7 +161,7 @@ To change only the color, you do not have to write over the rule at all —
 **Images, checkboxes, table cell dragging and code coloring have nothing to mount separately** —
 the wings hold all of it in `attach` and `mountSurface` attaches it along with them. Code coloring
 is the only one that wants somebody plugged in to do the coloring (`makeCodeAttach`, see
-[{{ t('menu_wing_code') }}](../wing/block/code)).
+[{{ t('menu_block_code') }}](../wing/block/code)).
 
 ### Where accelerators are heard
 

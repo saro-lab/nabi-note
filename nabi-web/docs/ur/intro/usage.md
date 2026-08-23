@@ -129,7 +129,7 @@ mountToolbar({ nabi, registry, surface, root: toolbar, locale: 'ur' })   // ٹو
 **تصویر، چیک، جدول کے خانے کو گھسیٹنا اور کوڈ کی رنگ کاری کے لیے الگ سے کوئی mount
 نہیں چاہیے** — یہ سب wing خود `attach` سے اٹھائے ہوتی ہے، اور `mountSurface` انہیں
 خود ساتھ لگا دیتا ہے۔ کوڈ کی رنگ کاری کے لیے صرف رنگ کرنے والا جوڑ دیں
-(`makeCodeAttach`، دیکھیں [{{ t('menu_wing_code') }}](../wing/block/code))۔
+(`makeCodeAttach`، دیکھیں [{{ t('menu_block_code') }}](../wing/block/code))۔
 
 ### خالی ایڈیٹر کی رہنما تحریر
 

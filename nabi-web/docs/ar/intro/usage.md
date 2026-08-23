@@ -152,7 +152,7 @@ mountSurface({ nabi, registry, root: surface, placeholder: '' })   // بلا ن�
 **لا حاجة لأي mount مستقل للصورة أو صندوق الاختيار أو سحب خلايا الجدول أو تلوين
 الكود** — كلها يحملها الجناح عبر `attach` ويُلصِقها `mountSurface` معًا. لتلوين الكود
 فقط وصِّل من يتولى التلوين (`makeCodeAttach`، راجع
-[{{ t('menu_wing_code') }}](../wing/block/code)).
+[{{ t('menu_block_code') }}](../wing/block/code)).
 
 ### يُلصَق وقت تشغيل جانب القراءة في المعاينة
 

@@ -121,10 +121,27 @@ de baixo para cima, e a regra é uma só — **a camada de baixo não conhece a 
 camadas mais baixas (`schema` · `doc` · `html`) não tocam DOM, e é por isso que rodam do mesmo
 jeito no servidor. O caminho por onde o valor entra e sai é o diagrama da árvore nabi, acima.
 
-<LayerStack
-  :layers="layers"
-  caption=""
-/>
+```
+src/
+├── style/     a folha do núcleo — o CSS que a tela de edição e o texto publicado compartilham
+├── locale/    idioma
+├── code/      o tokenizador puro que a tela de edição e o lado da leitura compartilham
+├── schema/    a forma da árvore nabi e a definição do cocoon
+├── doc/       inserir · apagar · dividir · intervalo — sem DOM
+├── caret/     posição, seleção e fronteiras do cursor
+├── html/      árvore nabi ↔ HTML
+├── io/        as portas dentro e fora — candidatos a colar, salvar, abrir, markdown
+├── editor/    a instância com a interface de comandos
+├── wing/      verificações dos wings no momento do registro
+├── wings/     os wings oficiais (negrito · itálico … tabela · upload)
+├── surface/   encaixa o cursor, IME e entrada na árvore
+├── ui/        a camada de interface
+├── viewer/    somente leitura
+├── index.ts   a entrada do núcleo — `nabi-note`
+└── ssr.ts     a entrada de SSR — `nabi-note/ssr` (não toca em nenhum arquivo de surface ou ui)
+```
+
+**A ordem das linhas é a ordem das camadas** — não alfabética mas **de baixo para cima.** `style` é o piso e `viewer` é o topo.
 
 Essa direção não é uma promessa escrita, **uma rede garante isso por código** — se um único
 import for contra a camada, o teste quebra ali mesmo.
@@ -140,6 +157,7 @@ import for contra a camada, o teste quebra ali mesmo.
 | **parágrafo wrapper** | o parágrafo que envolve objetos de parágrafo único como tabela, lista, imagem |
 | **claim (posse)** | a decisão de a qual wing pertence uma marcação |
 | **parts (partes)** | funcionalidades internas do wing, ex.: linha/célula da tabela, linha de resumo do bloco recolhível |
+| **IO filter (filtro de E/S)** | o ponto de extensão que trata de colar (a porta de entrada) e salvar e abrir (a porta de saída) como um conjunto. Fica **fora do contrato wing**, então não estabelece nó próprio no documento |
 
 ### Tela de edição
 
@@ -165,7 +183,6 @@ import for contra a camada, o teste quebra ali mesmo.
 
 <script setup lang="ts">
 import FlowHub from '../.vitepress/ui/FlowHub.vue'
-import LayerStack from '../.vitepress/ui/LayerStack.vue'
 import { useTranslate } from '../.vitepress/src/langs.ts'
 
 const { t } = useTranslate()
@@ -183,18 +200,4 @@ const hubTargets = [
   { label: 'getEditorHtml()', note: 'HTML para o editor', kind: 'out' },
 ];
 
-const layers = [
-  { name: 'locale', what: 'idioma' },
-  { name: 'code', what: 'o tokenizador puro que a tela de edição e o lado da leitura compartilham' },
-  { name: 'schema', what: 'a forma da árvore nabi e a definição do Cocoon' },
-  { name: 'doc', what: 'inserir · apagar · dividir · intervalo, sem DOM' },
-  { name: 'caret', what: 'posição, seleção e fronteiras do cursor' },
-  { name: 'html', what: 'árvore nabi ↔ HTML' },
-  { name: 'editor', what: 'a instância com a interface de comandos' },
-  { name: 'wing', what: 'verificação dos Wings no momento do registro' },
-  { name: 'wings', what: 'os wings oficiais (bold, italic ... table, upload...)' },
-  { name: 'surface', what: 'ajusta cursor, IME e entrada à árvore' },
-  { name: 'ui', what: 'a camada de interface' },
-  { name: 'viewer', what: 'somente leitura' },
-]
 </script>

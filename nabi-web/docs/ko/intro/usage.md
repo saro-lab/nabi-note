@@ -151,7 +151,7 @@ mountSurface({ nabi, registry, root: surface, placeholder: '' })   // 안내글 
 
 **그림·체크·표 칸 드래그·코드 색칠에는 따로 mount 할 것이 없습니다** — 전부 날개가 `attach`
 로 들고 있고 `mountSurface` 가 함께 붙입니다. 코드 색칠만 칠할 사람을 꽂아 주면 됩니다
-(`makeCodeAttach`, [{{ t('menu_wing_code') }}](../wing/block/code) 참고).
+(`makeCodeAttach`, [{{ t('menu_block_code') }}](../wing/block/code) 참고).
 
 ### 가속키는 편집기의 땅에서만 삽니다
 

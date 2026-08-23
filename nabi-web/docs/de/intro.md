@@ -122,10 +122,28 @@ untere Schicht kennt die obere nie.** Deshalb rühren die unteren Schichten (`sc
 `html`) kein DOM an, und genau deshalb laufen sie unverändert auf dem Server. Der Weg, auf dem
 Werte hinein- und herausgehen, ist das Nabi-Baum-Bild oben.
 
-<LayerStack
-  :layers="layers"
-  caption=""
-/>
+```
+src/
+├── style/     der Kernstil — das CSS, das Editier-Bildschirm und Leseseite gemeinsam nutzen
+├── locale/    Sprache
+├── code/      ein reiner Tokenizer, den Editier-Bildschirm und Leseseite gemeinsam nutzen
+├── schema/    die Gestalt des Nabi-Baums und die cocoon-Definition
+├── doc/       Einfügen · Löschen · Teilen · Bereich — ohne DOM
+├── caret/     Position, Auswahl und Grenzen des Cursors
+├── html/      Nabi-Baum ↔ HTML
+├── io/        die Türen rein und heraus — Einfüge-Kandidaten, Speicherung, Öffnung, Markdown
+├── editor/    die Instanz mit der Command-Schnittstelle
+├── wing/      Prüfung des Wing-Vertrags bei der Registrierung
+├── wings/     die offiziellen Flügel (bold · italic … table · upload)
+├── surface/   passt den Caret, IME und Eingabe auf den Baum an
+├── ui/        die UI-Schicht
+├── viewer/    nur zum Lesen
+├── index.ts   der Kern-Einstiegspunkt — `nabi-note`
+└── ssr.ts     der SSR-Einstiegspunkt — `nabi-note/ssr` (rührt nicht eine einzige Datei von surface oder ui an)
+```
+
+**Die Reihenfolge der Zeilen ist die Reihenfolge der Schichten** — nicht alphabetisch sondern
+**von unten nach oben.** `style` ist der Boden und `viewer` ist die Spitze.
 
 Diese Richtung ist keine schriftlich niedergelegte Abmachung, sondern **ein Netz erzwingt sie
 maschinell** — entsteht auch nur ein einziger Import, der die Schichtordnung verletzt, schlägt an
@@ -142,6 +160,7 @@ der Stelle ein Test an.
 | **Wrapper-Absatz** | ein Absatz, der ein Einzelabsatz-Objekt wie Tabelle, Liste oder Bild umhüllt |
 | **Besitz (claim)** | die Entscheidung, welchem Flügel ein Stück Markup gehört |
 | **Teile (parts)** | eine Funktion innerhalb eines Flügels, z. B. Zeile/Zelle einer Tabelle, Zusammenfassungszeile einer Klappbox |
+| **IO-Filter** | die Erweiterungsstelle, die Einfügen (die Eingangstür) und Speicherung und Öffnung (die Ausgangstür) als ein Set behandelt. Sie sitzt **außerhalb des Flügel-Vertrags**, deshalb setzt sie keinen Knoten ihrem Selbst im Dokument auf |
 
 ### Editier-Bildschirm
 
@@ -167,7 +186,6 @@ der Stelle ein Test an.
 
 <script setup lang="ts">
 import FlowHub from '../.vitepress/ui/FlowHub.vue'
-import LayerStack from '../.vitepress/ui/LayerStack.vue'
 import { useTranslate } from '../.vitepress/src/langs.ts'
 
 const { t } = useTranslate()
@@ -184,19 +202,4 @@ const hubTargets = [
   { label: 'getJson()', note: 'Output JSON', kind: 'out' },
   { label: 'getEditorHtml()', note: 'HTML für den Editor', kind: 'out' },
 ];
-
-const layers = [
-  { name: 'locale', what: 'Sprache' },
-  { name: 'code', what: 'ein reiner Tokenizer, den Editier-Bildschirm und Leseseite gemeinsam nutzen' },
-  { name: 'schema', what: 'die Gestalt des Nabi-Baums und die cocoon-Definition' },
-  { name: 'doc', what: 'Einfügen · Löschen · Teilen · Bereich — ohne DOM' },
-  { name: 'caret', what: 'Position, Auswahl und Grenzen des Cursors' },
-  { name: 'html', what: 'Nabi-Baum ↔ HTML' },
-  { name: 'editor', what: 'die Instanz mit der Command-Schnittstelle' },
-  { name: 'wing', what: 'Prüfung des Wing-Vertrags bei der Registrierung' },
-  { name: 'wings', what: 'die offiziellen Flügel (bold, italic ... table, upload...)' },
-  { name: 'surface', what: 'passt Caret, IME und Eingabe auf den Baum an' },
-  { name: 'ui', what: 'UI-Schicht' },
-  { name: 'viewer', what: 'nur zum Lesen' },
-]
 </script>

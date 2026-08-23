@@ -124,10 +124,25 @@ jamais celle du dessus.** C'est pourquoi les couches basses (`schema` · `doc` �
 touchent pas le DOM, et c'est aussi pour cela qu'elles tournent telles quelles côté serveur. Le
 chemin qu'emprunte la valeur est le schéma du nabi-tree vu plus haut.
 
-<LayerStack
-  :layers="layers"
-  caption=""
-/>
+```
+src/
+├── style/     la feuille de base — le CSS que partagent l'écran d'édition et le texte publié
+├── locale/    la langue
+├── code/      le tokenizer pur partagé par l'écran d'édition et le côté lecture
+├── schema/    la forme du nabi-tree et la définition de Cocoon
+├── doc/       insérer · supprimer · scinder · plage — sans DOM
+├── caret/     la position du curseur, la sélection, les bornes
+├── html/      nabi-tree ↔ HTML
+├── io/        les portes d'entrée et de sortie — candidates au collage, enregistrement, ouverture, markdown
+├── editor/    l'instance porteuse de l'interface de commandes
+├── wing/      le contrôle des wings au moment de l'enregistrement
+├── wings/     les wings officielles (gras · italique … tableau · envoi)
+├── surface/   accorde le caret, l'IME et la saisie à l'arbre
+├── ui/        la couche UI
+├── viewer/    lecture seule
+├── index.ts   la porte d'entrée du cœur — `nabi-note`
+└── ssr.ts     la porte d'entrée du SSR — `nabi-note/ssr` (elle ne touche aucun fichier de surface ou ui)
+```
 
 Cette direction n'est pas une promesse écrite mais **un contrôle imposé par un filet** — dès
 qu'un import franchit une couche à contre-sens, le test échoue à cet endroit précis.
@@ -143,6 +158,7 @@ qu'un import franchit une couche à contre-sens, le test échoue à cet endroit 
 | **paragraphe enveloppe** | le paragraphe qui enveloppe un objet à paragraphe unique comme un tableau, une liste ou une image. |
 | **revendication (claim)** | le verdict qui décide à quelle wing appartient un balisage. |
 | **parts** | une fonctionnalité interne à la wing, ex. les lignes et cellules d'un tableau, la ligne de résumé d'un bloc dépliant |
+| **filtre IO (IO filter)** | l'extension qui traite le collage (la porte d'entrée) et l'enregistrement et l'ouverture (les portes de sortie) comme un ensemble. Elle se situe **en dehors du contrat de wing**, si bien qu'elle n'établit aucun nœud dans le document |
 
 ### Écran d'édition
 
@@ -168,7 +184,6 @@ qu'un import franchit une couche à contre-sens, le test échoue à cet endroit 
 
 <script setup lang="ts">
 import FlowHub from '../.vitepress/ui/FlowHub.vue'
-import LayerStack from '../.vitepress/ui/LayerStack.vue'
 import { useTranslate } from '../.vitepress/src/langs.ts'
 
 const { t } = useTranslate()
@@ -186,18 +201,4 @@ const hubTargets = [
   { label: 'getEditorHtml()', note: 'HTML pour l\'éditeur', kind: 'out' },
 ];
 
-const layers = [
-  { name: 'locale', what: 'la langue' },
-  { name: 'code', what: 'le tokenizer pur partagé par l\'écran d\'édition et le côté lecture' },
-  { name: 'schema', what: 'la forme du nabi-tree et la définition de Cocoon' },
-  { name: 'doc', what: 'insérer · supprimer · scinder · plage — sans DOM' },
-  { name: 'caret', what: 'la position du curseur, la sélection, les bornes' },
-  { name: 'html', what: 'nabi-tree ↔ HTML' },
-  { name: 'editor', what: 'l\'instance porteuse de l\'interface de commandes' },
-  { name: 'wing', what: 'le contrôle des Wings au moment de l\'enregistrement' },
-  { name: 'wings', what: 'les wings officielles (bold, italic ... table, upload...)' },
-  { name: 'surface', what: 'accorde le caret, l\'IME et la saisie à l\'arbre' },
-  { name: 'ui', what: 'la couche UI' },
-  { name: 'viewer', what: 'lecture seule' },
-]
 </script>
