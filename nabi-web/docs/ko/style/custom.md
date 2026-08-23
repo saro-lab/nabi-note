@@ -1,15 +1,13 @@
 ---
-title: 스타일 바꾸기
-description: 색·모양은 CSS 변수로 덮어 바꿉니다.
+title: 스타일 커스텀
+description: CSS 변수를 활용하여 NABI NOTE의 색상, 폰트, 여백 등 스타일을 커스텀하는 방법을 안내합니다.
 ---
 
-# 스타일 바꾸기
+# 스타일 커스텀
 
-시트는 **호스트가 겁니다** — 번들러를 쓰면 `import 'nabi-note/nabi.css'` 한 줄,
-CDN 이면 `<link>` 한 줄입니다. 그 뒤로는 변수만 덮으면 됩니다.
+스타일시트는 **호스트 애플리케이션에서 직접 로드**합니다. 번들러 환경에서는 `import 'nabi-note/nabi.css'`, CDN 환경에서는 `<link>` 태그를 사용합니다. 이후 필요한 CSS 변수만 재정의하면 전체 에디터 테마가 일관되게 변경됩니다.
 
-컴포넌트 규칙에는 **색 리터럴이 한 글자도 없습니다.** 전부 `--nabi-*` 변수로 그려져 있어서,
-변수만 덮으면 나머지가 따라옵니다.
+NABI NOTE의 모든 UI 컴포넌트는 **하드코딩된 색상 리터럴 없이 `--nabi-*` CSS 변수로만 스타일링**되어 있어, 변수 재정의만으로 손쉽게 브랜딩을 맞출 수 있습니다.
 
 ```css
 .nabi.nabi.nabi {
@@ -17,84 +15,62 @@ CDN 이면 `<link>` 한 줄입니다. 그 뒤로는 변수만 덮으면 됩니�
 }
 ```
 
-클래스를 세 번 겹친 이유는 아래 [특이도에 걸리지 않게](#특이도에-걸리지-않게)에 있습니다.
+클래스 선택자를 세 번 중첩한 이유는 [CSS 특이도 가이드](#css-특이도specificity-가이드) 절을 참고하세요.
 
-::: tip 이 문서의 큰 전제 — 저장값은 혼자 서지 않습니다
-나가는 HTML(`getHtml()`)에는 **인라인 `style` 이 한 글자도 없습니다.** 저장값은
-무엇인가만 속성으로 말하고(`data-nabi-align="center"`), 어떻게 보이는지는 이 시트가
-말합니다. 그래서 저장한 HTML 을 읽는 쪽에서 그릴 때도 **이 시트가 걸린 `.nabi-content`
-안**이어야 편집기와 같은 모습이 됩니다 — 아래 [저장한 HTML 을 밖에서 그릴
-때](#저장한-html-을-밖에서-그릴-때)를 보세요.
+::: tip 저장된 HTML에는 인라인 스타일이 포함되지 않습니다
+에디터가 출력하는 HTML(`getHtml()`)에는 **인라인 `style` 속성이 포함되지 않습니다.** HTML 마크업은 의미 구조와 속성(`data-nabi-align="center"` 등)만 나타내며, 시각적 표현은 스타일시트가 담당합니다. 따라서 저장된 HTML을 외부 페이지에서 렌더링할 때도 **`nabi.css`가 적용된 `.nabi-content` 컨테이너 내부**에 배치해야 편집기 화면과 동일한 모양으로 표시됩니다.
+
+자세한 내용은 [저장된 HTML을 외부에서 렌더링할 때](#저장된-html을-외부에서-렌더링할-때) 절을 참고하세요.
 :::
 
-::: tip 다크·라이트는 이미 들어 있습니다
-테마를 위해 호스트가 덮어야 할 토큰은 **없습니다.** 코어 시트가 라이트 기본값 · `.dark`
-재정의 · 명시적 `.light` 재정의 셋을 다 들고 옵니다. 이 사이트도 편집기 안에서는
-글꼴 토큰 넷 말고는 아무것도 덮지 않습니다.
+::: tip 라이트 및 다크 테마가 기본 내장되어 있습니다
+기본 테마를 위해 호스트가 추가 변수를 정의할 필요는 없습니다. 코어 스타일시트에 라이트 기본값, `.dark` 테마, 명시적 `.light` 테마가 모두 포함되어 있습니다.
 :::
 
-## 색 · 모양 토큰
+## 색상 및 테마 토큰
 
-| 토큰 | 뜻 | 기본값(라이트) |
+| 토큰 | 설명 | 기본값 (라이트) |
 |---|---|---|
-| `--nabi-bg` · `--nabi-soft` | 바탕 · 살짝 눌린 면 | `#fff` · `rgb(0 0 0 / 4.5%)` |
-| `--nabi-fg` · `--nabi-muted` · `--nabi-on-accent` | 글자 · 흐린 글자 · 강조 위의 글자 | `#1b1b1f` · `#6b6b76` · `#fff` |
-| `--nabi-line` · `--nabi-accent` | 선 · 강조색 | `#e2e2e8` · `#3b6fe0` |
-| `--nabi-danger` · `--nabi-on-danger` | 위험 · 그 위의 글자 | `#d93b3b` · `#fff` |
-| `--nabi-shadow` · `--nabi-scrim` | 상자 그림자 · 미리보기 배경 | — |
-| `--nabi-radius` · `--nabi-radius-sm` · `--nabi-radius-xs` | 모서리 | `6px` · `4px` · `3px` |
-| `--nabi-layer-radius` | 층(판·미리보기·라이트박스)의 모서리 | `.25rem` |
-| `--nabi-z-sticky` | 붙어 서는 줄의 층 번호 | `20` |
-| `--nabi-grid-cell` | 표 크기 격자의 칸 크기 | `1.125rem` |
-| `--nabi-hl-yellow`·`green`·`cyan`·`pink`·`purple`·`orange` | 형광펜 여섯 색 | 반투명 색 |
-| `--nabi-tc-green`·`coral`·`violet`·`amber`·`blue` | 글자색 다섯 색 | 진한 색 |
+| `--nabi-bg` · `--nabi-soft` | 기본 배경색 · 마우스 호버/연한 배경색 | `#fff` · `rgb(0 0 0 / 4.5%)` |
+| `--nabi-fg` · `--nabi-muted` · `--nabi-on-accent` | 기본 텍스트 · 흐린 보조 텍스트 · 강조색 위 텍스트 | `#1b1b1f` · `#6b6b76` · `#fff` |
+| `--nabi-line` · `--nabi-accent` | 테두리/구분선 · 메인 강조색(포커스/활성화) | `#e2e2e8` · `#3b6fe0` |
+| `--nabi-danger` · `--nabi-on-danger` | 위험/경고색 · 위험색 위 텍스트 | `#d93b3b` · `#fff` |
+| `--nabi-shadow` · `--nabi-scrim` | 드롭다운 그림자 · 모달/미리보기 딤 배경 | — |
+| `--nabi-radius` · `--nabi-radius-sm` · `--nabi-radius-xs` | 모서리 라운딩 (기본 · 작게 · 최소) | `6px` · `4px` · `3px` |
+| `--nabi-layer-radius` | 레이어 팝업/모달 모서리 라운딩 | `.25rem` |
+| `--nabi-z-sticky` | 상단 고정 헤더의 z-index | `20` |
+| `--nabi-grid-cell` | 표 삽입 피커 등의 격자 셀 크기 | `1.125rem` |
+| `--nabi-hl-yellow`·`green`·`cyan`·`pink`·`purple`·`orange` | 형광펜 6가지 색상 | 반투명 색상 |
+| `--nabi-tc-green`·`coral`·`violet`·`amber`·`blue` | 글자색 5가지 색상 | 선명한 색상 |
 
-이 표는 코어 시트(`nabi.css`)가 **직접 선언하는** 것만 담았습니다. 선언 자리는 `.nabi`
-하나가 아니라 셋입니다 — `:is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *)))`.
-미리보기 오버레이는 `body` 자식이라 `.nabi` 로부터 상속이 닿지 않고, 편집기 밖에서 홀로 선
-`.nabi-content` 도 토큰을 직접 받아야 하기 때문입니다.
+위 표의 변수들은 코어 스타일시트(`nabi.css`)가 **직접 선언**하는 토큰입니다. 선언 대상은 `.nabi`뿐만 아니라 독립 렌더링을 위해 `:is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *)))` 3가지 선택자에 바인딩되어 있습니다.
 
-같은 목록이 세 벌(라이트 기본값 · `.dark` · 명시적 `.light`)로 적혀 있습니다. **덮는 쪽은
-세 벌을 다 볼 필요가 없습니다** — 특이도만 이기면 한 번 덮은 값이 세 경우 모두에 걸립니다.
-다만 다크에서 다른 값을 쓰고 싶다면 `.dark` 조건을 스스로 붙여야 합니다.
+## 참조 전용 토큰 (:root 정의 가능)
 
-## 값 없이 참조만 하는 토큰
+아래 변수들은 코어 스타일시트가 **직접 선언하지 않고 `var(--변수, 대체값)` 형태로 참조만** 하는 토큰입니다. 호스트에서 정의하지 않으면 지정된 기본 대체값이 적용됩니다. 코어 레벨에서 선언되어 있지 않으므로 **`:root`에 선언하여 전역으로 적용**할 수 있습니다.
 
-아래는 코어가 **선언하지 않고 참조만** 하는 변수들입니다. 호스트가 값을 주지 않으면 괄호
-안의 폴백이 섭니다. 선언된 자리가 없으므로 **`:root` 에 적어도 그대로 먹습니다** — 위
-색·모양 토큰과 갈리는 지점이 여기입니다(그쪽은 `.nabi` 에 선언돼 있어 상속이 못 이깁니다).
-
-| 토큰 | 뜻 | 폴백 |
+| 토큰 | 설명 | 기본 대체값 |
 |---|---|---|
-| `--nabi-font` · `--nabi-font-serif` · `--nabi-font-mono` · `--nabi-font-cursive` | 서체 날개의 네 갈래에 실제로 물릴 글꼴 | 시스템 글꼴 |
-| `--nabi-cursive-adjust` | 필기체의 `font-size-adjust`. 손글씨 얼굴은 x-높이가 낮아 같은 px 로도 작아 보이는데, 이 값이 x-높이 기준으로 다시 재웁니다 | `0.4` |
-| `--nabi-sticky-top` | 붙는 줄이 얼마나 내려와 앉나. 사이트에 고정 머리줄이 있으면 그 높이 | `0px` |
-| `--nabi-preview-width` | 미리보기 카드의 폭. **`openPreview` 가 열 때 편집 영역의 폭을 재서 카드에 직접 적으므로**, 호스트가 겉에서 덮어도 그 인라인 값이 이깁니다 | `720px` |
-| `--nabi-placeholder` | 빈 편집기의 안내글(따옴표까지 담은 글자열). **`mountSurface` 가 제 `placeholder` 옵션(또는 코어 사전)의 말을 편집 영역 뿌리에 직접 적으므로**, 겉에서 덮어도 그 인라인 값이 이깁니다 — 결을 바꾸려면 `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` 를 고쳐 쓰세요 | 없음(안 뜸) |
-| `--nabi-placeholder-color` | 그 안내글의 색입니다. 코어는 이 이름을 **선언하지 않고**, 대신 라이트·다크를 아는 `--nabi-placeholder-color-fallback`(라이트 `#6b6b76aa` · 다크 `#9a9aa6aa`)을 뒤에 세워 둡니다 — `:root` 에 이 토큰을 적으면 두 테마 모두에서 이깁니다 | `--nabi-placeholder-color-fallback` |
-| `--nabi-content-min-height` | 빈 편집기가 서 있을 최소 높이입니다. **편집 표면(`.nabi-content.nabi-editing`)에만** 걸립니다 — 발행·미리보기의 `.nabi-content` 는 글 길이가 곧 높이라 짧은 글 밑에 빈 자리가 안 생깁니다 | `12.5rem` |
-| `--nabi-touch-font-size` | 손가락 기기(`pointer: coarse` **또는** 폭 `40rem` 이하)에서 코어가 그리는 입력 칸(`.nabi-input` — 링크 주소·저장 이름·프롬프트)의 글자 크기입니다. **iOS 사파리는 글자가 16px 미만인 폼 칸에 겨눔이 들면 페이지를 통째로 확대하므로** 그것을 막으려고 세운 바닥값입니다. 마우스 화면은 한 픽셀도 안 바뀝니다 | `16px` |
+| `--nabi-font` · `--nabi-font-serif` · `--nabi-font-mono` · `--nabi-font-cursive` | 에디터 및 서체 날개의 각 폰트 패밀리 | 시스템 폰트 |
+| `--nabi-cursive-adjust` | 필기체 폰트의 `font-size-adjust` 비율 | `0.4` |
+| `--nabi-sticky-top` | 상단 고정 툴바의 상단 여백 (GNB 헤더 높이만큼 설정) | `0px` |
+| `--nabi-preview-width` | 미리보기 모달 카드의 기본 너비 | `720px` |
+| `--nabi-placeholder` | 빈 에디터에 표시될 플레이스홀더 텍스트 | 없음 |
+| `--nabi-placeholder-color` | 플레이스홀더 텍스트 색상 (지정하지 않으면 테마별 대체 색상 적용) | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | 빈 에디터 편집 영역의 최소 높이 (편집 영역 `.nabi-editing`에만 적용) | `12.5rem` |
+| `--nabi-touch-font-size` | 터치 디바이스(`pointer: coarse` 또는 너비 40rem 이하)에서 폼 입력 요소(`.nabi-input`)의 폰트 크기 (iOS 사파리 자동 확대 방지) | `16px` |
 
-`--nabi-typeface-base` 는 이 갈래가 아닙니다 — **코어가 선언합니다**(기본은 `--nabi-font` 를
-따라갑니다). 서체 날개에는 이 값을 정하는 옵션이 없으므로, 바꾸려면 이 토큰을 덮으세요.
+`--nabi-typeface-base`는 참조 전용이 아니라 **코어가 직접 선언**하는 토큰입니다(기본적으로 `--nabi-font` 참조). 기본 폰트를 변경할 때는 `--nabi-font`를 재정의하세요.
 
-`--nabi-keyboard-top` · `--nabi-keyboard-bottom` 도 같은 자리에 서지만 이것은 **코어가
-씁니다** — `mountSticky()` 이 모바일 키보드가 화면을 밀어낸 만큼을 재서 여기에
-적고, 붙는 줄과 전체화면이 그 값을 읽습니다. 손으로 적을 값이 아닙니다.
+`--nabi-keyboard-top`과 `--nabi-keyboard-bottom`은 **`mountSticky()`가 모바일 키보드 높이를 측정하여 동적으로 기록**하는 내부 변수입니다.
 
-`--nabi-bar-height` 도 **코어가 쓰고 코어가 읽습니다.** `mountSticky()` 가 붙는 크롬의
-**실측 높이**를 `.nabi` 뿌리에 적고, 시트의 `.nabi-content > *` 가 그 값을
-`scroll-margin-block-start` 에 더해 씁니다 — 캐럿으로 굴러간 줄이 툴바 밑에 안 잠기는 것이
-이 값 덕입니다. `mountSticky` 를 안 붙이면 값이 아예 안 적히고 어림값 `3.5rem` 이 섭니다.
-툴바가 두 줄이거나 상황 줄이 떠 있으면 어림값이 한참 모자라므로, 이 자리는 **왜 재야
-하는가**의 답이지 호스트가 적을 값이 아닙니다.
+`--nabi-bar-height` 역시 **`mountSticky()`가 실제 툴바 높이를 측정하여 기록**하는 내부 변수입니다. `.nabi-content > *` 요소가 스크롤 시 툴바 아래로 가려지지 않도록 `scroll-margin-block-start`에 이 값을 사용합니다.
 
-## 토큰이 없는 자리 — 규칙을 덮습니다
+## 변수가 없는 고정 스타일 재정의
 
-아래 셋은 **변수가 없습니다.** 코어가 규칙에 값을 박아 두었으므로, 바꾸려면 그 선택자를
-덮습니다.
+아래 3가지 속성은 CSS 변수 대신 고정된 CSS 규칙으로 정의되어 있으므로, 변경하려면 해당 클래스 선택자를 직접 재정의합니다.
 
-**글자 크기 네 단계** — `em` 이라 부모 크기를 따라갑니다.
+**글자 크기 4단계** (부모 크기 기준 `em` 단위):
 
 ```css
 .nabi-content [data-nabi-size="xs"] { font-size: .75em; }
@@ -103,15 +79,13 @@ CDN 이면 `<link>` 한 줄입니다. 그 뒤로는 변수만 덮으면 됩니�
 .nabi-content [data-nabi-size="xl"] { font-size: 1.5em; }
 ```
 
-**드롭 캡의 크기** — 몇 줄을 감쌀지 정하는 값이 아니라 글자 크기 하나입니다. 실제로 몇 줄을
-덮을지는 그 문단의 줄 높이가 정합니다.
+**드롭캡 첫 글자 크기**:
 
 ```css
 .nabi-content [data-nabi-dropcap="1"]::first-letter { font-size: 5.9em; line-height: .83; }
 ```
 
-**코드 토큰 색** — 코드 날개의 시트가 `[data-nabi-token]` 에 색을 직접 적습니다. 지금 색이
-붙는 갈래는 **다섯**입니다.
+**코드 블록 토큰 색상**:
 
 ```css
 .nabi-content [data-nabi-token="comment"] { color: #7a8a7a; font-style: italic; }
@@ -121,75 +95,49 @@ CDN 이면 `<link>` 한 줄입니다. 그 뒤로는 변수만 덮으면 됩니�
 .nabi-content [data-nabi-token="literal"] { color: #2f8f4e; }
 ```
 
-하이라이터가 답하는 `type` 은 자유로운 글자입니다 — 위 다섯 밖의 이름을 답하면 색 없이
-그려지므로, 쓰고 싶은 갈래는 호스트가 같은 모양으로 규칙을 더하면 됩니다. 다크에서 다른
-색을 쓰려면 `.dark` 조건을 스스로 붙이세요 — 코어는 이 다섯에 다크 변형을 안 답니다.
+---
 
-업로드 날개의 진행률 애니메이션(`--nabi-per`·`--nabi-t`·`--nabi-span`·`--nabi-clear`·
-`--nabi-blur-max`)은 **날개 내부 구현용**입니다 — 이름이 `--nabi-` 로 시작하지만 호스트가
-덮으라고 연 자리가 아닙니다.
+## 단위 규격
+
+버튼 크기, 여백, 툴바 높이 등 대부분의 UI 치수는 `rem` 단위로 정의되어 있어 **루트(`html`) 폰트 크기 설정에 비례하여 크기가 조절**됩니다. 사용자가 브라우저나 OS의 기본 글꼴 크기를 확대하면 에디터 UI도 자연스럽게 함께 확대됩니다.
 
 ---
 
-## 겉의 치수는 `rem` 이다
+## CSS 특이도(Specificity) 가이드
 
-버튼·여백·툴바 칩을 비롯한 겉의 치수는 대부분 `rem` 이라 **루트(`html`)의 글자 크기를
-따라 자랍니다.** 사용자가 브라우저나 OS 에서 글자를 키우면 편집기 틀도 함께 커집니다.
-크기를 바꾸고 싶으면 루트의 `font-size` 를 바꾸세요. 선(`border`)은 크기가 아니라
-**선**이므로 `px` 로 남아 있는 곳도 있습니다.
-
----
-
-## 특이도에 걸리지 않게
-
-색·모양 토큰을 덮으려면 **클래스 셋**을 겹치세요.
+코어에 선언된 테마 색상 변수를 재정의할 때는 스타일 우선순위를 확실하게 높이기 위해 **클래스 3개를 중첩**하는 방식을 권장합니다.
 
 ```css
 .nabi.nabi.nabi,
 .nabi-scrim.nabi-scrim.nabi-scrim {
-  --nabi-accent: var(--내-강조색);
+  --nabi-accent: #7c3aed;
 }
 ```
 
-세어 보면 이렇습니다. 라이트 기본값 규칙 `:is(.nabi, …)` 는 `:is()` 가 인자 중 가장 높은
-것을 따르므로 **(0,1,0)**, 다크 규칙 `:where(html, body).dark :is(.nabi, …)` 는
-`:where()` 가 0 이고 `.dark` 와 `:is()` 가 각각 클래스 하나씩이라 **(0,2,0)** 입니다.
-그러니 `.nabi.nabi` 로는 다크와 **비깁니다** — 비기면 나중에 실린 쪽이 이기고, 코어 시트가
-호스트 시트보다 나중에 실릴 수도 있습니다. 셋을 겹쳐 (0,3,0) 으로 올려야 순서에 안 기댑니다.
+- 라이트 기본 규칙 `:is(.nabi, …)`의 특이도는 **(0, 1, 0)**입니다.
+- 다크 모드 규칙 `:where(html, body).dark :is(.nabi, …)`의 특이도는 **(0, 2, 0)**입니다.
+- 따라서 `.nabi.nabi.nabi`처럼 클래스를 3개 중첩하면 **(0, 3, 0)**의 특이도를 확보하여 CSS 로드 순서에 구애받지 않고 항상 안정적으로 재정의할 수 있습니다.
 
-미리보기 오버레이는 `.nabi` 밖(`body` 자식)에 서므로 그쪽 선택자도 함께 적어야 같은 색이
-됩니다.
-
-**글꼴처럼 코어가 선언하지 않는 토큰은 이 씨름이 필요 없습니다** — 선언된 자리가 없어
-상속만으로 닿으니 `:root` 한 줄이면 됩니다.
-
-```css
-:root {
-  --nabi-font: 'Noto Sans', system-ui, sans-serif;
-}
-```
+미리보기 모달은 `body` 직속 자식 요소로 마운트되므로 `.nabi-scrim.nabi-scrim.nabi-scrim` 선택자도 함께 지정해야 동일한 테마 색상이 적용됩니다.
+폰트 토큰처럼 코어가 선언하지 않는 참조 전용 토큰은 `:root`에 한 번만 선언해도 정상 적용됩니다.
 
 ---
 
-## 라이트 · 다크
+## 라이트 / 다크 테마
 
-`html` 이나 `body` **둘 중 하나**에 `dark` 클래스가 있으면 다크, `light` 면 라이트입니다.
-클래스가 없으면 라이트가 기본이고, 둘 다 있으면 명시적 `light` 가 이깁니다(`.light` 규칙이
-`.dark` 규칙 뒤에 실려 있습니다).
+`html` 또는 `body` 요소에 `dark` 클래스가 있으면 다크 테마, `light` 클래스가 있으면 라이트 테마가 적용됩니다. 클래스가 없으면 기본 라이트 테마로 동작하며, 두 클래스가 모두 존재할 경우 명시적인 `light` 클래스가 우선합니다.
 
 ```html
 <html class="dark"><!-- 또는 <body class="dark"> --></html>
 ```
 
-클래스를 토글하면 CSS 가 반응합니다. 부를 API 는 없습니다. 테마가 갈아 끼우는 것은 색
-변수뿐이고 컴포넌트 규칙은 그대로입니다 — 직접 만든 스타일도 `--nabi-*` 변수만 쓰면
-다크를 따라갑니다.
+테마 전환은 클래스 토글만으로 즉각 반응하며 별도의 자바스크립트 API 호출이 필요하지 않습니다. 커스텀 스타일을 작성할 때도 `--nabi-*` 변수를 활용하면 테마 전환 시 색상이 자동으로 연동됩니다.
 
 ---
 
-## 시트를 거는 두 길
+## 스타일시트 로드 방식
 
-**① 파일 하나** — 가장 흔한 길입니다. 모든 날개의 CSS 가 들어 있습니다.
+**1. CSS 파일 전체 임포트** (가장 권장되는 일반적인 방식)
 
 ```ts
 import 'nabi-note/nabi.css'
@@ -199,125 +147,64 @@ import 'nabi-note/nabi.css'
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note/dist/nabi.css">
 ```
 
-**② 등록한 것만 주입** — 실제로 켠 날개의 시트만 담고 싶을 때입니다.
+**2. 등록된 날개의 스타일만 동적 주입**
 
 ```ts
 import { collectSheets, injectSheets } from 'nabi-note'
 
 const drop = injectSheets(document, collectSheets(registry))
-// drop() 을 부르면 이 부름이 넣은 것만 걷힙니다
+// drop() 호출 시 주입된 스타일이 DOM에서 정리됩니다.
 ```
 
-같은 글의 시트는 **한 번만** 들어갑니다 — 접는 열쇠가 시트의 **내용**이라, 한 문서에 편집기를
-여럿 띄워도 쌓이지 않고 서로 다른 날개 구성이 섞여도 합집합 하나로 모입니다.
-
-::: tip 둘의 차이 — 무엇이 실리나, 언제 걸리나
-**무엇이 실리나.** 파일은 어느 날개를 등록했는지 알 수 없으므로 **전부** 싣습니다. 주입은
-`registry` 를 보고 **등록한 것만** 담습니다. 저장된 HTML 을 보여 주기만 하는 페이지는
-편집기가 없어 `registry` 도 없으므로 파일 쪽을 씁니다.
-
-**언제 걸리나.** 파일은 `<link>` 로 머리(head)에서 **그리기를 막고** 들어오지만, 주입은
-편집기 자바스크립트가 **도착한 뒤에야** 붙습니다. 그래서 문서를 서버에서 미리 그려
-내려보내는 페이지는 파일 쪽이어야 합니다 — 주입으로 걸면 서버가 보낸 문서가 맨몸으로 한 번
-그려졌다가 스타일이 얹히며 배치가 다시 잡힙니다.
-:::
-
-등록한 wing 의 시트는 코어 시트 **뒤에** 들어가므로, 같은 우선순위에서는 wing 이
-이깁니다.
+동일한 스타일시트 내용은 중복 주입되지 않고 단일 태그로 관리됩니다.
+서버 사이드 렌더링(SSR) 환경에서는 클라이언트 JS 실행 전 스타일 깜빡임(FOUC)을 방지하기 위해 정적 CSS 파일 로드 방식을 사용하는 것이 좋습니다.
 
 ---
 
-## 붙일 수 있는 자리
+## 커스텀 가능한 CSS 클래스 및 UI 요소
 
-변수로 안 되는 것은 실제로 존재하는 클래스를 직접 겨냥합니다.
-
-| 선택자 | 무엇 | 누가 붙입니까 |
+| 선택자 | 설명 | 생성 주체 |
 |---|---|---|
-| `.nabi` | 편집기 전체(크롬 + 편집 영역)를 감싸는 껍데기. 색·모양 토큰이 여기 걸립니다 | 호스트 |
-| `.nabi-content[contenteditable]` | 편집 영역 자신 | 호스트 |
-| `.nabi-toolbar` | 툴바 줄 + 상황 줄을 감싸는 자리. 이 클래스가 곧 "위에 붙는다" 입니다 | 호스트 |
-| `.nabi-toolbar-row` | 툴바가 들어앉은 그릇 | `mountToolbar()` |
-| `.nabi-context` | 상황 줄이 들어앉은 그릇 | `mountContextToolbar()` |
-| `.nabi-tools` | 미리보기·전체화면 두 단추의 자리 — 코어가 오른쪽 위로 띄웁니다 | `mountViewTools()` |
-| `.nabi-tool` | 그 두 단추 자신 | `mountViewTools()` |
-| `.tb-group` | 툴바의 버튼 묶음 | `mountToolbar()` |
-| `.ctb-group` · `.ctb-button` · `.ctb-swatch` · `.ctb-input` | 상황 줄의 묶음·버튼·색 견본·글자 칸 | `mountContextToolbar()` |
-| `.tb-picker` · `.tb-picker-grid` · `.tb-picker-cell` | 표 크기 격자 등 버튼 아래 뜨는 상자 | `mountToolbar()` |
-| `.tb-prompt` · `.tb-prompt-input` | 새로 넣을 때 뜨는 주소 입력 레이어 | `mountToolbar()` |
-| `.nabi-hints [data-hint]` | Shift 두 번 연타로 뜨는 단축키 배지 — 배지는 `::before`, 이름표는 `::after` 라 둘이 함께 보입니다 | `mountHints()` |
-| `[data-nabi-tip]` | 이름표(tooltip) — CSS `::after` 로만 그립니다 | 코어 전반 |
-| `.nabi-content.nabi-dropping` | 파일을 끌고 온 동안의 편집 영역. 안내 글자는 `data-nabi-drop` 속성에 실립니다 | `mountUpload()` |
+| `.nabi` | 에디터 전체(툴바 + 편집 영역)를 감싸는 최상위 컨테이너 | 호스트 |
+| `.nabi-content[contenteditable]` | 실제 본문 편집 영역 | 호스트 |
+| `.nabi-toolbar` | 툴바와 컨텍스트 바를 감싸는 고정 헤더 컨테이너 | 호스트 |
+| `.nabi-toolbar-row` | 메인 툴바 버튼 줄 | `mountToolbar()` |
+| `.nabi-context` | 동적 컨텍스트 툴바 컨테이너 | `mountContextToolbar()` |
+| `.nabi-tools` | 미리보기 및 전체화면 버튼 래퍼 | `mountViewTools()` |
+| `.nabi-hints [data-hint]` | Shift 키 연타 시 표시되는 단축키 안내 배지 | `mountHints()` |
+| `[data-nabi-tip]` | 버튼 툴팁 (CSS `::after`로 렌더링) | 코어 컴포넌트 |
+| `.nabi-content.nabi-dropping` | 파일 드래그 중인 편집 영역 | `mountUpload()` |
 
-미리보기·전체화면도 **코어가 짓습니다.**
+### 모달 및 팝업 요소
 
-| 선택자 | 무엇 | 누가 |
+| 선택자 | 설명 | 생성 함수 |
 |---|---|---|
-| `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | 문서 미리보기 오버레이 | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | 그림 하나만 크게 보는 상자 | `openLightbox()` |
-| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | 붙여넣기 후보를 고르는 판 | `openChoosePanel()` |
-| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | 저장 판 — 이름 칸·확장자 표식·형식 칸들 | `openSavePanel()` |
-| `.nabi.is-fullscreen` | 전체화면 — `.nabi` 상자를 화면에 고정합니다 | `setFullscreen()` (클래스 이름은 `FULLSCREEN_CLASS`) |
-
-::: tip 두 판이 **한 규칙**을 씁니다
-붙여넣기 판과 저장 판은 같은 격자 부품으로 서므로 선택자가 짝을 이룹니다 —
-`.nabi-choose-list`/`.nabi-save-list` · `.nabi-choose-row`/`.nabi-save-row` ·
-`.nabi-choose-icon`/`.nabi-save-icon` · `.nabi-choose-label`/`.nabi-save-label`.
-겨눔은 **둘 다** `[aria-selected="true"]` 로 말하고 그 표시는 `--nabi-accent` 테두리 하나뿐
-입니다 — 안쪽 칠은 어느 판에도 없습니다.
-
-저장 판만의 것은 셋입니다: `.nabi-save-name`(이름 줄) · `.nabi-save-ext`(확장자 표식) ·
-`.nabi-save-note`(`(손실저장)` — 이름보다 작고 경고색이 아닙니다).
-
-`--nabi-grid-cols` 는 격자의 열 수인데 **판을 세우는 손이 적습니다** — 판이 칸 수를 보고
-최대 셋까지 직접 목록에 인라인으로 적으므로, 호스트가 겉에서 적을 값이 아닙니다.
-`--nabi-save-ext-len`(확장자 표식의 글자 수)도 같은 자리입니다.
-:::
-
-::: warning `.nabi-save-format` 은 없어졌습니다
-저장 판이 세로 목록이던 시절의 이름입니다. 그 이름으로 호버 칠을 덮던 호스트는 **조용히
-실패합니다** — 지금 격자 한 칸의 이름은 `.nabi-save-row` 이고(붙여넣기 판과 같은 자리 이름),
-호버·겨눔에 안쪽 칠은 아예 없습니다.
-:::
-
-`mountViewTools()` 를 붙이면 두 단추가 알아서 이것들을 열고 닫습니다. 직접 열고 싶으면
-`openPreview({ nabi, surface })` · `openLightbox({ surface, src, alt?, locale })` ·
-`setFullscreen(root, on)` · `isFullscreen(root)` 를 부르세요.
-
-::: tip 도구 자리는 스스로 섭니다
-`mountViewTools` 가 `.nabi-tools` 상자를 직접 만들어 받은 그릇의 맨 앞에 넣습니다. 호스트가
-`<span>` 을 툴바보다 앞에 놓아 둘 일이 없습니다 — 자리를 미리 만들어 두면 오히려 상자가
-둘이 됩니다.
-:::
-
-편집 화면 전용 표식도 겨냥할 수 있습니다 — `[data-nabi-token]`(코드 블록의 토큰 색),
-`[data-nabi-lang]`(코드 블록의 언어), `[data-color]`(형광펜·글자색 — `<mark>`·`<span>`
-태그로 구분), `data-nabi-align`·`data-nabi-typeface`·`data-nabi-size`·`data-nabi-dropcap`
-(문단 속성). 이 표식들의 실제 이름은 각 wing 파일의 `*_ATTR` 상수가 정본입니다.
+| `.nabi-scrim` > `.nabi-card` > `.nabi-content.nabi-preview-body` | 문서 미리보기 모달 | `openPreview()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | 이미지 라이트박스 팝업 | `openLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` | 붙여넣기 형식 선택 팝업 | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` | 파일 저장 팝업 (파일명 입력 및 형식 선택) | `openSavePanel()` |
+| `.nabi.is-fullscreen` | 에디터 전체화면 모드 활성화 클래스 | `setFullscreen()` |
 
 ---
 
-## 저장한 HTML 을 밖에서 그릴 때
+## 저장된 HTML을 외부에서 렌더링할 때
 
-나가는 값(`getHtml()`)은 `data-nabi-*` 속성이 남은 HTML 이고, **인라인 `style` 은
-한 글자도 없습니다.** 모양은 전부 시트의 몫이라는 뜻이고, 그래서 시트 없이 그리면 정렬도
-글자 크기도 표의 줄도 없는 맨 HTML 이 됩니다.
-
-편집기와 같은 모습으로 그리려면 `.nabi-content` 로 감싸세요 — 이 클래스는 `.nabi` 로
-감싸지 않아도 색·모양 토큰을 직접 받습니다(`nabi.css` 의
-`.nabi-content:where(:not(.nabi *))` 규칙).
+`getHtml()`로 추출한 HTML 문자열은 인라인 `style` 없이 시맨틱 마크업과 `data-nabi-*` 속성으로만 구성됩니다.
+외부 페이지에서 에디터 화면과 동일한 스타일로 렌더링하려면 본문을 `.nabi-content` 클래스로 감싸고 `nabi.css`를 로드합니다.
 
 ```html
-<div class="nabi-content">저장한 HTML</div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note/dist/nabi.css">
+
+<div class="nabi-content">
+  <!-- nabi.getHtml()로 저장된 HTML 본문 -->
+</div>
 ```
 
-시트는 위 「시트를 거는 두 길」에서 본 그대로 걸면 됩니다 — 번들러면 `import
-'nabi-note/nabi.css'`, 그 밖이면 `<link>` 하나입니다. 편집기를 안 세우는 페이지라도
-`.nabi-content` 만 있으면 코어 시트가 토큰을 선언해 줍니다.
+`.nabi`로 감싸지 않아도 `.nabi-content` 자체에 테마 및 폰트 토큰이 적용되므로, 에디터에서 보던 스타일을 그대로 재현할 수 있습니다.
 
-### 보는 쪽에서 도는 동작 — 표 정렬
+### 읽기 전용 표 정렬 기능 활성화
 
-지금은 **표 정렬 하나**만 읽는 쪽 전용 함수로 나옵니다. 임의의 wing 이 저마다 읽는 쪽
-동작을 다는 범용 체계는 아직 없습니다.
+발행된 HTML 페이지에서 표 열 정렬 기능을 활성화하려면 `attachTableSort` 함수를 연결합니다.
 
 ```ts
 import { attachTableSort } from 'nabi-note/viewer'
@@ -325,20 +212,18 @@ import { attachTableSort } from 'nabi-note/viewer'
 const detach = attachTableSort(document.querySelector('#article')!, { locale: 'ko' })
 ```
 
-`data-nabi-sortable` 이 붙은 표를 찾아 제목 칸에 정렬 버튼을 답니다. 해제 함수(`detach`)가
-꽂은 버튼과 바꾼 행 순서를 되돌립니다.
+`data-nabi-sortable` 속성이 포함된 표를 감지하여 열 제목에 정렬 버튼을 추가합니다. 반환된 `detach()` 함수를 호출하면 추가된 DOM 버튼이 제거되고 원래 행 순서로 복원됩니다.
 
-::: danger 편집 대상 엘리먼트에는 붙이지 마세요
-`attachTableSort()` 는 DOM 에 버튼을 꽂고 행 순서를 바꿉니다. 붙어 있는 동안의 DOM 을
-저장하면 그것이 값에 굳습니다 — 보는 쪽은 읽기 전용 사본에만 붙이세요.
+::: warning 편집 중인 DOM에는 attachTableSort를 적용하지 마세요
+`attachTableSort()`는 DOM 구조를 직접 조작하므로, 편집 중인 에디터 영역에 적용하면 정렬 버튼 UI가 문서 본문에 영구 저장될 수 있습니다. 반드시 읽기 전용 뷰어 화면에만 사용하세요.
 :::
 
 ---
 
 ## 다음 문서
 
-- [{{ t('menu_wing_custom') }}](../wing/custom) — 없는 서식을 직접 만들기
-- [{{ t('menu_intro_index') }}](../intro) — 이 문서가 쓰는 말
+- [{{ t('menu_wing_custom') }}](../wing/custom) — 새로운 커스텀 서식 날개 직접 만들기
+- [{{ t('menu_intro_index') }}](../intro) — NABI NOTE 소개 및 아키텍처
 
 <script setup lang="ts">
 import { useTranslate } from '../../.vitepress/src/langs.ts'

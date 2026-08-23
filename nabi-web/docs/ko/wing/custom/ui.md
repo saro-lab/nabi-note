@@ -1,101 +1,85 @@
 ---
-title: UI 와 동작
-description: 툴바 단추(button)·상황 줄(context)·시트(styles) — 날개가 사람 앞에 서는 세 자리입니다.
+title: UI와 상호작용
+description: 툴바 버튼(button), 컨텍스트 툴바(context), 스타일시트(styles), 사용자 대화 상자(ask) 연동 방법을 안내합니다.
 ---
 
-# UI 와 동작
+# UI와 상호작용
 
-날개가 사람 앞에 서는 자리는 셋입니다.
-
-| 칸 | 어디에 |
-|---|---|
-| `button` · `buttons` | 위쪽 **툴바** — 언제나 보이는 자리 |
-| `context` | **상황 줄** — 지금 캐럿이 닿은 것에만 뜨는 자리 |
-| `styles` | 이 날개가 나르는 **CSS** |
+날개가 사용자 인터페이스(UI)를 제공하는 영역은 3가지입니다: **메인 툴바**(`button`/`buttons`), **컨텍스트 툴바**(`context`), **날개 전용 CSS**(`styles`).
 
 ---
 
-## 툴바 단추
+## 툴바 버튼 (`button` / `buttons`)
 
 ```ts
 button: {
-  group: 'emphasis',                   // 어느 무리에 서는가 — 필수입니다
-  svg: '<path d="…"/>',                // 16×16 좌표의 속입니다. 없으면 글자로 섭니다
+  group: 'emphasis',                   // 소속 버튼 그룹 (필수)
+  svg: '<path d="…"/>',                // 16×16 viewBox 내부 SVG path 문자열
   label: { ko: '굵게', en: 'Bold' },
-  shortcut: 'B',                       // 힌트 모드에서 이 글자
-  accelerator: 'mod+b',                // Ctrl/⌘ 조합
-  action: { kind: 'mark' },
+  shortcut: 'B',                       // Shift 2회 연타 힌트 모드에서 표시될 단축키 문자
+  accelerator: 'mod+b',                // 키보드 단축키 (Ctrl/⌘ 조합)
+  action: { kind: 'mark' },            // 인라인 마크 토글 액션
 }
 ```
 
-단추가 여럿이면 `buttons` 에 배열로 적습니다 — 정렬 날개 하나가 왼쪽·가운데·오른쪽 셋을
-세우는 식입니다. 그때는 `name` 으로 서로를 가르고 `value` 로 각자가 나타내는 값을 적습니다.
+하나의 날개가 여러 개의 버튼을 제공할 때는 `buttons` 배열로 정의합니다 (예: 텍스트 정렬 날개가 왼쪽/가운데/오른쪽 버튼 3개를 제공하는 경우). 각 버튼은 `name`으로 구분하며 `value`에 해당 버튼이 나타내는 값을 지정합니다.
 
-### `group` — 순서는 무리가 정합니다
+### 버튼 그룹 (`group`) 순서
+
+툴바 버튼 그룹의 렌더링 순서는 다음과 같이 고정되어 있습니다:
 
 ```
 font · heading · emphasis · script · color · link ·
 align · list · structure · media · container · clear · file
 ```
 
-**이 순서는 못박혀 있습니다.** 날개를 배열 어디에 넣든 단추는 자기 무리 자리에 섭니다. 같은
-무리 안에서만 등록 순서대로 늘어섭니다. 목록에 없는 이름을 쓰면 맨 뒤에 새 무리가 섭니다.
+날개를 배열 어디에 선언하든 버튼은 소속된 그룹 위치에 자동으로 배치되며, 동일 그룹 내에서만 날개 등록 순서대로 정렬됩니다. 목록에 없는 새로운 그룹명을 지정하면 툴바 맨 끝에 새 그룹이 추가됩니다.
 
-무리가 통째로 빌 때(속의 단추가 다 숨었을 때) 그 무리는 화면에서 사라집니다 — 빈 구분선이
-남지 않습니다.
+특정 그룹에 속한 버튼이 현재 상태에서 모두 숨겨지면, 해당 그룹과 구분선도 자동으로 숨김 처리됩니다.
 
-### `action` — 누르면 무슨 일이 나는가
+### 버튼 액션 (`action`) 유형
 
-| `kind` | 하는 일 | 함께 적는 것 |
+| `kind` | 동작 설명 | 추가 속성 |
 |---|---|---|
-| `'mark'` | 코어의 마크 토글로 갑니다. **커맨드를 안 써도 됩니다** | — |
-| `'command'` | 커맨드 하나를 돌립니다 | `command` · `args?` |
-| `'menu'` | 값 목록을 판으로 폅니다 | `command` · `argKey` · `values` |
-| `'grid'` | 행×열 격자를 폅니다 (표 넣기) | `command` · `rowsKey` · `colsKey` · `max?` |
-| `'prompt'` | 입력 칸을 띄우고 받은 값을 커맨드에 넘깁니다 | `command` · `fields` |
-| `'file'` | 파일 고르기 창을 엽니다 | `accept?` · `multiple?` |
-| `'host'` | 호스트에게 넘깁니다 (`mountToolbar` 의 `onHost`) | — |
+| `'mark'` | 인라인 마크 토글 (코어 기본 로직으로 동작) | — |
+| `'command'` | 지정된 커맨드 실행 | `command`, `args?` |
+| `'menu'` | 드롭다운 값 선택 메뉴 표시 | `command`, `argKey`, `values` |
+| `'grid'` | 표 삽입용 행×열 격자 피커 표시 | `command`, `rowsKey`, `colsKey`, `max?` |
+| `'prompt'` | 입력 팝업을 띄우고 입력값을 커맨드로 전달 | `command`, `fields` |
+| `'file'` | 파일 선택 대화 상자 열기 | `accept?`, `multiple?` |
+| `'host'` | 호스트 콜백(`mountToolbar`의 `onHost`)으로 전달 | — |
 
-`action` 을 안 적으면 그 단추는 눌러도 아무 일도 안 합니다.
+`action`을 정의하지 않은 버튼은 클릭해도 아무런 동작을 수행하지 않습니다.
 
-### `shortcut` 과 `accelerator`
+### 단축키 (`shortcut`과 `accelerator`)
 
-| | 모양 | 규칙 |
+| 항목 | 형식 | 규칙 |
 |---|---|---|
-| `shortcut` | `'B'` | 라틴 **대문자·숫자 한 글자**입니다 |
-| `accelerator` | `'mod+b'` | `mod+` 뒤에 **소문자 한 글자**입니다 |
+| `shortcut` | `'B'` | 라틴 **대문자 또는 숫자 1자리** |
+| `accelerator` | `'mod+b'` | `mod+` 접두사 뒤에 **소문자 1자리** |
 
-둘 다 **날개 사이에서 겹치면 등록하는 자리에서 죽습니다.** 나중에 조용히 한쪽이 안 먹는 일이
-없습니다.
+서로 다른 날개가 동일한 단축키를 중복 선언하면 초기화 시점에 즉시 예외가 발생합니다.
 
-`accelerated` 를 따로 적으면 가속키로 눌렀을 때만 다른 동작이 갑니다 — 단추를 누르면 판이
-열리지만 <kbd>Ctrl</kbd>+키로는 기본값이 바로 걸리는 식입니다.
+`accelerated` 옵션을 지정하면 단축키로 실행했을 때만 다른 액션을 수행하도록 분기할 수 있습니다 (예: 버튼 클릭 시에는 옵션 모달이 뜨고, 단축키 입력 시에는 기본값이 바로 적용되는 방식).
 
-::: warning 가속키는 **이 편집기의 땅**에서 난 키만 듣습니다
-가속키를 듣는 자리는 툴바 하나이고, 그 귀가 미치는 범위를 `mountToolbar({ surface })` 가
-그립니다 — 그 표면과 툴바 줄 안에서 난 키만 이 편집기의 것입니다. **한 페이지에 편집기가
-둘이면 반드시 주세요**: 안 주면 옛길로 문서 전체를 듣고, 두 편집기가 서로의 키를 먹습니다.
-
-문턱이 둘 더 있습니다. **단추가 서 있어야** 하고(= 그 날개가 등록됐고 지금 보인다),
-**닿을 데가 있어야** 키를 삼킵니다. `'host'` 갈래는 `onHost` 나 저장 판 중 하나가 배선돼
-있어야 닿은 것이고, 아무 데도 안 닿으면 키는 브라우저의 것으로 그대로 흘러갑니다.
+::: warning 단축키는 지정된 에디터 영역 내부에서만 동작합니다
+단축키 이벤트는 `mountToolbar({ surface })`에 전달된 편집 영역 내부에서 발생한 키 입력만 감지합니다. 한 페이지에 여러 에디터가 존재할 때는 `surface` 옵션을 반드시 지정해야 키 이벤트 간섭을 방지할 수 있습니다.
 :::
 
 ---
 
-## 눌린 것으로 보이는 법
+## 버튼 활성화 (Pressed) 상태 표시 규칙
 
-단추가 "지금 켜져 있다" 고 칠해지는 근거는 하나뿐입니다.
+툴바 버튼이 "현재 활성화됨(Pressed)"으로 표시되는 기준은 날개 유형(`place`)에 따라 결정됩니다:
 
-| `place` | 무엇을 보고 | 
+| `place` | 활성화 판별 기준 |
 |---|---|
-| `'mark'` | 캐럿 자리에 그 마크가 있는가 |
-| `'attr'` | 캐럿이 선 문단의 `currentValue` |
-| `'container'`·`'void'` | 캐럿이 그 물건 안이나 위에 있는가 |
-| `'tool'` | **언제나 꺼짐**입니다 |
+| `'mark'` | 현재 커서 위치에 해당 인라인 마크가 적용되어 있는지 여부 |
+| `'attr'` | 현재 문단 노드의 `currentValue` 반환값과 버튼의 `value` 일치 여부 |
+| `'container'` · `'void'` | 현재 커서가 해당 블록 객체 내부 또는 위에 위치하는지 여부 |
+| `'tool'` | 항상 비활성 상태 유지 |
 
-값이 여럿인 날개(정렬·제목)는 단추마다 `value` 를 적고, 날개의 `currentValue` 가 답한 값과
-같은 단추만 칠해집니다.
+여러 값을 가지는 날개(제목, 정렬 등)는 `currentValue` 함수가 반환한 문자열과 일치하는 `value`를 가진 버튼만 활성화 상태로 칠해집니다.
 
 ```ts
 currentValue: (node) => {
@@ -104,32 +88,20 @@ currentValue: (node) => {
 }
 ```
 
-**`currentValue` 는 글자를 답합니다** — 숫자 값이어도 `String()` 으로 옮겨 답합니다.
-`undefined` 는 "이 노드에는 내 값이 없다" 입니다.
+---
+
+## 버튼 자동 숨김 규칙
+
+에디터 코어는 서식을 적용할 수 없는 상황에서 관련 툴바 버튼을 자동으로 비활성화하거나 숨깁니다:
+- **코드 블록 내부처럼 서식이 제한된 영역**에서는 인라인 마크 및 다른 블록 생성 버튼이 자동으로 숨겨집니다.
+- 블록 객체(이미지, 표 등)의 래퍼 문단에서는 제목 등의 문단 속성이 숨겨집니다 (단, 텍스트 정렬(`a`)은 객체 정렬을 위해 예외적으로 유지됩니다).
+- 상위 컨테이너의 `allows` 허용 목록에 포함되지 않은 날개의 버튼은 자동으로 숨겨집니다.
 
 ---
 
-## 단추는 못 설 자리에서 저절로 숨습니다
+## 동적 컨텍스트 툴바 (`context`)
 
-| `place` | 숨는 때 |
-|---|---|
-| `'mark'` | 글자만 사는 자리(코드 상자 안 따위)에서, 그 자리의 주인일 때 |
-| `'attr'` | 캐럿이 물건을 담은 래퍼 문단 위일 때. **정렬(`a`)만 예외**입니다 |
-| `'void'`·`'container'` | 글자만 사는 자리이거나, 지금 그릇의 `allows` 가 나를 안 받을 때 |
-| `'tool'` | 안 숨습니다 |
-
-정렬만 예외인 까닭은 앞에서 본 그대로입니다 — 물건의 정렬은 물건이 아니라 그것을 담은 래퍼
-문단이 듭니다. 그림 위에서 "가운데" 를 누를 수 있어야 합니다.
-
-`allows` 를 적어 두면 **툴바가 알아서 따라옵니다.** 코드 상자 안에서 표 단추가 사라지는 것은
-따로 적은 규칙이 아니라 `allows` 하나에서 나옵니다.
-
----
-
-## 상황 줄
-
-지금 캐럿이 닿은 것에만 뜨는 줄입니다. 그림을 누르면 크기 조절이, 링크에 캐럿을 두면 주소
-칸이 뜨는 자리입니다.
+현재 커서가 위치한 요소에 특화된 설정 도구를 제공하는 보조 툴바입니다 (예: 이미지 클릭 시 크기 조절 슬라이더, 링크 클릭 시 URL 입력 폼, 표 내부 커서 위치 시 행/열 추가 버튼).
 
 ```ts
 context: {
@@ -138,12 +110,12 @@ context: {
     {
       kind: 'select',
       name: 'tone',
-      label: { ko: '결', en: 'Tone' },
+      label: { ko: '유형', en: 'Tone' },
       command: 'setNoteTone',
       argKey: 'value',
-      attr: 't',                                    // 지금 값을 읽을 속성 칸
+      attr: 't',                                    // 현재 값을 읽어올 노드 속성 키
       values: [
-        { value: 'info', label: { ko: '알림' } },
+        { value: 'info', label: { ko: '안내' } },
         { value: 'warn', label: { ko: '주의' } },
       ],
     },
@@ -151,74 +123,41 @@ context: {
 }
 ```
 
-### 언제 뜨는가
+### 컨텍스트 툴바 컨트롤 종류 (`ContextControl`)
 
-캐럿 자리에서 **닿는 것 전부**가 각자 자기 줄을 폅니다.
-
-- 캐럿의 길 위에 있는 그릇들 (안쪽이 먼저, 바깥이 나중)
-- 겨눠진 물건 (래퍼 문단 위에서 선택된 그림 따위)
-- 캐럿 자리에 걸린 **마크들** — 툴바 단추와 달리 마크도 상황 줄을 가집니다
-- 캐럿이 선 문단이 값을 든 **문단 속성** 날개
-
-표 안의 링크에 캐럿을 두면 링크 줄과 표 줄이 함께 뜹니다.
-
-### `ContextControl` 일곱 갈래
-
-| `kind` | 무엇 | 함께 적는 것 |
+| `kind` | 컨트롤 형태 | 주요 속성 |
 |---|---|---|
-| `'button'` | 한 번 누르면 커맨드 | `command` · `args?` |
-| `'toggle'` | 켜짐/꺼짐 두 상태 | `command` · `token` |
-| `'select'` | 목록에서 하나 | `command` · `argKey` · `values` · `attr?` |
-| `'range'` | 눈금을 미는 것 (크기 조절) | `command` · `argKey` · `values` · `rest?` · `readout?` |
-| `'text'` | 글자 한 칸 (링크 주소) | `command` · `argKey` · `initial?` · `placeholder?` · `validate?` |
-| `'prompt'` | 여러 칸을 판으로 | `command` · `fields` |
-| `'lightbox'` | 크게 보기 | `src` · `alt?` |
+| `'button'` | 단순 버튼 클릭 | `command`, `args?` |
+| `'toggle'` | 토글 스위치 (ON/OFF) | `command`, `token` |
+| `'select'` | 드롭다운 선택 메뉴 | `command`, `argKey`, `values`, `attr?` |
+| `'range'` | 슬라이더 바 (너비 조절 등) | `command`, `argKey`, `values`, `rest?`, `readout?` |
+| `'text'` | 텍스트 입력 필드 (링크 URL 등) | `command`, `argKey`, `initial?`, `placeholder?`, `validate?` |
+| `'prompt'` | 복합 폼 입력 팝업 | `command`, `fields` |
+| `'lightbox'` | 이미지 확대 팝업 | `src`, `alt?` |
 
-일곱 다 공통으로 `name`(필수) · `label?` · `svg?` · `tip?` · `visible?` 을 가집니다.
-
-`visible: (node) => boolean` 은 **같은 날개 안에서 칸을 가리는** 문입니다 — 이미 병합된 칸에만
-"병합 풀기" 를 보이는 식입니다.
-
-`attr` 을 적으면 지금 값을 그 속성 칸에서 직접 읽어 칠합니다. `'toggle'` 은 `token` 으로
-`currentValue` 가 답한 글자와 견줍니다.
+모든 컨트롤은 공통으로 `name`(필수), `label?`, `svg?`, `tip?`, `visible?` 속성을 지원합니다. `visible(node)` 함수를 통해 특정 조건(예: 셀 병합이 되어 있을 때만 '병합 해제' 버튼 표시)에 따라 컨트롤의 표시 여부를 동적으로 제어할 수 있습니다.
 
 ---
 
-## `styles` — 날개가 나르는 CSS
+## 날개 전용 스타일 (`styles`)
+
+날개가 필요한 CSS 스타일을 자체적으로 내장할 수 있습니다.
 
 ```ts
 styles: `
-.nabi-content aside[data-nabi-note] {
-  border-inline-start: 3px solid var(--nabi-accent);
-  padding: .6rem .9rem;
-  background: color-mix(in srgb, var(--nabi-accent) 8%, transparent);
-}
+  .nabi-content aside[data-nabi-note] {
+    border-left: 3px solid var(--nabi-accent);
+    padding: 0.5rem 1rem;
+    margin: 1rem 0;
+  }
 `
 ```
 
-규칙 넷입니다.
-
-- **`.nabi-content` 아래로 한정합니다.** 호스트 페이지의 다른 글에 번지면 안 됩니다.
-- **글꼴 크기는 `rem` 이나 `em`** 으로 씁니다.
-- **어두운 갈래는 `.dark` 클래스로만** 가릅니다. 미디어 쿼리로 가리면 호스트가 켠 밝은
-  화면에서 편집기만 어두워집니다.
-- **넓고 좁음은 컨테이너 질의**로 잽니다. 화면 너비가 아니라 편집기가 놓인 자리의 너비가
-  기준입니다.
-
-등록한 것만 담고 싶으면 직접 모아 붙입니다.
-
-```ts
-import { collectSheets, injectSheets } from 'nabi-note'
-
-const detach = injectSheets(document, collectSheets(registry))
-```
-
-같은 글의 시트는 **한 번만** 실립니다 — 여러 날개가 같은 CSS 를 나눠 들어도 문서에 하나만
-붙습니다. 답은 떼는 함수이고, **이 부름이 새로 붙인 것만** 뗍니다.
+`collectSheets(registry)`와 `injectSheets(document, sheets)`를 통해 등록된 날개들의 스타일만 문서에 동적으로 주입할 수 있으며, 동일한 스타일 문자열은 중복 주입되지 않습니다.
 
 ---
 
-## 사람에게 묻기
+## 사용자 대화 상자 연동 (`ask`)
 
 ```ts
 const { nabi, registry } = createNabiWith(wings, {
@@ -229,49 +168,23 @@ const { nabi, registry } = createNabiWith(wings, {
 })
 ```
 
-`confirm` 은 `boolean` 도 `Promise<boolean>` 도 받습니다 — 브라우저의 `confirm` 을 그대로 꽂아도
-되고, 직접 만든 판을 띄우고 답을 나중에 줘도 됩니다.
+- `message`: 단순 알림 표시 (`(text: string) => void`)
+- `confirm`: 확인/취소 선택 창 (`(text: string) => boolean | Promise<boolean>`)
+- `choose`: 다중 옵션 선택 창 (`(question: string, options: ChooseOption[]) => number | Promise<number>`)
 
-셋째 칸 `choose` 는 **여럿 중 하나**입니다 — 붙여넣기 후보가 둘 이상일 때 이 문이 열립니다.
+`ChooseOption` 구조는 `{ label: string, icon?: string }`이며, 반환값은 선택된 옵션의 0 기반 인덱스(취소 시 `-1`)입니다.
 
-```ts
-choose: (question, options) => user_callback(question, options),   // 답은 자리 번호
-```
-
-받는 목록은 `ChooseOption` 의 배열이고 칸은 둘입니다.
-
-| | |
-|---|---|
-| `label` | 그 자리에 설 이름입니다 |
-| `icon?` | 16×16 svg 의 **속**(path 몇 개)입니다. 껍데기는 판이 씌우고, **없으면 이름만 섭니다** |
-
-답은 **자리 번호**입니다 — `0` 이 맨 위이고, `-1`(과 범위 밖)은 취소라 그때는 아무것도 안
-붙습니다. `number` 도 `Promise<number>` 도 받습니다.
-
-::: warning 안 주면 `confirm` 은 "아니오", `choose` 는 맨 위입니다
-`ask` 를 안 꽂으면 조용한 기본이 들어갑니다. `message` 는 아무 데도 안 가고 `confirm` 은
-`false` 를 답합니다. **묻고 지우는 일이 조용히 안 되는 것**이 조용히 되어 버리는 것보다 낫다는
-쪽입니다. 로컬 히스토리의 "정말 지울까요" 가 이 문을 지납니다.
-
-`choose` 만 방향이 다릅니다 — 기본이 **0(맨 위)** 입니다. 여기서 취소를 답하면 붙여넣기가
-통째로 사라지는데, 후보 목록의 첫째는 늘 "가장 그럴듯한 해석" 이라 물을 사람이 없으면 그것이
-맞는 답이기 때문입니다. 그리고 `choose` 는 대개 안 꽂아도 됩니다 — `mountToolbar` 가 서면서
-코어에 제 판을 스스로 겁니다.
-:::
-
-::: tip 커맨드는 못 묻습니다
-커맨드는 순수 함수라 화면도 시간도 모릅니다. 물어야 하는 일은 커맨드 밖에서 묻고 **답이 나온
-뒤에** 커맨드를 부릅니다. 날개 안에서 그럴 자리는 `attach` 이고, 거기서는 `host.nabi.$ask` 로
-닿습니다.
+::: warning ask 핸들러 미지정 시 기본 동작
+`ask` 핸들러를 전달하지 않으면 `confirm`의 기본 반환값은 안전을 위해 `false`(취소)로 처리됩니다.
+`choose`의 경우 핸들러가 없으면 기본적으로 첫 번째 후보(인덱스 `0`)가 선택됩니다. 붙여넣기 형식 선택 등의 UI는 `mountToolbar`가 마운트될 때 코어에 내장된 전용 UI가 자동으로 바인딩되므로 일반적인 환경에서는 `choose`를 직접 구현할 필요가 없습니다.
 :::
 
 ---
 
 ## 다음 문서
 
-- [인라인 마크](../custom/inline) · [블록과 문단 속성](../custom/block) ·
-  [키·자동 변환·붙여넣기](../custom/input)
-- [테마와 CSS 변수](../../style/custom) — 시트가 기대는 변수 이름들
+- [인라인 마크 만들기](../custom/inline) · [블록과 문단 속성 만들기](../custom/block) · [키·자동 변환·붙여넣기](../custom/input)
+- [스타일 커스텀](../../style/custom) — CSS 변수 및 테마 가이드
 
 <script setup lang="ts">
 import { useTranslate } from '../../../.vitepress/src/langs.ts'

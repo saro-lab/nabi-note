@@ -6,59 +6,24 @@ title: 파일 업로드
 
 ## 설명
 
-업로드는 세 조각으로 나뉩니다 — 날개 등록만으로는 아무 일도 일어나지 않습니다.
+파일 업로드 기능은 3가지 모듈의 연동으로 구성됩니다:
 
-1. **`uploadWing`** — 툴바에 파일 선택 단추를 답니다. 이 날개 자신은 `img` 도 `a` 도 만들지
-   않습니다 — 올라간 파일은 그림·링크 날개가 그리는 것으로 커밋되므로, **`imageWing` 이나
-   `linkWing` 을 함께 등록해야** 결과가 문서에 남습니다. 어느 쪽도 없으면 **등록하는 그 자리에서
-   예외가 납니다**(늦게 터지지 않습니다).
-2. **`mountUpload({ … })`** — 실제로 파일을 받아 `uploader` 를 돌리는 쪽입니다. 드롭·붙여넣기·
-   파일 선택이 이리로 흘러옵니다. **이 mount 를 빼면 단추는 있어도 아무 일도 안 납니다.**
+1. **`uploadWing`**: 툴바에 파일 첨부 버튼을 제공합니다. 업로드된 결과물은 이미지 또는 파일 링크 노드로 문서에 삽입되므로, **`imageWing` 또는 `linkWing`이 함께 등록**되어 있어야 합니다. 둘 다 누락된 경우 초기화 시점에 예외가 발생합니다.
+2. **`mountUpload({ … })`**: 드래그 앤 드롭, 클립보드 붙여넣기, 툴바 파일 선택을 통해 유입된 파일을 받아 호스트의 `uploader` 함수로 전달합니다.
+3. **`mountUploadView({ … })`**: 업로드 진행률(Progress) 플레이스홀더 UI를 화면에 렌더링합니다.
 
-::: warning 붙여넣기는 반쪽만 이리로 옵니다
-붙여넣기에 **글자가 하나라도 섞여 있으면**(`text/html` 이든 `text/plain` 이든) 업로드는
-아예 안 불립니다 — 그때는 글자가 후보가 되어 [붙여넣기 판](../../intro/usage)으로 갑니다.
-파일이 업로드로 흘러오는 것은 **글자가 아예 없는 붙여넣기**뿐입니다.
-
-엑셀에서 칸을 복사해 붙이면 표와 글자가 함께 실려 오므로 결과는 **그림이 아니라 표**입니다.
-그림으로 올리고 싶으면 그림만 따로 복사하세요. 드롭(파일을 끌어다 놓는 것)은 이 규칙과
-상관없이 언제나 업로드로 옵니다.
+::: warning 클립보드 붙여넣기 시 파일 업로드 처리 규칙
+클립보드 데이터에 **텍스트나 HTML이 포함되어 있는 경우**(`text/html` 또는 `text/plain`)에는 파일 업로드가 아닌 일반 텍스트/마크다운 붙여넣기 파이프라인으로 처리됩니다. 파일 데이터만 단독으로 포함된 클립보드 붙여넣기 시에만 업로드 파이프라인이 호출됩니다. (드래그 앤 드롭 파일 첨부는 항상 업로드 파이프라인으로 처리됩니다.)
 :::
-3. **`mountUploadView({ … })`** — 진행률 자리표시자를 화면에 세우는 쪽입니다. 없어도 업로드는
-   되지만 올라가는 동안 화면이 아무 말도 안 합니다.
 
-`uploader` 는 `(task) => Promise<{ uri } | null>` 모양입니다 — **주소를 답하면 성공, `null`
-이면 실패**라 자리표시자가 걷힙니다. `task.onProgress(0~100)` 로 진행률을 알리고,
-`task.signal` 이 중단되면 멈춥니다.
+`uploader` 함수는 `(task) => Promise<{ uri: string } | null>` 시그니처를 가집니다. 서버 업로드 성공 시 `{ uri }` 객체를 반환하고, 실패 시 `null`을 반환합니다. `task.onProgress(0~100)` 콜백을 통해 업로드 진행률을 업데이트할 수 있으며, `task.signal`을 통해 취소 신호를 처리합니다.
 
-제한은 `extensions`·`maxFileSize`·`maxTotalSize` 셋이고 전부 선택입니다(0 이나 생략이면
-제한 없음). 걸러진 파일은 `onReject` 로 옵니다.
+파일 확장자 및 용량 제한 옵션: `extensions`, `maxFileSize`, `maxTotalSize` (생략 시 제한 없음). 유효하지 않은 파일은 `onReject` 콜백으로 전달됩니다.
 
-## 올라간 뒤에 남는 것
+## 업로드 완료 후 문서 렌더링
 
-이미지는 `imageWing` 의 블록으로, 그 밖의 파일은 `linkWing` 의 첨부 링크로
-커밋됩니다.
-
-- **첨부의 이름은 파일명이 아니라 i18n 이름표입니다** — 한국어라면 "첨부파일".
-  파일명은 대개 문서에 남기기엔 길고, 무엇보다 바꿀 수 있어야 하기 때문입니다.
-  이름은 캐럿을 그 링크에 두고 [상황 줄의 이름 칸](../inline/link)에서 바꿉니다.
-- **확장자는 표식으로 남습니다** — `data-nabi-file="pdf"`. 이 값은 진짜 파일명에서
-  뽑고, 시트가 그것을 배지로 그립니다. 이름을 바꿔도 표식은 따라갑니다.
-- 링크가 받아 주지 않는 주소(`allowLocalUrls` 를 안 켠 채로 온 `blob:` 등)는
-  평문 파일명으로 강등됩니다 — 화이트리스트를 우회하지 않습니다.
-
-## 올라가는 동안 보이는 것
-
-올라가는 동안 그 자리에는 임시 상자가 섭니다 — 편집기 DOM 에만 있고 나비트리에는
-없어서, 저장값에는 한 글자도 남지 않습니다.
-
-- **이미지**는 고른 파일로 만든 미리보기가 바로 뜨고, 그 위를 격자가 덮습니다. 진행률만큼
-  칸이 하나씩 걷히며 또렷해집니다. 칸이 걷히는 차례는 파일마다 섞여, 여러 장을 한꺼번에
-  올려도 같은 무늬가 반복되지 않습니다.
-- **이미지가 아닌 파일**은 격자 없이 📎 와 "첨부파일" 이름표가 선 상자를 받고, 확장자가
-  대문자 배지(`PDF` 등)로 함께 뜹니다. 미리보기를 못 그리는 이미지도 여기로 떨어집니다.
-- 진행률은 상자에 `data-nabi-per` 로 실려 시트가 그립니다. 올리는 동안 상자마다 취소(×)
-  단추가 서고, 배치가 도는 동안 편집은 잠깁니다.
+- **이미지 파일**: `imageWing`의 `<img>` 블록 객체로 삽입됩니다.
+- **일반 첨부파일**: `linkWing`의 파일 다운로드 링크(`<a data-nabi-file="pdf" href="...">`)로 삽입됩니다. 첨부파일의 표시 텍스트는 로케일에 맞춰 "첨부파일"로 생성되며, 커서를 링크에 두고 컨텍스트 툴바에서 표시 이름을 자유롭게 변경할 수 있습니다.
 
 ## 사용 예시
 
@@ -77,23 +42,23 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// 업로드는 그림·링크 날개가 있어야 결과를 남길 수 있다 — 없으면 여기서 바로 예외다
+// 업로드 날개는 이미지 또는 링크 날개가 함께 등록되어야 합니다.
 const { nabi, registry } = createNabiWith([imageWing, linkWing, uploadWing])
 
 mountSurface({ nabi, registry, root: surface })
 
-// 진행률 자리표시자를 세우는 쪽 — 먼저 만들어 두고 아래에서 이어 준다
+// 업로드 진행률 UI 뷰 마운트
 const view = mountUploadView({ nabi, surface, locale: 'ko' })
 
 const upload = mountUpload({
   nabi,
   root: surface,
   locale: 'ko',
-  extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'],
-  maxFileSize: 10 * 1024 * 1024,
+  extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'zip'],
+  maxFileSize: 10 * 1024 * 1024,   // 10MB
   uploader: async (task) => {
-    // 여기에 실제로 서버에 올리는 코드를 넣는다. 주소를 답하면 성공, null 이면 실패다
-    // const uri = await user_callback(task.file, task.onProgress, task.signal)
+    // 실제 백엔드 서버에 파일을 업로드하는 로직 구현
+    // const uri = await myUploadApi(task.file, task.onProgress, task.signal)
     // return { uri }
     return null
   },
@@ -104,17 +69,15 @@ const upload = mountUpload({
 })
 
 mountToolbar({
-  nabi, registry, surface,
+  nabi,
+  registry,
+  surface,
   root: document.querySelector<HTMLElement>('#toolbar')!,
-  // 툴바의 파일 선택 단추가 고른 파일이 흘러가는 곳
   onFiles: (files) => upload.take(files),
 })
 ```
 
 ## 데모
-
-이 사이트에는 올릴 서버가 없어 `URL.createObjectURL()` 로 만든 `blob:` 주소를
-그대로 돌려주는 시늉만 합니다. 결과는 이 페이지 안에서만 남습니다.
 
 <WingDemo path="/wing/etc/upload" />
 

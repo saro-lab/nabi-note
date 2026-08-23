@@ -1,16 +1,15 @@
 ---
 title: 인라인 마크 만들기
-description: place 'mark' — 글자 위에 씌우는 서식. 나가는 길(toHtml)과 들어오는 길(claim)을 함께 적습니다.
+description: place 'mark' — 텍스트 위에 적용되는 인라인 서식 날개를 작성하고 toHtml과 claim을 구성하는 방법을 안내합니다.
 ---
 
 # 인라인 마크 만들기
 
-`place: 'mark'` 는 **글자 위에 씌우는 서식**입니다. 자리를 차지하지 않고, 글의 흐름을 끊지
-않으며, 겹칠 수 있습니다 — 굵게·기울임·형광펜이 전부 이 갈래입니다.
+`place: 'mark'`는 **텍스트 글자 단위에 적용되는 인라인 서식**입니다. 줄바꿈을 유발하거나 레이아웃 공간을 차지하지 않으며, 여러 서식이 자유롭게 중첩될 수 있습니다 (예: 굵게, 기울임, 형광펜, 링크 등).
 
 ---
 
-## 다 갖춘 마크 하나
+## 기본 인라인 마크 예제
 
 ```ts
 import { createNabiWith, mountSurface, simpleMark, type Wing } from 'nabi-note'
@@ -24,7 +23,7 @@ const kbdWing: Wing = {
       group: 'emphasis',
       label: { ko: '단축키', en: 'Key' },
       shortcut: 'K',
-      action: { kind: 'mark' },        // 토글은 코어가 합니다 — 커맨드를 안 써도 됩니다
+      action: { kind: 'mark' },        // 인라인 마크 토글은 코어가 자동 처리 (별도 커맨드 불필요)
     },
     styles: `.nabi-content kbd {
       font-family: var(--nabi-font-mono, monospace);
@@ -39,21 +38,18 @@ const { nabi, registry } = createNabiWith([kbdWing])
 mountSurface({ nabi, registry, root: surface })
 ```
 
-`simpleMark` 가 채워 주는 것은 `place: 'mark'` 와 `escapeKeys: ['Escape']` 둘입니다. 나머지는
-그대로 넘어갑니다.
+`simpleMark()` 헬퍼는 `place: 'mark'`와 `escapeKeys: ['Escape']`를 기본 설정해 줍니다.
 
 ---
 
-## 두 방향은 따로 적습니다
+## 양방향 직렬화 규칙 (`toHtml`과 `claim`)
 
-| | 방향 | 없으면 |
+| 속성 | 변환 방향 | 미정의 시 동작 |
 |---|---|---|
-| `toHtml` | 문서 → HTML | **등록이 죽습니다.** 노드를 세우는 날개는 그리는 법이 있어야 합니다 |
-| `claim` | HTML → 문서 | 그려지긴 하지만 **다시 못 읽습니다.** 저장했다 불러오면 껍데기가 벗겨집니다 |
+| `toHtml` | 나비트리 → HTML | **초기화 시 예외 발생.** 문서 노드를 생성하는 날개는 반드시 HTML 출력 함수가 필요합니다 |
+| `claim` | HTML → 나비트리 | HTML 출력은 가능하지만 **다시 불러올 때 태그가 인식되지 않고 평문으로 변환**됩니다 |
 
-기본 마크 여섯(`b`·`i`·`u`·`s`·`sub`·`sup`)과 값 마크 넷(`hl`·`tc`·`fs`·`tf`)은 **코어가 이미
-태그를 압니다.** 그래서 `boldWing` 에는 `toHtml` 도 `claim` 도 없습니다. 직접 만드는 이름은
-코어가 모르므로 둘 다 적습니다.
+공식 기본 마크(`b`, `i`, `u`, `s`, `sub`, `sup`)와 값 마크(`hl`, `tc`, `fs`, `tf`)는 코어가 내장 변환 규칙을 알고 있으므로 별도 정의가 필요 없습니다. 커스텀 날개는 두 속성을 모두 명시해야 합니다.
 
 ### `toHtml`
 
@@ -61,24 +57,16 @@ mountSurface({ nabi, registry, root: surface })
 toHtml: (node, children, ctx) => ctx.element('kbd', children())
 ```
 
-| 인자 | 무엇입니까 |
-|---|---|
-| `node` | 지금 노드입니다. 속성은 `node.a?.['키']` 로 꺼냅니다 |
-| `children()` | 속을 그린 글자입니다. **부를 때 그려지므로**, 안 부르면 속이 안 나갑니다 |
-| `ctx` | 안전하게 짓는 도구입니다 |
+- `node`: 현재 나비트리 노드 객체 (속성은 `node.a?.['키']`로 접근)
+- `children()`: 자식 노드들의 HTML 문자열 생성 함수 (반드시 호출하여 자식을 렌더링해야 함)
+- `ctx`: 안전한 HTML 생성을 위한 헬퍼 컨텍스트
+  - `ctx.element(tag, inner, attrs?)`: HTML 태그 문자열 생성 (속성값 자동 이스케이프)
+  - `ctx.escape(text)`: 텍스트 이스케이프 함수
+  - `ctx.url(raw)` / `ctx.src(raw)`: 안전한 URL 검증 (위험한 프로토콜인 경우 `null` 반환)
+  - `ctx.keys`: 편집기용 렌더링(`getEditorHtml()`) 여부 (`boolean`)
 
-`ctx` 가 주는 것:
-
-| | |
-|---|---|
-| `ctx.element(tag, inner, attrs?)` | 한 덩어리를 짓습니다. 값은 알아서 이스케이프됩니다 |
-| `ctx.escape(text)` | 글자만 이스케이프합니다 |
-| `ctx.url(raw)` · `ctx.src(raw)` | 주소를 거릅니다. 못 믿을 주소는 **`null`** 입니다 |
-| `ctx.keys` | 지금이 **편집기용** 조립인지입니다 (`getEditorHtml()`) |
-
-::: warning 글자를 직접 이어 붙이지 마세요
-`` `<kbd>${node.a?.['t']}</kbd>` `` 처럼 쓰면 문서 속 글자가 그대로 마크업이 됩니다.
-언제나 `ctx.element` 나 `ctx.escape` 를 지납니다.
+::: warning 템플릿 리터럴로 직접 HTML을 결합하지 마세요
+`` `<kbd>${node.a?.['t']}</kbd>` ``처럼 문자열을 직접 연결하면 XSS 취약점이 발생할 수 있습니다. 항상 `ctx.element` 또는 `ctx.escape`를 사용하세요.
 :::
 
 ### `claim`
@@ -87,22 +75,17 @@ toHtml: (node, children, ctx) => ctx.element('kbd', children())
 claim: (el, inner) => (el.tag === 'kbd' ? [{ w: 'kbd', ch: inner(false) }] : null)
 ```
 
-| | |
-|---|---|
-| `el` | `{ kind, tag, attrs, children }` — 들어온 그대로의 요소입니다 |
-| `inner(block)` | 속을 읽습니다. 마크라면 `false`(글자 자리), 블록이면 `true` |
-| 답 | 노드 배열, 또는 **`null`**(내 것이 아님 → 다음 날개에게) |
+- `el`: 파싱 대상 HTML 요소 (`{ kind, tag, attrs, children }`)
+- `inner(block)`: 자식 노드 파싱 함수 (인라인 마크는 `false`, 블록 컨테이너는 `true` 전달)
+- 반환값: 생성된 나비트리 노드 배열 또는 **`null`**(소유권 없음 → 다음 날개로 위임)
 
-날개 배열 순서대로 물어보고 **처음 손든 날개**가 가져갑니다.
-
-`null` 을 답하는 두 자리가 있습니다 — 내 태그가 아닐 때, 그리고 **내 태그지만 값이 목록
-밖일 때**입니다. 뒤쪽에서 `inner(false)` 를 답하면 껍데기만 벗기고 글은 살립니다.
+처리 대상 태그가 아니거나, 태그는 일치하지만 허용된 속성값이 아닐 때는 `null` 또는 `inner(false)`를 반환합니다. `inner(false)`를 반환하면 태그만 제거되고 내부 텍스트는 보존됩니다.
 
 ---
 
-## 값을 담는 마크
+## 값을 저장하는 인라인 마크 (`valueMark`)
 
-색·크기처럼 **정해진 목록에서 하나를 고르는** 마크는 `valueMark` 를 씁니다.
+색상, 폰트 크기처럼 **정해진 값 목록 중 하나를 선택하여 적용하는 마크**는 `valueMark()` 헬퍼를 사용합니다.
 
 ```ts
 import { valueMark, type Wing } from 'nabi-note'
@@ -112,8 +95,8 @@ const LEVELS = ['low', 'mid', 'high'] as const
 const riskWing: Wing = {
   ...valueMark({
     w: 'risk',
-    key: 'v',                        // 값이 사는 속성 칸
-    values: [...LEVELS],             // 이 밖의 값은 안 받습니다
+    key: 'v',                        // 값을 저장할 속성 키
+    values: [...LEVELS],             // 허용 가능한 값 목록
     toHtml: (node, children, ctx) =>
       ctx.element('span', children(), { 'data-risk': String(node.a?.['v'] ?? '') }),
   }),
@@ -121,72 +104,50 @@ const riskWing: Wing = {
     if (el.tag !== 'span') return null
     const v = el.attrs['data-risk']
     if (v === undefined) return null
-    if (!LEVELS.includes(v as typeof LEVELS[number])) return inner(false)   // 목록 밖 — 글만 남깁니다
+    if (!LEVELS.includes(v as typeof LEVELS[number])) return inner(false)   // 유효하지 않은 값은 텍스트만 보존
     return [{ w: 'risk', a: { v }, ch: inner(false) }]
   },
 }
 ```
 
-`valueMark` 가 얹어 주는 것 둘:
-
-- **`currentValue`** — 지금 캐럿이 앉은 자리의 값입니다. 툴바와 상황 줄이 이 답으로 어느 칸이
-  눌려 있는지 칠합니다.
-- **`repair`** — JSON 입구에서 값을 다시 검사합니다. 목록 밖이거나 없으면 `null` 을 답해
-  **껍데기째 걷습니다.** 손으로 고친 저장값이 들어와도 여기서 걸립니다.
-
-::: tip 값을 바꾸는 커맨드
-값 마크의 "이 값으로 바꿔라" 커맨드는 아직 공개 도우미가 없습니다. 툴바 단추만으로 켜고 끄는
-`action: { kind: 'mark' }` 는 그대로 쓸 수 있고, 값 고르기가 필요하면 지금은 기본 값 마크
-넷(형광펜·글자색·글자 크기·서체)을 쓰거나 그 선언을 펼쳐 쓰세요.
-:::
+`valueMark()`가 자동으로 추가하는 기능:
+- **`currentValue`**: 현재 커서 위치에 적용된 마크의 속성 값을 반환하여 툴바 버튼의 활성화 상태를 표시합니다.
+- **`repair`**: JSON 파싱 시 속성 값이 유효 목록에 속하는지 검증하고, 유효하지 않으면 노드를 자동으로 정규화합니다.
 
 ---
 
-## `escapeKeys` — 마크 밖으로 나가기
+## `escapeKeys` — 마크 서식 벗어나기
 
-마크 끝에 캐럿이 서 있을 때, 다음 글자가 마크 안인지 밖인지는 사람만 압니다. `escapeKeys` 가
-그 문입니다.
+마크 서식의 맨 끝에 커서가 위치할 때, 이어지는 입력을 해당 마크 내부로 작성할지 서식을 벗어나서 작성할지 제어합니다.
 
 ```ts
-escapeKeys: ['Escape']    // simpleMark·valueMark 의 기본값입니다
+escapeKeys: ['Escape']    // simpleMark 및 valueMark의 기본값
 ```
 
-**캐럿은 안 움직입니다.** 이 키를 누르면 "다음에 치는 글자는 이 마크를 벗는다" 는 예약이
-걸립니다. 한 글자를 치면 예약은 쓰이고 사라집니다.
+커서 위치 자체는 이동하지 않으며, 지정된 키를 누르면 "다음 입력할 문자는 현재 마크 서식을 적용하지 않는다"는 상태가 예약됩니다. 다음 글자를 입력하면 서식이 분리되고 예약 상태는 초기화됩니다.
 
 ```
-<kbd>Ctrl</kbd>(캐럿)  →  Escape  →  타이핑 "+"  →  <kbd>Ctrl</kbd>+
+<kbd>Ctrl</kbd>| (커서)  →  Escape 입력  →  "+" 타이핑  →  <kbd>Ctrl</kbd>+
 ```
 
-여러 날개가 같은 키를 걸어도 됩니다 — 캐럿이 지금 실제로 그 마크 안에 있을 때만 예약이
-걸리므로, 겹쳐 있는 마크 중 해당하는 것들만 함께 벗습니다. <kbd>Escape</kbd> 는 걸린 예약이
-있으면 그것을 **무르는** 데도 쓰입니다.
-
-::: tip <kbd>Esc</kbd> 를 연타하면 그 너머까지 갑니다
-연타 셈은 **앞 갈래가 키를 소비했는지와 무관하게** 돕니다. 그래서 첫 <kbd>Esc</kbd> 가
-예약을 걷거나 마크 탈출을 걸었더라도, 둘째 <kbd>Esc</kbd> 에서는
-[서식 지우기](../etc/clear-format)까지 갑니다 — 형광펜 한가운데의 캐럿이 그 본보기입니다.
-`escapeKeys` 와 `doubleKeys` 는 낱말만 닮았지 서로 막지 않습니다.
+::: tip Esc 키를 2번 연속 누르면 서식 지우기가 동작합니다
+Esc 키 2회 연속 입력 시 동작하는 [서식 지우기](../etc/clear-format)(`doubleKeys`)는 `escapeKeys`와 독립적으로 동작합니다. 첫 번째 Esc로 마크 탈출 예약이 걸렸더라도, 350ms 이내에 한 번 더 Esc를 누르면 서식 지우기 커맨드가 정상 실행됩니다.
 :::
 
 ---
 
-## 마크는 키를 못 가집니다
+## 인라인 마크의 키보드 이벤트 (`onKey`) 제한
 
-`onKey` 를 적어도 **마크에게는 안 옵니다.** 캐럿의 자리는 `{ path, offset }` 이고 `path` 의
-끝은 **글자를 담는 홀더**입니다 — 마크는 그 홀더 속의 인라인 노드라 길에 아예 안 나옵니다.
-키의 주인을 가릴 때 코어는 이 길을 위로 걸으므로 마크를 만날 일이 없습니다.
-
-까닭은 겹침입니다. 굵게 안의 기울임 안의 링크에서 <kbd>Enter</kbd> 를 눌렀을 때 셋 중 누가
-주인인지 정할 방법이 없습니다. 마크가 키에 대해 가진 문은 `escapeKeys` 하나입니다.
+인라인 마크(`place: 'mark'`)에는 **`onKey` 핸들러가 적용되지 않습니다.**
+키보드 이벤트의 소유권은 커서 경로(`path`) 상의 상위 블록 컨테이너(문단, 인용문, 표 등)에 귀속되며, 텍스트 내부에 중첩된 인라인 마크는 단일 키보드 소유권을 가질 수 없기 때문입니다.
 
 ---
 
 ## 다음 문서
 
-- [블록과 문단 속성](../custom/block) — 자리를 차지하는 것
-- [키·자동 변환·붙여넣기](../custom/input) — `onKey` 와 `inputRules`
-- [UI 와 동작](../custom/ui) — 툴바 단추와 상황 줄
+- [블록과 문단 속성 만들기](../custom/block) — 컨테이너 및 독립 블록 객체
+- [키·자동 변환·붙여넣기](../custom/input) — `onKey`, `inputRules`, `attach`
+- [UI와 상호작용](../custom/ui) — 툴바 단추 및 컨텍스트 바
 
 <script setup lang="ts">
 import { useTranslate } from '../../../.vitepress/src/langs.ts'

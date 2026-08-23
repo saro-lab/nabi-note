@@ -6,24 +6,19 @@ title: 제목
 
 ## 설명
 
-`headingWing`(id `h`) **하나**가 여섯 단계를 다 들고 있습니다. 제목은 별도 노드가 아니라
-**문단의 속성**입니다 — 저장값은 `{"w":"p","a":{"h":2}}` 이고, 나갈 때 `<h2>` 가 됩니다.
+`headingWing`(식별자 `h`)은 H1부터 H6까지의 6단계 제목 서식을 제공합니다. 제목은 별도의 독립 노드가 아니라 **문단(`p`)의 속성**으로 처리됩니다 (저장값: `{"w":"p","a":{"h":2}}`, HTML 출력: `<h2>`).
 
-문단이 그대로 제목이 되므로 정렬·드롭캡 같은 다른 문단 속성과 함께 걸립니다
-(`<h2 data-nabi-align="c">`).
+문단 자체가 제목이 되므로 텍스트 정렬, 드롭캡 등 다른 문단 속성과 결합하여 사용할 수 있습니다 (`<h2 data-nabi-align="c">`).
 
-## 툴바는 하나, 단계는 상황 줄에서
+## 툴바 및 컨텍스트 바 동작
 
-**툴바 버튼은 `H` 하나뿐입니다.** 문단에서 누르면 제목 1이 되고, 캐럿이 제목 안에 있으면
-상황 줄에 `제목`·`H1`~`H6` 칸이 뜹니다 — 지금 몇 단계인지가 눌린 칸으로 보이고, 다른 칸을
-누르면 그 단계로 옮겨 갑니다. `제목` 칸을 누르면 문단으로 돌아옵니다.
+**메인 툴바에는 `H` 버튼 하나가 제공됩니다.** 일반 문단에서 클릭하면 H1 제목으로 변환되며, 커서가 제목 블록 내부에 위치하면 동적 컨텍스트 툴바에 `본문` 및 `H1`~`H6` 선택 버튼이 표시됩니다. 현재 제목 레벨이 활성화 상태로 표시되며, 다른 레벨을 선택하여 즉시 변경하거나 `본문`을 눌러 일반 문단으로 되돌릴 수 있습니다.
 
-빈 줄에서 `#`을 단계 수만큼(2단계라면 `##`) 치고 스페이스를 누르면 자동으로 그 단계의 제목이
-됩니다 — 친 `#`과 스페이스 자체는 지워집니다.
+빈 줄에서 `#` 문자를 원하는 단계 수만큼 입력하고 스페이스를 누르면(예: `## ` 입력) 해당 단계의 제목으로 자동 변환됩니다.
 
 ## 사용 예시
 
-단계 고르개는 `mountContextToolbar` 가 그립니다.
+제목 단계 선택 UI를 사용하려면 `mountContextToolbar`를 함께 마운트합니다.
 
 ```ts
 import { createNabiWith, mountSurface, mountToolbar, mountContextToolbar, headingWing } from 'nabi-note'
@@ -31,7 +26,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// 날개 목록이 갈래 지식·커맨드·조립기를 함께 짓는다 — 그것이 `registry` 다
 const { nabi, registry } = createNabiWith([headingWing])
 
 mountSurface({ nabi, registry, root: surface })
@@ -41,15 +35,14 @@ mountContextToolbar({ nabi, registry, surface, root: document.querySelector<HTML
 // nabi.onChange(() => user_callback(nabi.getHtml()))
 ```
 
-커맨드로 직접 걸 수도 있습니다.
+프로그래밍 방식으로 커맨드를 직접 호출할 수도 있습니다:
 
 ```ts
-nabi.applyCommand('setHeading', { value: 2 })  // 2단계 제목으로
-nabi.applyCommand('setHeading', { value: 2 })  // 같은 단계를 다시 — 문단으로 돌아온다
+nabi.applyCommand('setHeading', { value: 2 })  // H2 제목으로 설정
+nabi.applyCommand('setHeading', { value: 2 })  // 동일한 단계를 다시 호출 시 일반 문단으로 복원
 ```
 
-여러 문단을 잡고 걸면 **걸린 문단 전부**에 걸립니다. 표·목록처럼 문단 자리를 차지하는 물건은
-건너뜁니다 — 제목은 글 문단의 속성이기 때문입니다.
+여러 문단을 드래그 선택한 후 커맨드를 실행하면 선택된 모든 문단에 일괄 적용됩니다. 표나 목록처럼 문단 자리를 차지하는 블록 객체는 건너뜁니다.
 
 ## 데모
 
