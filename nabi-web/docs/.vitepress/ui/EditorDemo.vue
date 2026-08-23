@@ -380,7 +380,22 @@ const langsReady = ref(false)
 const ZOOM_MIN = 80
 const ZOOM_MAX = 300
 const ZOOM_STEP = 10
-const ZOOM_BASE_PX = 15
+// 100% 는 **손대기 전 그대로**여야 한다. 여기 15 가 박혀 있어서, 돋보기를 한 번 건드렸다가
+// 100% 로 되돌리면 사이트가 뿌리 16px 에서 15px 로 한 치 줄어든 채 남았다(2026-08-23).
+// 그래서 바닥은 적어 두는 수가 아니라 **브라우저가 실제로 쓰고 있는 뿌리 글자 크기**다 —
+// 시트가 `html { font-size: 16px }` 로 세워 둔 그 값이다. 적어 둔 수를 그대로 쓰지 않고 재는
+// 까닭은 시트의 값이 바뀌어도 100% 가 계속 "손대기 전 그대로"이기 위해서다. 재는 것은 첫 그림
+// 때 한 번뿐이다 — 우리가 인라인으로 덮어쓴 뒤에 다시 재면 우리 값을 도로 읽는다.
+// 100% must mean "as it already was": the hardcoded 15 left the site a notch smaller than the
+// 16px root once the magnifier had been touched. The base is now the root size the browser is
+// really using, measured once on the first paint (re-reading later would read our own override).
+const ZOOM_BASE_FALLBACK_PX = 16
+let zoomBasePx = ZOOM_BASE_FALLBACK_PX
+
+const readZoomBasePx = () => {
+  const px = Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
+  if (px > 0) zoomBasePx = px
+}
 
 const zoom = ref(100)
 const draft = ref(100)
@@ -394,7 +409,7 @@ const applyZoom = (value: number) => {
 const stepZoom = (by: number) => applyZoom(zoom.value + by)
 
 watch(zoom, (value) => {
-  document.documentElement.style.fontSize = `${(ZOOM_BASE_PX * value) / 100}px`
+  document.documentElement.style.fontSize = `${(zoomBasePx * value) / 100}px`
 })
 
 const RANGE_NEEDS_REM = 32
@@ -408,7 +423,7 @@ const wingsOpen = ref(false)
 const wingsShown = computed(() => !foldable.value || wingsOpen.value)
 
 const measureViewport = () => {
-  viewportRem.value = window.innerWidth / ((ZOOM_BASE_PX * zoom.value) / 100)
+  viewportRem.value = window.innerWidth / ((zoomBasePx * zoom.value) / 100)
 }
 watch(zoom, measureViewport)
 
@@ -563,7 +578,7 @@ let pickedMark: Unmountable | null = null
 let viewTools: Unmountable | null = null
 let upload: (Unmountable & { take(files: readonly File[]): void }) | null = null
 let uploadView: Unmountable | null = null
-let fileMount: (Unmountable & { takeFiles(files: readonly File[]): Promise<boolean> }) | null = null
+let fileMount: (Unmountable & Record<string, unknown>) | null = null
 let historyMount: (Unmountable & { sessionId: string }) | null = null
 // 첫 조립인가 — 서버가 그린 DOM 을 이어받을 수 있는 것은 이때뿐이다 (095 ⓐ).
 let firstBuild = true
@@ -702,8 +717,15 @@ function build(): void {
   if (wings.some((wing) => wing.w === 'save' || wing.w === 'open')) {
     fileMount = mod.mountFile({
       nabi,
+      // 형식 목록이 여기서 온다 — 저장 형식도 여는 형식도 등록된 어휘가 정한다. **필수다**
+      // The format list comes from here — required
+      registry,
       store: mod.browserFileStore(document),
       name: () => 'nabi-note',
+      // 붙여넣기와 같은 파서다 — `.html` 파일을 여는 길이 그것으로 열린다
+      // The same parser paste uses; it is what opens a plain `.html` file
+      parse: mod.parseNodes,
+      allowLocalUrls: true,
       locale: here,
     }) as never
   }
@@ -711,8 +733,8 @@ function build(): void {
     historyMount = mod.mountLocalHistory({ nabi, storage: mod.browserHistoryStorage(window) }) as never
   }
 
-  // 4. 편집 표면 — 드롭·붙여넣기로 온 파일은 먼저 `.nabi` 인지 물어보고, 아니면 업로드로 간다.
-  // The edit surface: a dropped file is asked whether it is a `.nabi` document first
+  // 4. 편집 표면 — 드롭·붙여넣기로 온 파일은 업로드로 간다.
+  // The edit surface: a dropped file goes to upload
   surface = mod.mountSurface({
     nabi,
     registry,
@@ -725,16 +747,10 @@ function build(): void {
     // wing 을 껐다 켜는 두 번째부터는 앞선 편집기가 그려 둔 것이라, 이어받으면 껐던 wing 의
     // 마크업을 그대로 물려받는 꼴이 된다. 어긋나면 코어가 알아서 새로 그리므로 안전한 쪽이다.
     hydrate: firstBuild && props.ssrHtml !== undefined,
-    fileSink: (files) => {
-      const taken = fileMount
-      if (!taken) {
-        upload?.take(files as never)
-        return
-      }
-      void taken.takeFiles(files as never).then((ok) => {
-        if (!ok) upload?.take(files as never)
-      })
-    },
+    // 드롭·붙여넣기로 온 파일은 **전부 업로드로** 간다 — 파일로 문서를 여는 길은 열기 단추
+    // 하나다. 떨어뜨린 것을 열지 업로드할지 짐작하면 첨부하려던 `.nabi` 가 쓰던 글을 덮는다
+    // Every dropped file goes to upload; opening a document by file is the open button's job alone
+    fileSink: (files) => upload?.take(files as never),
   })
 
   // 5. 화면 도구 — 몸짓 가라앉기 **하나**를 툴바·상황 줄·스티키가 나눠 쓴다.
@@ -746,6 +762,9 @@ function build(): void {
     ...common,
     root: toolbarHost,
     onFiles: (files) => upload?.take(files as never),
+    // 저장 판은 배선 한 낱말이다 — 부속을 끼운 편집기면 저장 단추와 ⌘S 가 그 판을 연다
+    // The save panel is one word of wiring: with the mount handed over, the button opens it
+    ...(fileMount ? { file: fileMount as never } : {}),
     // 판이 필요한 도구(로컬 기록)는 호스트가 받는다 — 다만 **모양은 호스트가 짓지 않는다**.
     // ui 가 부품 하나(`openHistoryPanel`)로 내놓으므로 호스트는 그 문을 부르기만 한다
     // A tool that needs a panel comes back to the host — but the host does not draw it
@@ -823,7 +842,13 @@ function applySticky(): void {
   sticky?.unmount()
   sticky =
     stickyOn.value && stickyKeyboard.value && nabiModule
-      ? nabiModule.mountSticky({ root, surface: content, chrome, ...(settle ? { settle: settle as never } : {}) })
+      ? nabiModule.mountSticky({
+          root,
+          surface: content,
+          chrome,
+          ...(nabi ? { nabi: nabi as never } : {}),
+          ...(settle ? { settle: settle as never } : {}),
+        })
       : null
 }
 
@@ -914,7 +939,7 @@ const code = computed(() => {
   }
   if (on('save') || on('open')) {
     imports.push('browserFileStore', 'mountFile')
-    wired.push("mountFile({ nabi, store: browserFileStore(document), name: () => 'note' })")
+    wired.push("const file = mountFile({ nabi, registry, store: browserFileStore(document), name: () => 'note' })")
   }
   imports.push('mountViewTools')
   if (on('localHistory')) {
@@ -973,13 +998,18 @@ const code = computed(() => {
             : '// A tool that needs a panel comes back to the host — without this the button is dead',
           'const toolbar = mountToolbar({',
           "  ...shared, root: document.querySelector('#toolbar')!,",
+          ...(on('save') || on('open') ? ['  file,'] : []),
           '  onHost: (w) => {',
           "    if (w !== 'localHistory') return",
           `    openHistoryPanel({ history, surface: content, locale: '${locale.value}', sessionId: history.sessionId })`,
           '  },',
           '})',
         ]
-      : ["const toolbar = mountToolbar({ ...shared, root: document.querySelector('#toolbar')! })"]),
+      : [
+          on('save') || on('open')
+            ? "const toolbar = mountToolbar({ ...shared, file, root: document.querySelector('#toolbar')! })"
+            : "const toolbar = mountToolbar({ ...shared, root: document.querySelector('#toolbar')! })",
+        ]),
     "const context = mountContextToolbar({ ...shared, root: document.querySelector('#context')! })",
     'mountHints({ toolbar, context, root, surface: content })',
     ko
@@ -1042,6 +1072,9 @@ function labelOf(id: string, code: string): string {
 }
 
 onMounted(async () => {
+  // 재는 것이 먼저다 — 아래 `measureViewport()` 가 이 값으로 폭을 rem 으로 옮긴다
+  // Measure first: `measureViewport()` below converts the width into rem with this number
+  readZoomBasePx()
   measureViewport()
   // 서체 wing 이 고를 네 갈래의 실제 글꼴 — 데모가 뜰 때만 부른다 (src/fonts.ts 머리말)
   // The four genera's actual fonts — fetched only where a demo exists (see src/fonts.ts)
@@ -1227,12 +1260,11 @@ onBeforeUnmount(() => {
   min-block-size: 22rem;
 }
 
+/* 비워도 한 줄로 접히지 않는 것은 이제 **코어의 일**이다 — `.nabi-content.nabi-editing` 이
+   `--nabi-content-min-height`(기본 12.5rem)를 든다. 여기 있던 사본은 걷었다.
+   The min height now lives in core (`--nabi-content-min-height`); the copy here is gone */
 .demo-host .nabi-content {
   border-radius: 0 0 12px 12px;
-  /* 비워도 한 줄로 접히지 않게 — 데모는 만져 보는 자리라, 글을 다 지운 순간 상자가 한 줄로
-     주저앉으면 그 아래가 통째로 위로 딸려 올라온다. 200px 만큼은 늘 열어 둔다.
-     Keep the editing area open even when emptied (200px) - a collapsed box yanks the page up */
-  min-block-size: 12.5rem;
 }
 
 /* 붙는 것 자체는 코어의 `.nabi-toolbar` 기본값이다 — 여기는 라운드 모서리만 맞춘다 */

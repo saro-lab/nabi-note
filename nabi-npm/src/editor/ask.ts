@@ -2,12 +2,25 @@
 // editor 층은 DOM 을 모르므로 브라우저 alert/confirm 연결은 호스트·ui 몫이다.
 import type { Toast } from './toast.js';
 
+// 고르는 판의 한 자리 — 이름과 (있으면) 그림이다. 그림은 16×16 svg 의 **속**(path 몇 개)이라
+// 이 층도 DOM 을 안 문다. 없는 자리는 이름만 선다.
+export interface ChooseOption {
+  readonly label: string;
+  readonly icon?: string;
+}
+
 export interface Ask {
   // 말 하나 — 답을 안 받는다.
   message(text: string): void;
   // 예/아니오 — 동기든 비동기든 받는다.
   confirm(text: string): boolean | Promise<boolean>;
+  // 여럿 중 하나 — 답은 **자리 번호**다. `-1`(과 범위 밖)은 취소이고, 그때는 아무 일도 안 난다.
+  // 붙여넣기 후보가 둘 이상일 때 이 문이 열린다.
+  choose?(question: string, options: readonly ChooseOption[]): number | Promise<number>;
 }
+
+// 고르는 판 하나 — ui 가 `$bindChoose` 로 거는 그릇의 모양이다.
+export type Choose = NonNullable<Ask['choose']>;
 
 // 머리 없는 환경(서버·시험)의 기본 — 물을 사람이 없다.
 //
@@ -18,6 +31,12 @@ export const silentAsk: Ask = {
   message() {},
   confirm() {
     return false;
+  },
+  // **고르는 물음의 기본은 첫째다.** confirm 과 답이 갈리는 자리다: confirm 의 "아니오" 는
+  // 쓰던 글을 지키는 답이지만, 여기서 취소(-1)를 답하면 붙여넣기가 통째로 사라진다.
+  // 후보 목록의 첫째는 늘 "가장 그럴듯한 해석"이라, 물을 사람이 없으면 그것이 맞는 답이다.
+  choose() {
+    return 0;
   },
 };
 

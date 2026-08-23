@@ -1,14 +1,15 @@
 // 고치(cocoon) — 어떤 길로 들어온 나비트리든 여기를 지나면 불변식이 선다 (: 매 커맨드).
 // 루트는 문단 배열 — 떠도는 인라인은 문단으로 모이고, 맨몸 물건은 래퍼문단을 입는다.
 // 물건과 글이 섞인 문단은 쪼개진다. 이미지 둘이 든 문단은 래퍼문단 둘이 된다.
-// 래퍼문단의 attrs 는 정렬(a)만 남는다 (Q11). 글 문단의 attrs 는 h·a·dc 화이트리스트다.
+// 래퍼문단의 attrs 는 정렬(a)만 남고, 물건이 정렬을 마다하면(`noAlign` — 코드 상자) 그것도
+// 안 남는다 (Q11). 글 문단의 attrs 는 h·a·dc 화이트리스트다.
 // 빈 문단은 걷지 않는다 — 공백은 내용이다 (엔터 연타).
 // 타입별 복구(표 격자 등)는 wing 의 repair 훅에 위임한다 — cocoon 은 호출 자리만 갖는다.
 // 모든 엘리먼트에 유일한 _id 를 결정적으로 채운다 — 같은 JSON 은 같은 키를 얻는다 (hydrate).
 // 바뀐 것이 없으면 원래 참조를 그대로 돌려준다 — 매 커맨드 위에서도 구조 공유로 싸게 돈다.
 import { BR, P } from './reserved.js';
 import { isElement, type Attrs, type AttrValue, type ElementNode, type NabiDoc, type NabiNode } from './types.js';
-import { isLump, type SchemaEnv } from './env.js';
+import { isLump, refusesAlign, type SchemaEnv } from './env.js';
 
 // 정렬 값은 첫 글자 표기 하나로 통일한다.
 const ALIGNS: ReadonlySet<string> = new Set(['l', 'c', 'r']);
@@ -26,11 +27,14 @@ function sameAttrs(a: Attrs | undefined, b: Attrs | undefined): boolean {
 
 // 글 문단이 입을 수 있는 속성은 제목(h: 1~6)·정렬(a: l/c/r)·드롭캡(dc: 1) 셋뿐이고
 // 래퍼문단은 그중 정렬만이다 (·Q11). 이름별 검증이 곧 화이트리스트다.
-function paragraphAttrs(a: Attrs | undefined, wrapper: boolean): Attrs | undefined {
+// `align` 이 거짓이면 그 정렬 하나마저 걷는다 — 물건이 정렬을 마다한 자리다(`noAlign`).
+// 옛 저장본에 이미 박힌 값도 이 문을 지나며 걷힌다: 못 쓰게 막기만 하고 남겨 두면
+// 사람은 걸린 정렬을 벗길 단추가 없는 문서를 만난다.
+function paragraphAttrs(a: Attrs | undefined, wrapper: boolean, align = true): Attrs | undefined {
   if (!a) return undefined;
   const out: Record<string, AttrValue> = {};
   for (const [key, value] of Object.entries(a)) {
-    if (key === 'a' && typeof value === 'string' && ALIGNS.has(value)) out['a'] = value;
+    if (key === 'a' && align && typeof value === 'string' && ALIGNS.has(value)) out['a'] = value;
     if (wrapper) continue;
     if (key === 'h' && typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 6) out['h'] = value;
     if (key === 'dc' && value === 1) out['dc'] = 1;
@@ -193,7 +197,8 @@ function paragraph(node: ElementNode, env: SchemaEnv): ElementNode[] {
   if (lumps.length === 1 && slots.length === 1) {
     // 물건이 거절되면 빈 문단만 남는다 — 껍데기 없는 자리에 캐럿이 설 곳은 있어야 한다.
     const only = lumpNode(lumps[0] as ElementNode, env);
-    return [rebuild(node, P, paragraphAttrs(node.a, true), only ? [only] : [])];
+    const attrs = paragraphAttrs(node.a, true, only === null || !refusesAlign(only.w, env));
+    return [rebuild(node, P, attrs, only ? [only] : [])];
   }
 
   // 섞였다 — 쪼갠다. 글 조각은 글 문단으로(속성 화이트리스트), 물건마다 래퍼문단이 선다(정렬만 상속).
@@ -205,9 +210,9 @@ function paragraph(node: ElementNode, env: SchemaEnv): ElementNode[] {
       const attrs = paragraphAttrs(node.a, false);
       out.push(attrs ? { w: P, a: attrs, ch: inline } : { w: P, ch: inline });
     } else {
-      const attrs = paragraphAttrs(node.a, true);
       const wrapped = lumpNode(slot, env);
       if (!wrapped) continue; // 거절된 물건 — 쓴 적 없는 빈 문단을 대신 세우지 않는다
+      const attrs = paragraphAttrs(node.a, true, !refusesAlign(wrapped.w, env));
       out.push(attrs ? { w: P, a: attrs, ch: [wrapped] } : { w: P, ch: [wrapped] });
     }
   }

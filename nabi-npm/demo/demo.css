@@ -42,6 +42,16 @@ html.dark {
   color-scheme: dark;
 }
 
+/* 이 페이지의 크기는 전부 `rem` 이라 뿌리 글자 크기 하나가 화면 전체의 자다 — 여기서 못박아
+   둔다. 값이 16px 인 까닭은 iOS 사파리 때문이다: 사람이 적는 칸의 글자가 16px 아래면 겨눔이
+   들어갈 때 페이지를 통째로 확대해 버리고, 한 번 확대되면 되돌아오지 않는다. 뿌리가 16px 이면
+   `rem` 로 적은 값들이 그 아래로 안 내려간다.
+   돋보기(main.ts)는 이 자리에 인라인 `font-size` 를 얹어 뿌리를 몰고, 그쪽의 기준값
+   (`ZOOM_BASE_PX`) 도 16 이라 100% 일 때 이 줄과 같은 크기가 된다. */
+html {
+  font-size: 16px;
+}
+
 html, body {
   margin: 0;
   background: var(--g-bg);

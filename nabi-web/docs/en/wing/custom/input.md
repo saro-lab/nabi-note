@@ -179,14 +179,22 @@ place inside the document.
 
 ## Paste and initial HTML
 
-Pasting, `setHtml()`, and loading a stored value all go through **the same door**. The wing's
-only job here is `claim` — it is written up under [`claim` on the inline page](./inline#claim).
+All three go through **the same door** at the end. The wing's only job at that door is `claim` — it
+is written up under [`claim` on the inline page](./inline#claim). **Pasting alone has one step in
+front of it**, though: before it reaches `claim` it passes the IO filters and the candidate panel.
 
 ```
-paste       ─┐
-setHtml     ─┼→ parse → the wings' claim → the core's default tag handling → repair → cocoon → document
-initial HTML ─┘
+paste        ─→ IO filters ─→ candidate panel (only when there are two or more) ─┐
+setHtml      ───────────────────────────────────────────────────────────────────┼→ parse → the wings' claim → the core's default tag handling → repair → cocoon → document
+initial HTML ───────────────────────────────────────────────────────────────────┘
 ```
+
+**`setHtml()` and initial HTML do not pass the panel.** That is where the host pushes a value in,
+so there is nothing to ask — no filters, no candidates, straight to parsing.
+
+A candidate is only actually built (and so `claim` only called) **after the person picks one in the
+panel**. Building all four candidates to use one would be waste. Building a filter of your own is
+covered in [Plugging in an IO filter](../custom#plugging-in-an-io-filter).
 
 Without a `claim`, **that tag has its shell stripped and only the text inside survives.** This
 rule is why unfamiliar markup copied out of somebody else's editor does not get lodged in the
@@ -200,10 +208,5 @@ The way in through JSON (`setJson()`) carries nodes rather than tags, so the gat
 ## Next
 
 - [UI and actions](../custom/ui) — toolbar buttons and the context toolbar
+- [Plugging in an IO filter](../custom#plugging-in-an-io-filter) — the extension point for paste, save and open
 - [Writing an inline mark](../custom/inline) · [Blocks and paragraph attributes](../custom/block)
-
-<script setup lang="ts">
-import { useTranslate } from '../../../.vitepress/src/langs.ts'
-
-const { t } = useTranslate()
-</script>

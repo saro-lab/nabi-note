@@ -5,6 +5,7 @@ import type { AttrValue, ElementNode, NabiDoc, NabiNode } from '../schema/index.
 import type { EditEnv } from '../doc/index.js';
 import type { Selection } from '../caret/index.js';
 import type { HtmlBuilder, ParseElement } from '../html/index.js';
+import type { IoFilter, MdBuilder, MdBuilders } from '../io/index.js';
 import type { Command, CommandOutcome, Nabi } from '../editor/index.js';
 
 // 갈래 — §2.1 의 다섯 정의와 맞물린다: 문단·라인은 코어 예약어이고, wing 은 이 다섯 중 하나다.
@@ -270,6 +271,12 @@ export interface Wing {
   readonly w: string;
   readonly place: WingPlace;
 
+  // 호스트가 아무것도 안 끼워도 그대로 도는 wing — `wings().allBasic()` 이 이것만 모은다.
+  // 안 적으면 false 다(모르는 것은 안 든다). false 인 것은 호스트가 제 것을 더 대야 산다:
+  // upload 는 올려 줄 서버(`uploader`), save·open 은 `FileStore` 다 — 그런 단추를 기본값으로
+  // 세우면 사람은 "눌러도 아무 일이 없는 편집기" 를 먼저 만난다. 커스텀 wing 도 같은 문을 쓴다.
+  readonly basic?: boolean;
+
   // container 전용 — 자기 속의 갈래. void 는 속이 없고 mark·attr·tool 은 해당 없다.
   readonly holds?: 'blocks' | 'inline';
   readonly singleParagraph?: boolean;
@@ -278,6 +285,16 @@ export interface Wing {
   readonly parts?: Readonly<Record<string, StructureDecl>>;
   // 컨테이너가 품는 자식 타입 제한 — 벗어난 자식은 repair 앞에서 걷힌다(껍데기 벗기기).
   readonly allows?: readonly string[];
+  // 물건 전용 — 이 물건을 입은 **래퍼문단이 정렬을 안 받는다**.
+  //
+  // 래퍼문단이 드는 문단 속성은 정렬 하나뿐인데(Q11), 그 하나조차 뜻이 없는 물건이 있다:
+  // 코드 상자의 속은 글자 자리가 곧 뜻인 평문이라 `text-align` 이 상자를 옮기는 것이 아니라
+  // **코드를 흐트러뜨린다**(pre 가 정렬을 물려받는다). 그런 물건이 스스로 말하는 자리다 —
+  // 정렬 wing 이 물건 이름을 알아보는 특례를 두지 않게 방향이 이쪽이다.
+  //
+  // 선언하면 셋이 함께 선다: 툴바에서 정렬 단추가 숨고(ui), 커맨드가 무변화로 거절하고(doc),
+  // 이미 박힌 값은 고치를 지나며 걷힌다(cocoon). void·container 만 든다 — 등록 검사가 지킨다.
+  readonly noAlign?: boolean;
   // 이 중 하나는 함께 등록돼야 한다 (upload → a·img 류).
   readonly requiresAnyOf?: readonly string[];
 
@@ -293,6 +310,10 @@ export interface Wing {
   // 조립 — 노드를 세우는 wing(mark·void·container)은 필수, parts 도 각자 필수 (등록 검사).
   readonly toHtml?: HtmlBuilder;
   readonly partHtml?: Readonly<Record<string, HtmlBuilder>>;
+  // md 조립 — **선택이다.** 안 달면 그 노드는 md 저장에서 html 로 떨어진다(밑줄·유튜브·접기
+  // 처럼 md 에 자리가 없는 것들이 그 자리다). 손실보다 섞는 쪽이 낫다.
+  readonly toMd?: MdBuilder;
+  readonly partMd?: MdBuilders;
   // 들여오기의 역방향 주장 — 먼저 물어보고 null 이면 기본 대응으로 떨어진다.
   //
   // **여기서 받은 값은 검사해야 한다.** `el.attrs` 는 밖에서 온 HTML 그대로다(남의 사이트에서
@@ -300,6 +321,11 @@ export interface Wing {
   // 막지만 **저장값이 오염되고**, 그 JSON 을 읽는 다른 렌더러에서 터진다. 주소는 `safeUrl`
   // 값은 제 목록으로 거른다. `repair` 를 함께 선언하면 JSON 입구에서도 같은 검사가 걸린다.
   readonly claim?: (el: ParseElement, inner: (block: boolean) => NabiNode[]) => NabiNode[] | null;
+
+  // IO 필터 하나 — 이 wing 이 제 형식의 붙여넣기·저장·열기를 데려온다(`.nabi` 파일이 그 자리다).
+  // **필터는 wing 이 아니다**: 여기 실려 오는 것은 wing 이 딸린 지식일 뿐이고, 호스트가
+  // `makeRegistry(wings, { ioFilters })` 로 끼운 것이 이보다 앞에 선다. id 는 등록 검사에서 유일하다.
+  readonly ioFilter?: IoFilter;
 
   // 자기 속 구조의 복구 (표 격자 직사각형화 류) — cocoon 이 위임 호출한다.
   // 밖에서 온 노드 하나를 제 규칙으로 고친다 — JSON 입구(cocoon)가 부르는 자리다.
@@ -315,6 +341,16 @@ export interface Wing {
   readonly currentValue?: (node: ElementNode) => string | undefined;
   // 마크 전용 — 이 키가 눌리면 예약의 음수 방향(마크 벗고 쓰기)이 선다 (④).
   readonly escapeKeys?: readonly string[];
+
+  // 연타 선언 — 이 키를 연타 창(`TAP_MS`) 안에 **두 번** 두드리면 그 커맨드가 돈다.
+  // 키 이름(`KeyboardEvent.key`) → 커맨드 이름. `escapeKeys` 와 낱말은 닮았지만 뜻이 전혀 다르다:
+  // 그쪽은 "마크를 벗고 이어 쓴다" 이고, 이쪽은 "한 몸짓으로 커맨드 하나".
+  //
+  // 표면은 이 표만 본다 — wing 이름을 알아보고 특례를 두는 자리가 안 생긴다. 그 wing 을 안
+  // 끼운 편집기에서는 표가 비어 있어 연타가 아무 일도 안 한다.
+  // 우선순위는 **가장 낮다**: Escape 의 기존 갈래 셋(예약 걷기·마크 탈출·남은 예약)이 전부
+  // 통과한 뒤에만 받고, 위에 뜬 것이 있거나 문서가 잠겼으면 아예 세지 않는다.
+  readonly doubleKeys?: Readonly<Record<string, string>>;
 
   // 표면 부속 — 선언형이다. mount 가 붙이고 떼며, wing 은 계약 밖 리스너를 달지 않는다.
   readonly attach?: Attach;

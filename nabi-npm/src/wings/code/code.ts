@@ -8,6 +8,7 @@ import { caretAt, ordered } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
 import { replaceAt } from '../../doc/index.js';
 import { topNodeAt, type OnKey, type Wing } from '../../wing/index.js';
+import type { MdBuilder } from '../../io/index.js';
 import type { LocaleText } from '../../locale/index.js';
 import { codeAttach } from './paint.js';
 
@@ -284,11 +285,28 @@ const fenceArgs = (m: RegExpMatchArray): { name: string; args?: Record<string, u
 ...(m[1] ? { args: { lang: m[1] } } : {}),
 });
 
+// ```lang … ``` — 속은 이미 평문과 라인뿐이라 **이스케이프를 안 한다**(코드는 글자 그대로다).
+// 울타리는 속의 가장 긴 줄머리 백틱보다 하나 길다 — 코드 안의 ``` 가 상자를 일찍 닫으면 안 된다.
+const codeMd: MdBuilder = (node) => {
+  let body = '';
+  for (const child of node.ch) body += typeof child === 'string' ? child : '\n';
+  const longest = Math.max(2, ...[...body.matchAll(/^`+/gm)].map((m) => (m[0] as string).length));
+  const fence = '`'.repeat(longest + 1);
+  return `${fence}${language(node.a?.['lang']) ?? ''}\n${body}\n${fence}`;
+};
+
 export const codeWing: Wing = {
   w: 'code',
   place: 'container',
+  basic: true,
   holds: 'inline',
+  // **코드 상자는 정렬을 안 받는다.** 다른 물건(표·그림·영상)에게 정렬은 "이 물건이 줄의 어디에
+  // 서는가"인데, 코드 상자는 제 폭이 곧 줄의 폭이라 옮겨 갈 자리가 없다. 그런데 정렬은 문단의
+  // 속성이라 `text-align` 으로 나가고, `pre` 가 그것을 물려받아 **코드 줄이 가운데로 밀린다** —
+  // 들여쓰기가 뜻인 글에서 그것은 옮기는 것이 아니라 망가뜨리는 것이다.
+  noAlign: true,
   toHtml: DEFAULT_BUILDERS['code'],
+  toMd: codeMd,
   repair: repairCode,
   onKey,
   currentValue: (node) => language(node.a?.['lang']),

@@ -47,15 +47,19 @@ toolbar itself does not throw the button row out of shape.
 
 ### Picking wings
 
-Picking wings is one builder line. The file above starts from the twenty-nine standard wings and
-takes out upload, then narrows the typeface down to two.
+Picking wings is one builder line. The file above starts from the twenty-six that run with no
+wiring, adds save and open on top, then narrows the typeface down to two.
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
 - `all()` starts you off from every official wing. **Skip it and you start with nothing** — only
   what `use()` adds gets loaded.
+- `allBasic()` takes only the ones among those that **run as they are, with no wiring** (twenty-six).
+  The three left out are upload, save and open — they come alive only once the host supplies a server
+  to upload to or a file store, so standing them by default would hand the reader a button that does
+  nothing when pressed. That is why the example above adds save and open back with `use()`.
 - `use('name', options?)` adds one. Call it on a wing already in and it just stacks the options —
   the `use('tf', { values: [...] })` above is that shape. If the wing needs another wing to stand
   on (upload needs either image or link), that one is quietly pulled in too.
@@ -90,6 +94,11 @@ work. Open anyway?" goes to that box. Skip it and the answer to any question is 
 one-liner that needs no answer surfaces in the toast tray the core carries under the toolbar — an
 upload error, say, has nowhere else it needs wiring. More detail is at
 [{{ t('menu_intro_usage') }}](./usage).
+
+`ask` also carries **`choose`, for picking one out of several.** The paste panel, though, **stands
+without being plugged in** — as the toolbar goes up it hangs its own panel onto the core (the same
+grain as the toast box), so a page that stands a toolbar, like the file above, gets the panel for
+free. Plug `ask.choose` in only when you want to swap in a panel of your own.
 
 ### Getting the value out
 

@@ -16,15 +16,19 @@
   --page-bg: #fff;
   --page-line: #e2e2e8;
   --page-soft: rgb(0 0 0 / 4.5%);
-  /* 편집기 세로 최소치 — 200px 근접치. 화면이 짧을 때도 이 아래로는 안 줄어든다.
-     이 페이지를 가져다 쓰는 쪽이 값만 바꿔도 된다. */
-  --page-content-min: 12.5rem;
 }
 :root.dark {
   --page-fg: #e8e8ee;
   --page-bg: #16161a;
   --page-line: #2e2e36;
   --page-soft: rgb(255 255 255 / 7%);
+}
+
+/* 이 예문의 크기는 전부 `rem` 이라 뿌리 글자 크기가 곧 자다 — 여기서 못박는다. 16px 인 까닭은
+   iOS 사파리다: 사람이 적는 칸의 글자가 16px 아래면 겨눔이 들어갈 때 페이지가 통째로 확대되고
+   되돌아오지 않는다. 뿌리가 16px 이면 `rem` 로 적은 값이 그 아래로 안 내려간다. */
+html {
+  font-size: 16px;
 }
 
 body {
@@ -75,11 +79,9 @@ main {
   border-radius: .75rem;
   overflow: hidden;
 }
-/* 최소 세로 높이 — 기본은 200px 근접치(`--page-content-min`), 이 페이지를 가져다 쓰는
-   쪽이 값만 바꾸면 된다. 그 아래로는 안 줄어들 뿐, 글이 길어지면 그만큼 자란다
-   (`nabi-content` 자체에 스크롤 상한을 두지 않는다 — 편집기가 페이지 흐름 그대로 자라는 것이
-   맞다). */
-#content { min-block-size: var(--page-content-min); }
+/* 편집 표면의 최소 높이는 **코어가 든다** (`.nabi-content.nabi-editing`, 기본 12.5rem).
+   여기 있던 사본은 걷었다 — 이 페이지는 "코어만으로 이만큼 된다"를 보이는 자리라 사본이
+   남으면 거짓말이 된다. 값을 바꾸고 싶으면 `--nabi-content-min-height` 를 적으면 된다. */
 
 /* 두 얼굴 — 좁으면 위아래로 선다. */
 .panes { display: grid; gap: 1rem; grid-template-columns: 1fr; }

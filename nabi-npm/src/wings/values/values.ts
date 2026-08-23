@@ -18,6 +18,7 @@ import {
 import { isCollapsed, ordered } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
 import { markSpanAt, valueMark, type Wing, type WingChoice } from '../../wing/index.js';
+import type { MdBuilder } from '../../io/index.js';
 import type { LocaleText } from '../../locale/index.js';
 
 // wing 이름 넷 — old 사전 이식(14 로케일).
@@ -356,6 +357,7 @@ export function makeHighlightWing(options: ValueWingOptions = {}): Wing {
       // 형광펜과 글자색이 시트 하나를 나눠 쓴다 — 같은 글이라 문서에는 한 번만 실린다.
       styles: COLOR_CSS,
     }),
+    basic: true,
     commands: { setHighlight: setValueCommand('hl', 'c', values) },
     claim: rejectUnknown('mark', 'data-color', values),
     context: {
@@ -393,6 +395,7 @@ export function makeTextColorWing(options: ValueWingOptions = {}): Wing {
       },
       styles: COLOR_CSS,
     }),
+    basic: true,
     commands: { setTextColor: setValueCommand('tc', 'c', values) },
     claim: rejectUnknown('span', 'data-color', values),
     context: {
@@ -432,6 +435,7 @@ export function makeFontSizeWing(options: ValueWingOptions = {}): Wing {
       },
       styles: SIZE_CSS,
     }),
+    basic: true,
     commands: { setFontSize: setValueCommand('fs', 'v', values, 'paragraph') },
     claim: rejectUnknown('span', 'data-nabi-size', values),
     context: {
@@ -454,6 +458,24 @@ export function makeFontSizeWing(options: ValueWingOptions = {}): Wing {
 }
 export const fontSizeWing: Wing = makeFontSizeWing();
 
+// md 조립은 **서체 하나뿐**이고 그중 고정폭 하나뿐이다 — 형광펜·글자색·크기는 md 에 자리가
+// 없어서 `toMd` 를 안 단다(그 노드만 html 로 떨어진다).
+//
+// 코드 조각(`` `x` ``)의 속은 md 에서 평문뿐이다. 마크가 섞였거나 백틱이 양 끝에 선 글은
+// 표식을 못 세우므로 html 로 낸다 — 되읽을 때 조각이 엉뚱한 자리에서 닫히기 때문이다.
+const monoMd: MdBuilder = (node, ctx) => {
+  if (node.a?.['v'] !== 'mono') return ctx.html();
+  let raw = '';
+  for (const child of node.ch) {
+    if (typeof child !== 'string') return ctx.html();
+    raw += child;
+  }
+  if (raw.startsWith('`') || raw.endsWith('`')) return ctx.html();
+  const longest = Math.max(0, ...[...raw.matchAll(/`+/g)].map((m) => m[0].length));
+  const fence = '`'.repeat(longest + 1);
+  return `${fence}${raw}${fence}`;
+};
+
 export function makeTypefaceWing(options: ValueWingOptions = {}): Wing {
   const values = narrowed('tf', TYPEFACES, options);
   // 산세리프는 표식 없는 글이 이미 입고 있는 것이라, 눌러서 나오는 것은 그다음 얼굴이다 —
@@ -472,6 +494,8 @@ export function makeTypefaceWing(options: ValueWingOptions = {}): Wing {
       },
       styles: FACE_CSS,
     }),
+    basic: true,
+    toMd: monoMd,
     commands: { setTypeface: setValueCommand('tf', 'v', values, 'paragraph') },
     claim: rejectUnknown('span', 'data-nabi-typeface', values),
     context: {

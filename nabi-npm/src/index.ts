@@ -45,18 +45,29 @@ export type {
   WingField,
   WingPlace,
 } from './wing/index.js';
+// IO 필터 계약 — 호스트가 제 형식을 끼우는 문(`makeRegistry(wings, { ioFilters })`)의 모양이다.
+export type {
+  ClipFile,
+  DocSource,
+  IoFilter,
+  MdBuilder,
+  MdBuilders,
+  MdContext,
+  PasteCandidate,
+  PasteData,
+} from './io/index.js';
 
 // --- 편집 표면 ---------------------------------------------------------------------------------
 export { mountSurface } from './surface/index.js';
 export type { EditSurfacePort, Surface, SurfaceActions, SurfaceOptions } from './surface/index.js';
 // mount 부속 — 호스트 배선(전송 훅·저장소)이 있어야 사는 것들.
-export { browserFileStore, browserHistoryStorage, mountFile, mountLocalHistory, mountUpload } from './surface/index.js';
+export { browserFileStore, browserHistoryStorage, mountFile, mountLocalHistory, mountUpload, readExtensions } from './surface/index.js';
 export type {
-  DroppedFile,
   FileMount,
   FileMountOptions,
   HistoryMount,
   HistoryMountOptions,
+  SaveFormat,
   UploadMount,
   UploadOptions,
   UploadTask,
@@ -75,14 +86,17 @@ export {
   mountToolbar,
   mountUploadView,
   mountViewTools,
+  openChoosePanel,
   openHistoryPanel,
   openLightbox,
   openPreview,
+  openSavePanel,
   setFullscreen,
 } from './ui/index.js';
 export type {
   ContextGroupView,
   ContextToolbar,
+  ChoosePanelOptions,
   ContextToolbarOptions,
   HintOptions,
   HistoryPanelOptions,
@@ -92,6 +106,7 @@ export type {
   PickedMark,
   PickedMarkOptions,
   PreviewOptions,
+  SavePanelOptions,
   Sticky,
   StickyOptions,
   Toolbar,
@@ -132,7 +147,7 @@ export type { Nabi, NabiChange, NabiOptions } from './editor/index.js';
 // `message` 는 core 기본 toast(info) 로 흐른다 — 브라우저 confirm 을 쓰려면 그 어댑터도
 // 호스트가 두 줄로 짓는다.
 export { silentAsk } from './editor/index.js';
-export type { Ask } from './editor/index.js';
+export type { Ask, ChooseOption } from './editor/index.js';
 // 알리는 길 — 기본은 core 의 toast 그릇이 툴바 아래에 선다(mountToolbar 가 함께 세운다).
 // 제 알림 시스템이 있는 호스트는 `createNabiWith(wings, { toast })` 로 표시만 갈아탄다 —
 // 기본 그릇의 결(시간·상한)은 `toastMs`·`toastMax` 옵션이다.

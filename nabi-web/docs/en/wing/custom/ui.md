@@ -73,6 +73,18 @@ on.
 Write a separate `accelerated` and pressing the accelerator does something different — the button
 opens a panel while <kbd>Ctrl</kbd>+key applies the default straight away, for instance.
 
+::: warning An accelerator hears only keys raised on **this editor's ground**
+One place listens for accelerators — the toolbar — and how far its ear reaches is drawn by
+`mountToolbar({ surface })`. Only a key raised inside that surface or the toolbar rows belongs to
+this editor. **With two editors on one page you must pass it**: without it the toolbar falls back to
+listening to the whole document, and the two editors eat each other's keys.
+
+Two more thresholds. **The button has to be standing** (meaning that wing is registered and visible
+right now), and **the press has to reach something** before the key is swallowed. A `'host'` action
+counts as reaching something only when `onHost` or the save panel is wired; reaching nothing, the key
+flows on to the browser as its own.
+:::
+
 ---
 
 ## How a button looks pressed
@@ -226,10 +238,32 @@ const { nabi, registry } = createNabiWith(wings, {
 `confirm` takes a `boolean` or a `Promise<boolean>` — plug in the browser's own `confirm`, or
 raise a panel of your own and answer later.
 
-::: warning Leave it out and the answer is always "no"
+A third slot, `choose`, is **one out of several** — this door opens when a paste has two or more
+candidates.
+
+```ts
+choose: (question, options) => user_callback(question, options),   // the answer is an index
+```
+
+The list it receives is an array of `ChooseOption`, which has two fields.
+
+| | |
+|---|---|
+| `label` | the name that stands in that slot |
+| `icon?` | the **inside** of a 16×16 svg (a few paths). The panel puts the shell on, and **without it the name stands alone** |
+
+The answer is **an index** — `0` is the top one, and `-1` (or anything out of range) is a cancel, in
+which case nothing is pasted. Both `number` and `Promise<number>` are accepted.
+
+::: warning Left out, `confirm` answers "no" and `choose` answers the top one
 Supply no `ask` and a silent default goes in. `message` goes nowhere and `confirm` answers
 `false`. The reasoning is that **an ask-then-delete quietly not working** is better than it
 quietly happening. Local history's "really delete this?" goes through this door.
+
+`choose` alone runs the other way — its default is **0 (the top one)**. Answering cancel here would
+make the paste vanish entirely, and the first candidate in the list is always "the most likely
+reading", so with nobody to ask that is the right answer. And `choose` usually needs no plugging in
+at all — as the toolbar stands, it hangs its own panel onto the core.
 :::
 
 ::: tip Commands cannot ask

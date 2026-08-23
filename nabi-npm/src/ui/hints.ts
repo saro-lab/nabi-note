@@ -7,10 +7,10 @@
 //
 // 배지는 요소를 새로 안 짓는다 — 크롬에 클래스 하나가 붙고, 시트가 `[data-hint]::before` 로 그린다.
 import { focusQuiet } from './parts/dom.js';
+import { TAP_MS } from '../surface/actions.js';
 import type { ContextToolbar } from './context.js';
 import type { Toolbar } from './toolbar.js';
 
-const TAP_MS = 350;
 const HINTING = 'nabi-hinting';
 const KBD = 'nabi-kbd';
 

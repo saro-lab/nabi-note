@@ -16,6 +16,16 @@ Upload comes in three pieces — registering the wing alone does nothing.
 2. **`mountUpload({ … })`** — the side that actually receives the files and runs
    `uploader`. Drops, pastes and the picker button all flow here. **Skip this mount
    and the button is there but nothing happens.**
+
+::: warning Only half of pasting comes this way
+If a paste carries **even a single piece of text** (`text/html` or `text/plain`), the upload is not
+called at all — the text becomes a candidate and goes to the [paste panel](../../intro/usage)
+instead. Files flow into the upload only from **a paste with no text in it whatsoever.**
+
+Copy cells out of a spreadsheet and both a table and text ride along, so the result is **a table,
+not a picture.** To upload it as a picture, copy the picture on its own. A drop (dragging a file in)
+comes to the upload always, regardless of this rule.
+:::
 3. **`mountUploadView({ … })`** — the side that stands progress placeholders on
    screen. Uploads still work without it, but the screen says nothing while they run.
 

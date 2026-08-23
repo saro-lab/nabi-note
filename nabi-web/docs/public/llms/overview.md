@@ -14,7 +14,7 @@ sanitize-after-the-fact pass, so **XSS is blocked at the root**.
 |---|---|---|
 | `nabi-note` | Browser | Everything: wings, `createNabiWith`, `mountSurface`, `mountToolbar`, UI mounts |
 | `nabi-note/ssr` | Node.js / DOM-free | `makeRegistry`, `renderStoredHtml`, `renderStoredEditorHtml` - no `surface`/`ui` code, verified by a boundary test |
-| `nabi-note/viewer` | Browser, read-only pages | Opt-in view-side behaviors (table sort, image lightbox) via `nabiViewer(root, { wings })` - nothing here writes to the document |
+| `nabi-note/viewer` | Browser, read-only pages | Opt-in view-side behaviors (table sort, code coloring) via `attachViewer(root, { locale?, highlight? })`, or one at a time with `attachTableSort` / `attachCodePaint` - nothing here writes to the document |
 | `nabi-note/nabi.css` | Any | The bundled stylesheet (core + all built-in wings), for hosts that skip runtime style injection |
 
 ## The four-layer runtime model
@@ -26,7 +26,14 @@ What a host builds, from data to DOM. Layers below are unaware of layers above.
 | **Registry** | The output of `makeRegistry(wings)` - env, builders, commands, claim rules, attaches for the wings you registered | Pure, read-only, no mutable state. **Share one registry across many editors** (comment threads, etc.) instead of rebuilding it per instance |
 | **Stylesheets** | `collectSheets(registry)` + `injectSheets(document, sheets)`, or a static `<link>` to `nabi-note/nabi.css` | Deduplicated by content hash - mounting several editors never doubles up a `<style>` tag |
 | **Nabi state engine** | `createNabi`'s closure - the document tree, caret, undo history | One per open document. Reusable only by swapping documents into it with `setJson()`, not by sharing the instance |
-| **Surface & chrome mounts** | `mountSurface`, `mountToolbar`, `mountContextToolbar`, `mountViewTools`, `mountUpload`, `mountLocalHistory`, and more | Bound to the `HTMLElement`s you pass in; `destroy()` unwinds every listener (all registered through one `AbortSignal`) |
+| **Surface & chrome mounts** | `mountSurface`, `mountToolbar`, `mountContextToolbar`, `mountViewTools`, `mountUpload`, `mountLocalHistory`, `mountFile`, and more | Bound to the `HTMLElement`s you pass in; `destroy()` unwinds every listener (all registered through one `AbortSignal`) |
+
+`mountFile` is the one that reaches back down a layer: it wants **`registry` as well as `nabi`
+and `store`**, because the save formats and both sets of builders (HTML and Markdown) are
+registry knowledge. Optionally it takes `parse` (falls back to `parseNodes`, so it is required
+only headless) and `ioFilters`. It returns a `FileMount` - the canonical programmatic door for
+saving and opening, independent of whether the `save`/`open` wings are registered. Details in
+`llms/api-reference.md`.
 
 The registry and stylesheet layers are cheap and shareable; only the state engine and DOM mounts
 are per-document. Measured (Node, all built-in wings, a comment-sized document, 200-run

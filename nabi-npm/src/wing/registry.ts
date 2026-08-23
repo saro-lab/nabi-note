@@ -5,6 +5,7 @@ import { $fromJson, $guarded, P, RESERVED, isElement, type ElementNode, type Nab
 import type { EditEnv } from '../doc/index.js';
 import { renderEditorHtml, renderHtml } from '../html/index.js';
 import type { HtmlBuilder, HtmlBuilders, HtmlOptions, ImportOptions } from '../html/index.js';
+import type { IoFilter, MdBuilder, MdBuilders } from '../io/index.js';
 import { createNabi, type Command, type Nabi, type NabiOptions } from '../editor/index.js';
 import { erectsNode, type Attach, type InputRule, type Wing } from './contract.js';
 
@@ -30,6 +31,13 @@ export interface Registry {
   readonly attaches: readonly Attach[];
   // escape 키 → 그 키를 선언한 마크 wing 의 `w` 목록 (surface 09 가 예약 음수 방향에 쓴다).
   readonly escapes: ReadonlyMap<string, readonly string[]>;
+  // 연타 키 → 돌릴 커맨드 이름 (`Wing.doubleKeys`). 표면은 이 표만 보고 wing 이름을 모른다.
+  readonly doubles: ReadonlyMap<string, string>;
+  // IO 필터 목록 — **호스트가 끼운 것이 앞, wing 이 든 것이 뒤**다. 내장 셋(html·md·nabi)은
+  // 이 뒤에 붙는다(붙이는 자리는 표면이다). id 는 등록 검사에서 유일함이 보장된다.
+  readonly ioFilters: readonly IoFilter[];
+  // md 조립 맵 — 조립 맵(builders)과 같은 무늬다. 없는 타입은 md 저장에서 html 로 떨어진다.
+  readonly mdBuilders: MdBuilders;
   // 이 타입(부품 포함)을 소유한 wing — 키 소유 판정·ui 가 쓴다.
   ownerOf(typeW: string): Wing | null;
   wingOf(w: string): Wing | null;
@@ -81,11 +89,24 @@ function allowsRepair(allowed: ReadonlySet<string>): (node: ElementNode) => Elem
   };
 }
 
-export function makeRegistry(wings: readonly Wing[]): Registry {
+export interface RegistryExtra {
+  // 호스트가 끼우는 IO 필터 — wing 이 든 것보다 **앞**에 선다(제 형식이 내장보다 먼저 답한다).
+  readonly ioFilters?: readonly IoFilter[];
+}
+
+export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Registry {
   const byType = new Map<string, Wing>(); // 노드 타입(w·부품) → 소유 wing
   const byW = new Map<string, Wing>(); // wing 의 w → wing (tool·attr 포함)
   const shortcuts = new Map<string, string>();
   const accelerators = new Map<string, string>();
+  // IO 필터 id → 주장한 이가 누구인가. 호스트의 것도 함께 담는다 — 같은 id 가 둘이면 어느 쪽이
+  // 답하는지가 등록 순서에 숨는다.
+  const filterIds = new Map<string, string>();
+
+  for (const filter of extra?.ioFilters ?? []) {
+    if (filterIds.has(filter.id)) fail(`IO 필터 id "${filter.id}" 를 호스트가 두 번 든다`);
+    filterIds.set(filter.id, '호스트');
+  }
 
   // --- 1차 — 이름·모양 검사와 색인 ----------------------------------------------------------
   for (const wing of wings) {
@@ -100,6 +121,10 @@ export function makeRegistry(wings: readonly Wing[]): Registry {
     }
     if (wing.place === 'container' && !wing.holds) fail(`"${wing.w}" 컨테이너에 holds 선언이 없다`);
     if (wing.place !== 'container' && wing.parts) fail(`"${wing.w}" — parts 는 컨테이너만 가진다`);
+    // 정렬은 **래퍼문단**의 것이라, 마다하겠다는 말도 래퍼문단을 입는 물건만 할 수 있다.
+    if (wing.noAlign && wing.place !== 'void' && wing.place !== 'container') {
+      fail(`"${wing.w}" — noAlign 은 물건(void·container)만 든다`);
+    }
 
     for (const part of Object.keys(wing.parts ?? {})) {
       if (RESERVED.has(part)) fail(`"${wing.w}" 의 부품 "${part}" 가 코어 예약어다`);
@@ -134,6 +159,12 @@ export function makeRegistry(wings: readonly Wing[]): Registry {
       if (taken) fail(`가속키 "${accelerator}" 를 "${taken}" 와 "${wing.w}" 가 같이 주장한다`);
       accelerators.set(accelerator, wing.w);
     }
+
+    if (wing.ioFilter) {
+      const taken = filterIds.get(wing.ioFilter.id);
+      if (taken) fail(`IO 필터 id "${wing.ioFilter.id}" 를 ${taken} 와 "${wing.w}" 가 같이 주장한다`);
+      filterIds.set(wing.ioFilter.id, `"${wing.w}"`);
+    }
   }
 
   // --- 2차 — 서로를 보는 검사 (등록 순서를 안 탄다) -----------------------------------------
@@ -154,6 +185,7 @@ export function makeRegistry(wings: readonly Wing[]): Registry {
   const blockHolders: string[] = [];
   const inlineHolders: string[] = [];
   const singleParagraph: string[] = [];
+  const noAlign: string[] = [];
   const boolAttrs = new Set<string>();
   const repair: Record<string, (node: ElementNode) => ElementNode | null> = {};
   const builders: Record<string, HtmlBuilder> = {};
@@ -161,6 +193,9 @@ export function makeRegistry(wings: readonly Wing[]): Registry {
   const rules: RegisteredRule[] = [];
   const attaches: Attach[] = [];
   const escapes = new Map<string, string[]>();
+  const doubles = new Map<string, string>();
+  const ioFilters: IoFilter[] = [...(extra?.ioFilters ?? [])];
+  const mdBuilders: Record<string, MdBuilder> = {};
 
   const addRepair = (w: string, fns: ((node: ElementNode) => ElementNode | null)[]): void => {
     const chain = fns.filter((fn) => fn !== undefined);
@@ -185,6 +220,7 @@ export function makeRegistry(wings: readonly Wing[]): Registry {
       for (const attr of decl.boolAttrs ?? []) boolAttrs.add(attr);
     }
     for (const attr of wing.boolAttrs ?? []) boolAttrs.add(attr);
+    if (wing.noAlign) noAlign.push(wing.w);
 
     // repair 사슬 — allows 필터가 먼저, wing 자신의 복구가 그 위에 선다.
     const own: ((node: ElementNode) => ElementNode | null)[] = [];
@@ -198,6 +234,10 @@ export function makeRegistry(wings: readonly Wing[]): Registry {
     if (wing.toHtml) builders[wing.w] = wing.toHtml;
     for (const [part, builder] of Object.entries(wing.partHtml ?? {})) builders[part] = builder;
 
+    if (wing.toMd) mdBuilders[wing.w] = wing.toMd;
+    for (const [part, builder] of Object.entries(wing.partMd ?? {})) mdBuilders[part] = builder;
+    if (wing.ioFilter) ioFilters.push(wing.ioFilter);
+
     for (const [name, command] of Object.entries(wing.commands ?? {})) {
       if (commands[name]) fail(`커맨드 "${name}" 를 wing 둘이 같이 주장한다`);
       commands[name] = command;
@@ -209,6 +249,17 @@ export function makeRegistry(wings: readonly Wing[]): Registry {
       list.push(wing.w);
       escapes.set(key, list);
     }
+    // 연타 키는 **하나에 하나**다 — 커맨드처럼 둘이 같이 주장하면 등록이 죽는다(고를 근거가 없다).
+    for (const [key, name] of Object.entries(wing.doubleKeys ?? {})) {
+      if (doubles.has(key)) fail(`연타 키 "${key}" 를 wing 둘이 같이 주장한다`);
+      doubles.set(key, name);
+    }
+  }
+
+  // 연타가 가리키는 커맨드는 실재해야 한다 — 없는 이름을 두면 그 몸짓만 조용히 죽는다.
+  // (커맨드 맵이 다 찬 뒤에 본다 — 선언한 wing 이 먼저 서는 순서를 요구하지 않는다.)
+  for (const [key, name] of doubles) {
+    if (!commands[name]) fail(`연타 키 "${key}" 가 없는 커맨드 "${name}" 를 가리킨다`);
   }
 
   const env: EditEnv = {
@@ -217,6 +268,7 @@ export function makeRegistry(wings: readonly Wing[]): Registry {
     blockHolders: new Set(blockHolders),
     inlineHolders: new Set(inlineHolders),
     boolAttrs,
+    ...(noAlign.length > 0 ? { noAlign: new Set(noAlign) } : {}),
     ...(Object.keys(repair).length > 0 ? { repair } : {}),
     ...(singleParagraph.length > 0 ? { singleParagraph: new Set(singleParagraph) } : {}),
   };
@@ -243,6 +295,9 @@ export function makeRegistry(wings: readonly Wing[]): Registry {
     inputRules: rules,
     attaches,
     escapes,
+    doubles,
+    ioFilters,
+    mdBuilders,
     ownerOf: (typeW) => byType.get(typeW) ?? null,
     wingOf: (w) => byW.get(w) ?? null,
   };
@@ -267,10 +322,13 @@ export function nabiOptionsOf(
 // 없앴다. 이 층은 빌더가 사는 wings 층을 못 보므로 이름이 아니라 모양(build)만 본다.
 export function createNabiWith(
   wings: readonly Wing[] | { build(): readonly Wing[] },
-  extra?: Omit<NabiOptions, 'env' | 'commands' | 'builders' | 'claim'>,
+  extra?: Omit<NabiOptions, 'env' | 'commands' | 'builders' | 'claim'> & RegistryExtra,
 ): { readonly nabi: Nabi; readonly registry: Registry } {
-  const registry = makeRegistry('build' in wings ? wings.build() : wings);
-  return { nabi: createNabi(nabiOptionsOf(registry, extra)), registry };
+  // `ioFilters` 는 편집기의 옵션이 아니라 **레지스트리의 문**이다 — 필터는 wing 지식이라
+  // 어휘를 접는 그 자리에서 순서가 정해져야 한다(호스트가 앞, wing 이 뒤).
+  const { ioFilters, ...rest } = extra ?? {};
+  const registry = makeRegistry('build' in wings ? wings.build() : wings, ioFilters ? { ioFilters } : undefined);
+  return { nabi: createNabi(nabiOptionsOf(registry, rest)), registry };
 }
 
 // --- 저장본 → HTML — 에디터 없이, DOM 없이 (090) ---------------------------------------------

@@ -19,8 +19,17 @@ import {
   type Wing,
   type WingChoice,
 } from '../../wing/index.js';
+import type { MdBuilder } from '../../io/index.js';
 import type { LocaleText } from '../../locale/index.js';
 import { imageAttach } from './watch.js';
+
+// `![](주소)` — **폭은 잃는다**(md 에 자리가 없다). 대체 글은 처음부터 안 받는 갈래라 빈 칸이다.
+// 주소가 없으면 그림이 아니므로 html 로도 낼 것이 없다 — 빈 글자다.
+const imageMd: MdBuilder = (node) => {
+  const src = node.a?.['src'];
+  if (typeof src !== 'string' || src === '') return '';
+  return `![](${src.replace(/[\\()]/g, '\\$&').replace(/ /g, '%20')})`;
+};
 
 // 이름들 — old 사전 이식(14 로케일).
 const IMAGE_NAME: LocaleText = { ko: '이미지', en: 'Image', ja: '画像', zh: '图片', de: 'Bild', fr: 'Image', es: 'Imagen', pt: 'Imagem', ru: 'Изображение', ar: 'صورة', hi: 'छवि', bn: 'ছবি', ur: 'تصویر', id: 'Gambar' };
@@ -153,6 +162,8 @@ export function makeImageWing(options: ImageWingOptions = {}): Wing {
       },
       styles: WIDTH_CSS,
     }),
+    basic: true,
+    toMd: imageMd,
     // 상황 줄 — **폭과 크게 보기 둘뿐**이다. 정렬은 래퍼문단의 것이라 여기 없고
     // 대체 글도 여기 없다 — old 의 상황 줄에도 없었다. 대체 글은 그림을 **넣을 때** 한 번 묻는
     // 것이지(단추의 prompt 가 그 자리다) 그림을 고른 채 늘 곁에 두고 고치는 것이 아니다.

@@ -106,14 +106,33 @@ nabi.redo()
 
 ## 코드의 층
 
-**값이 이 차례로 흐른다는 뜻이 아닙니다.** 아래에서 위로 쌓은 **의존 방향**이고, 규칙은 하나입니다
-— **아랫층은 윗층을 모릅니다.** 그래서 아래쪽 층(`schema`·`doc`·`html`)은 DOM 을 안 딛고,
-그것이 서버에서 그대로 도는 까닭입니다. 값이 드나드는 길은 위의 나비트리 그림입니다.
+**값이 이 차례로 흐른다는 뜻이 아닙니다.** `src` 를 열면 그대로 보이는 **폴더 열넷**이고,
+그 폴더 하나가 층 하나입니다. 규칙은 하나입니다 — **아랫층은 윗층을 모릅니다.** 그래서 위쪽에
+적힌 층(`schema`·`doc`·`html`)은 DOM 을 안 딛고, 그것이 서버에서 그대로 도는 까닭입니다.
+값이 드나드는 길은 위의 나비트리 그림입니다.
 
-<LayerStack
-  :layers="layers"
-  caption=""
-/>
+```
+src/
+├── style/     코어 시트 — 편집 화면과 발행된 글이 함께 쓰는 CSS
+├── locale/    언어
+├── code/      편집 화면과 보는 쪽이 함께 쓰는 순수 토크나이저
+├── schema/    나비트리의 모양과 cocoon 정의
+├── doc/       넣기·지우기·나누기·범위 — DOM 없음
+├── caret/     커서의 위치·선택·경계
+├── html/      나비트리 ↔ HTML
+├── io/        드나드는 문 — 붙여넣기 후보·저장·열기·마크다운
+├── editor/    커맨드 인터페이스를 가진 인스턴스
+├── wing/      등록 시점의 날개 검사
+├── wings/     공식 날개들 (bold · italic … table · upload)
+├── surface/   캐럿·IME·입력을 트리에 맞춤
+├── ui/        UI 레이어
+├── viewer/    읽기 전용
+├── index.ts   코어 엔트리 — `nabi-note`
+└── ssr.ts     SSR 엔트리 — `nabi-note/ssr` (surface·ui 를 한 파일도 안 딛습니다)
+```
+
+**줄 차례가 곧 층 차례입니다** — 알파벳순이 아니라 **아래층부터** 적었습니다. `style` 이 맨
+아래고 `viewer` 가 맨 위입니다.
 
 이 방향은 글로 적어 둔 약속이 아니라 **그물이 기계로 지킵니다** — 층을 거스르는 import 가
 하나라도 생기면 그 자리에서 시험이 깨집니다.
@@ -129,6 +148,7 @@ nabi.redo()
 | **래퍼 문단** | 표·리스트·이미지같은 단일문단 오브젝트를 감싸는 문단. |
 | **소유(claim)** | 어떤 마크업이 어느 날개의 것인지 가리는 판정.         |
 | **부품(parts)** | 날개 내 기능 ex) 표의 행·칸, 접기의 요약줄          |
+| **IO 필터(io filter)** | 붙여넣기(들어오는 문)와 저장·열기(나가는 문)를 한 벌로 다루는 확장점. **날개 계약 밖**이라 문서에 제 노드를 안 세웁니다 |
 
 ### 편집화면
 
@@ -154,7 +174,6 @@ nabi.redo()
 
 <script setup lang="ts">
 import FlowHub from '../.vitepress/ui/FlowHub.vue'
-import LayerStack from '../.vitepress/ui/LayerStack.vue'
 import { useTranslate } from '../.vitepress/src/langs.ts'
 
 const { t } = useTranslate()
@@ -172,18 +191,4 @@ const hubTargets = [
   { label: 'getEditorHtml()', note: '편집기용 HTML', kind: 'out' },
 ];
 
-const layers = [
-  { name: 'locale', what: '언어' },
-  { name: 'code', what: '편집 화면과 보는 쪽이 함께 쓰는 순수 토크나이저' },
-  { name: 'schema', what: '나비트리의 모양과 Cocoon 정의' },
-  { name: 'doc', what: '넣기·지우기·나누기·범위 Dom-less' },
-  { name: 'caret', what: '커서의 위치, 선택, 경계' },
-  { name: 'html', what: '나비트리 ↔ HTML' },
-  { name: 'editor', what: '커맨드 인터페이스를 가진 인스턴스' },
-  { name: 'wing', what: '등록 시점의 Wings 검사' },
-  { name: 'wings', what: '공식 날개들 (bold, italic ... table, upload...)' },
-  { name: 'surface', what: '캐럿·IME·입력을 트리에 맞춤' },
-  { name: 'ui', what: 'UI 레이어' },
-  { name: 'viewer', what: '읽기 전용' },
-]
 </script>

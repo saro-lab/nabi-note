@@ -42,6 +42,19 @@ export interface ToolbarSlot {
   readonly tip: string;
 }
 
+// 연타 키의 **보이는 이름** — 이름표에 `KeyboardEvent.key` 를 날로 적으면 'Escape' 가 뜬다.
+// 사람이 자판에서 읽는 글자로 옮긴다. 모르는 키는 그대로가 답이다.
+const KEY_LABELS: Readonly<Record<string, string>> = { Escape: 'Esc' };
+
+// 이 단추를 부르는 연타 키가 있나 — 같은 커맨드를 가리키는 `doubleKeys` 의 키를 찾는다.
+// wing 이름으로 짐작하지 않는다: 이름표도 표면과 **같은 표**를 본다.
+function doubleKeyOf(wing: Wing, decl: WingButton): string | undefined {
+  const action = decl.action;
+  if (!action || action.kind !== 'command') return undefined;
+  const found = Object.entries(wing.doubleKeys ?? {}).find(([, name]) => name === action.command);
+  return found ? (KEY_LABELS[found[0]] ?? found[0]) : undefined;
+}
+
 // 등록된 날개 → 단추 자리 목록. 순서가 곧 줄의 순서다.
 export function toolbarSlots(
   registry: Registry,
@@ -60,13 +73,18 @@ export function toolbarSlots(
     const decls = wing.buttons ?? (wing.button ? [wing.button] : []);
     for (const decl of decls) {
       const label = t.pick(decl.label, `wing.${wing.w}.${decl.name ?? ''}`);
+      // 이름표의 꼬리는 하나뿐이다 — 힌트 글자가 있으면 그것이, 없고 연타가 있으면 연타가 붙는다.
+      const twice = doubleKeyOf(wing, decl);
       slots.push({
         wing,
         decl,
         name: decl.name === undefined ? wing.w : `${wing.w}:${decl.name}`,
         group: decl.group,
         label,
-        tip: decl.shortcut ? t.t('hintTail', { label, key: decl.shortcut }) : label,
+        tip:
+          decl.shortcut ? t.t('hintTail', { label, key: decl.shortcut })
+          : twice ? t.t('twiceTail', { label, key: twice })
+          : label,
       });
     }
   }

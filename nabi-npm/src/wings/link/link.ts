@@ -12,7 +12,20 @@ import { attachFileLink } from './attach.js';
 const text = (value: unknown): string | undefined =>
   typeof value === 'string' ? value : typeof value === 'number' ? String(value) : undefined;
 import { markSpanAt, simpleMark, type Wing } from '../../wing/index.js';
+import type { MdBuilder } from '../../io/index.js';
 import type { LocaleText } from '../../locale/index.js';
+
+// md 링크의 주소 자리 — 괄호가 짝을 흔들지 않게 막고, 공백은 자리를 가르므로 부호로 바꾼다.
+const mdUrl = (raw: string): string => raw.replace(/[\\()]/g, '\\$&').replace(/ /g, '%20');
+
+// `[글](주소)` 하나. **첨부는 md 에 자리가 없다** — 표식(`file`)이 곧 뜻인데 md 링크는 그것을
+// 실을 칸이 없어서, 껍데기만 남기면 눌러도 내려받을 것이 없는 링크가 된다. 그래서 html 로 낸다.
+const linkMd: MdBuilder = (node, ctx) => {
+  const href = text(node.a?.['href']);
+  const file = text(node.a?.['file']);
+  if (href === undefined || href === '' || (file !== undefined && file !== '')) return ctx.html();
+  return `[${ctx.children()}](${mdUrl(href)})`;
+};
 
 // 맨 URL 오토포맷 — 한 토큰이 통째로 주소일 때만. 질의문자열(`&`·`#`)도 `\S+` 라 한 토큰에 든다.
 const BARE_URL = /^https?:\/\/\S+$/;
@@ -192,6 +205,8 @@ export const linkWing: Wing = {
     },
     styles: LINK_CSS,
   }),
+  basic: true,
+  toMd: linkMd,
   // JSON 으로 들어온 링크의 검사 — HTML 입구(`import.ts`)가 하는 것과 **같은 답**을 낸다.
   //
   // 예전에는 이 자리가 비어 있어서 같은 공격이 길에 따라 다르게 끝났다: `<a href="javascript:…">`

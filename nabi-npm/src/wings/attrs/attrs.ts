@@ -4,7 +4,7 @@
 //
 // 이름 하나 — 정렬 wing 의 `w` 는 `align` 이다. attr 키는 `a` 가 맞지만, 그 이름은
 // 링크 마크 wing 이 이미 노드 타입으로 쓰고 있어 registry 가 충돌로 죽인다. 키는 `attrKey: 'a'` 다.
-import { P, type AttrValue, type ElementNode, type NabiDoc } from '../../schema/index.js';
+import { P, takesAlign, type AttrValue, type ElementNode, type NabiDoc } from '../../schema/index.js';
 import { comparePositions, holderLength, holders, nodeAt, replaceAt, setParagraphAttr, type EditEnv } from '../../doc/index.js';
 import { ordered, type Selection } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
@@ -126,6 +126,7 @@ const headingRules: readonly InputRule[] = LEVELS.map((level): InputRule => ({
 export const headingWing: Wing = {
   w: 'h',
   place: 'attr',
+  basic: true,
   attrKey: 'h',
   attrValues: LEVELS,
   currentValue: (node) => {
@@ -178,7 +179,10 @@ export const headingWing: Wing = {
 // 칸 안의 글자만 가운데로 보내고, 표는 왼쪽에 그대로 남는다.
 //
 // 글 문단에서는 최상위가 곧 자기 자신이라 규칙이 하나로 끝난다 — 두 갈래를 안 만든다.
-const setAlign: Command = (doc, sel, args) => {
+//
+// **물건은 정렬을 마다할 수 있다** (`Wing.noAlign` — 코드 상자). 그 판정은 여기서 이름을
+// 알아보는 것이 아니라 `takesAlign` 한 문이 답한다: 정렬 wing 은 어떤 물건이 마다했는지 모른다.
+const setAlign: Command = (doc, sel, args, env) => {
   const raw = args['value'];
   const value = raw === 'l' || raw === 'c' || raw === 'r' ? raw : null;
   if (raw !== null && value === null) return null;
@@ -190,12 +194,15 @@ const setAlign: Command = (doc, sel, args) => {
   const to = end.path[0];
   if (from === undefined || to === undefined) return null;
 
+  // 정렬을 마다한 물건의 래퍼문단은 겨눔에서 아예 빠진다 — 토글 셈에도 안 든다. 그 자리가
+  // 셈에 들면 코드 상자 하나를 잡고 누를 때 "전부 그 값이 아니다" 가 되어 걸 것도 없이
+  // 참을 답하고, 여럿을 잡았을 때는 옆 문단의 토글 방향까지 흔든다.
   const tops: { index: number; node: ElementNode }[] = [];
   for (let index = Math.min(from, to); index <= Math.max(from, to); index += 1) {
     const node = doc[index];
-    if (node && node.w === P) tops.push({ index, node });
+    if (node && node.w === P && takesAlign(node, env)) tops.push({ index, node });
   }
-  if (tops.length === 0) return null;
+  if (tops.length === 0) return null; // 겨눌 문단이 없다 — 무변화 침묵
 
   const next = value === null ? null : toggledValue(tops.map((top) => top.node.a?.['a']), value);
 
@@ -223,6 +230,7 @@ const setAlign: Command = (doc, sel, args) => {
 export const alignWing: Wing = {
   w: 'align',
   place: 'attr',
+  basic: true,
   attrKey: 'a',
   attrValues: ALIGNS,
   currentValue: (node) => {
@@ -255,6 +263,7 @@ export const alignWing: Wing = {
 export const dropCapWing: Wing = {
   w: 'dc',
   place: 'attr',
+  basic: true,
   attrKey: 'dc',
   attrValues: [1],
   currentValue: (node) => (node.a?.['dc'] === 1 ? '1' : undefined),

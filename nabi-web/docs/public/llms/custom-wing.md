@@ -2,7 +2,7 @@
 
 A wing is one plain object. No subclassing, no separate registration step - putting it in the
 array passed to `createNabiWith` **is** registering it. Built-in wings (bold, table, upload) are
-built from the same 25 slots documented here - there is no shortcut path only the core gets to
+built from the same 31 slots documented here - there is no shortcut path only the core gets to
 use.
 
 ## The shortest wing
@@ -130,7 +130,7 @@ Callers always use the name:
 nabi.applyCommand('insertStamp', { text: 'confirmed' })   // boolean
 ```
 
-## Every slot (25 total, 2 required: `w`, `place`)
+## Every slot (31 total, 2 required: `w`, `place`)
 
 ### What it is
 
@@ -138,10 +138,12 @@ nabi.applyCommand('insertStamp', { text: 'confirmed' })   // boolean
 |---|---|
 | `w` | This wing's name - becomes `w` in storage. Reserved words (`p`, `br`) are not allowed |
 | `place` | `'mark'` on text, `'void'` an object with no content, `'container'` an object holding text, `'attr'` a paragraph attribute, `'tool'` leaves no trace in the document |
+| `basic` | Does it run with no host wiring at all - the gate `wings().allBasic()` passes through. Omitted means `false` ("what we do not know, we do not include"). The built-ins that answer `false` are `upload`, `save`, `open`, each of which needs something from the host. **A custom wing is judged the same way**: declare it and `allBasic()` would take it, though the catalog is only official wings, so anything arriving via `.use(object)` is unaffected either way |
 | `holds` | How it holds its content - `'blocks'` or `'inline'` |
 | `singleParagraph` | Content is fixed to exactly one paragraph (a table cell) |
 | `boolAttrs` | Names of boolean attributes whose only value is `1` |
 | `allows` | Which wing names may appear inside. Omitted means all |
+| `noAlign` | Object-only. A wrapper paragraph carrying this object **takes no alignment**: the toolbar hides the alignment buttons, the command refuses as a no-op, and a value already baked in is swept away by the repair pass. The code box is the first user - `pre` inherits `text-align`, so aligning it does not move the box, it shifts the code inside. Declaring it on a mark, a tool, or a paragraph attribute **fails registration** |
 | `requiresAnyOf` | At least one of these must also be registered |
 | `parts` | Button-less structure carried alongside (a table's rows/cells, a details' summary) |
 
@@ -157,7 +159,10 @@ nabi.applyCommand('insertStamp', { text: 'confirmed' })   // boolean
 | Slot | Meaning |
 |---|---|
 | `toHtml` / `partHtml` | Outgoing shape |
+| `toMd` | Outgoing Markdown. **Optional - without it the node falls back to `toHtml`** on a `.md` save, which is exactly what "Markdown with HTML mixed in" is. Underline, YouTube and details have no Markdown spelling, so mixing beats losing |
+| `partMd` | The same for this wing's structural parts |
 | `claim` | Decides who owns this tag on the way in |
+| `ioFilter` | One IO filter this wing brings along - its own format's paste, save and open (the table wing's TSV is the model). **A filter is not a wing**: a host filter registered through `ioFilters` stands ahead of it, and a duplicate `id` fails registration. See `llms/api-reference.md` |
 | `repair` / `partRepair` | Cleans up this node on JSON entry. Returning `null` strips the whole node |
 
 ### Hands and keys
@@ -167,6 +172,7 @@ nabi.applyCommand('insertStamp', { text: 'confirmed' })   // boolean
 | `commands` | The commands this wing adds |
 | `onKey` | Intercepts a key first when the caret is inside this wing's node |
 | `escapeKeys` | Keys that make the next typed character break out of this mark |
+| `doubleKeys` | `{ key: command }` - tapping that key **twice within 350ms** runs that command. Named like `escapeKeys` but meaning something else entirely: that one is "shed the mark and keep typing", this one is "one gesture, one command". Priority is **the lowest** - it is heard only after every other branch for that key has passed, and it is not even counted while something is floating above or the document is locked. Registration checks both key collisions and that the command actually exists. `clearFormat`'s `{ Escape: 'clearFormat' }` is the built-in user |
 | `inputRules` | Autoformatting triggered by typed characters alone |
 | `attach` | DOM-level behavior - table cell drag, code coloring |
 

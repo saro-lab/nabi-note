@@ -6,8 +6,9 @@
 //   tool       늘 보인다 — 문서 자리를 안 탄다
 //   mark       속이 평문인 상자(스스로 `holds: 'inline'` 인 컨테이너 = 코드) 안에서는 숨는다
 //   attr       래퍼문단에는 정렬만 얹힌다 — 나머지 문단 속성은 숨는다
+//              (물건이 `noAlign` 을 선언했으면 그 정렬도 숨는다 — 코드 상자)
 //   void·container  글 속(인라인 홀더)에는 못 서고, 품을 쪽의 `allows` 밖이면 숨는다
-import { isWrapper, type ElementNode, type NabiDoc } from '../schema/index.js';
+import { isWrapper, takesAlign, type ElementNode, type NabiDoc } from '../schema/index.js';
 import { nodeAt, type EditEnv, type Position } from '../doc/index.js';
 import type { Registry, Wing } from '../wing/index.js';
 
@@ -25,6 +26,8 @@ export interface ReachAt {
   // 캐럿의 최상위 문단.
   readonly top: ElementNode | null;
   readonly topIsWrapper: boolean;
+  // 그 최상위 문단이 정렬을 받는가 — 물건이 정렬을 마다하면(`noAlign`) 거짓이다.
+  readonly topTakesAlign: boolean;
 }
 
 // 캐럿 자리를 한 번만 재서 규칙 넷이 나눠 쓴다 — 같은 걸음을 네 번 걷지 않는다.
@@ -56,6 +59,7 @@ export function reachAt(doc: NabiDoc, pos: Position, registry: Registry, env: Ed
     blockParentWing: blockParent ? registry.ownerOf(blockParent.w) : null,
     top,
     topIsWrapper: top !== null && isWrapper(top, env),
+    topTakesAlign: top === null || takesAlign(top, env),
   };
 }
 
@@ -77,8 +81,11 @@ export function visibleAt(reach: ReachAt, wing: Wing): boolean {
       // 속이 평문인 상자 안 — 마크가 살아남지 못하는 자리다(코드 상자의 repair 가 걷는다).
       return !(reach.inline && reach.holderIsOwnNode);
     case 'attr':
-      // 래퍼문단(물건을 입은 문단)이 드는 문단 속성은 정렬 하나뿐이다.
-      return !reach.topIsWrapper || wing.attrKey === 'a';
+      // 래퍼문단(물건을 입은 문단)이 드는 문단 속성은 정렬 하나뿐이고, 그 하나도 물건이
+      // 마다했으면(`noAlign` — 코드 상자) 없다. 캐럿이 상자 **속**이든 상자를 통째로 고른
+      // 자리든 최상위는 같은 래퍼문단이라, 두 자리가 한 판정으로 함께 닫힌다.
+      if (!reach.topIsWrapper) return true;
+      return wing.attrKey === 'a' && reach.topTakesAlign;
     default:
       // void·container — 글 속에는 못 서고, 품을 쪽의 `allows` 밖이면 숨는다.
       return !reach.inline && admits(reach, wing.w);

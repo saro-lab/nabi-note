@@ -123,29 +123,38 @@ mountSurface({ nabi, registry, root: surface, placeholder: '' })   // no hint at
 ```
 
 A newline (`\n`) becomes a line break. The hint stands **out of the flow** though (so that it never
-pushes the caret), so on an editing area only one line tall a multi-line hint spills below it — give
-the area that much minimum height when you use more than one line.
+pushes the caret), so a multi-line hint spills below an editing area shorter than itself. An empty
+editing area already stands `12.5rem` tall by default, so most of the time you leave it alone; when
+you need more, raise it with `--nabi-content-min-height`. That value applies **to the editing
+surface only** — on a published or previewed document the text itself is the height.
+
+**The hint is a layer of its own.** It has moved up onto the editing root's `::before`, so it is
+**untouched by document formatting** — whether the first line is a heading, centred, or wearing a
+drop cap. Only text direction decides where it stands.
 
 The word goes onto the editing root as `--nabi-placeholder`, and the sheet is what draws it. To
 change its color or feel, write over this rule.
 
 ```css
-.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before {
+.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before {
   color: #999;
 }
 ```
+
+To change only the color, you do not have to write over the rule at all —
+`--nabi-placeholder-color` is one line.
 
 | Piece | Required | What it does |
 |---|---|---|
 | `createNabiWith(wings, options?)` | yes | answers `{ nabi, registry }`. Needs no DOM. Takes the wing array as-is, or the picker builder (`wings()`, see [{{ t('menu_intro_cdn') }}](./cdn#picking-wings)) |
 | `mountSurface({ nabi, registry, root })` | yes | fits the caret, IME and input back onto the nabi-tree. It also attaches the `attach` of every registered wing |
-| `mountToolbar({ nabi, registry, root, surface?, locale? })` | no | the main toolbar. Without it you can still edit directly through `applyCommand()` |
+| `mountToolbar({ nabi, registry, root, surface?, locale?, file? })` | no | the main toolbar. Without it you can still edit directly through `applyCommand()`. Plug the answer of `mountFile()` into `file` and **the save panel stands with no wiring** — the save button and <kbd>⌘</kbd><kbd>S</kbd> open it. Leave it out and the press comes to the host through `onHost('save')`, as before. `surface` is also **the ground accelerators live on** (see [Where accelerators are heard](#where-accelerators-are-heard)) |
 | `mountContextToolbar({ nabi, registry, root, surface? })` | no | the per-caret context row (table rows and columns, code language, a link's address and name, and so on) |
 | `mountHints({ toolbar, context?, root, surface? })` | no | the shortcut badges that appear on a double tap of Shift |
 | `mountViewTools({ nabi, surface, root, container, onBody? })` | no | the preview and full-screen buttons. `root` is the `.nabi` box full screen will pin, and `onBody` is the hook that hangs reading-side runtime on the preview body (below) |
-| `mountSticky({ root, surface })` | no | gives back as much as a mobile keyboard pushed the sticky toolbar up |
+| `mountSticky({ root, surface, chrome?, nabi? })` | no | gives back as much as a mobile keyboard pushed the sticky toolbar up. Pass `nabi` and **after an edit it pushes the caret out from under the toolbar by itself** — leave it out and it works as before, only when the host calls `aim()` (see [The mobile keyboard](#the-mobile-keyboard-and-the-sticky-toolbar)) |
 | `mountPickedMark({ nabi, surface })` | no | the marking for a picked image or video (the browser does not draw it) |
-| `mountFile({ nabi, store, name? })` | with save and open | saving to and opening a `.nabi` file |
+| `mountFile({ nabi, store, registry, parse?, name? })` | with save and open | saves in **three** formats — `.nabi`, `.nhtml`, `.md` — and opens **four**, those three plus a plain `.html` from elsewhere. **`registry` is required** — the format list and the md and HTML assembly all come from it. `parse` is the door that reads HTML; in a browser you can leave it out and `parseNodes` stands in, but in a headless place (server, tests) you have to pass it for `.nhtml` and `.html` to open. The `FileMount` it answers is **the canonical way to save and open without wings** (`file.save()` · `file.saveAs(id, name)` · `file.formats()` · `await file.open()`) |
 | `mountLocalHistory({ nabi, storage })` | with localHistory | a record kept in the browser at a fixed interval. Stand it up even when `storage` is `null` (a blocked spot like `file://`) — that is what lets it tell you by toast why the button does nothing |
 | `mountUpload({ … })` + `mountUploadView({ … })` | with upload | running uploads from a drop, a paste or the file picker, and showing them |
 
@@ -153,6 +162,57 @@ change its color or feel, write over this rule.
 the wings hold all of it in `attach` and `mountSurface` attaches it along with them. Code coloring
 is the only one that wants somebody plugged in to do the coloring (`makeCodeAttach`, see
 [{{ t('menu_wing_code') }}](../wing/block/code)).
+
+### Where accelerators are heard
+
+One place listens for accelerators such as <kbd>⌘</kbd><kbd>S</kbd>, and that is the toolbar. How
+far its ear reaches is drawn by `mountToolbar({ surface })` — **only a key raised inside that
+surface or the toolbar rows** belongs to that editor.
+
+- **With two editors on one page, you must pass `surface`.** Without it the toolbar falls back to
+  listening to the whole document, and then <kbd>⌘</kbd><kbd>S</kbd> typed in the lower editor saves
+  the upper editor's text. Even a key typed in a plain input of the host's own gets taken.
+- **Register no wing and the key does not exist at all.** Saving and opening live in the core
+  (`mountFile`), but the button and the accelerator belong to the wing — so an editor built with
+  `wings().allBasic()` alone has no <kbd>⌘</kbd><kbd>S</kbd> and no <kbd>⌘</kbd><kbd>O</kbd>. The one
+  way back is `.use('save').use('open')`.
+- **With nowhere to land, the key is not swallowed.** In a setup where the save button reaches
+  nothing (neither `file` nor `onHost` plugged into the toolbar) the key flows on to the browser as
+  its own. We do not take a shortcut away for work we do not do — swallow it silently and the reader
+  thinks their browser is broken.
+
+To save and open without wings, use the handle `mountFile` answers — in an editor with no button
+and no accelerator the host calls `file.save()` and `file.open()` itself.
+
+### The mobile keyboard and the sticky toolbar
+
+`mountSticky` does more on mobile now — it watches the keyboard rise and fall, and brings the caret
+out **below the toolbar and above the keyboard**. Three things the host should know.
+
+- **It moves only while the editor holds focus.** With focus elsewhere it does not take a single
+  step — the page must not jump while the host is pushing a value in through `setHtml()`.
+- **While a hand is scrolling it does not move one pixel.** It stays locked for 250ms after a
+  scroll: taking the screen away from a moving hand is what shaking actually is.
+- **Only a keyboard-sized change opens the gate.** An address bar folding away (tens of pixels) moves
+  nothing; the gate opens only past `max(120px, 15% of window height)`.
+
+Typing pushes **only as far as it must** — dragging the screen up to the toolbar on every character
+would be unusable. At the moment the keyboard rises, though, it lines the view up so that **the
+toolbar sits at the top of the window**, and once the viewport has settled it lines it up once more.
+
+`--nabi-bar-height` is the value this step works with — `mountSticky` writes the **measured height**
+of the chrome it attaches to onto the `.nabi` root, and the sheet's `.nabi-content > *` adds that
+value into `scroll-margin-block-start`. **It is not a value for the host to set, but the explanation
+of why the caret never hides under the toolbar** — without the mount, an estimate of `3.5rem` stands
+instead, and that falls far short when the toolbar wraps to two rows or the context row is up.
+
+::: warning Do not block zoom with the viewport meta
+iOS Safari zooms the whole page when focus lands in a form field whose text is smaller than 16px.
+The core stops that by **making the text bigger** — `--nabi-touch-font-size` (`16px` by default). We
+did **not** take the other road of blocking zoom itself with `user-scalable=no` or
+`maximum-scale=1`: that one takes away a reader's right to zoom in. If the host writes that meta on
+its own page, the floor the core set becomes meaningless — so do not write it.
+:::
 
 ### Hanging reading-side runtime on the preview
 
@@ -297,6 +357,21 @@ the HTML it makes is open as it stands.
 
 ---
 
+## Paste, save and open
+
+**Paste reads one clipboard through several eyes** — `HTML`, `MARKDOWN`, `TEXT`, and nabi's own
+format (`NABI`). When more than one reading stands, a small panel asks which one to paste; when
+only one does, it pastes without asking. A paste carrying no text at all (files only) skips the
+panel and goes to [{{ t('menu_etc_upload') }}](../wing/etc/upload).
+
+**Three formats save** — `.nabi` (the original), `.nhtml` (a standalone HTML page) and `.md`
+(markdown; whatever has no place there is mixed in as HTML, so it may not come back).
+**Four open** — those three plus a plain `.html` from elsewhere. The door needs the `mountFile()`
+of the table above, and plugging one more format in is covered in
+[{{ t('menu_wing_custom') }}](../wing/custom#plugging-in-an-io-filter).
+
+---
+
 ## Notifications come out as a toast
 
 A single line — an upload error, a note from local history, "there is nothing to apply to" — comes
@@ -344,12 +419,23 @@ const { nabi } = createNabiWith(wings, {
 |---|---|
 | `message` | `(text: string) => void` — one message, no answer taken |
 | `confirm` | `(text: string) => boolean \| Promise<boolean>` — synchronous or asynchronous, both accepted |
+| `choose` | `(question: string, options: ChooseOption[]) => number \| Promise<number>` — one out of several. The answer is **an index**, and `-1` (or anything out of range) is a cancel. `ChooseOption` is `{ label, icon? }`, where `icon` is the **inside** of a 16×16 svg — leave it out and the name stands alone |
 
 **The core never reaches for the browser's own on its own.** A grey box must not barge into a page
 that has dialogs of its own, and a plugin host (IntelliJ, VS Code) has no `window.confirm` at all.
-Those three lines are the host's to build.
+Those lines are the host's to build.
 
-::: warning Left out, the answer is "no"
+**Only the slots you plug in win** — plugging in `message` alone, or `confirm` alone, is fine. An
+unplugged `message` comes out as a core toast (info), and an unplugged `confirm` answers "no".
+
+**`choose` is usually left out.** The paste panel hangs itself onto the core as the toolbar stands
+(the same grain as the toast box), so a page that stands a toolbar gets the panel with no work at
+all. Plug this slot in only when you are swapping in a panel of your own. With neither a hung panel
+nor a plugged slot, **the answer is 0 (the top one)** — a different direction from `confirm`'s "no".
+Answering cancel here would make the paste vanish entirely, and the first candidate in the list is
+always "the most likely reading", so with nobody to ask that is the right answer.
+
+::: warning Left out, `confirm` answers "no"
 A question nobody answered is not a "yes" — it means what cancel, Escape and closing the window
 mean. The place this answer lands is "throw the writing away and open?", so when there is nobody to
 ask, it must not go the throwing-away way. On a server (Node) it passes quietly by this value too.
@@ -382,6 +468,13 @@ nabi.$markSaved(savedDoc)   // after a save succeeds — hand it the document yo
 **Hand it the tree from the moment you were saving** (not the tree as it stands now). Letters typed
 during a slow save have to stay "changed". The save wing (`save`) calls this once the file is
 actually written, so saving to `.nabi` makes `isChanged()` `false`.
+
+::: warning Only `.nabi` moves the baseline
+What goes out as `.nhtml` or `.md` is a **copy**, and a copy does not move the baseline — after
+saving, `isChanged()` stays `true`. Treat a copy as "saved" and the window closes without asking,
+taking the real writing with it. When the save is asynchronous the baseline moves **only after it
+succeeds** — a failed save leaves it alone.
+:::
 
 **Undo back to where it started and it is `false` again** — the nabi-tree is immutable and replaced
 whole on every edit, so this is known on the spot, without walking or hashing to ask whether it is

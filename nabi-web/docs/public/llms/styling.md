@@ -89,7 +89,11 @@ them).
 | `--nabi-cursive-adjust` | `font-size-adjust` for the cursive family (handwriting faces have a low x-height and look small at the same px; this re-measures by x-height) | `0.4` |
 | `--nabi-sticky-top` | How far down the sticky row sits. Set this to your fixed header's height if you have one | `0px` |
 | `--nabi-preview-width` | Width of the preview card. `openPreview` measures the edit area's width when it opens and writes it directly onto the card, so a host override loses to that inline value | `720px` |
-| `--nabi-placeholder` | The quoted string shown on the first line while the document is empty. `mountSurface` writes it onto the editing root from its `placeholder` option (or the core dictionary), so a host override loses to that inline value; restyle the hint through `.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before` instead | empty (no hint) |
+| `--nabi-placeholder` | The quoted string shown on the first line while the document is empty. `mountSurface` writes it onto the editing root from its `placeholder` option (or the core dictionary), so a host override loses to that inline value; restyle the hint through `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` instead. Note where that `::before` sits - **on the editing root, not inside the first block** - so the hint is a separate layer that the document's own heading, alignment and drop cap never reach | empty (no hint) |
+| `--nabi-placeholder-color` | Color of that hint. The core never declares it; it reads it with a fallback of `--nabi-placeholder-color-fallback`, which **is** declared in a light and a dark pair (`#6b6b76aa` / `#9a9aa6aa`). Three links in the chain, so `:root { --nabi-placeholder-color: ... }` wins outright - and if you only need a different dark value, override the fallback instead | `var(--nabi-placeholder-color-fallback, #6b6b76aa)` |
+| `--nabi-content-min-height` | Minimum height of the editing surface. **Only `.nabi-editing` gets it** - a published or previewed `.nabi-content` is as tall as its text | `12.5rem` |
+| `--nabi-touch-font-size` | Font size of the core's own input boxes (`.nabi-input`: link URL, save name, prompt) on a coarse pointer or under 40rem wide. **iOS Safari zooms the whole page when the caret enters a form field smaller than 16px**, which then throws off every rect the editor measures; this floor prevents it. Mouse screens are untouched. Do not fight the same problem with `user-scalable=no` or `maximum-scale=1` on your viewport meta - besides taking away the reader's right to zoom, it makes this value pointless | `16px` |
+| `--nabi-bar-height` | The **measured** height of the chrome `mountSticky` attaches to; the mount writes it and the sheet's `.nabi-content > *` reads it for `scroll-margin-block-start`. Not a value to set by hand - it is the explanation of why a line never ends up trapped under the toolbar (the old guess, `3.5rem`, survives as the fallback) | `3.5rem` |
 
 ```css
 :root {
@@ -204,16 +208,40 @@ only use `--nabi-*` variables.
 | `[data-nabi-tip]` | Tooltip - drawn with CSS `::after` only | core-wide |
 | `.nabi-content.nabi-dropping` | Edit area while a file is being dragged over it. The hint text rides on `data-nabi-drop` | `mountUpload()` |
 
+### The two grid panels - paste and save
+
+The paste-candidate panel and the save panel are **one part in two dresses**, so the sheet binds
+their selectors in pairs. Aiming is shown by a `--nabi-accent` border alone; there is no fill on
+the aimed cell.
+
+| Selector | What | Who attaches it |
+|---|---|---|
+| `.nabi-card.nabi-choose` / `.nabi-card.nabi-save` | The card itself | `openChoosePanel()` / `openSavePanel()` |
+| `.nabi-choose-title` / `.nabi-save-title` | The one-word centered title | same |
+| `.nabi-choose-list` / `.nabi-save-list` | The grid - `repeat(var(--nabi-grid-cols, 3), ...)` | same |
+| `.nabi-choose-row` / `.nabi-save-row` | One cell (icon above, name below); the aimed one carries `aria-selected="true"` | same |
+| `.nabi-choose-icon` / `.nabi-save-icon` | The 24px icon box inside a cell | same |
+| `.nabi-save-name` | The save panel's name row (`.nabi-input` plus the extension marker) | `openSavePanel()` |
+| `.nabi-save-ext` | The extension marker beside the name, which follows whichever format is aimed. Its **width does not move**: it is sized from the longest extension on the panel (`--nabi-save-ext-len`, in characters) so the name field never grows and shrinks under a typing hand | `openSavePanel()` |
+| `.nabi-save-note` | The very small line under a name, e.g. the lossy-save note on `.md` | `openSavePanel()` |
+
+`--nabi-grid-cols` (default `3`) is written onto the list by the code that stands the panel up,
+from the number of cells - **not a value for a host to write**. The same number drives the arrow
+math (`gridStep`), so the grid you see and the grid the aim walks are one grid.
+
+**`.nabi-save-format` is gone.** A host that used to override hover paint through that name now
+fails silently; the pair-bound names above replaced it.
+
 Preview and fullscreen are also **core-built**:
 
 | Selector | What | Who |
 |---|---|---|
 | `.nabi-scrim` > `.nabi-card` > (`.nabi-close` / `.nabi-content.nabi-preview-body`) | Document preview overlay | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | Single-image lightbox | `openImageLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | Single-image lightbox | `openLightbox()` |
 | `.nabi.is-fullscreen` | Fullscreen - pins the `.nabi` box to the screen | `setFullscreen()` (class name is `FULLSCREEN_CLASS`) |
 
 `mountViewTools()` wires both buttons to open/close these on their own. To open them directly:
-`openPreview({ nabi, editor })`, `openImageLightbox({ editor, src, alt?, locale })`,
+`openPreview({ nabi, surface })`, `openLightbox({ surface, src, alt?, locale? })`,
 `setFullscreen(root, on)`, `isFullscreen(root)`.
 
 Edit-screen-only markers are also targetable - `[data-nabi-token]` (code block token color),

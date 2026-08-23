@@ -20,9 +20,21 @@ export { admits, reachAt, visibleAt } from './visible.js';
 export type { ReachAt } from './visible.js';
 export { contextGroupsAt } from './groups.js';
 export type { ContextGroup } from './groups.js';
-export { BAND_MARGIN, bandFix, bandOf, isIos } from './band.js';
+export {
+  BAND_MARGIN,
+  KEYBOARD_STEPS,
+  REVEAL_STEPS,
+  bandFix,
+  bandOf,
+  isIos,
+  placeWalk,
+  revealFix,
+  revealWalk,
+  underWalk,
+} from './band.js';
 export type { Band, Rect } from './band.js';
 export { CORE_CSS, collectSheets, injectSheets, sheetKey } from './css.js';
+export type { SheetSource } from './css.js';
 
 export { focusQuiet, hostOf, iconSvg, make } from './parts/dom.js';
 export type { UiHost } from './parts/dom.js';
@@ -40,8 +52,8 @@ export type { PromptField, PromptOptions } from './parts/prompt.js';
 
 export { TOAST_FADE_MS, mountToast, toastOrder, toastOverflow } from './toast.js';
 export type { ToastMount, ToastMountOptions, ToastSlot } from './toast.js';
-export { TOOLBAR_GROUPS, mountToolbar } from './toolbar.js';
-export type { Toolbar, ToolbarButton, ToolbarOptions } from './toolbar.js';
+export { TOOLBAR_GROUPS, actionReaches, mountToolbar, ownsKey } from './toolbar.js';
+export type { KeyBox, KeyScope, Toolbar, ToolbarButton, ToolbarOptions } from './toolbar.js';
 export { mountContextToolbar } from './context.js';
 export type { ContextGroupView, ContextToolbar, ContextToolbarOptions } from './context.js';
 export { mountHints } from './hints.js';
@@ -67,5 +79,9 @@ export { DEFAULT_BANDWIDTH, createTicker } from './parts/ticker.js';
 export type { Ticker, TickerOptions } from './parts/ticker.js';
 export { PICKED_ATTR, mountPickedMark } from './picked.js';
 export type { PickedMark, PickedMarkOptions } from './picked.js';
+export { CHOOSE_COLS, gridStep, initialChoice, openChoosePanel } from './choose.js';
+export type { ChoosePanelOptions } from './choose.js';
 export { openHistoryPanel } from './history.js';
 export type { HistoryPanelOptions } from './history.js';
+export { extensionFor, formatName, openSavePanel } from './save.js';
+export type { SavePanelOptions } from './save.js';

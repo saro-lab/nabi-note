@@ -112,6 +112,7 @@ const setDetailsOpen: Command = (doc, sel, args) => {
 export const detailsWing: Wing = {
   w: 'details',
   place: 'container',
+  basic: true,
   holds: 'blocks',
   boolAttrs: ['o'],
   parts: { [SUMMARY]: { holds: 'inline' } },

@@ -32,6 +32,7 @@ import {
 import { caretAt, isCollapsed, ordered, type Selection } from '../../caret/index.js';
 import type { Command, CommandOutcome } from '../../editor/index.js';
 import { listFamily, unwrapItem, type InputRule, type OnKey, type Wing } from '../../wing/index.js';
+import type { MdBuilder } from '../../io/index.js';
 import type { LocaleText } from '../../locale/index.js';
 
 interface Family {
@@ -702,6 +703,42 @@ const BULLET_NAME: LocaleText = { ko: '글머리 목록', en: 'Bullet list', ja:
 const ORDERED_NAME: LocaleText = { ko: '번호 목록', en: 'Numbered list', ja: '番号付きリスト', zh: '编号列表', de: 'Nummerierte Liste', fr: 'Liste numérotée', es: 'Lista numerada', pt: 'Lista numerada', ru: 'Нумерованный список', ar: 'قائمة مرقمة', hi: 'क्रमांकित सूची', bn: 'সংখ্যাযুক্ত তালিকা', ur: 'نمبر شدہ فہرست', id: 'Daftar bernomor' };
 const TASK_NAME: LocaleText = { ko: '체크리스트', en: 'Checklist', ja: 'チェックリスト', zh: '任务列表', de: 'Checkliste', fr: 'Liste de tâches', es: 'Lista de tareas', pt: 'Lista de tarefas', ru: 'Список задач', ar: 'قائمة المهام', hi: 'चेकलिस्ट', bn: 'চেকলিস্ট', ur: 'چیک لسٹ', id: 'Daftar tugas' };
 
+// --- md 조립 -------------------------------------------------------------------------------------
+// 목록은 항목이 **붙어 서야** 한 목록이다 — 사이에 빈 줄이 들면 되읽을 때 목록이 둘로 갈린다.
+// 항목은 첫 줄에 표식을 얹고 나머지 줄을 들여쓴다: 그 들여쓰기가 곧 중첩의 문법이다.
+
+const MD_MARKER: Readonly<Record<string, (node: ElementNode) => string>> = {
+  li: () => '- ',
+  // 전부 `1.` 로 적고 목록이 번호를 매긴다 — 항목은 제가 몇 째인지 모른다.
+  oli: () => '1. ',
+  tli: (node) => (node.a?.['ck'] === 1 ? '- [x] ' : '- [ ] '),
+};
+
+const MD_PAD: Readonly<Record<string, string>> = { li: '  ', oli: '   ', tli: '  ' };
+
+const itemMd = (item: string): MdBuilder => {
+  const marker = MD_MARKER[item] as (node: ElementNode) => string;
+  const pad = MD_PAD[item] as string;
+  return (node, ctx) => {
+    const lines = ctx.children('\n', pad).split('\n');
+    lines[0] = marker(node) + (lines[0] as string).slice(pad.length);
+    return lines.join('\n');
+  };
+};
+
+const listMd: MdBuilder = (_node, ctx) => ctx.children('\n');
+
+// 번호 매기기 — 줄머리에 선 `1. ` 만 이 목록의 항목이다(들여쓴 줄은 속 목록의 것이고,
+// 그 목록이 제 번호를 스스로 매긴다).
+const orderedMd: MdBuilder = (_node, ctx) => {
+  let at = 0;
+  return ctx
+    .children('\n')
+    .split('\n')
+    .map((line) => (line.startsWith('1. ') ? `${(at += 1)}. ${line.slice(3)}` : line))
+    .join('\n');
+};
+
 // --- wing 셋 -----------------------------------------------------------------------------------
 
 function listWing(
@@ -730,6 +767,9 @@ function listWing(
       },
       styles: LIST_CSS,
     }),
+    basic: true,
+    toMd: family.list === ORDERED.list ? orderedMd : listMd,
+    partMd: { [family.item]: itemMd(family.item) },
     commands: { [command]: toggleList(family) },
 ...(extra ?? {}),
   };

@@ -29,6 +29,9 @@ export const dividerWing: Wing = {
     },
     styles: DIVIDER_CSS,
   }),
+  basic: true,
+  // 하이픈 셋 — 파서의 `^-{3,}$` 와 같은 하나다(별·밑줄도 읽지만 적는 것은 하나로 굳힌다).
+  toMd: () => '---',
   commands: { insertDivider },
   // `---` 뒤의 엔터 — 하이픈이 셋 이상이면 된다 (old 규격표).
   inputRules: [{ trigger: 'enter', pattern: /^-{3,}$/, run: () => ({ name: 'insertDivider' }) }],

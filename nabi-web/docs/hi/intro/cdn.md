@@ -52,7 +52,7 @@ wing चुनना अब बिल्डर की एक लाइन है
 हटाया है, और फ़ॉन्ट को दो तक सीमित किया है।
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
 - `all()` सभी आधिकारिक wing से शुरू करता है। **न बुलाएँ तो ख़ाली हाथ है** — सिर्फ़

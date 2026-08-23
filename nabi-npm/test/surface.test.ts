@@ -404,6 +404,177 @@ const IMG = { w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] };
   ok('캐럿은 있던 자리에 남는다', sel.focus.offset === 2 && sel.anchor.offset === 2);
 }
 
+// ─── Esc 두 번 = 서식 지우기 (260823_004) ───────────────────────────────────────
+//
+// 연타는 `Wing.doubleKeys` 선언 → registry 표 → escapeKey 순으로 흐른다. 표면은 wing 이름을
+// 모르고, 시계가 주입이라 진짜 시간을 안 기다린다.
+
+// 게이트를 그물이 쥔다 — mount 가 DOM 에서 답하는 그 자리다.
+function escRig(doc: unknown, plain?: () => boolean, wings: readonly Wing[] = TEST_WINGS): Rig {
+  const { nabi, registry } = createNabiWith(wings, { doc });
+  const actions = makeSurfaceActions({
+    nabi,
+    registry,
+    now: () => clock,
+    ...(plain ? { plain } : {}),
+  });
+  return { nabi, actions };
+}
+
+const BOLD_DOC = [{ w: 'p', a: { h: 2 }, ch: [{ w: 'b', ch: ['굵게'] }] }];
+const range = (path: readonly number[], from: number, to: number): Selection => ({
+  anchor: { path, offset: from },
+  focus: { path, offset: to },
+});
+const plainDoc = [{ w: 'p', ch: ['굵게'] }];
+
+{
+  const { nabi, actions } = escRig(BOLD_DOC);
+  nabi.select(range([0], 0, 2));
+  ok('첫 Esc 는 아직 아무것도 안 한다', !actions.escapeKey('Escape'));
+  tick(350);
+  ok('창 안의 둘째 Esc 가 소비된다', actions.escapeKey('Escape'));
+  eq('마크도 문단 속성도 한 번에 걷힌다', nabi.getJson(), plainDoc);
+}
+
+{
+  const { nabi, actions } = escRig(BOLD_DOC);
+  nabi.select(range([0], 0, 2));
+  actions.escapeKey('Escape');
+  tick(351);
+  ok('창 밖(351ms)의 둘째 Esc 는 안 소비된다', !actions.escapeKey('Escape'));
+  eq('트리가 그대로다', nabi.getJson(), BOLD_DOC);
+}
+
+// 예약이 서 있어도 셈은 돈다 — 첫 Esc 가 예약을 걷고, **둘째가 서식을 지운다**.
+// (소비를 셈의 끝으로 읽던 옛 규칙은 2026-08-23 주인의 재보고로 뒤집혔다.)
+{
+  const { nabi, actions } = escRig([{ w: 'p', a: { h: 2 }, ch: ['가나'] }]);
+  nabi.select(range([0], 0, 2));
+  nabi.$armed.arm({ w: 'b', ch: [] }); // 겨눔이 선 뒤에 예약이 선다 — 자리를 옮기면 예약이 걷힌다
+  ok('첫 Esc 는 예약을 걷는다', actions.escapeKey('Escape'));
+  ok('예약이 걷혔다', nabi.$armed.isEmpty());
+  tick(10);
+  ok('그 다음 Esc 가 연타의 둘째다', actions.escapeKey('Escape'));
+  eq('예약을 걷은 뒤에도 둘째에 발동한다', nabi.getJson(), [{ w: 'p', ch: ['가나'] }]);
+}
+
+// **접힌 캐럿에서도 발동한다** — 단추를 그 자리에서 누른 것과 똑같은 일이다.
+// 벗길 마크가 없으면 커맨드가 문단 속성을 한 켜로 걷는다(clearAtCaret).
+{
+  const CARET_DOC = [{ w: 'p', a: { h: 2 }, ch: ['굵게'] }];
+  const { nabi, actions } = escRig(CARET_DOC);
+  nabi.select(at([0], 1));
+  actions.escapeKey('Escape');
+  tick(10);
+  ok('접힌 캐럿의 둘째 Esc 가 소비된다', actions.escapeKey('Escape'));
+  eq('벗길 마크가 없으면 문단 속성이 걷힌다', nabi.getJson(), plainDoc);
+}
+
+// **형광펜 위의 캐럿** — 주인이 짚은 그 자리다. 마크 안이라 Esc 마다 "마크 탈출"(선언된
+// escapeKeys) 이 먼저 키를 가져가는데, 그래도 셈은 돌아서 둘째에 형광펜이 벗겨진다.
+{
+  const { nabi, actions } = escRig([{ w: 'p', ch: [{ w: 'hl', a: { c: 'yellow' }, ch: ['형광펜'] }] }]);
+  nabi.select(at([0], 2)); // 마크 한가운데
+  ok('첫 Esc 는 탈출 예약으로 소비된다', actions.escapeKey('Escape'));
+  ok('음수 예약이 섰다', nabi.$armed.peek().minus.includes('hl'));
+  tick(10);
+  ok('둘째 Esc 가 서식 지우기로 간다', actions.escapeKey('Escape'));
+  eq('형광펜이 통째로 벗겨진다', nabi.getJson(), [{ w: 'p', ch: ['형광펜'] }]);
+}
+
+// 누르고 있는 것은 연타가 아니다 — 반복 이벤트는 세지도 않고 셈을 끊는다.
+{
+  const { nabi, actions } = escRig(BOLD_DOC);
+  nabi.select(range([0], 0, 2));
+  actions.escapeKey('Escape');
+  tick(10);
+  ok('repeat 인 Esc 는 발동 안 한다', !actions.escapeKey('Escape', true));
+  tick(10);
+  ok('repeat 가 셈을 끊었다', !actions.escapeKey('Escape'));
+  eq('눌러 둔 Esc 로는 안 지워진다', nabi.getJson(), BOLD_DOC);
+}
+
+// IME — 조합이 지나면 셈이 끊긴다(mount 가 조합 중의 키마다 부르는 그 문).
+{
+  const { nabi, actions } = escRig(BOLD_DOC);
+  nabi.select(range([0], 0, 2));
+  actions.escapeKey('Escape');
+  actions.breakDouble();
+  tick(10);
+  ok('조합 직후의 Esc 는 앞의 것과 안 이어진다', !actions.escapeKey('Escape'));
+  eq('조합 뒤에도 트리가 그대로다', nabi.getJson(), BOLD_DOC);
+}
+
+// 사이에 다른 키가 오면 끊긴다 — 글자를 치는 손은 연타가 아니다.
+{
+  const { nabi, actions } = escRig(BOLD_DOC);
+  nabi.select(range([0], 0, 2));
+  actions.escapeKey('Escape');
+  actions.escapeKey('a');
+  tick(10);
+  ok('사이에 글자가 끼면 안 발동한다', !actions.escapeKey('Escape'));
+  eq('그때도 트리가 그대로다', nabi.getJson(), BOLD_DOC);
+}
+
+// Esc 네 번은 두 번이 아니라 **한 번**이다 — 발동은 딱 둘째 두드림이고 셋째부터는 흘러간다.
+{
+  const { nabi, actions } = escRig(BOLD_DOC);
+  nabi.select(range([0], 0, 2));
+  actions.escapeKey('Escape');
+  tick(10);
+  ok('둘째에 발동', actions.escapeKey('Escape'));
+  eq('한 번 걷혔다', nabi.getJson(), plainDoc);
+  // 지울 것을 다시 만든다 — 두 번째 발동이 있으면 이것이 걷힌다.
+  ok('다시 굵게', nabi.applyCommand('toggleMark', { mark: { w: 'b', ch: [] } }));
+  tick(10);
+  ok('셋째는 아무 일 없다', !actions.escapeKey('Escape'));
+  tick(10);
+  ok('넷째도 아무 일 없다 (네 번 = 한 번)', !actions.escapeKey('Escape'));
+  eq('두 번째 발동은 없다', nabi.getJson(), [{ w: 'p', ch: [{ w: 'b', ch: ['굵게'] }] }]);
+}
+
+// 게이트 — 위에 뭔가 떠 있으면 세지도 발동하지도 않는다. 셈이 끊기는 것이 요점이다:
+// 전체화면의 첫 Esc 가 화면을 나가고 둘째가 서식을 지우는 길이 그래서 막힌다.
+{
+  let up = true;
+  const { nabi, actions } = escRig(BOLD_DOC, () => !up);
+  nabi.select(range([0], 0, 2));
+  ok('덮인 동안의 첫 Esc 는 안 소비된다', !actions.escapeKey('Escape'));
+  tick(10);
+  up = false; // 첫 Esc 가 전체화면을 나갔다 — 이제 일반 편집 상태다
+  ok('걷힌 직후의 Esc 는 연타의 둘째가 아니다', !actions.escapeKey('Escape'));
+  eq('한 몸짓에 두 일이 안 난다', nabi.getJson(), BOLD_DOC);
+  tick(10);
+  ok('새로 두 번 치면 그때는 발동한다', actions.escapeKey('Escape'));
+  eq('게이트가 열린 뒤에는 걷힌다', nabi.getJson(), plainDoc);
+}
+
+// 업로드 잠금 — 게이트를 안 줘도 인스턴스의 `$lock` 이 문을 닫는다.
+{
+  const { nabi, actions } = escRig(BOLD_DOC);
+  const unlock = nabi.$lock('upload');
+  nabi.select(range([0], 0, 2));
+  actions.escapeKey('Escape');
+  tick(10);
+  ok('잠긴 동안은 연타가 안 선다', !actions.escapeKey('Escape'));
+  unlock();
+  tick(10);
+  ok('풀린 직후의 Esc 도 둘째가 아니다', !actions.escapeKey('Escape'));
+  eq('잠금 중에는 트리가 그대로다', nabi.getJson(), BOLD_DOC);
+}
+
+// 서식 지우기 wing 을 **안 끼운** 편집기 — 표가 비어 있어 연타가 아무 일도 안 한다.
+{
+  const bare = TEST_WINGS.filter((wing) => wing.w !== 'clearFormat');
+  const { nabi, actions } = escRig(BOLD_DOC, undefined, bare);
+  nabi.select(range([0], 0, 2));
+  actions.escapeKey('Escape');
+  tick(10);
+  ok('연타를 선언한 wing 이 없으면 무동작', !actions.escapeKey('Escape'));
+  eq('안 끼운 편집기의 트리는 그대로다', nabi.getJson(), BOLD_DOC);
+}
+
 // ─── 오토포맷 (옛 011 규격표) ───────────────────────────────────────────────────
 
 function typed(actions: SurfaceActions, nabi: Nabi, text: string): boolean {
@@ -563,6 +734,46 @@ function typed(actions: SurfaceActions, nabi: Nabi, text: string): boolean {
   eq('빈 문단이 사라진다', nabi.getJson(), [{ w: 'p', ch: ['X'] }]);
 }
 
+// 260823_008 — **문단 하나짜리 인라인 조각은 안 가른다.** 문단의 중간을 복사해 문단 가운데에
+// 붙이면 문단 하나가 셋이 되던 자리다. 잃어버렸던 옛 규칙("문단만 글자로 풀어 잇는다")이다.
+
+{
+  const { nabi } = rig([{ w: 'p', ch: ['abcd'] }]);
+  nabi.select(at([0], 2));
+  ok('인라인 조각 끼우기', nabi.$applyRaw(insertFragmentOp([{ w: 'p', ch: ['XY'] }]), 'insertFragment'));
+  eq('문단 하나 조각은 문단을 안 가른다', nabi.getJson(), [{ w: 'p', ch: ['abXYcd'] }]);
+  eq('캐럿은 이어 쓴 글자 뒤', nabi.getSelection().focus, { path: [0], offset: 4 });
+}
+
+{
+  const { nabi } = rig([{ w: 'p', ch: ['abcd'] }]);
+  nabi.select(at([0], 2));
+  const frag: ElementNode[] = [{ w: 'p', ch: [{ w: 'b', ch: ['XY'] }] }];
+  ok('마크 든 인라인 조각', nabi.$applyRaw(insertFragmentOp(frag), 'insertFragment'));
+  eq('마크가 그대로 산다', nabi.getJson(), [{ w: 'p', ch: ['ab', { w: 'b', ch: ['XY'] }, 'cd'] }]);
+}
+
+{
+  const { nabi } = rig([{ w: 'p', ch: ['abcd'] }]);
+  nabi.select(at([0], 2));
+  const frag: ElementNode[] = [{ w: 'p', ch: ['X', { w: 'br', ch: [] }, 'Y'] }];
+  ok('라인 든 인라인 조각', nabi.$applyRaw(insertFragmentOp(frag), 'insertFragment'));
+  eq('라인이 한 문단 안에 산다', nabi.getJson(), [{ w: 'p', ch: ['abX', { w: 'br', ch: [] }, 'Ycd'] }]);
+}
+
+{
+  // 블록의 뜻을 든 문단(제목·정렬·드롭캡)은 글줄로 누르면 그 말이 사라진다 — 가르기로 간다.
+  const { nabi } = rig([{ w: 'p', ch: ['abcd'] }]);
+  nabi.select(at([0], 2));
+  const frag: ElementNode[] = [{ w: 'p', a: { h: 1 }, ch: ['XY'] }];
+  ok('제목 조각 끼우기', nabi.$applyRaw(insertFragmentOp(frag), 'insertFragment'));
+  eq('제목 조각은 여전히 가른다', nabi.getJson(), [
+    { w: 'p', ch: ['ab'] },
+    { w: 'p', a: { h: 1 }, ch: ['XY'] },
+    { w: 'p', ch: ['cd'] },
+  ]);
+}
+
 {
   const { nabi } = rig();
   nabi.select(at([0], 0));
@@ -571,6 +782,68 @@ function typed(actions: SurfaceActions, nabi: Nabi, text: string): boolean {
   const top = nabi.$doc()[0];
   ok('그 자리가 래퍼문단이 된다', top !== undefined && top.ch.length === 1 && isElement(top.ch[0] ?? '') );
   eq('캐럿은 물건 뒤(래퍼.1)', nabi.getSelection().focus, { path: [0], offset: 1 });
+}
+
+// 260823_010 — **래퍼문단의 속성이 물건과 함께 붙는다.** 가운데 세운 그림만 골라 복사해
+// 붙이면 왼쪽으로 돌아오던 자리다: 복사한 html 에는 `data-nabi-align="c"` 가 실렸고 조각에도
+// `a:{a:'c'}` 로 도착했는데, 물건만 뽑아 새 껍데기를 입히느라 그 말이 버려졌다.
+
+{
+  const { nabi } = rig();
+  nabi.select(at([0], 0));
+  const wrapper: ElementNode = {
+    w: 'p',
+    a: { a: 'c' },
+    ch: [{ w: 'img', a: { src: 'https://x.com/a.png', w: '50' }, ch: [] }],
+  };
+  ok('빈 문단 + 정렬 실린 래퍼 조각', nabi.$applyRaw(insertFragmentOp([wrapper]), 'insertFragment'));
+  eq('빈 자리에서도 실려 온 정렬이 이긴다', nabi.getJson(), [
+    { w: 'p', a: { a: 'c' }, ch: [{ w: 'img', a: { src: 'https://x.com/a.png', w: '50' }, ch: [] }] },
+  ]);
+}
+
+{
+  const { nabi } = rig([{ w: 'p', ch: ['abcd'] }]);
+  nabi.select(at([0], 4));
+  const wrapper: ElementNode = {
+    w: 'p',
+    a: { a: 'r' },
+    ch: [{ w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] }],
+  };
+  ok('글 문단 뒤 + 래퍼 조각', nabi.$applyRaw(insertFragmentOp([wrapper]), 'insertFragment'));
+  eq('빈 자리가 아니어도 정렬이 함께 선다', nabi.getJson(), [
+    { w: 'p', ch: ['abcd'] },
+    { w: 'p', a: { a: 'r' }, ch: [{ w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] }] },
+  ]);
+}
+
+{
+  // 속성 없는 래퍼는 지금까지와 똑같다 — 빈 문단이 든 속성을 빼앗지 않는다.
+  const { nabi } = rig([{ w: 'p', a: { a: 'c' }, ch: [] }]);
+  nabi.select(at([0], 0));
+  const wrapper: ElementNode = { w: 'p', ch: [{ w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] }] };
+  ok('맨 래퍼 조각', nabi.$applyRaw(insertFragmentOp([wrapper]), 'insertFragment'));
+  eq('빈 문단이 들고 있던 정렬이 산다', nabi.getJson(), [
+    { w: 'p', a: { a: 'c' }, ch: [{ w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] }] },
+  ]);
+}
+
+{
+  // 첨부 조각(문단 + 빈 문단)은 문단 둘이라 글줄로 안 눌린다 — 제 줄에 서고 빈 줄이 뒤따른다.
+  // 이것이 "파일링크끼리 엉켜 하나의 긴 것처럼 되는" 자리를 막는 몸이다 (260823_010).
+  const { nabi } = rig([{ w: 'p', ch: ['앞', { w: 'a', a: { href: 'https://x/f.txt', file: 'txt' }, ch: ['첨부'] }] }]);
+  nabi.select(at([0], 3));
+  const frag: ElementNode[] = [
+    { w: 'p', ch: [{ w: 'a', a: { href: 'https://x/g.txt', file: 'txt' }, ch: ['둘째'] }] },
+    { w: 'p', ch: [] },
+  ];
+  ok('첨부 조각 끼우기', nabi.$applyRaw(insertFragmentOp(frag), 'insertFragment'));
+  eq('첨부는 제 줄에 서고 빈 줄이 뒤에 남는다', nabi.getJson(), [
+    { w: 'p', ch: ['앞', { w: 'a', a: { href: 'https://x/f.txt', file: 'txt' }, ch: ['첨부'] }] },
+    { w: 'p', ch: [{ w: 'a', a: { href: 'https://x/g.txt', file: 'txt' }, ch: ['둘째'] }] },
+    { w: 'p', ch: [] },
+    { w: 'p', ch: [] },
+  ]);
 }
 
 // ─── 드롭캡 걸음 재료 ───────────────────────────────────────────────

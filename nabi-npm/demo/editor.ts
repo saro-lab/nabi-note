@@ -175,26 +175,29 @@ export function standEditor(hosts: EditorHosts, options: StandOptions = {}): Sto
   // 하는데, 데모의 빈 편집기는 그 짝을 아예 안 든다(안 들면 나중에 문 쪽이 이기는 일도 없다).
   const file = options.bare
     ? null
-    : mountFile({ nabi, store: browserFileStore(owner), name: () => 'nabi-note', ...(locale ? { locale } : {}) });
+    : mountFile({
+        nabi,
+        registry,
+        store: browserFileStore(owner),
+        name: () => 'nabi-note',
+        // 붙여넣기와 같은 파서다 — `.html` 파일을 여는 길이 그것으로 열린다.
+        parse: parseNodes,
+        allowLocalUrls: true,
+        ...(locale ? { locale } : {}),
+      });
   // **저장소가 막혀도 부속은 세운다** (`file://` 에서 열면 null 이 온다). 안 세우면 wing 단추가
   // 아무 데도 안 닿아 조용히 죽고, 왜 안 열리는지 말할 자리가 사라진다 — 그 말은 판의 것이다.
   const history = options.bare ? null : mountLocalHistory({ nabi, storage: browserHistoryStorage(owner.defaultView) });
 
-  // 4. 편집 표면 — 드롭·붙여넣기로 온 파일은 먼저 `.nabi` 인지 물어보고, 아니면 업로드로 간다.
+  // 4. 편집 표면 — 드롭·붙여넣기로 온 파일은 전부 업로드로 간다. **파일로 문서를 여는 길은
+  // 열기 단추 하나다**: 떨어뜨린 것을 열지 업로드할지 우리가 짐작하면, 첨부하려던 `.nabi` 가
+  // 쓰던 글을 덮는 일이 생긴다.
   const surface = mountSurface({
     nabi,
     registry,
     root: hosts.content,
     allowLocalUrls: true,
-    fileSink: (files) => {
-      if (!file) {
-        upload.take(files);
-        return;
-      }
-      void file.takeFiles(files).then((taken) => {
-        if (!taken) upload.take(files);
-      });
-    },
+    fileSink: (files) => upload.take(files),
   });
 
   // 5. 화면 도구 — 몸짓 가라앉기 하나를 툴바·상황 줄·스티키가 나눠 쓴다.
@@ -205,6 +208,8 @@ export function standEditor(hosts: EditorHosts, options: StandOptions = {}): Sto
     ...common,
     root: hosts.toolbar,
     onFiles: (files) => upload.take(files),
+    // 저장 판은 배선 한 낱말이다 — 부속을 끼운 편집기면 저장 단추와 ⌘S 가 그 판을 연다.
+    ...(file ? { file } : {}),
     // 판이 필요한 도구(로컬 기록)는 호스트가 받는다 — 다만 **모양은 호스트가 짓지 않는다**.
     // ui 가 부품 하나(`openHistoryPanel`)로 내놓으므로 호스트는 그 문을 부르기만 한다.
     // 호스트가 직접 그리면 호스트마다 다른 모양이 나오고, 그러면 이 기능의 생김새란 것이 없어진다.
@@ -242,7 +247,7 @@ export function standEditor(hosts: EditorHosts, options: StandOptions = {}): Sto
   const sticky =
     options.keyboardInset === false
       ? null
-      : mountSticky({ root: hosts.root, surface: hosts.content, chrome: hosts.chrome, settle });
+      : mountSticky({ nabi, root: hosts.root, surface: hosts.content, chrome: hosts.chrome, settle });
 
   return {
     nabi,

@@ -1,12 +1,11 @@
-// 데모 **페이지** 자신의 일 — 언어 칩·테마·돋보기·wing 토글·상태 줄·HTML/JSON 판·발행 미리보기.
+// 데모 **페이지** 자신의 일 — 언어 칩·테마·돋보기·wing 토글·상태 줄·HTML/JSON 판.
 // 편집기를 세우는 선언은 전부 `editor.ts` 에 있다: 호스트가 베껴 갈 곳은 그 파일이다.
 //
-// 여기서 한 가지를 더 보인다 — **엔트리가 둘**이라는 것. 편집기는 코어(`../src/index.js`)로
-// 서고, 발행 미리보기는 보는 쪽 엔트리(`../src/viewer/index.js`)만으로 산다.
+// 발행된 모습은 툴바의 **미리보기** 단추가 이미 보인다(같은 보는 쪽 런타임으로 뜬다) — 페이지
+// 아래에 또 두면 같은 것이 두 번 나온다.
 import { demoWings, standEditor, type EditorHosts, type StoodEditor } from './editor.js';
 // 시작 문서는 CDN 예문과 나눠 쓰는 한 벌이라 제 파일에 산다 (sample.ts 머리말).
 import { SAMPLE } from './sample.js';
-import { attachTableSort } from '../src/viewer/index.js';
 import type { Wing } from '../src/index.js';
 
 const el = <T extends HTMLElement>(id: string): T => {
@@ -76,7 +75,6 @@ const htmlArea = el<HTMLTextAreaElement>('html');
 const jsonArea = el<HTMLTextAreaElement>('json');
 const htmlDirtyEl = el('html-dirty');
 const jsonDirtyEl = el('json-dirty');
-const preview = el('preview');
 const chips = el('locales');
 const wingList = el('wing-list');
 const wingCount = el('wing-count');
@@ -92,7 +90,6 @@ let locale = 'en';
 const picked = new Map<string, boolean>();
 let editor: StoodEditor | null = null;
 let sandbox: StoodEditor | null = null;
-let detachSort: (() => void) | null = null;
 let htmlDirty = false;
 let jsonDirty = false;
 
@@ -130,10 +127,6 @@ const refresh = (): void => {
     .map((button) => button.el.getAttribute('aria-label') ?? button.w);
   statusMarks.textContent = on.length > 0 ? `Here: ${on.join(', ')}` : 'No formatting here';
   statusMarks.classList.toggle('is-active', on.length > 0);
-
-  detachSort?.();
-  preview.innerHTML = html;
-  detachSort = attachTableSort(preview, { tables: 'all' });
 };
 
 // --- 세우기 -----------------------------------------------------------------------------------
@@ -144,8 +137,6 @@ function pickedWings(): readonly Wing[] {
 
 // wing 구성은 생성 시점에 정해지므로 바꾸려면 편집기를 다시 만들어야 한다.
 function stand(doc: unknown, html?: string): void {
-  detachSort?.();
-  detachSort = null;
   editor?.unmount();
   hosts.content.innerHTML = '';
   document.documentElement.lang = locale;

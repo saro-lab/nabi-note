@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const SOURCE = join(root, 'src', 'wings', 'file', 'file.ts');
+const SOURCE = join(root, 'src', 'io', 'file.ts');
 const MARK = /export const NABI_VERSION = '([^']*)';/;
 
 export function synced(source, version) {
@@ -32,7 +32,7 @@ function main() {
     return;
   }
   writeFileSync(SOURCE, synced(before, version), 'utf8');
-  console.log(`판 ${was} → ${version} (src/wings/file/file.ts)`);
+  console.log(`판 ${was} → ${version} (src/io/file.ts)`);
 }
 
 if (process.argv[1] && process.argv[1].endsWith('sync-version.mjs')) main();

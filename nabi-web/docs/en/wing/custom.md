@@ -153,7 +153,7 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 
 ## Every field you can fill in
 
-`Wing` has twenty-five fields and **only two are required** (`w` and `place`).
+`Wing` has thirty-one fields and **only two are required** (`w` and `place`).
 
 ### What it is
 
@@ -161,10 +161,12 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 |---|---|
 | `w` | This wing's name. It becomes the `w` in the stored value. Reserved words (`p`, `br`) are not allowed |
 | `place` | `'mark'` over characters · `'void'` a lump with no inside · `'container'` a lump with text inside · `'attr'` a paragraph attribute · `'tool'` a tool leaving no trace in the document |
+| `basic` | **Does it run as it is, with no wiring?** Left out it is `false` — what it does not know, it does not take. `wings().allBasic()` gathers only the ones carrying this mark, and **a custom wing is measured the same way**. `allBasic()` walks the official catalogue, though, so a wing handed in directly through `.use(object)` is loaded regardless of this value |
 | `holds` | How it holds its inside — `'blocks'` or `'inline'` |
 | `singleParagraph` | The inside is fixed at **one** paragraph (a table cell) |
 | `boolAttrs` | Names of boolean attributes whose only value is `1` |
 | `allows` | The wing names allowed inside. Left out, everything |
+| `noAlign` | **Objects only.** Carry it and the **wrapper paragraph wearing this object takes no alignment** — the alignment buttons hide in the toolbar, the command refuses as a no-change, and a value already baked into an old stored document is stripped as it passes through the cocoon. The code box is the first user: `pre` inherits `text-align`, so instead of the box moving, **the code lines shift**. Put it on a mark, a tool or a paragraph attribute and **registration dies** |
 | `requiresAnyOf` | One of these must be registered alongside |
 | `parts` | Buttonless structure brought along — a table's rows and cells, a details summary |
 
@@ -180,6 +182,9 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 | Field | Meaning |
 |---|---|
 | `toHtml` · `partHtml` | The way out |
+| `toMd` | The way out into markdown. **Optional — leave it out and the node falls back to `toHtml`** (underline, YouTube and Details are the sort with no place in markdown, and this is what "md with HTML mixed in" actually is) |
+| `partMd` | The markdown share of that wing's `parts` |
+| `ioFilter` | This wing **brings the paste, save and open of its own format along with it** (the `.nabi` file is that spot). A filter is not a wing but knowledge attached to one, so anything the host plugs in through `ioFilters` stands ahead of it — see [Plugging in an IO filter](#plugging-in-an-io-filter) below |
 | `claim` | Decides who owns this tag in incoming HTML |
 | `repair` · `partRepair` | Tidies this node at the JSON door. Answer `null` and it is stripped, shell and all |
 
@@ -190,6 +195,7 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 | `commands` | The commands this wing lays on |
 | `onKey` | Intercepts keys first while the caret is inside this wing's node |
 | `escapeKeys` | Keys that make the next character typed leave this mark |
+| `doubleKeys` | `{ key name: command name }` — tap that key **twice within 350ms** and the command runs. The word looks like `escapeKeys` but means something else: that one is "leave the mark and keep writing", this one is "one command from one gesture". Its priority is **the lowest**, so it takes its turn after every other job on that key has passed. At registration it **checks for key collisions and for the command's existence**, so two wings claiming the same key, or a name pointing at no command, kills registration |
 | `inputRules` | Automatic conversion driven by typing alone |
 | `attach` | For when the screen has to be touched — a table's cell drag, code's colouring |
 
@@ -200,6 +206,34 @@ nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
 | `button` · `buttons` | One toolbar button, or several |
 | `context` | The context toolbar declaration |
 | `styles` | The CSS this wing carries |
+
+---
+
+## Plugging in an IO filter
+
+**An IO filter is not a wing.** It stands only at the doors the document goes through — paste,
+save and open — takes charge of one format, and raises no node of its own in the document. The
+contract is a single `IoFilter`.
+
+| Field | Meaning |
+|---|---|
+| `id` · `label` | The filter's name, and the name shown in the panel. A colliding `id` **dies right where you register it** |
+| `paste` | Looks at the clipboard (`PasteData`) and offers a candidate. `null` if it is not its own, and `build()` digs only once the person picks that slot |
+| `save` | `{ extension, write, lossy?, mime? }` — `write` gets a `DocSource` and takes whichever of `json()`, `html()` and `md()` it needs. `lossy` is what puts "(lossy)" on the save panel |
+| `read` | Takes a name and a string and reads it into a nabi tree. **`null` if it is not its own**, and it passes to the next filter |
+
+**All three doors are optional** — a filter that only knows paste, or only reads, is fine. The
+places to plug one in are `ioFilters` on `mountSurface` and `mountFile`,
+`createNabiWith(wings, { ioFilters })`, and the `ioFilter` field in the table above, and
+**whoever stands first wins** — mount → host → wing → built-in (`nabi`, `html`, `html-open`,
+`markdown`). The open list comes from `readExtensions(filters)`, which **cannot count a filter
+with no save slot** (the built-in `.html` is such a spot, so the default store adds it by hand to
+make four).
+
+Markdown alone a filter cannot make on its own — which characters a node is written as is known by
+**the wing** carrying `toMd` and `partMd` above. Leave them out and the node falls back to
+`toHtml`, mixed into the md as HTML; and the md parser too raises **only the syntax a registered
+wing can take**.
 
 ---
 

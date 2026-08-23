@@ -54,7 +54,7 @@ Choisir les wings tient en une ligne de builder. Le fichier ci-dessus part des v
 standard, retire l'upload et restreint la police à deux choix.
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
 - `all()` part de toutes les wings officielles. **Sans cet appel, la liste est vide** — seul ce

@@ -1,6 +1,6 @@
 {
   "name": "nabi-note",
-  "version": "0.7.4",
+  "version": "0.8.0",
   "description": "open-source WYSIWYG editor",
   "keywords": [
     "wysiwyg",
@@ -55,7 +55,7 @@
     "test": "node scripts/run-tests.mjs",
     "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsup && tsc -p tsconfig.build.json --emitDeclarationOnly && node scripts/build-css.mjs && npm run build:cdn",
     "build:cdn": "tsx scripts/build-cdn.mjs",
-    "version": "node scripts/sync-version.mjs && git add src/wings/file/file.ts",
+    "version": "node scripts/sync-version.mjs && git add src/io/file.ts",
     "cdn": "vite cdn/dist --open",
     "prepublishOnly": "npm run build"
   },

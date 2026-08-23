@@ -61,7 +61,7 @@
       var $ = function (id) { return document.getElementById(id); };
 
       // 1. 편집기 하나 — 날개 목록이 갈래 지식·커맨드·조립기를 함께 짓는다.
-      var made = N.createNabiWith(N.defaultWings, {
+      var made = N.createNabiWith(N.wings().allBasic(), {
         doc: window.NABI_SAMPLE,
         parseHtml: N.parseNodes,
         // 묻는 길 — 안 주면 코어는 아무것도 안 묻고 "아니오" 로 답한다(머리 없는 곳에서도 도니까).

@@ -166,7 +166,7 @@ ok('저장본이 아니면 null 로 거절한다', renderStoredHtml({ not: 'tree
 
 // 안쪽 것은 안 나간다 — 이름이 엔트리 소스에 없으면 나갈 길도 없다.
 const entrySource = strip(read('src/index.ts'));
-const INTERNAL = ['planRedraw', 'pressedOf', 'fromDomPoint', 'tryInputRule', 'contextGroupsAt', 'bandOf', 'iconButton'];
+const INTERNAL = ['planRedraw', 'pressedOf', 'fromDomPoint', 'tryInputRule', 'contextGroupsAt', 'bandOf', 'revealFix', 'revealWalk', 'underWalk', 'placeWalk', 'iconButton'];
 ok(
   '엔트리가 내부 잡동사니를 안 내보낸다',
   INTERNAL.every((name) => !entrySource.includes(name)),
@@ -249,7 +249,7 @@ ok('package: unpkg 가 tsup 이 내는 자리를 가리킨다', pkg.unpkg === '.
 // (번들러마다 JSON 을 읽는 법이 다르고 서버에서도 돌아야 한다). 판을 올리면서 이 한 줄을
 // 빠뜨리면 **내보낸 파일이 남의 판을 자기 판이라고 적는다** — 나중에 "이 판을 읽을 수 있나" 를
 // 물을 때 답할 것이 없어진다. 발행 전에 여기서 걸린다.
-eq('package: 발행 판과 NABI_VERSION 이 같다', /NABI_VERSION = '([^']+)'/.exec(read('src/wings/file/file.ts'))?.[1], pkg.version);
+eq('package: 발행 판과 NABI_VERSION 이 같다', /NABI_VERSION = '([^']+)'/.exec(read('src/io/file.ts'))?.[1], pkg.version);
 
 ok('package: build 가 tsup·선언·CSS 셋을 잇는다', /tsup/.test(pkg.scripts['build'] ?? '') && /emitDeclarationOnly/.test(pkg.scripts['build'] ?? '') && /build-css/.test(pkg.scripts['build'] ?? ''));
 

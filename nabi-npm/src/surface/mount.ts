@@ -4,23 +4,21 @@
 //
 // 원칙: 정본은 트리다. 화면 캐럿은 파생이고, 어긋나면 트리 쪽으로 교정한다.
 // 예외 구간은 IME 조합뿐 — 그동안은 DOM 이 정답이고, 끝나는 순간 한 번에 따라잡는다.
-import { P, cocoon, isElement, isWrapper, type ElementNode, type NabiDoc } from '../schema/index.js';
+import { isElement, isWrapper, type NabiDoc } from '../schema/index.js';
 import { isHolder, nodeAt, terminalOf } from '../doc/index.js';
 import { caretAt, isCollapsed, sameSelection, selectObject, type Selection } from '../caret/index.js';
 import { localeDirection, translate } from '../locale/index.js';
 import type { Nabi, NabiChange } from '../editor/index.js';
 import type { Registry } from '../wing/index.js';
-import {
-  fragmentOf,
-  pasteFragment,
-  renderEditorHtml,
-  renderParagraphHtml,
-  type HtmlOptions,
-} from '../html/index.js';
+import { renderEditorHtml, renderParagraphHtml, type HtmlOptions } from '../html/index.js';
+import type { IoFilter } from '../io/index.js';
 import { makeSurfaceActions, type SurfaceActions } from './actions.js';
 import { diffPlain, holderTextOf } from './text.js';
 import { domTextOf, fromDomPoint, holderElOf, pathOfId, toDomPoint, ZERO_WIDTH } from './map.js';
-import { insertFragmentOp } from './fragment.js';
+import { rememberClip } from './clip.js';
+import { clipHtmlOf, loadClipboard } from './clipboard.js';
+import { ioFiltersOf } from './filters.js';
+import { makePasteFlow } from './paste.js';
 import { planRedraw } from './redraw.js';
 import type { EditSurfacePort, ReadCaret } from './port.js';
 
@@ -42,6 +40,10 @@ export interface SurfaceOptions {
   // 안 주면 코어 사전의 말이 로케일대로 선다. **빈 글자열을 주면 안내글이 없다**(끄는 손).
   // 줄바꿈(`\n`)은 그대로 줄바꿈으로 선다 — 여러 줄짜리 안내글이 된다.
   readonly placeholder?: string;
+  // 호스트가 이 표면에만 끼우는 IO 필터 — **맨 앞에 선다**. 레지스트리에 끼운 것
+  // (`makeRegistry(wings, { ioFilters })`)은 이미 wing 필터 앞에 접혀 있고, 내장 셋(html·md)은
+  // 늘 마지막이다. 그래서 최종 순서는 여기 것 → 레지스트리 것 → 내장이다.
+  readonly ioFilters?: readonly IoFilter[];
   // 드롭·붙여넣기로 온 파일이 흘러가는 곳 (업로드 wing 이 11 에서 잇는다). 없으면 삼킨다.
   readonly fileSink?: (files: readonly File[]) => void;
   readonly doubleEnterMs?: number;
@@ -86,10 +88,38 @@ export function mountSurface(options: SurfaceOptions): Surface {
     builders: registry.builders,
     ...(options.allowLocalUrls ? { allowLocalUrls: true } : {}),
   };
+  // 일반 편집 상태인가 — **연타 몸짓의 문**이다 (260823_004 ④).
+  //
+  // 새 전역 깃발을 안 세운다: 위에 뜬 것들은 이미 DOM 에 제 표식을 남기고 있고, 업로드 잠금은
+  // 인스턴스의 `$lock` 이 든다(그쪽은 actions 가 직접 묻는다). 여기서 보는 것은 셋이다 —
+  // 전체화면(크롬 뿌리의 클래스)· 힌트 배지(같은 뿌리의 클래스)· 문서에 실재하는 덮개와 판.
+  //
+  // 덮개·판은 사실 캡처에서 `preventDefault`(+ 덮개는 `stopPropagation`)까지 하므로 키가
+  // 여기 오지도 않는다 — 그래도 함께 본다. **실제로 새는 자리는 전체화면 하나**다:
+  // `ui/overlay.ts` 의 귀는 문서 **버블**이라 편집기가 먼저 먹고, 막지도 소비하지도 않는다.
+  const layered = '.nabi-scrim, .nabi-panel';
+  const plain = (): boolean =>
+    root.closest('.is-fullscreen') === null &&
+    root.closest('.nabi-hinting') === null &&
+    owner.querySelector(layered) === null;
+
   const actions = makeSurfaceActions({
     nabi,
     registry,
+    plain,
     ...(options.doubleEnterMs !== undefined ? { doubleEnterMs: options.doubleEnterMs } : {}),
+  });
+
+  // 붙여넣기가 지나는 필터 목록 — 짓는 법은 `filters.ts` 하나다(저장 판도 같은 목록을 본다).
+  const takePaste = makePasteFlow({
+    nabi,
+    filters: ioFiltersOf({
+      registry,
+      ...(options.ioFilters ? { extra: options.ioFilters } : {}),
+      ...(options.allowLocalUrls ? { allowLocalUrls: true } : {}),
+    }),
+    locale: () => options.locale ?? nabi.$locale(),
+    ...(options.fileSink ? { fileSink: options.fileSink } : {}),
   });
 
   // --- 상태 (전부 이 mount 의 것) ------------------------------------------------------
@@ -262,6 +292,9 @@ export function mountSurface(options: SurfaceOptions): Surface {
     // 코드 상자가 들여쓰기까지 했다. `defaultPrevented` 가 "이건 이미 누구의 것"이라는 표식이다.
     if (ev.defaultPrevented) return;
     if (ev.isComposing || ev.keyCode === 229) {
+      // 조합이 지나면 연타 셈이 끊긴다 — 조합을 끝낸 직후의 Esc 가 조합 앞의 Esc 와 이어져
+      // 세어지면 안 된다(힌트의 IME 철칙과 같다: 조합 중에는 아무것도 안 센다).
+      actions.breakDouble();
       // 조합 중의 보조키+A — 브라우저가 조합 확정에 써 버려 씹힌다. 표식만 남겨 끝에 재생한다.
       if ((ev.metaKey || ev.ctrlKey) && !ev.altKey && (ev.key.toLowerCase() === 'a' || ev.code === 'KeyA')) {
         replaySelectAll = true;
@@ -330,7 +363,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
       }
       return;
     }
-    if (actions.escapeKey(ev.key)) ev.preventDefault();
+    if (actions.escapeKey(ev.key, ev.repeat)) ev.preventDefault();
   };
 
   // --- beforeinput — 구조 입력은 전부 우리 것, 문단 안 타이핑만 브라우저에 맡긴다 ---------------
@@ -494,6 +527,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
 
   const onCompositionStart = (): void => {
     replaySelectAll = false;
+    actions.breakDouble();
     const sel = nabi.getSelection();
     // 범위 위 조합 — 브라우저가 DOM 에서 범위를 지우기 전에 트리도 지워 캐럿 하나에서 시작한다.
     if (!isCollapsed(sel)) nabi.applyCommand('deleteRange');
@@ -542,36 +576,51 @@ export function mountSurface(options: SurfaceOptions): Surface {
   };
 
   // --- 붙여넣기·드롭·클릭 ----------------------------------------------------------------------
+  // 붙여넣기의 판정은 전부 `paste.ts` 에 있다 — 여기서는 **이벤트에서 값을 뜨는 일**만 한다.
+  // `clipboardData` 는 이 함수 밖에서 죽으므로 동기 구간에서 전부 떠 둔다(판이 뜨면 답은 나중에 온다).
   const onPaste = (ev: ClipboardEvent): void => {
     ev.preventDefault();
-    const files = ev.clipboardData?.files;
-    if (files && files.length > 0) {
-      options.fileSink?.(Array.from(files));
+    const cd = ev.clipboardData;
+    const files = cd ? Array.from(cd.files) : [];
+    takePaste(
+      {
+        html: cd?.getData('text/html') ?? '',
+        plain: cd?.getData('text/plain') ?? '',
+        files,
+        types: cd ? Array.from(cd.types) : [],
+      },
+      files,
+    );
+  };
+
+  // 복사·잘라내기 — **클립보드를 우리가 채운다** (260823_008).
+  //
+  // 007 은 브라우저가 채우게 두고 한 벌 떠 두기만 했다. 그 대가가 "되돌아온 글자가 뜬 글자와
+  // 같다는 보장이 없다" 였고, 봉해진 첨부에서 그것이 터졌다 — 크롬은 `user-select: none` 인
+  // 서브트리를 아예 안 싣는다(실측). 지금은 실은 글자와 기억이 **같은 글자**라 `sameClip` 의
+  // ① 겹이 언제나 서고, `<h1>` 의 글자를 다 골라 복사하면 제목도 함께 간다(`clipboard.ts`).
+  //
+  // 기억은 전역 하나라 인스턴스를 건너서도, 한 번 잘라 열 번 붙여도 그대로 산다.
+  const onCopyOrCut = (ev: ClipboardEvent): void => {
+    const s = domSelection();
+    if (!s || s.rangeCount === 0 || s.isCollapsed) return;
+    const range = s.getRangeAt(0);
+    if (!root.contains(range.commonAncestorContainer)) return;
+    const html = clipHtmlOf(range, root, owner);
+    const cd = ev.clipboardData;
+    // 실을 손이 없다(옛 브라우저·합성 이벤트) — 브라우저에 맡기고 기억만 둔다(007 의 길).
+    if (!cd) {
+      rememberClip(html);
       return;
     }
-    const html = ev.clipboardData?.getData('text/html') ?? '';
-    const plain = ev.clipboardData?.getData('text/plain') ?? '';
-    if (html === '' && plain === '') return;
-    if (html === '' && !plain.includes('\n')) {
-      // 평문 한 줄은 그냥 글자다 — 캐럿에 이어 쓴다.
-      nabi.applyCommand('insertText', { text: plain });
-      return;
-    }
-    const raw: readonly ElementNode[] =
-      html !== ''
-        ? pasteFragment(html, {
-            env,
-            ...(registry.claim ? { claim: registry.claim } : {}),
-            ...(options.allowLocalUrls ? { allowLocalUrls: true } : {}),
-          })
-        : plain.split('\n').map((line): ElementNode => ({ w: P, ch: line === '' ? [] : [line] }));
-    // 조각도 문서의 불변식을 입고 들어온다 — 래퍼 입히기·쪼개기는 cocoon 의 것이다.
-    const fragment = fragmentOf(cocoon([...raw], env));
-    if (fragment.length === 0) return;
-    nabi.group(() => {
-      if (!isCollapsed(nabi.getSelection())) nabi.applyCommand('deleteRange');
-      nabi.$applyRaw(insertFragmentOp(fragment), 'insertFragment');
-    });
+    // 맨 글자는 **선택의 것**이 먼저다 — 블록 사이의 줄바꿈은 `Selection.toString()` 만 안다.
+    // 봉해진 첨부처럼 `user-select: none` 이 걸린 자리에서는 그것이 빈 글자라 범위의 것으로
+    // 받친다(`Range.toString()` 은 CSS 를 안 본다).
+    const plain = s.toString() || range.toString();
+    ev.preventDefault();
+    loadClipboard(cd, html, plain);
+    // `preventDefault` 를 했으니 브라우저의 `deleteByCut` 이 안 온다 — 지우는 것도 우리 몫이다.
+    if (ev.type === 'cut') nabi.applyCommand('deleteRange');
   };
 
   const onDrop = (ev: DragEvent): void => {
@@ -679,6 +728,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
   root.addEventListener('compositionstart', onCompositionStart);
   root.addEventListener('compositionend', onCompositionEnd);
   root.addEventListener('paste', onPaste as EventListener);
+  root.addEventListener('copy', onCopyOrCut as EventListener);
+  root.addEventListener('cut', onCopyOrCut as EventListener);
   root.addEventListener('drop', onDrop as EventListener);
   root.addEventListener('dragover', onDragOver as EventListener);
   root.addEventListener('mousedown', onMouseDown);
@@ -708,6 +759,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       root.removeEventListener('compositionstart', onCompositionStart);
       root.removeEventListener('compositionend', onCompositionEnd);
       root.removeEventListener('paste', onPaste as EventListener);
+      root.removeEventListener('copy', onCopyOrCut as EventListener);
+      root.removeEventListener('cut', onCopyOrCut as EventListener);
       root.removeEventListener('drop', onDrop as EventListener);
       root.removeEventListener('dragover', onDragOver as EventListener);
       root.removeEventListener('click', onClick);

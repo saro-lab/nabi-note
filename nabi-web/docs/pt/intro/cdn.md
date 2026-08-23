@@ -52,7 +52,7 @@ Escolher os wings é uma única linha de construtor. O arquivo acima parte dos v
 padrão, tira o upload e restringe o tipo de letra a dois.
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
 - `all()` começa com todos os wings oficiais. **Sem chamar, a mão fica vazia** — só o que entrar

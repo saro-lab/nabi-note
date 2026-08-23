@@ -52,7 +52,7 @@ description: CDN の例
 書体を二つに絞りました。
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
 - `all()` は公式の翼すべてから始めます。**呼ばなければ空の手です** — `use()` で足した

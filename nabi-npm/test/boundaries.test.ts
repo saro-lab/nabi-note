@@ -23,7 +23,12 @@ const SRC = fileURLToPath(new URL('../src', import.meta.url));
 // 아래의 `wings/code`(편집 화면의 색칠)와 맨 위의 `viewer`(발행 HTML 의 색칠)가 같은 토크나이저·
 // 같은 span 얹기를 쓴다. 둘 중 어느 쪽에 두어도 반대쪽이 층을 거스르므로, 둘 모두의 아래에 세웠다 (088).
 // `html` 은 schema 만 딛는 조립층이라 editor 아래에 선다 — editor 의 getHtml 계열이 부른다 (05).
-const ORDER = ['locale', 'code', 'schema', 'doc', 'caret', 'html', 'editor', 'wing', 'wings', 'surface', 'ui', 'viewer'];
+// `io`(필터 계약·md 파서)는 html 위 editor 아래다: 다루는 값이 전부 그 아래 것(ElementNode·
+// SchemaEnv·importDoc·LocaleText)이고, wing 계약이 `ioFilter`·`toMd` 를 무는 방향이 그래야 선다.
+// `style`(시트의 글·지문·접기)도 아무것도 안 무는 맨 아래다 — 화면(ui)이 문서에 붙일 때도,
+// io 가 `.html` 한 장을 지을 때도 같은 글을 봐야 해서 둘 모두의 아래에 세웠다. 붙이는 문
+// (`injectSheets`)만 DOM 이 필요해 ui 에 남았다.
+const ORDER = ['style', 'locale', 'code', 'schema', 'doc', 'caret', 'html', 'io', 'editor', 'wing', 'wings', 'surface', 'ui', 'viewer'];
 
 // 예외 천장은 없다 — 07 결과 계약 타입(HtmlBuilder)은 html 자신이 정의하고 wing 이 그것을
 // 잇는 방향이 됐으므로, html 은 제 층 아래(schema)만 딛으면 된다. 낡은 `html: 'wing'` 천장은

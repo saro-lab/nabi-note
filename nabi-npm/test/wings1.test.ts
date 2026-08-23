@@ -21,6 +21,7 @@ import {
   linkWing,
 } from '../src/wings/index.js';
 import { attachFileLink } from '../src/wings/link/attach.js';
+import { reachAt, visibleAt } from '../src/ui/visible.js';
 import { tinyHtml } from './tiny-html.js';
 import { done, eq, ok } from './net.js';
 
@@ -682,6 +683,73 @@ for (const fam of FAMILIES) {
   ]);
   eq('코드 wing 의 currentValue — 언어', codeWing.currentValue?.({ w: 'code', a: { lang: 'ts' }, ch: [] }), 'ts');
 }
+
+// --- 코드 상자는 정렬을 안 받는다 (`Wing.noAlign` 선언) ----------------------------------------
+//
+// 다른 물건에게 정렬은 "줄의 어디에 서는가" 인데 코드 상자는 제 폭이 곧 줄의 폭이고, 정렬은
+// `text-align` 으로 나가 `pre` 가 물려받는다 — 옮기는 것이 아니라 코드 줄을 밀어 망가뜨린다.
+// 선언 하나가 세 자리에서 함께 선다: 노출(ui)· 커맨드(doc·정렬 wing)· 고치(cocoon).
+{
+  eq('noAlign 접힘 — 코드 상자 하나', [...(env.noAlign ?? [])], ['code']);
+  eq('다른 물건은 안 든다 — 표는 여전히 정렬을 받는다', env.noAlign?.has('table') ?? false, false);
+}
+{
+  // 물건이 **골라진 상태** — 래퍼문단의 0~1 범위가 곧 "이것을 골랐다" 다 (ui/picked 와 같은 잣대).
+  const n = make([p(['글']), el('code', ['const x = 1'], { lang: 'ts' })]);
+  n.select(range(at([1], 0), at([1], 1)));
+  ok('코드 상자를 골라도 정렬은 안 선다 (무변화 침묵)', n.applyCommand('setAlign', { value: 'c' }) === false);
+  eq('코드 래퍼문단에 정렬이 안 실린다', n.getJson(), [
+    { w: 'p', ch: ['글'] },
+    { w: 'p', ch: [{ w: 'code', a: { lang: 'ts' }, ch: ['const x = 1'] }] },
+  ]);
+
+  // 상자 **속**의 캐럿도 같은 답이다 — 겨눔은 어차피 같은 래퍼문단이라 두 자리가 함께 닫힌다.
+  n.select(caretAt(at([1, 0], 3)));
+  ok('코드 속 캐럿에서도 정렬이 안 선다', n.applyCommand('setAlign', { value: 'r' }) === false);
+
+  // 다른 물건은 그대로다 — 막은 것은 마다한 물건 하나뿐이다.
+  const d = make([el('hr')]);
+  d.select(range(at([0], 0), at([0], 1)));
+  ok('구분선 래퍼는 여전히 정렬을 받는다', d.applyCommand('setAlign', { value: 'c' }));
+}
+{
+  // 여러 문단을 잡으면 코드 래퍼만 건너뛴다 — 옆 문단의 정렬은 그대로 걸린다.
+  const mixed = make([p(['앞']), el('code', ['x'], { lang: 'ts' }), p(['뒤'])]);
+  mixed.select(range(at([0], 0), at([2], 1)));
+  ok('코드가 섞인 선택 — 정렬은 그대로 돈다', mixed.applyCommand('setAlign', { value: 'c' }));
+  eq('코드 래퍼만 건너뛴다', mixed.getJson(), [
+    { w: 'p', a: { a: 'c' }, ch: ['앞'] },
+    { w: 'p', ch: [{ w: 'code', a: { lang: 'ts' }, ch: ['x'] }] },
+    { w: 'p', a: { a: 'c' }, ch: ['뒤'] },
+  ]);
+}
+{
+  // 이미 정렬이 박힌 옛 저장본 — 고치를 지나며 걷힌다. 막기만 하고 남겨 두면 사람은 그 정렬을
+  // 벗길 단추가 없는 문서를 만난다(단추가 숨었으니).
+  const old = make([{ w: 'p', a: { a: 'c' }, ch: [el('code', ['x'])] }]);
+  eq('옛 저장본의 코드 정렬은 고치가 걷는다', old.getJson(), [{ w: 'p', ch: [{ w: 'code', ch: ['x'] }] }]);
+  const kept = make([{ w: 'p', a: { a: 'c' }, ch: [el('hr')] }]);
+  eq('구분선 래퍼의 정렬은 그대로 남는다', kept.getJson(), [{ w: 'p', a: { a: 'c' }, ch: [{ w: 'hr', ch: [] }] }]);
+  // 글과 코드가 섞인 문단이 쪼개질 때도 같다 — 글 조각은 정렬을 물려받고 코드 래퍼는 안 받는다.
+  const split = make([{ w: 'p', a: { a: 'c' }, ch: ['앞', el('code', ['x']), '뒤'] }]);
+  eq('쪼개진 자리에서도 코드 래퍼만 정렬을 안 받는다', split.getJson(), [
+    { w: 'p', a: { a: 'c' }, ch: ['앞'] },
+    { w: 'p', ch: [{ w: 'code', ch: ['x'] }] },
+    { w: 'p', a: { a: 'c' }, ch: ['뒤'] },
+  ]);
+}
+{
+  // 노출 — 눌러도 안 되는 단추를 보여 주지 않는다. 커맨드와 노출이 같은 문(`takesAlign`)을 쓴다.
+  const doc = cocoon([p(['글']), el('code', ['x']), p([el('hr')])], env);
+  const reach = (path: readonly number[], offset: number) => reachAt(doc, { path, offset }, registry, env);
+  ok('노출: 코드 상자를 고른 자리에서 정렬이 숨는다', !visibleAt(reach([1], 1), alignWing));
+  ok('노출: 코드 속 캐럿에서도 정렬이 숨는다', !visibleAt(reach([1, 0], 0), alignWing));
+  ok('노출: 코드 래퍼에서는 제목·드롭캡도 그대로 숨는다', !visibleAt(reach([1], 1), headingWing));
+  ok('노출: 다른 물건의 래퍼문단에서는 정렬이 보인다', visibleAt(reach([2], 1), alignWing));
+  ok('노출: 글 문단에서는 정렬이 보인다', visibleAt(reach([0], 0), alignWing));
+}
+throws('noAlign 은 물건만 든다 — 마크가 들면 묶음째 죽는다', () =>
+  makeRegistry([...defaultWings, {...simpleMark({ w: 'z' }), noAlign: true } as Wing]), 'noAlign');
 {
   const n = make([p([])]);
   n.select(caretAt(at([0], 0)));

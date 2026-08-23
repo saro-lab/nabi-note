@@ -30,6 +30,27 @@ Being `place: 'tool'`, it stands no node of its own in the document. One command
 - When there is nothing to strip the command answers `null`, so no undo point piles
   up.
 
+## <kbd>Esc</kbd> twice
+
+Besides the toolbar button there is **one road in through the keyboard** — tapping <kbd>Esc</kbd>
+twice in a row. Neither a one-letter hint nor a `⌘` accelerator could hold this gesture, so it went
+to the double-tap declaration (`doubleKeys`).
+
+- **It does exactly what pressing the button does.** With a range selected, that stretch; **with
+  just a caret**, one layer at that spot — the command already knows what to strip, so the key side
+  does not branch on the state of the caret.
+- **It fires on the second tap, exactly.** Four taps are still one firing, and if more than 350ms
+  passes between two taps the count starts over. Repeats from holding the key down (`repeat`) and
+  taps during IME composition are not counted.
+- **Its priority is the lowest.** It takes its turn only after every other job <kbd>Esc</kbd> had
+  (undoing an arming, escaping a mark) has passed — press <kbd>Esc</kbd> in the middle of a
+  highlight and the first tap arms the mark escape, and the second still carries through to clearing
+  formatting.
+- **There are only five places it does not work** — an open panel, a scrim, full screen, the hint
+  badges, and an upload lock.
+- The button's tooltip says so — **"Clear formatting (Esc Esc)"**, the same pattern as the Shift
+  badges.
+
 ## Usage example
 
 ```ts

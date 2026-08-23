@@ -6,6 +6,6 @@ export type { Command, CommandArgs, CommandOutcome } from './commands.js';
 export { diffParagraphs } from './signal.js';
 export type { NabiChange } from './signal.js';
 export { silentAsk, toastAsk } from './ask.js';
-export type { Ask } from './ask.js';
+export type { Ask, Choose, ChooseOption } from './ask.js';
 export { TOAST_MAX, TOAST_MS } from './toast.js';
 export type { Toast, ToastLevel } from './toast.js';

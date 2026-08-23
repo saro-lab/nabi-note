@@ -9,6 +9,7 @@ import { holderLength, nodeAt, replaceAt, holders, type EditEnv, type Position }
 import { caretAt, isCollapsed, ordered, type Selection } from '../../caret/index.js';
 import type { Command, CommandOutcome } from '../../editor/index.js';
 import type { HtmlBuilder, ParseElement } from '../../html/index.js';
+import type { MdBuilder } from '../../io/index.js';
 import type { KeyIntent, OnKey, Wing } from '../../wing/index.js';
 import { insertLump } from '../../wing/index.js';
 import type { LocaleText } from '../../locale/index.js';
@@ -693,6 +694,39 @@ const tdHtml: HtmlBuilder = (node, children, ctx) =>
     rowspan: spanAttr(node.a?.[SPAN_ROW]),
   });
 
+// --- md 조립 -------------------------------------------------------------------------------------
+// 파이프 표는 md 에서 **격자 하나**뿐이다: 머리 줄이 첫 줄이고(그리고 첫 줄은 통째로 머리이고),
+// 병합이 없고, 줄마다 칸 수가 같아야 한다. 하나라도 어긋나면 이 표는 md 로 못 적는다 —
+// 반쯤 적어 격자를 흐트러뜨리느니 통째로 html 로 낸다.
+function pipeable(node: ElementNode): boolean {
+  let cols = -1;
+  for (let r = 0; r < node.ch.length; r += 1) {
+    const row = node.ch[r];
+    if (!isElement(row) || row.w !== 'tr') return false;
+    if (cols < 0) cols = row.ch.length;
+    else if (row.ch.length !== cols) return false;
+    for (const cell of row.ch) {
+      if (!isElement(cell) || cell.w !== 'td') return false;
+      if (spanOf(cell.a?.[SPAN_COL]) > 1 || spanOf(cell.a?.[SPAN_ROW]) > 1) return false;
+      if ((cell.a?.[TH] === 1) !== (r === 0)) return false;
+    }
+  }
+  return cols > 0;
+}
+
+const tableMd: MdBuilder = (node, ctx) => {
+  if (!pipeable(node)) return ctx.html();
+  const rows = ctx.children('\n').split('\n');
+  const cols = (node.ch[0] as ElementNode).ch.length;
+  // 구분 줄 — 머리와 몸을 가르는 이 한 줄이 없으면 파이프 줄은 그냥 글이다.
+  return [rows[0], `|${' --- |'.repeat(cols)}`, ...rows.slice(1)].join('\n');
+};
+
+const trMd: MdBuilder = (_node, ctx) => `| ${ctx.children(' | ')} |`;
+
+// 칸 하나는 **한 줄**에 들어야 한다 — 줄바꿈은 칸이 아니라 표를 깬다.
+const tdMd: MdBuilder = (_node, ctx) => ctx.children(' ').replace(/\s+/g, ' ').trim();
+
 // 들여오기 — 기본 대응은 th 를 td 로만 누이므로, 제목 표식은 여기서 주장한다.
 function claim(el: ParseElement, inner: (block: boolean) => NabiNode[]): NabiNode[] | null {
   // 정렬 표식을 단 표 — 표식만 되읽고 속은 기본 대응이 읽게 둔다.
@@ -856,6 +890,7 @@ const TABLE_CSS = `
 export const tableWing: Wing = {
   w: 'table',
   place: 'container',
+  basic: true,
   holds: 'blocks',
   allows: ['tr'],
   parts: {
@@ -864,6 +899,8 @@ export const tableWing: Wing = {
   },
   toHtml: tableHtml,
   partHtml: { tr: trHtml, td: tdHtml },
+  toMd: tableMd,
+  partMd: { tr: trMd, td: tdMd },
   claim,
   repair: repairTable,
   partRepair: { td: repairCell },

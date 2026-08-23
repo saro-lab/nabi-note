@@ -9,7 +9,7 @@
       class="g-glass rd-box w-[14rem] shrink-0 p-3 text-[0.9rem]"
       :class="drawer ? 'menu-drawer' : ''"
     >
-      <div v-for="group in NAV" :key="group.key" class="mb-3">
+      <div v-for="group in nav" :key="group.key" class="mb-3">
         <div class="mb-1 px-2 text-[0.8rem] font-semibold opacity-60">{{ t(group.key) }}</div>
 
         <template v-for="entry in group.entries" :key="entryKey(entry)">
@@ -70,6 +70,10 @@ const emit = defineEmits<{ 'update:modelValue': [boolean] }>()
 const { page } = useData()
 const { t } = useTranslate()
 const root = useRoot()
+
+// One menu serves every locale — each row's page stands in all fourteen
+// 메뉴는 열넷이 나눠 쓰는 한 벌이다 — 줄마다 그 페이지가 열넷 모두에 선다
+const nav = NAV
 
 // Must use the header hamburger's breakpoint exactly, or some widths get a drawer with no button
 // 헤더 햄버거와 같은 문턱을 써야 한다 — 어긋나면 버튼 없이 층만 뜨는 폭이 생긴다

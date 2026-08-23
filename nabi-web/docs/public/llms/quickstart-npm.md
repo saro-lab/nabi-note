@@ -100,14 +100,29 @@ mountSurface({ nabi, registry, root: surface, placeholder: 'First line\nSecond l
 mountSurface({ nabi, registry, root: surface, placeholder: '' })  // no hint at all
 ```
 
-A newline (`\n`) in the option becomes a line break. The hint is positioned out of the flow so that
-it never pushes the caret, so a multi-line hint spills below an editing area that is only one line
-tall - give the area a matching min height when the hint has more than one line.
+A newline (`\n`) in the option becomes a line break. The hint is positioned out of the flow so
+that it never pushes the caret. The editing surface already carries a minimum height of
+`12.5rem`, raised or lowered through `--nabi-content-min-height`; only `.nabi-editing` gets it,
+since a published or previewed `.nabi-content` is as tall as its text.
 
 The stylesheet reads the word from the `--nabi-placeholder` custom property on the editing root
 and draws it with
-`.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before`,
-so its color or style can be restyled from the host CSS.
+`.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before`,
+so its color or style can be restyled from the host CSS. Note where that `::before` sits: **the
+hint is a separate layer on the editing root, not something inside the first block**, so a
+document's own formatting - heading level, alignment, drop cap - never reaches it. Its color is
+`--nabi-placeholder-color` (see `llms/styling.md`).
+
+### Form fields on touch devices
+
+On a coarse pointer (or under 40rem wide) the core's own input boxes (`.nabi-input`: link URL,
+save name, prompt) take `font-size: var(--nabi-touch-font-size, 16px)`. **iOS Safari zooms the
+whole page when the caret enters a form field smaller than 16px**, and once the page is zoomed
+every rect the editor measures is off, which also throws off the mobile keyboard correction.
+
+The fix here is to grow the text, not to forbid zooming: **do not set `user-scalable=no` or
+`maximum-scale=1`** on the page's viewport meta. Beyond taking away a reader's right to zoom, it
+makes the core's floor value meaningless. Mouse screens are not changed by one pixel.
 
 ## Mounts
 
@@ -115,15 +130,15 @@ so its color or style can be restyled from the host CSS.
 |---|---|---|
 | `createNabiWith(wings, options?)` | yes | Returns `{ nabi, registry }`. No DOM needed. Accepts a plain wing array or the picker builder (`wings()`, see `llms/quickstart-cdn.md`) |
 | `mountSurface({ nabi, registry, root })` | yes | Wires caret/IME/input to the document tree; also attaches every registered wing's `attach` |
-| `mountToolbar({ nabi, registry, root, surface?, locale? })` | no | Main toolbar. Without it, editing still works via `nabi.applyCommand()` |
+| `mountToolbar({ nabi, registry, root, surface?, locale?, file? })` | no | Main toolbar. Without it, editing still works via `nabi.applyCommand()`. `surface` is also **the ground the accelerators are heard on** - two editors on one page must both be given it, or they eat each other's Cmd+S. `file` takes the `FileMount` and stands the save panel up with no further wiring |
 | `mountContextToolbar({ nabi, registry, root, surface? })` | no | Caret-position context row (table row/column, code language, link address, etc.) |
 | `mountHints({ toolbar, context?, root, surface? })` | no | Shortcut badges shown on a fast double-tap of Shift |
 | `mountViewTools({ nabi, surface, root, container, onBody? })` | no | Preview and fullscreen buttons. `root` is the `.nabi` box fullscreen pins; `onBody` attaches viewer-side JS to the preview body (see below) |
-| `mountSticky({ root, surface })` | no | Undoes the toolbar's sticky offset by however much a mobile keyboard has pushed the viewport |
+| `mountSticky({ root, surface, nabi? })` | no | Undoes the toolbar's sticky offset by however much a mobile keyboard has pushed the viewport. Pass `nabi` and it also aims by itself after an edit, pushing the caret out from under the toolbar; leave it out and behavior is unchanged. See `llms/api-reference.md` for the full mobile-keyboard rules |
 | `mountPickedMark({ nabi, surface })` | no | Selected-image/video highlight (browsers do not draw this on their own) |
-| `mountFile({ nabi, store, name? })` | only with `save`/`open` wings | Save/open as a `.nabi` file |
+| `mountFile({ nabi, registry, store, parse?, name? })` | for `save`/`open` wings, or any host that wants the door | `registry` is **required**. Handles **three** save formats (`.nabi`, `.nhtml`, `.md`) and **four** open ones (those three plus `.html`). `parse` is optional in a browser - it falls back to `parseNodes` - and required only headless. Returns a `FileMount`, **the canonical programmatic door**: `save(name?)`, `saveAs(id, name?)`, `formats()`, `await open()` |
 | `mountLocalHistory({ nabi, storage })` | only with `localHistory` wing | Periodic snapshot to the browser. Still mount it when `storage` is `null` (e.g. blocked on `file://`) so the button can toast why it is disabled |
-| `mountUpload({ ... })` + `mountUploadView({ ... })` | only with `upload` wing | Upload progress for drop/paste/file-picker, and its display |
+| `mountUpload({ ... })` + `mountUploadView({ ... })` | only with `upload` wing | Upload progress for drop/paste/file-picker, and its display. **A paste carrying any text at all (`text/html` or `text/plain`) never reaches `fileSink`** - to paste only the image, copy only the image (a spreadsheet is where this bites) |
 
 Image selection highlighting, checkbox toggling, table-cell drag, and code coloring need no
 separate mount - every one of those is a wing's `attach`, wired in automatically by
@@ -254,6 +269,12 @@ const { nabi } = createNabiWith(wings, {
 |---|---|
 | `message` | `(text: string) => void` - one statement, no answer expected |
 | `confirm` | `(text: string) => boolean \| Promise<boolean>` - sync or async |
+| `choose` | `(question: string, options: readonly ChooseOption[]) => number \| Promise<number>` - one of several. The answer is a **position index**; `-1` and out-of-range mean cancel. `ChooseOption` is `{ label, icon? }` |
+
+`choose` is what the paste-candidate panel asks through, and **it usually needs no wiring**:
+`mountToolbar` binds the core's own panel to the editor. Unfilled and unbound, the answer is
+`0` - the first candidate, which is always the most likely reading (see `silentAsk` in
+`llms/api-reference.md`).
 
 The core never reaches for the browser's own dialogs automatically - a host with its own dialog
 system should not have a native gray box interrupt it, and plugin hosts (IntelliJ, VS Code) have
@@ -280,10 +301,12 @@ nabi.$markSaved(savedDoc)   // after a save succeeds - pass the tree that was ac
 ```
 
 Pass the tree **as of the moment the save started**, not the current tree - characters typed
-while the save was in flight must still count as "changed". The `save` wing calls this after the
-file write actually lands, so saving to `.nabi` makes `isChanged()` false. Undoing back to the
-saved state also returns to `false` - NABI TREE is immutable and replaced wholesale on every
-edit, so sameness is known immediately, with no diffing or hashing.
+while the save was in flight must still count as "changed". Saving to `.nabi` makes
+`isChanged()` false, because that is the original. **Only `.nabi` moves the baseline** -
+`.nhtml` and `.md` are copies, and treating one of them as "saved" would let the window close
+without asking and take the real work with it. Undoing back to the saved state also returns to
+`false` - NABI TREE is immutable and replaced wholesale on every edit, so sameness is known
+immediately, with no diffing or hashing.
 
 ```ts
 window.addEventListener('beforeunload', (e) => {

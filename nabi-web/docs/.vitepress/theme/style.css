@@ -74,6 +74,21 @@
   color-scheme: dark;
 }
 
+/* 이 사이트의 크기는 전부 `rem` 이라 뿌리 글자 크기 하나가 화면 전체의 자다. 그 자를 여기서
+   한 번 **16px** 로 못박는다 (주인 지시 2026-08-23).
+   바닥을 16px 로 잡는 까닭은 iOS 사파리다: 사람이 적는 칸의 글자가 16px 아래면 겨눔이 들어갈
+   때 페이지를 통째로 확대하고, 한 번 확대되면 되돌아오지 않는다. 뿌리가 16px 이면 `rem` 로
+   적은 값들이 그 아래로 안 내려간다.
+   브라우저 기본 글꼴을 키워 둔 사람에게는 이 줄이 그 설정을 도로 16px 로 되돌린다 — 그 사람의
+   확대(브라우저 줌)는 그대로 살아 있고, 아래 `@media (pointer: coarse)` 규칙이 적는 칸의
+   바닥을 따로 지킨다. */
+/* Every size on this site is in `rem`, so the root font size is the site's ruler — pinned here to
+   16px. The floor matters because iOS Safari zooms the whole page when focus lands in a field
+   smaller than 16px, and never zooms back. */
+html {
+  font-size: 16px;
+}
+
 html,
 body {
   margin: 0;
@@ -81,6 +96,35 @@ body {
   color: var(--g-fg);
   font-family: var(--font-sans);
   line-height: 1.7;
+}
+
+/* 사람이 적는 칸의 글자는 손가락 기기에서 **16px 아래로 안 내린다** (주인 신고 2026-08-23
+   "사파리에서 자꾸 확대돼서"). iOS 사파리는 글자가 16px 미만인 폼 칸에 겨눔이 들면 페이지를
+   통째로 확대한다 — 한 번 확대되면 되돌아오지 않아 읽던 자리가 어긋난다.
+   막는 지름길(`user-scalable=no` · `maximum-scale=1`)은 **안 쓴다** — 사람이 확대해 볼 권리를
+   뺏는 길이다. 바른 길은 글자를 키우는 것이고, 손가락일 때만 키운다(코어 시트가 `.nabi-input`
+   에 쓴 것과 같은 길이다).
+   `max()` 라서 **바닥만** 올린다 — 이미 16px 보다 큰 칸은 제 크기를 지키고, 데모의 돋보기가
+   뿌리를 키우면 `1em`(제 부모의 크기)이 함께 커져 그 칸도 따라 커진다.
+   `!important` 인 까닭: 이 칸들의 크기는 대부분 Vue 의 scoped 스타일과 Tailwind 유틸리티가
+   정하는데, 둘 다 이 요소 선택자보다 특이도가 높아 그냥 두면 진다.
+   글자를 안 받는 컨트롤(체크박스·라디오·눈금·색·파일)은 뺀다 — 확대의 방아쇠가 아니고,
+   괜히 건드리면 생김새만 흔들린다.
+   `.nabi-input` 도 뺀다 — 편집기 안은 이 사이트가 안 입힌다(이 파일 머리말)는 규칙이고, 코어가
+   이미 같은 바닥을 `--nabi-touch-font-size` 토큰으로 깔아 두었다. 그 값은 `rem` 이 아니라
+   절대 16px 이라 데모의 돋보기로 뿌리를 줄여도 안 따라 내려간다. */
+/* Editable fields never drop below 16px on a touch device: iOS Safari zooms the whole page when
+   focus lands in a form field smaller than that. `user-scalable=no`/`maximum-scale=1` is NOT the
+   answer — it takes the reader's own zoom away. `max()` only raises the floor, so anything already
+   larger (and the demo's magnifier, which drives the root) keeps its size. `!important` because
+   scoped styles and Tailwind utilities both outrank a bare element selector. */
+@media (pointer: coarse) {
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='file'], .nabi-input),
+  textarea,
+  select,
+  [contenteditable]:not([contenteditable='false']) {
+    font-size: max(16px, 1em) !important;
+  }
 }
 
 .g-frame {

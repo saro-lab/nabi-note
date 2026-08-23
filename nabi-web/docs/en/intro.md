@@ -117,15 +117,33 @@ they answer `false` and leave neither a history entry nor an edit behind.
 
 ## Layers of the code
 
-**This is not the order values flow in.** It is the **dependency direction**, stacked bottom to
-top, and there is one rule — **a lower layer never knows an upper one.** That is why the lower
-layers (`schema`, `doc`, `html`) never touch the DOM, and why they run unchanged on the server. The
-path values actually travel is the nabi-tree diagram above.
+**This is not the order values flow in.** These are the **fourteen folders** you see when you open
+`src`, one folder to a layer, and there is one rule — **a lower layer never knows an upper one.**
+That is why the layers written near the top (`schema`, `doc`, `html`) never touch the DOM, and why
+they run unchanged on the server. The path values actually travel is the nabi-tree diagram above.
 
-<LayerStack
-  :layers="layers"
-  caption=""
-/>
+```
+src/
+├── style/     the core sheet — the CSS the editing screen and the published text share
+├── locale/    language
+├── code/      the pure tokenizer shared by the editing screen and the reading side
+├── schema/    the shape of the nabi-tree and the cocoon definition
+├── doc/       insert · delete · split · range — DOM-less
+├── caret/     the cursor's position, selection, and boundaries
+├── html/      nabi-tree ↔ HTML
+├── io/        the doors in and out — paste candidates, save, open, markdown
+├── editor/    the instance carrying the command interface
+├── wing/      checks on the wings at registration time
+├── wings/     the official wings (bold · italic … table · upload)
+├── surface/   fits the caret, IME, and input onto the tree
+├── ui/        the UI layer
+├── viewer/    read-only
+├── index.ts   the core entry — `nabi-note`
+└── ssr.ts     the SSR entry — `nabi-note/ssr` (it touches not one file of surface or ui)
+```
+
+**The order of the lines is the order of the layers** — not alphabetical but **bottom layer
+first.** `style` is the floor and `viewer` is the top.
 
 This order is not a promise written in prose — **a net enforces it by machine.** The moment a
 single import runs against this direction, the check fails right there.
@@ -141,6 +159,7 @@ single import runs against this direction, the check fails right there.
 | **wrapper paragraph** | the paragraph wrapping a single-paragraph object such as a table, list or image |
 | **claim** | the judgment of which wing a piece of markup belongs to |
 | **parts** | a feature inside a wing — e.g. a table's rows and cells, a Details' summary line |
+| **IO filter** | the extension point that handles pasting (the door in) and saving and opening (the door out) as one set. It sits **outside the wing contract**, so it stands no node of its own in the document |
 
 ### On the editing screen
 
@@ -166,7 +185,6 @@ single import runs against this direction, the check fails right there.
 
 <script setup lang="ts">
 import FlowHub from '../.vitepress/ui/FlowHub.vue'
-import LayerStack from '../.vitepress/ui/LayerStack.vue'
 import { useTranslate } from '../.vitepress/src/langs.ts'
 
 const { t } = useTranslate()
@@ -184,18 +202,4 @@ const hubTargets = [
   { label: 'getEditorHtml()', note: 'HTML for the editor', kind: 'out' },
 ];
 
-const layers = [
-  { name: 'locale', what: 'language' },
-  { name: 'code', what: 'the pure tokenizer shared by the editing screen and the reading side' },
-  { name: 'schema', what: 'the shape of the nabi-tree and the Cocoon definition' },
-  { name: 'doc', what: 'insert · delete · split · range — DOM-less' },
-  { name: 'caret', what: 'the cursor\'s position, selection, and boundaries' },
-  { name: 'html', what: 'nabi-tree ↔ HTML' },
-  { name: 'editor', what: 'the instance carrying the command interface' },
-  { name: 'wing', what: 'checks on the Wings at registration time' },
-  { name: 'wings', what: 'the official wings (bold, italic … table, upload…)' },
-  { name: 'surface', what: 'fits the caret, IME, and input onto the tree' },
-  { name: 'ui', what: 'the UI layer' },
-  { name: 'viewer', what: 'read-only' },
-]
 </script>

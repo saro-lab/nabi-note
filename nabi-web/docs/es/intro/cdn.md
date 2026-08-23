@@ -54,7 +54,7 @@ Elegir wings es una sola línea con el constructor. El archivo de arriba parte d
 veintinueve wings por defecto, quita la subida y limita la tipografía a dos.
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
 - `all()` arranca con todos los wings oficiales. **Si no se llama, empieza con las manos

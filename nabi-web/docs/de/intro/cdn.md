@@ -54,7 +54,7 @@ Flügel auswählen ist eine einzige Builder-Zeile. Die Datei oben nimmt aus den 
 Standard-Flügeln das Upload heraus und schränkt die Schriftart auf zwei ein.
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
 - `all()` beginnt mit allen offiziellen Flügeln. **Rufen Sie es nicht, sind die Hände leer** — es

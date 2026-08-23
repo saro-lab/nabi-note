@@ -13,6 +13,7 @@ import { positionExists, type Position } from '../src/doc/index.js';
 import type { Selection } from '../src/caret/index.js';
 import { createNabiWith, makeRegistry, type Wing } from '../src/wing/index.js';
 import { defaultWings, makeTypefaceWing, wingNames, wings } from '../src/wings/index.js';
+import { $isBasic } from '../src/wings/builder.js';
 import {
   CLEARED_MARKS,
   IMAGE_WIDTHS,
@@ -44,7 +45,7 @@ import {
   type HistoryStorage,
   type UploadFile,
 } from '../src/wings/extra.js';
-import { mountFile, mountLocalHistory, mountUpload } from '../src/surface/index.js';
+import { ioFiltersOf, mountFile, mountLocalHistory, mountUpload, readExtensions } from '../src/surface/index.js';
 import { LOCALES, translate } from '../src/locale/index.js';
 import { tinyHtml } from './tiny-html.js';
 import { done, eq, ok } from './net.js';
@@ -475,20 +476,28 @@ eq('readNabiFile — 나비트리를 통째로 담은 옛 파일도 읽는다', 
 eq('readNabiFile — 형식이 아니면 null 이다(던지지 않는다)', readNabiFile('not json'), null);
 
 {
+  // 가짜 저장소 — 이름·글자·형식(mime) 셋을 그대로 받아 둔다. 형식이 는 뒤로 mime 은 필터가
+  // 말하는 값이라, 저장소가 그것을 받는지도 여기서 함께 본다.
   const source = make([p(['저장할 글'], { h: 2 }), p([el('img', [], { src: '/a.png', w: '40' })])]);
   let saved = '';
   let savedName = '';
+  let savedMime = '';
   const store = {
-    save({ name, text }: { name: string; text: string }): void {
+    save({ name, text, mime }: { name: string; text: string; mime?: string }): void {
       savedName = name;
       saved = text;
+      savedMime = mime ?? '';
     },
     open: (): Promise<string | null> => Promise.resolve(saved),
   };
-  const mount = mountFile({ nabi: source, store, name: () => '메모' });
+  // html 을 읽는 문은 주입이다 — 그물은 제 손 토크나이저를 준다(브라우저는 parseNodes).
+  const mounted = (nabi: ReturnType<typeof make>) =>
+    mountFile({ nabi, registry, store, parse: tinyHtml, name: () => '메모', allowLocalUrls: true });
+  const mount = mounted(source);
   ok('mountFile — saveFile 커맨드가 저장소로 이어진다', source.applyCommand('saveFile') === false); // 문서를 안 바꾸므로 문은 false 다
   ok('mountFile — 파일 이름은 날짜 + 이름 + 확장자다', /^\d{4}-\d{2}-\d{2} 메모\.nabi$/.test(savedName));
   ok('mountFile — 저장한 글자가 `.nabi` 모양이다', readNabiFile(saved) !== null);
+  eq('mountFile — 형식은 필터가 말한다 (`.nabi` = json)', savedMime, 'application/json');
 
   // **저장하면 그 문서가 기준선이 된다** — 저장 직후에는 안 바뀐 문서이고, 그 뒤에 친 글자부터
   // 다시 바뀐 것이다. 이것이 없으면 열 때마다 "안 저장한 글이 있다" 를 늘 묻는다.
@@ -497,21 +506,100 @@ eq('readNabiFile — 형식이 아니면 null 이다(던지지 않는다)', read
   source.applyCommand('insertText', { text: 'x' });
   ok('mountFile — 저장 뒤에 친 글자는 다시 바뀐 것이다', source.isChanged());
 
-  // 이름을 주면 그것으로 — 판(prompt)이 준 이름이 이 길로 온다.
+  // 이름을 주면 그것으로 — 판이 준 이름이 이 길로 온다.
   source.applyCommand('saveFile', { name: '2026-08-17 내 글' });
   eq('mountFile — 준 이름에 확장자만 붙는다', savedName, '2026-08-17 내 글.nabi');
 
-  // 저장 단추와 ⌘S 는 **다른 답**을 든다 — 단추는 이름을 묻고, 가속키는 그대로 저장한다.
-  eq('save — 단추는 이름을 묻는다', saveFileWing.button?.action?.kind, 'prompt');
-  eq('save — 가속키는 안 묻는다', saveFileWing.button?.accelerated?.kind, 'command');
-  const field = (saveFileWing.button?.action as { fields: readonly { initial?: () => string }[] }).fields[0];
-  ok('save — 칸은 오늘 날짜만 들고 열린다', field?.initial?.() === `${today()} `);
+  // --- 형식 셋 ----------------------------------------------------------------------------------
+  //
+  // 저장 판이 세울 단추의 재료다. 순서는 **nabi → html → md**: 원본이 맨 앞이고, 되돌아오지
+  // 못하는 것이 맨 뒤다.
+  const formats = mount.formats();
+  eq('formats — 순서는 nabi → html → md', formats.map((format) => format.id), ['nabi', 'html', 'markdown']);
+  // html 형식이 내는 이름은 **`.nhtml`** 이다(주인 지시 2026-08-23) — 담기는 글자와 mime 은
+  // 여전히 html 한 장이고, 바뀐 것은 파일 이름의 꼬리뿐이다.
+  eq('formats — 확장자도 그 순서다', formats.map((format) => format.extension), ['.nabi', '.nhtml', '.md']);
+  eq('formats — 되돌아오지 못하는 것은 md 뿐이다', formats.filter((format) => format.lossy).map((f) => f.id), ['markdown']);
 
-  const target = make([]);
-  const opened = mountFile({ nabi: target, store });
-  eq('mountFile — 연 문서가 저장한 문서와 같다 (getJson → setJson 왕복)', await opened.open(), true);
-  eq('mountFile — 왕복한 값이 그대로다', target.getJson(), source.getJson());
-  ok('mountFile — 취소(null)는 오류가 아니다', (await mountFile({ nabi: target, store: { save: () => {}, open: () => Promise.resolve(null) } }).open()) === false);
+  // `.html` — **자립형 한 장이다.** 조각만 내리면 서식 없는 문서가 나오므로 껍데기와 시트를 얹는다.
+  // 사본을 내리기 전에 **바뀐 문서**로 만들어 둔다 — 기준선을 옮기는지 여기서 갈린다.
+  source.select({ anchor: { path: [0], offset: 0 }, focus: { path: [0], offset: 0 } });
+  source.applyCommand('insertText', { text: 'y' });
+  ok('saveAs — 사본을 내리기 전에는 바뀐 문서다', source.isChanged());
+  const kept = source.getJson();
+  mount.saveAs('html', '내 글');
+  eq('saveAs — html 은 `.nhtml` 로 나가고 형식은 html 그대로다', `${savedName} ${savedMime}`, '내 글.nhtml text/html');
+  ok('saveAs — html 은 doctype 으로 시작한다', saved.startsWith('<!doctype html>'), saved.slice(0, 40));
+  ok('saveAs — html 이 charset·제목·시트를 든다', saved.includes('<meta charset="utf-8">') && saved.includes('<title>내 글</title>') && saved.includes('.nabi-content {'));
+  ok('saveAs — html 본문이 `.nabi-content` 안에 든다', saved.includes('<div class="nabi-content">') && saved.includes('<h2>'));
+
+  mount.saveAs('markdown', '내 글');
+  eq('saveAs — md 는 확장자와 형식이 제 것이다', `${savedName} ${savedMime}`, '내 글.md text/markdown');
+  ok('saveAs — md 가 제목을 `##` 로 적는다', saved.startsWith('## '), saved.slice(0, 20));
+  ok('saveAs — md 는 줄바꿈으로 끝난다', saved.endsWith('\n'));
+
+  // **사본은 기준선을 안 옮긴다** — `.md` 로 내린 뒤 창을 닫으면 여전히 물어야 한다.
+  eq('saveAs — 사본을 내려도 문서는 그대로다', source.getJson(), kept);
+  ok('saveAs — 사본 저장은 "저장됨" 이 아니다 (기준선을 안 옮긴다)', source.isChanged());
+  // 없는 형식은 조용히 아무 일도 안 한다 — 판이 낸 id 만 이 문에 온다.
+  mount.saveAs('없는형식', '내 글');
+  eq('saveAs — 모르는 형식이면 저장소를 안 부른다', savedName, '내 글.md');
+
+  // --- 열기 -------------------------------------------------------------------------------------
+  //
+  // 파일 대화상자가 받는 확장자는 **read 를 든 필터가 제 save.extension 으로 말한다**.
+  // **여는 목록에 `.html` 이 빠져 있다** — 그 이름을 읽는 것은 저장 칸이 없는 짝(`html-open`)
+  // 이고, 이 함수는 `save.extension` 을 든 필터만 센다. 목록을 넓히는 일은 surface 의 몫이라
+  // 이 라운드에서 손대지 않았다(`todo/260823_012` 의 "남은 것" 참고).
+  eq('열기 — 받는 확장자 셋', readExtensions(ioFiltersOf({ registry, parse: tinyHtml })), ['.nabi', '.nhtml', '.md']);
+
+  // 이름을 실은 새 모양 — 확장자가 어느 필터로 읽을지를 정한다.
+  const named = (name: string, text: string) => ({
+    save: (): void => {},
+    open: (): Promise<{ name: string; text: string }> => Promise.resolve({ name, text }),
+  });
+  {
+    const target = make([]);
+    const opened = mountFile({ nabi: target, registry, store: named('메모.nabi', writeNabiFile(kept)), parse: tinyHtml });
+    eq('mountFile — `.nabi` 가 열린다', await opened.open(), true);
+    eq('mountFile — 왕복한 값이 그대로다', target.getJson(), kept);
+  }
+  {
+    // 우리가 내린 이름 — 저장 판이 내는 그 확장자다. **저장한 것을 다시 열 수 있어야 한다.**
+    const target = make([]);
+    const opened = mountFile({ nabi: target, registry, store: named('메모.nhtml', '<h1>연 제목</h1>'), parse: tinyHtml });
+    eq('mountFile — `.nhtml` 은 html 필터가 읽는다', await opened.open(), true);
+    eq('mountFile — 연 nhtml 이 문서가 됐다', target.getJson(), [{ w: 'p', a: { h: 1 }, ch: ['연 제목'] }]);
+  }
+  {
+    // 밖에서 온 평범한 html — **여는 길을 막지 않는다**(주인 지시). 저장 칸 없는 짝이 받는다.
+    const target = make([]);
+    const opened = mountFile({ nabi: target, registry, store: named('메모.html', '<h1>연 제목</h1>'), parse: tinyHtml });
+    eq('mountFile — `.html` 도 그대로 열린다', await opened.open(), true);
+    eq('mountFile — 연 html 이 문서가 됐다', target.getJson(), [{ w: 'p', a: { h: 1 }, ch: ['연 제목'] }]);
+  }
+  {
+    const target = make([]);
+    const opened = mountFile({ nabi: target, registry, store: named('메모.md', '# 마크다운 제목'), parse: tinyHtml });
+    eq('mountFile — `.md` 는 md 필터가 읽는다', await opened.open(), true);
+    eq('mountFile — 연 md 가 문서가 됐다', target.getJson(), [{ w: 'p', a: { h: 1 }, ch: ['마크다운 제목'] }]);
+  }
+  {
+    // 모르는 확장자 — 아무 필터도 안 받는다. **쓰던 글이 그대로 남는 것**이 답이다.
+    const target = make([{ w: 'p', ch: ['쓰던 글'] }]);
+    const opened = mountFile({ nabi: target, registry, store: named('메모.txt', '그냥 글자'), parse: tinyHtml });
+    eq('mountFile — 모르는 확장자는 안 연다', await opened.open(), false);
+    eq('mountFile — 그때 쓰던 글은 그대로다', target.getJson(), [{ w: 'p', ch: ['쓰던 글'] }]);
+  }
+  {
+    // 옛 모양(글자만 답하는 저장소)도 계속 열린다 — 이름이 없으면 `.nabi` 로 본다.
+    const target = make([]);
+    const old = { save: (): void => {}, open: (): Promise<string> => Promise.resolve(writeNabiFile(kept)) };
+    const opened = mountFile({ nabi: target, registry, store: old });
+    eq('mountFile — 옛 모양(글자만) 저장소도 열린다', await opened.open(), true);
+    eq('mountFile — 그 값도 그대로 앉는다', target.getJson(), kept);
+  }
+  ok('mountFile — 취소(null)는 오류가 아니다', (await mountFile({ nabi: make([]), registry, store: { save: () => {}, open: () => Promise.resolve(null) } }).open()) === false);
 
   // **쓰던 글이 있으면 먼저 묻는다.** 묻는 길은 인스턴스의 것이라 호스트가 제 상자를 끼운다.
   {
@@ -520,34 +608,35 @@ eq('readNabiFile — 형식이 아니면 null 이다(던지지 않는다)', read
       doc: [{ w: 'p', ch: ['쓰던 글'] }],
       ask: { message: () => {}, confirm: (text) => { asked.push(text); return false; } },
     }).nabi;
-    const mounted = mountFile({ nabi: dirty, store });
+    const mounted2 = mountFile({ nabi: dirty, registry, store: named('메모.nabi', writeNabiFile(kept)) });
     dirty.select({ anchor: { path: [0], offset: 1 }, focus: { path: [0], offset: 1 } });
     dirty.applyCommand('insertText', { text: 'x' });
-    const kept = dirty.getJson();
-    eq('mountFile — 안 저장한 글이 있으면 열기가 묻는다', await mounted.open(), false);
+    const mine = dirty.getJson();
+    eq('mountFile — 안 저장한 글이 있으면 열기가 묻는다', await mounted2.open(), false);
     eq('mountFile — 물은 것은 한 번', asked.length, 1);
-    eq('mountFile — 아니오면 쓰던 글이 그대로다', dirty.getJson(), kept);
+    eq('mountFile — 아니오면 쓰던 글이 그대로다', dirty.getJson(), mine);
   }
   // 아무것도 안 끼운 인스턴스는 **아무도 예라고 안 했다** 로 답한다 — 물을 사람이 없다고
   // 쓰던 글을 버리지 않는다.
   {
     const silent = make([{ w: 'p', ch: ['글'] }]);
-    const mounted = mountFile({ nabi: silent, store });
+    const mounted2 = mountFile({ nabi: silent, registry, store: named('메모.nabi', writeNabiFile(kept)) });
     silent.select({ anchor: { path: [0], offset: 1 }, focus: { path: [0], offset: 1 } });
     silent.applyCommand('insertText', { text: 'x' });
-    eq('mountFile — 묻는 길이 없으면 안 연다', await mounted.open(), false);
+    eq('mountFile — 묻는 길이 없으면 안 연다', await mounted2.open(), false);
   }
 
-  // 드롭·붙여넣기로 온 파일 — `.nabi` 면 열고, 아니면 false 로 답해 업로드로 흘려보낸다.
-  const dropped = make([]);
-  const drop = mountFile({ nabi: dropped, store });
-  eq('mountFile — 우리 파일이 아니면 안 연다 (업로드의 몫이다)', await drop.takeFiles([
-    { name: 'a.png', text: () => Promise.resolve('') },
-  ]), false);
-  eq('mountFile — 떨어뜨린 `.nabi` 는 열린다', await drop.takeFiles([
-    { name: '메모.nabi', text: () => Promise.resolve(saved) },
-  ]), true);
-  eq('mountFile — 드롭으로 연 문서가 저장한 문서와 같다', dropped.getJson(), source.getJson());
+  // --- 저장 단추의 선언 -------------------------------------------------------------------------
+  //
+  // **두 손이 같은 판을 연다.** 옛 판은 단추가 이름을 묻고 ⌘S 는 그대로 저장했는데, 형식이
+  // 여럿이 된 뒤로 "지금 그대로" 라는 답이 무엇으로 저장할지를 안 말한다.
+  eq('save — 단추는 판을 연다 (호스트의 문)', saveFileWing.button?.action?.kind, 'host');
+  ok('save — 가속키도 같은 판이다 (제 답을 안 든다)', saveFileWing.button?.accelerated === undefined);
+  ok('save — 이름 칸의 선언은 wing 에 없다 (판이 든다)', !('fields' in (saveFileWing.button?.action ?? {})));
+  ok('save — 키는 여전히 툴바가 삼킨다', saveFileWing.button?.accelerator === 'mod+s');
+
+  // 판이 이름 칸을 열 때 쓰는 값 — 날짜 뒤 빈칸 하나(옛 wing 선언의 그 값 그대로).
+  ok('save — 이름 칸은 오늘 날짜만 들고 열린다', `${today()} `.startsWith(today()));
   mount.unmount();
 }
 
@@ -796,6 +885,47 @@ function dies(name: string, fn: () => unknown, needles: readonly string[]): void
   );
   eq('빌더 — wingNames() 가 defaultWings 의 w 차례 그대로다', wingNames(), defaultWings.map((wing) => wing.w));
   eq('빌더 — .all() 없이는 빈 손이다', wings().build(), []);
+}
+
+{
+  // .allBasic() — 배선 없이 도는 것만. 빠지는 셋은 호스트가 제 것을 대야 사는 것들이다:
+  // upload 는 올려 줄 서버, save·open 은 FileStore. 판정은 wing 의 선언(`basic`) 하나다.
+  const WIRED = ['upload', 'save', 'open'];
+  const basic = wings().allBasic().build();
+  const names = basic.map((wing) => wing.w);
+  eq(
+    '빌더 — .allBasic() 은 배선 필요한 셋만 뺀 나머지 전부다',
+    names,
+    defaultWings.map((wing) => wing.w).filter((w) => !WIRED.includes(w)),
+  );
+  eq('빌더 — .allBasic() 의 개수는 차례표에서 셋 준 것이다', basic.length, defaultWings.length - WIRED.length);
+  ok(
+    '빌더 — .allBasic() 이 든 것은 defaultWings 와 같은 인스턴스다',
+    basic.every((wing) => wing === defaultWings.find((one) => one.w === wing.w)),
+  );
+  ok('빌더 — 든 것은 전부 스스로 basic 이라 말한 것이다', basic.every((wing) => wing.basic === true));
+  ok('빌더 — 뺀 셋은 basic 을 안 단다', WIRED.every((w) => defaultWings.find((wing) => wing.w === w)?.basic !== true));
+
+  // 빠진 것을 도로 넣는 길은 이미 있는 문 하나뿐이다 — .use().
+  const withSave = wings().allBasic().use('save').use('open').build();
+  eq(
+    '빌더 — .allBasic().use(save·open) 은 차례표 차례 그대로 도로 든다',
+    withSave.map((wing) => wing.w),
+    defaultWings.map((wing) => wing.w).filter((w) => w !== 'upload'),
+  );
+
+  // 잣대는 이름이 아니라 선언이다 — 커스텀도 같은 문을 쓴다.
+  ok('빌더 — basic 을 안 단 커스텀은 안 든다', !$isBasic({ w: 'exNote', place: 'tool' }));
+  ok('빌더 — basic: true 를 단 커스텀은 든다', $isBasic({ w: 'exNote', place: 'tool', basic: true }));
+  // 차례표 밖이라 .allBasic() 이 커스텀을 찾아가지는 않는다 — 커스텀은 .use(객체) 로 온다.
+  ok('빌더 — .allBasic() 은 커스텀을 스스로 끌어오지 않는다', !wings().allBasic().build().some((wing) => wing.w.startsWith('ex')));
+}
+
+{
+  // .all() 은 한 글자도 안 바뀐다 — allBasic 이 늘어도 옛 문과 defaultWings 는 그대로다.
+  eq('빌더 — .all() 은 여전히 차례표 전부다', wings().all().build().length, defaultWings.length);
+  const mixed = wings().allBasic().all().build();
+  eq('빌더 — .allBasic() 뒤의 .all() 이 빠진 셋을 도로 채운다', mixed.map((wing) => wing.w), defaultWings.map((wing) => wing.w));
 }
 
 // ① 이름 오타 — 그 자리에서 죽고, "혹시 이것?" 과 전체 목록이 실린다.

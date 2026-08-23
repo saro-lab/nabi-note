@@ -52,7 +52,7 @@ wing বাছাই একটি বিল্ডার লাইন। উপ�
 বাদ দিয়ে, ফন্টকে দুটোয় সীমিত করেছে।
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
 - `all()` সবকিছুর অফিসিয়াল wing থেকে শুরু করে। **না ডাকলে হাত খালি** —

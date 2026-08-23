@@ -54,7 +54,7 @@ Memilih wing hanyalah satu baris builder. Berkas di atas mengambil dua puluh sem
 wing bawaan, menghapus upload, dan mempersempit typeface jadi dua pilihan.
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
 - `all()` memulai dari semua wing resmi. **Kalau tidak dipanggil, mulai dari tangan

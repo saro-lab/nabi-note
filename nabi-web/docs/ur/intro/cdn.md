@@ -52,7 +52,7 @@ wing چننا ایک ہی builder لائن سے ہوتا ہے۔ اوپر وال�
 اپ لوڈ ہٹاتی ہے، پھر ٹائپ فیس کو دو تک محدود کرتی ہے۔
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
 - `all()` تمام سرکاری wing سے شروع کرتا ہے۔ **نہ بلائیں تو خالی ہاتھ شروع ہوتا ہے** — صرف

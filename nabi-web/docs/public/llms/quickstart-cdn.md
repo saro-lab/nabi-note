@@ -38,11 +38,16 @@ you hand it, so passing the toolbar's own container is fine.
 ## Picking wings
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('tf', { values: ['sans', 'serif'] })
 ```
 
-- `.all()` starts from every official wing. **Not calling it means an empty set** - only what
-  `.use()` adds gets mounted.
+- `.all()` starts from every official wing (29). **Not calling it means an empty set** - only
+  what `.use()` adds gets mounted.
+- `.allBasic()` starts from only the wings that run with no wiring at all (26). The three left
+  out are the ones a host has to supply something for: `upload` needs an uploader, `save` and
+  `open` need a `FileStore` through `mountFile`. Add them back with
+  `.allBasic().use('save').use('open')` - and note that **Cmd+S and Cmd+O do not exist until you
+  do**, since the key belongs to the wing even though the feature lives in the core.
 - `.use('name', options?)` adds one. Calling it again on an already-included wing just layers
   options on top (as above with `tf`). If a wing needs another one to stand on (`upload` needs
   either an image or a link wing present), that dependency is pulled in quietly.
@@ -69,7 +74,7 @@ document read differently later. See `llms/custom-wing.md`.
 
 ```html
 <script>
-  var wings = N.wings().all().drop('upload')
+  var wings = N.wings().allBasic()
   var app = document.getElementById('app')
   var editor = document.getElementById('editor')
 

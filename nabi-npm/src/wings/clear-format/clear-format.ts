@@ -173,10 +173,16 @@ const clearFormat: Command = (doc, sel, _args, env) => {
   return next === doc ? null : { doc: next, selection: sel };
 };
 
+// **Esc 두 번 = 이 단추다.** 서식 지우기로 가는 유일한 길이 툴바 단추뿐이었다 — 한 글자
+// 힌트(`shortcut`)도 `mod+` 가속키도 이 몸짓을 담지 못해 연타 선언으로 간다. 연타는 **이 단추를
+// 지금 자리에서 누른 것과 똑같은 일**이다 — 범위면 `clearRange`, 접힌 캐럿이면 `clearAtCaret`.
+// 표면은 캐럿 상태로 갈래를 두지 않는다(무엇을 지울지는 이 커맨드가 이미 안다).
 export const clearFormatWing: Wing = {
   w: 'clearFormat',
   place: 'tool',
+  basic: true,
   commands: { clearFormat },
+  doubleKeys: { Escape: 'clearFormat' },
   button: {
     group: 'clear',
     svg: CLEAR_ICON,

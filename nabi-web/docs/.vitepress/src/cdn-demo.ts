@@ -62,7 +62,7 @@ ${cssNote(lang, 'cdn_code_minheight')}
 
 ${note(lang, 'cdn_code_wings')}
 ${note(lang, 'cdn_code_faces')}
-  var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+  var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 
   var made = N.createNabiWith(wings, {
     parseHtml: N.parseNodes,
@@ -81,10 +81,14 @@ ${note(lang, 'cdn_code_faces')}
   var shared = { nabi: nabi, registry: registry, surface: surface, settle: settle, locale: '${lang}' }
 
   var history = N.mountLocalHistory({ nabi: nabi, storage: N.browserHistoryStorage(window) })
-  N.mountFile({ nabi: nabi, store: N.browserFileStore(document), name: function () { return 'note' } })
+  var file = N.mountFile({
+    nabi: nabi, registry: registry, store: N.browserFileStore(document),
+    parse: N.parseNodes, name: function () { return 'note' }
+  })
 
   var toolbar = N.mountToolbar(Object.assign({}, shared, {
     root: document.querySelector('#toolbar'),
+    file: file,
     onHost: function (w) {
       if (w !== 'localHistory') return
       N.openHistoryPanel({

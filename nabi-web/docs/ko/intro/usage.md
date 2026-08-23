@@ -117,35 +117,90 @@ mountSurface({ nabi, registry, root: surface, placeholder: '' })   // 안내글 
 ```
 
 줄바꿈(`\n`)은 그대로 줄이 됩니다. 다만 안내글은 **흐름 밖**에 서므로(캐럿을 밀지 않으려고)
-편집 영역이 한 줄 높이면 여러 줄짜리 안내글은 아래로 흘러넘칩니다 — 여러 줄을 쓸 거면 편집
-영역에 그만큼의 최소 높이를 주세요.
+편집 영역이 그보다 낮으면 여러 줄짜리 안내글은 아래로 흘러넘칩니다. 빈 편집 영역에는 기본
+`12.5rem` 이 서 있으니 대개는 그대로 두면 되고, 더 필요하면 `--nabi-content-min-height` 로
+키우세요. 이 값은 **편집 표면에만** 걸립니다 — 발행·미리보기는 글 길이가 곧 높이입니다.
+
+**안내글은 별도 층입니다.** 편집 뿌리의 `::before` 로 올라가 있어서 첫 줄이 제목이든
+가운데 정렬이든 드롭 캡이든 **문서 서식의 영향을 안 받습니다** — 자리는 글의 방향만 따릅니다.
 
 말은 편집 영역 뿌리의 `--nabi-placeholder` 로 들어가고, 그리는 것은 시트입니다. 색이나 결을
 바꾸려면 이 규칙을 고쳐 쓰세요.
 
 ```css
-.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before {
+.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before {
   color: #999;
 }
 ```
+
+색만 바꿀 거면 규칙을 덮을 것 없이 `--nabi-placeholder-color` 한 줄이면 됩니다.
 
 | 조립 | 필수 | 하는 일 |
 |---|---|---|
 | `createNabiWith(wings, options?)` | 예 | `{ nabi, registry }` 를 돌려줍니다. DOM 이 필요 없습니다. wing 배열도, 고르기 빌더(`wings()`, [{{ t('menu_intro_cdn') }}](./cdn#날개-고르기) 참고)도 그대로 받습니다 |
 | `mountSurface({ nabi, registry, root })` | 예 | 캐럿·IME·입력을 나비트리에 되맞춥니다. 등록된 날개의 `attach` 도 함께 붙입니다 |
-| `mountToolbar({ nabi, registry, root, surface?, locale? })` | 아니오 | 메인 툴바. 없어도 `applyCommand()` 로 직접 편집은 됩니다 |
+| `mountToolbar({ nabi, registry, root, surface?, locale?, file? })` | 아니오 | 메인 툴바. 없어도 `applyCommand()` 로 직접 편집은 됩니다. `file` 에 `mountFile()` 의 답을 끼우면 **저장 판이 배선 없이 섭니다** — 저장 단추와 <kbd>⌘</kbd><kbd>S</kbd> 가 그 판을 엽니다. 안 끼우면 예전 그대로 `onHost('save')` 로 호스트에게 옵니다. `surface` 는 **가속키가 사는 땅**이기도 합니다(아래 [가속키](#가속키는-편집기의-땅에서만-삽니다)) |
 | `mountContextToolbar({ nabi, registry, root, surface? })` | 아니오 | 캐럿 자리별 상황 줄(표 행·열, 코드 언어, 링크 주소·이름 등) |
 | `mountHints({ toolbar, context?, root, surface? })` | 아니오 | Shift 두 번 연타로 뜨는 단축키 배지 |
 | `mountViewTools({ nabi, surface, root, container, onBody? })` | 아니오 | 미리보기·전체화면 두 단추. `root` 는 전체화면이 고정할 `.nabi` 상자, `onBody` 는 미리보기 본문에 보는 쪽 런타임을 거는 훅입니다(아래) |
-| `mountSticky({ root, surface })` | 아니오 | 모바일 키보드가 화면을 밀어낸 만큼 붙는 툴바를 되돌립니다 |
+| `mountSticky({ root, surface, chrome?, nabi? })` | 아니오 | 모바일 키보드가 화면을 밀어낸 만큼 붙는 툴바를 되돌립니다. `nabi` 를 주면 **편집 뒤에 캐럿이 툴바에 잠긴 만큼 스스로 밉니다** — 안 주면 예전 그대로 호스트가 `aim()` 을 부를 때만 돕니다 (아래 [모바일 키보드](#모바일-키보드와-붙는-툴바)) |
 | `mountPickedMark({ nabi, surface })` | 아니오 | 그림·영상을 골랐을 때의 표시(브라우저가 안 그려 줍니다) |
-| `mountFile({ nabi, store, name? })` | save·open 쓸 때 | `.nabi` 파일로 저장·열기 |
+| `mountFile({ nabi, store, registry, parse?, name? })` | save·open 쓸 때 | `.nabi`·`.nhtml`·`.md` **셋**으로 저장하고, 거기에 밖에서 온 `.html` 을 더한 **넷**을 엽니다. **`registry` 가 필수입니다** — 형식 목록도 md·HTML 조립도 거기서 옵니다. `parse` 는 HTML 을 읽는 문인데 브라우저에서는 안 주면 `parseNodes` 가 기본으로 서고, 머리 없는 자리(서버·테스트)에서는 직접 줘야 `.nhtml`·`.html` 이 열립니다. 돌려주는 `FileMount` 가 **날개 없이 저장·열기를 부르는 정본 문**입니다 (`file.save()` · `file.saveAs(id, name)` · `file.formats()` · `await file.open()`) |
 | `mountLocalHistory({ nabi, storage })` | localHistory 쓸 때 | 정해진 간격마다 브라우저에 기록. `storage` 가 `null`(`file://` 처럼 막힌 자리)이어도 세웁니다 — 그래야 단추가 왜 안 되는지 toast 로 말합니다 |
 | `mountUpload({ … })` + `mountUploadView({ … })` | upload 쓸 때 | 드롭·붙여넣기·파일 선택의 업로드 진행과 그 표시 |
 
 **그림·체크·표 칸 드래그·코드 색칠에는 따로 mount 할 것이 없습니다** — 전부 날개가 `attach`
 로 들고 있고 `mountSurface` 가 함께 붙입니다. 코드 색칠만 칠할 사람을 꽂아 주면 됩니다
 (`makeCodeAttach`, [{{ t('menu_wing_code') }}](../wing/block/code) 참고).
+
+### 가속키는 편집기의 땅에서만 삽니다
+
+<kbd>⌘</kbd><kbd>S</kbd> 같은 가속키를 듣는 자리는 툴바 하나입니다. 그 귀가 어디까지 미치는지를
+`mountToolbar({ surface })` 가 그립니다 — **그 표면과 툴바 줄 안에서 난 키만** 그 편집기의
+것입니다.
+
+- **한 페이지에 편집기가 둘이면 `surface` 를 반드시 주세요.** 안 주면 옛길로 문서 전체를 듣고,
+  그러면 아래 편집기에서 친 <kbd>⌘</kbd><kbd>S</kbd> 가 위 편집기의 글을 저장합니다. 호스트의
+  평범한 입력 칸에서 친 키까지 편집기가 가져갑니다.
+- **날개를 안 등록하면 그 키가 아예 없습니다.** 저장·열기의 기능은 코어(`mountFile`)에 살지만
+  단추와 가속키는 날개의 것이라, `wings().allBasic()` 만으로 세운 편집기에는
+  <kbd>⌘</kbd><kbd>S</kbd>·<kbd>⌘</kbd><kbd>O</kbd> 가 없습니다. 되살리는 길은
+  `.use('save').use('open')` 하나입니다.
+- **닿을 데가 없으면 키를 안 삼킵니다.** 저장 단추가 아무 데도 안 닿는 구성(`file` 도 `onHost`
+  도 안 끼움)에서는 키가 브라우저의 것으로 그대로 흘러갑니다. 우리가 안 하는 일의 단축키를
+  뺏지 않습니다 — 삼키고 침묵하면 사람은 제 브라우저가 고장 난 줄 압니다.
+
+날개 없이 저장·열기를 부르는 길은 `mountFile` 이 돌려주는 손잡이입니다 — 단추도 키도 없는
+편집기에서 `file.save()` · `file.open()` 을 호스트가 직접 부르면 됩니다.
+
+### 모바일 키보드와 붙는 툴바
+
+`mountSticky` 가 모바일에서 하는 일이 늘었습니다 — 키보드가 서고 눕는 것을 보고 캐럿을
+**툴바 아래·키보드 위**로 드러냅니다. 호스트가 알아야 할 것은 셋입니다.
+
+- **겨눔을 쥔 동안만 돕니다.** 편집기에 포커스가 없으면 한 걸음도 안 움직입니다 — 호스트가
+  `setHtml()` 로 값을 밀어 넣는 동안 페이지가 튀면 안 되기 때문입니다.
+- **손이 굴리는 동안은 한 픽셀도 안 밉니다.** 굴린 뒤 250ms 는 잠급니다 — 움직이는 화면을
+  뺏는 것이 떨림의 본체입니다.
+- **키보드 급 변화에만 섭니다.** 주소줄이 접히는 정도(수십 px)로는 안 움직이고,
+  `max(120px, 창 높이의 15%)` 를 넘는 변화에만 문이 열립니다.
+
+편집(타이핑)은 **모자란 만큼만** 밉니다 — 글자마다 화면이 툴바 밑으로 확 당겨지면 못 쓰기
+때문입니다. 반면 키보드가 서는 순간에는 **툴바가 창 맨 위에 붙도록** 자리를 맞추고,
+뷰포트가 가라앉은 뒤에 한 번 더 맞춥니다.
+
+`--nabi-bar-height` 는 이 걸음이 쓰는 값입니다 — `mountSticky` 가 붙는 크롬의 **실측 높이**를
+`.nabi` 뿌리에 적고, 시트의 `.nabi-content > *` 가 그 값을 `scroll-margin-block-start` 에
+더해 씁니다. **호스트가 손댈 값이 아니라 왜 툴바 밑에 안 잠기는지의 설명입니다** — 안 붙이면
+어림값 `3.5rem` 이 서는데, 툴바가 두 줄이거나 상황 줄이 떠 있으면 그 값은 한참 모자랍니다.
+
+::: warning 뷰포트 메타로 확대를 막지 마세요
+iOS 사파리는 글자가 16px 미만인 폼 칸에 겨눔이 들면 페이지를 통째로 확대합니다. 코어는
+그것을 `--nabi-touch-font-size`(기본 `16px`)로 **글자를 키워** 막습니다 —
+`user-scalable=no` 나 `maximum-scale=1` 로 확대 자체를 막는 길은 **고르지 않았습니다.**
+사람이 확대해 볼 권리를 뺏는 쪽이라서입니다. 호스트가 제 페이지에 그 메타를 쓰면 코어가 세운
+바닥값이 무의미해지므로, 쓰지 마세요.
+:::
 
 ### 미리보기에 보는 쪽 런타임을 겁니다
 
@@ -285,6 +340,21 @@ const { nabi } = createNabiWith(wings, { parseHtml: parseNodes })
 
 ---
 
+## 붙여넣기와 저장·열기
+
+**붙여넣기는 클립보드 하나를 여러 눈으로 읽습니다** — `HTML` · `MARKDOWN` · `TEXT`, 그리고
+나비 제 형식(`NABI`). 읽는 길이 둘 이상이면 작은 판이 떠서 무엇으로 붙일지 고르게 하고,
+하나뿐이면 묻지 않고 그대로 붙습니다. 글자가 하나도 없는 붙여넣기(파일만)는 판을 안 지나고
+[{{ t('menu_etc_upload') }}](../wing/etc/upload) 로 갑니다.
+
+**저장하는 형식은 셋입니다** — `.nabi`(원본) · `.nhtml`(혼자 열리는 HTML 한 장) ·
+`.md`(마크다운, 자리가 없는 것은 HTML 로 섞여 나가므로 되돌아오지 못할 수 있습니다).
+**여는 것은 넷**입니다 — 그 셋에 밖에서 온 평범한 `.html` 이 더해집니다. 이 문이 서려면
+위 표의 `mountFile()` 이 붙어 있어야 하고, 형식을 하나 더 끼우는 길은
+[{{ t('menu_wing_custom') }}](../wing/custom#io-필터-끼우기)에 있습니다.
+
+---
+
 ## 알림은 toast 로 나옵니다
 
 업로드 오류, 로컬기록의 안내, "적용할 대상이 없다" 같은 한 마디는 전부 **toast 한 길**로
@@ -331,6 +401,7 @@ const { nabi } = createNabiWith(wings, {
 |---|---|
 | `message` | `(text: string) => void` — 말 하나, 답을 안 받습니다 |
 | `confirm` | `(text: string) => boolean \| Promise<boolean>` — 동기든 비동기든 받습니다 |
+| `choose` | `(question: string, options: ChooseOption[]) => number \| Promise<number>` — 여럿 중 하나입니다. 답은 **자리 번호**이고 `-1`(과 범위 밖)은 취소입니다. `ChooseOption` 은 `{ label, icon? }` 이고, `icon` 은 16×16 svg 의 **속**이라 없으면 이름만 섭니다 |
 
 **코어는 브라우저의 것을 자동으로 쓰지 않습니다.** 제 대화상자를 가진 페이지에 회색 상자가
 끼어들면 안 되고, 플러그인(인텔리제이·VS Code)에는 `window.confirm` 이 아예 없기 때문입니다.
@@ -338,6 +409,13 @@ const { nabi } = createNabiWith(wings, {
 
 **끼운 칸만 이깁니다** — `message` 만, `confirm` 만 끼워도 됩니다. 안 끼운 `message` 는 위의
 core toast(info) 로 나오고, 안 끼운 `confirm` 의 답은 "아니오" 입니다.
+
+**`choose` 는 대개 안 끼웁니다.** 붙여넣기 후보 판은 `mountToolbar` 가 서면서 코어에 스스로
+걸리므로(toast 그릇과 같은 결입니다) 툴바를 세우는 페이지는 아무것도 안 해도 판이 뜹니다.
+직접 만든 판으로 갈아탈 때만 이 칸을 끼우세요. 걸린 판도 끼운 칸도 없으면 **답은 0(맨 위)**
+입니다 — `confirm` 의 "아니오" 와는 방향이 다릅니다. 여기서 취소를 답하면 붙여넣기가 통째로
+사라지는데, 후보 목록의 첫째는 늘 "가장 그럴듯한 해석" 이라 물을 사람이 없으면 그것이 맞는
+답이기 때문입니다.
 
 ::: warning confirm 을 안 주면 답은 "아니오" 입니다
 아무도 답하지 않은 물음은 "예" 가 아닙니다 — 취소·Escape·창 닫기가 뜻하는 것과 같습니다.
@@ -372,6 +450,13 @@ nabi.$markSaved(savedDoc)   // 저장이 성사된 뒤 — 그때 저장한 그 
 **저장하던 그 순간의 트리를 넘깁니다**(지금 트리가 아닙니다). 저장이 오래 걸리는 동안 친
 글자는 여전히 "바뀐 것" 으로 남아야 하기 때문입니다. 저장 날개(`save`)는 파일이 실제로 쓰인
 뒤에 이것을 부르므로, `.nabi` 로 저장하면 `isChanged()` 가 `false` 가 됩니다.
+
+::: warning 기준선을 옮기는 것은 `.nabi` 뿐입니다
+`.nhtml`·`.md` 로 내린 것은 **사본**이라 기준선을 안 옮깁니다 — 저장해도 `isChanged()` 는
+`true` 로 남습니다. 사본을 "저장됨" 으로 삼으면 창을 닫을 때 안 묻고 진짜 글이 사라지기
+때문입니다. 저장이 비동기라면 **성사된 뒤에만** 옮깁니다 — 실패한 저장은 기준선을 안
+건드립니다.
+:::
 
 **되돌려서 처음 자리로 오면 다시 `false`** 입니다 — 나비트리는 불변이고 편집마다 통째로
 갈리므로, 같은 문서인지를 훑거나 해시하지 않고 그 자리에서 압니다.

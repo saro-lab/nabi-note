@@ -166,6 +166,14 @@ Several wings may claim the same key — the arming only takes hold while the ca
 inside that mark, so of the marks overlapping there, only the matching ones come off together.
 <kbd>Escape</kbd> also serves to **undo** an arming that is already in place.
 
+::: tip Tapping <kbd>Esc</kbd> twice carries past that
+The double-tap count runs **regardless of whether the branch before it consumed the key.** So even
+when the first <kbd>Esc</kbd> undid an arming or armed a mark escape, the second <kbd>Esc</kbd>
+carries all the way to [clear formatting](../etc/clear-format) — a caret in the middle of a
+highlight is the example. `escapeKeys` and `doubleKeys` only look alike as words; they do not block
+each other.
+:::
+
 ---
 
 ## Marks cannot own keys

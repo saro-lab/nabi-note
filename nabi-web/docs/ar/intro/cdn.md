@@ -51,7 +51,7 @@ description: مثال CDN
 التسعة والعشرين، ويضيّق الخط إلى اثنين.
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
 - `all()` يبدأ من كل الأجنحة الرسمية. **بلا استدعائه تبدأ بيد فارغة** — لا يُحمَل

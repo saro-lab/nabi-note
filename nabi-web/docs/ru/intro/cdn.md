@@ -52,7 +52,7 @@ description: Пример для CDN
 убирает upload и сужает шрифт до двух вариантов.
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
 - `all()` начинает со всех официальных крыльев. **Если его не вызвать, список пуст** —

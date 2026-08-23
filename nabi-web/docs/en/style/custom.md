@@ -73,7 +73,10 @@ fallback in parentheses stands. Since there is no place they are declared, **wri
 | `--nabi-cursive-adjust` | the cursive's `font-size-adjust`. A handwriting face has a low x-height and looks smaller at the same px, and this value re-measures it against the x-height | `0.4` |
 | `--nabi-sticky-top` | how far down the sticky row sits. If the site has a fixed header, its height | `0px` |
 | `--nabi-preview-width` | the width of the preview card. **`openPreview` measures the editing surface as it opens and writes that width onto the card itself**, so an inline value beats anything you set from outside | `720px` |
-| `--nabi-placeholder` | the hint an empty editor shows, as a quoted string. **`mountSurface` writes the word from its own `placeholder` option (or the core dictionary) onto the editing root**, so an inline value beats anything you set from outside — to change its feel, write over `.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before` | none (no hint) |
+| `--nabi-placeholder` | the hint an empty editor shows, as a quoted string. **`mountSurface` writes the word from its own `placeholder` option (or the core dictionary) onto the editing root**, so an inline value beats anything you set from outside — to change its feel, write over `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` | none (no hint) |
+| `--nabi-placeholder-color` | the color of that hint. The core **does not declare** this name; behind it stands `--nabi-placeholder-color-fallback`, which knows light and dark (light `#6b6b76aa` · dark `#9a9aa6aa`) — write this token on `:root` and it wins in both themes | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | the minimum height an empty editor stands at. It applies **to the editing surface only** (`.nabi-content.nabi-editing`) — on a published or previewed `.nabi-content` the text itself is the height, so short text leaves no empty space below it | `12.5rem` |
+| `--nabi-touch-font-size` | the text size of the input fields the core draws (`.nabi-input` — a link address, a save name, a prompt) on a finger device (`pointer: coarse` **or** a width of `40rem` or less). **iOS Safari zooms the whole page when focus lands in a form field smaller than 16px**, and this is the floor that stops it. A mouse screen does not change by a single pixel | `16px` |
 
 `--nabi-typeface-base` is not of this kind — **the core declares it** (left alone it follows
 `--nabi-font`). The typeface wing has no option for it, so override the token to change it.
@@ -250,7 +253,32 @@ The preview and full screen are **built by the core** too.
 |---|---|---|
 | `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | the document preview overlay | `openPreview()` |
 | `.nabi-scrim` > `.nabi-card.nabi-lightbox` | the box showing one picture alone, large | `openImageLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | the panel for picking a paste candidate | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | the save panel — name field, extension marker, format cells | `openSavePanel()` |
 | `.nabi.is-fullscreen` | full screen — pins the `.nabi` box to the screen | `setFullscreen()` (the class name is `FULLSCREEN_CLASS`) |
+
+::: tip The two panels share **one set of rules**
+The paste panel and the save panel are built from the same grid part, so their selectors come in
+pairs — `.nabi-choose-list`/`.nabi-save-list` · `.nabi-choose-row`/`.nabi-save-row` ·
+`.nabi-choose-icon`/`.nabi-save-icon` · `.nabi-choose-label`/`.nabi-save-label`. **Both** mark the
+aimed cell with `[aria-selected="true"]`, and that marking is a single `--nabi-accent` border —
+neither panel fills a cell.
+
+Three things belong to the save panel alone: `.nabi-save-name` (the name row), `.nabi-save-ext`
+(the extension marker), and `.nabi-save-note` (the lossy note — smaller than the name, and in no
+warning color).
+
+`--nabi-grid-cols` is the column count of the grid, but **the hand that stands the panel writes
+it** — the panel counts its cells and writes up to three inline onto the list itself, so it is not a
+value for the host to set from outside. `--nabi-save-ext-len` (the character width of the extension
+marker) is the same kind of value.
+:::
+
+::: warning `.nabi-save-format` is gone
+That was the name from when the save panel was a vertical list. A host that used it to override the
+hover fill **fails silently** — one cell of the grid is now `.nabi-save-row` (the same slot name as
+in the paste panel), and there is no inner fill on hover or on aim at all.
+:::
 
 Attach `mountViewTools()` and the two buttons open and close these by themselves. To open them
 yourself, call `openPreview({ nabi, editor })`,

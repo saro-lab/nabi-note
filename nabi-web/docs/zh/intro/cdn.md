@@ -50,7 +50,7 @@ mount 不会注入 CSS，漏掉 `<link>` 编辑器就是光秃秃的样子。
 收窄成两种。
 
 ```js
-var wings = N.wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] })
+var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
 - `all()` 从全部官方翅膀起步。**不调用就是空手**——只有 `use()` 拿进来的才会

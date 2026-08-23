@@ -210,6 +210,10 @@ const HISTORY_ICON =
 export const localHistoryWing: Wing = {
   w: 'localHistory',
   place: 'tool',
+  // 기본이다 — 호스트가 **제 것을 대지 않는다.** 저장소도 판도 이 꾸러미 안에 있다
+  // (`browserHistoryStorage(window)` = localStorage, `openHistoryPanel`). upload 의 서버나
+  // save·open 의 FileStore 처럼 호스트가 구현해 줘야 하는 인터페이스가 없다.
+  basic: true,
   commands: { restoreHistory },
   button: {
     group: 'file',

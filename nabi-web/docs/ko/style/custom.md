@@ -70,7 +70,10 @@ CDN 이면 `<link>` 한 줄입니다. 그 뒤로는 변수만 덮으면 됩니�
 | `--nabi-cursive-adjust` | 필기체의 `font-size-adjust`. 손글씨 얼굴은 x-높이가 낮아 같은 px 로도 작아 보이는데, 이 값이 x-높이 기준으로 다시 재웁니다 | `0.4` |
 | `--nabi-sticky-top` | 붙는 줄이 얼마나 내려와 앉나. 사이트에 고정 머리줄이 있으면 그 높이 | `0px` |
 | `--nabi-preview-width` | 미리보기 카드의 폭. **`openPreview` 가 열 때 편집 영역의 폭을 재서 카드에 직접 적으므로**, 호스트가 겉에서 덮어도 그 인라인 값이 이깁니다 | `720px` |
-| `--nabi-placeholder` | 빈 편집기의 안내글(따옴표까지 담은 글자열). **`mountSurface` 가 제 `placeholder` 옵션(또는 코어 사전)의 말을 편집 영역 뿌리에 직접 적으므로**, 겉에서 덮어도 그 인라인 값이 이깁니다 — 결을 바꾸려면 `.nabi-content.nabi-editing > :is(p, h1, h2, h3, h4, h5, h6):only-child:has(> br:only-child)::before` 를 고쳐 쓰세요 | 없음(안 뜸) |
+| `--nabi-placeholder` | 빈 편집기의 안내글(따옴표까지 담은 글자열). **`mountSurface` 가 제 `placeholder` 옵션(또는 코어 사전)의 말을 편집 영역 뿌리에 직접 적으므로**, 겉에서 덮어도 그 인라인 값이 이깁니다 — 결을 바꾸려면 `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` 를 고쳐 쓰세요 | 없음(안 뜸) |
+| `--nabi-placeholder-color` | 그 안내글의 색입니다. 코어는 이 이름을 **선언하지 않고**, 대신 라이트·다크를 아는 `--nabi-placeholder-color-fallback`(라이트 `#6b6b76aa` · 다크 `#9a9aa6aa`)을 뒤에 세워 둡니다 — `:root` 에 이 토큰을 적으면 두 테마 모두에서 이깁니다 | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | 빈 편집기가 서 있을 최소 높이입니다. **편집 표면(`.nabi-content.nabi-editing`)에만** 걸립니다 — 발행·미리보기의 `.nabi-content` 는 글 길이가 곧 높이라 짧은 글 밑에 빈 자리가 안 생깁니다 | `12.5rem` |
+| `--nabi-touch-font-size` | 손가락 기기(`pointer: coarse` **또는** 폭 `40rem` 이하)에서 코어가 그리는 입력 칸(`.nabi-input` — 링크 주소·저장 이름·프롬프트)의 글자 크기입니다. **iOS 사파리는 글자가 16px 미만인 폼 칸에 겨눔이 들면 페이지를 통째로 확대하므로** 그것을 막으려고 세운 바닥값입니다. 마우스 화면은 한 픽셀도 안 바뀝니다 | `16px` |
 
 `--nabi-typeface-base` 는 이 갈래가 아닙니다 — **코어가 선언합니다**(기본은 `--nabi-font` 를
 따라갑니다). 서체 날개에는 이 값을 정하는 옵션이 없으므로, 바꾸려면 이 토큰을 덮으세요.
@@ -78,6 +81,13 @@ CDN 이면 `<link>` 한 줄입니다. 그 뒤로는 변수만 덮으면 됩니�
 `--nabi-keyboard-top` · `--nabi-keyboard-bottom` 도 같은 자리에 서지만 이것은 **코어가
 씁니다** — `mountSticky()` 이 모바일 키보드가 화면을 밀어낸 만큼을 재서 여기에
 적고, 붙는 줄과 전체화면이 그 값을 읽습니다. 손으로 적을 값이 아닙니다.
+
+`--nabi-bar-height` 도 **코어가 쓰고 코어가 읽습니다.** `mountSticky()` 가 붙는 크롬의
+**실측 높이**를 `.nabi` 뿌리에 적고, 시트의 `.nabi-content > *` 가 그 값을
+`scroll-margin-block-start` 에 더해 씁니다 — 캐럿으로 굴러간 줄이 툴바 밑에 안 잠기는 것이
+이 값 덕입니다. `mountSticky` 를 안 붙이면 값이 아예 안 적히고 어림값 `3.5rem` 이 섭니다.
+툴바가 두 줄이거나 상황 줄이 떠 있으면 어림값이 한참 모자라므로, 이 자리는 **왜 재야
+하는가**의 답이지 호스트가 적을 값이 아닙니다.
 
 ## 토큰이 없는 자리 — 규칙을 덮습니다
 
@@ -244,7 +254,30 @@ const drop = injectSheets(document, collectSheets(registry))
 |---|---|---|
 | `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | 문서 미리보기 오버레이 | `openPreview()` |
 | `.nabi-scrim` > `.nabi-card.nabi-lightbox` | 그림 하나만 크게 보는 상자 | `openImageLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | 붙여넣기 후보를 고르는 판 | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | 저장 판 — 이름 칸·확장자 표식·형식 칸들 | `openSavePanel()` |
 | `.nabi.is-fullscreen` | 전체화면 — `.nabi` 상자를 화면에 고정합니다 | `setFullscreen()` (클래스 이름은 `FULLSCREEN_CLASS`) |
+
+::: tip 두 판이 **한 규칙**을 씁니다
+붙여넣기 판과 저장 판은 같은 격자 부품으로 서므로 선택자가 짝을 이룹니다 —
+`.nabi-choose-list`/`.nabi-save-list` · `.nabi-choose-row`/`.nabi-save-row` ·
+`.nabi-choose-icon`/`.nabi-save-icon` · `.nabi-choose-label`/`.nabi-save-label`.
+겨눔은 **둘 다** `[aria-selected="true"]` 로 말하고 그 표시는 `--nabi-accent` 테두리 하나뿐
+입니다 — 안쪽 칠은 어느 판에도 없습니다.
+
+저장 판만의 것은 셋입니다: `.nabi-save-name`(이름 줄) · `.nabi-save-ext`(확장자 표식) ·
+`.nabi-save-note`(`(손실저장)` — 이름보다 작고 경고색이 아닙니다).
+
+`--nabi-grid-cols` 는 격자의 열 수인데 **판을 세우는 손이 적습니다** — 판이 칸 수를 보고
+최대 셋까지 직접 목록에 인라인으로 적으므로, 호스트가 겉에서 적을 값이 아닙니다.
+`--nabi-save-ext-len`(확장자 표식의 글자 수)도 같은 자리입니다.
+:::
+
+::: warning `.nabi-save-format` 은 없어졌습니다
+저장 판이 세로 목록이던 시절의 이름입니다. 그 이름으로 호버 칠을 덮던 호스트는 **조용히
+실패합니다** — 지금 격자 한 칸의 이름은 `.nabi-save-row` 이고(붙여넣기 판과 같은 자리 이름),
+호버·겨눔에 안쪽 칠은 아예 없습니다.
+:::
 
 `mountViewTools()` 를 붙이면 두 단추가 알아서 이것들을 열고 닫습니다. 직접 열고 싶으면
 `openPreview({ nabi, editor })` · `openImageLightbox({ editor, src, alt?, locale })` ·

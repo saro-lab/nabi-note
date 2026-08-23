@@ -18,6 +18,8 @@ import {
   valueMark,
   type Wing,
 } from '../src/wing/index.js';
+import { toolbarSlots } from '../src/wing/toolbar-html.js';
+import { makeTranslator } from '../src/locale/index.js';
 import { done, eq, ok } from './net.js';
 
 const p = (ch: readonly NabiNode[], a?: Record<string, string | number>): ElementNode =>
@@ -141,6 +143,30 @@ throws('커맨드 이름이 wing 둘에서 겹치면 죽는다', () =>
     {...bold, commands: { insertStamp: () => null } } as Wing,
     {...italic, commands: { insertStamp: () => null } } as Wing,
   ]), '커맨드');
+throws('연타 키를 wing 둘이 주장하면 죽는다', () =>
+  makeRegistry([
+    {...bold, commands: { doOne: () => null }, doubleKeys: { Escape: 'doOne' } } as Wing,
+    {...italic, commands: { doTwo: () => null }, doubleKeys: { Escape: 'doTwo' } } as Wing,
+  ]), '연타 키');
+throws('연타가 없는 커맨드를 가리키면 죽는다', () =>
+  makeRegistry([{...bold, doubleKeys: { Escape: 'doGhost' } } as Wing]), '없는 커맨드');
+
+// --- 연타 선언 — 표로 접히고, 이름표에도 실린다 ------------------------------------------------
+{
+  const stamp = {
+    ...bold,
+    commands: { doStamp: () => null },
+    doubleKeys: { Escape: 'doStamp' },
+    button: { group: 'clear', label: { ko: '찍기', en: 'Stamp' }, action: { kind: 'command', command: 'doStamp' } },
+  } as Wing;
+  const registry = makeRegistry([stamp]);
+  eq('연타 선언이 표로 접힌다', registry.doubles.get('Escape'), 'doStamp');
+  ok('선언 안 한 키는 표에 없다', registry.doubles.get('Enter') === undefined);
+  ok('연타를 안 선언하면 표가 빈다', makeRegistry([italic]).doubles.size === 0);
+  // 이름표에 몸짓이 실린다 — 힌트의 `⇧⇧` 와 같은 무늬로 "Esc 두 번"이 보인다.
+  const slot = toolbarSlots(registry, makeTranslator('ko'))[0];
+  eq('이름표가 Esc 두 번을 말한다', slot?.tip, '찍기 (Esc Esc)');
+}
 
 // --- 접힘 — env·builders·escapes ------------------------------------------------------------
 

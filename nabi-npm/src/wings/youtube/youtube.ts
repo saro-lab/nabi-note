@@ -139,6 +139,7 @@ export const youtubeWing: Wing = {
     },
     styles: YOUTUBE_CSS,
   }),
+  basic: true,
   context: {
     title: YOUTUBE_NAME,
     controls: [

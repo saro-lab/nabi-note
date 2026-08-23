@@ -16,6 +16,10 @@ import { openPanel, type Panel } from './parts/panel.js';
 import { openPrompt } from './parts/prompt.js';
 import { watchSettle, type Settle } from './parts/settle.js';
 import { mountToast, type ToastMount } from './toast.js';
+import { openChoosePanel } from './choose.js';
+import { openSavePanel } from './save.js';
+import { saveFileWing } from '../wings/file/file.js';
+import type { FileMount } from '../surface/index.js';
 
 // 기본 그룹 순서와 마크업은 **`wing/toolbar-html.ts` 가 든다** — 서버도 같은 줄을 그려야 하고,
 // ssr 엔트리는 ui 를 안 딛기 때문이다 (096). 여기서는 부르던 자리를 위해 다시 내보낸다.
@@ -26,7 +30,9 @@ export interface ToolbarOptions {
   readonly registry: Registry;
   // 툴바가 들어설 그릇 — 호스트가 준다.
   readonly root: HTMLElement;
-  // 편집 표면 — 누른 뒤 포커스가 돌아갈 자리.
+  // 편집 표면 — 누른 뒤 포커스가 돌아갈 자리. **가속키의 땅이기도 하다**: 이 자리(와 툴바 줄)
+  // 안에서 난 키만 우리 것이다. 안 주면 그 땅을 그릴 수 없어 옛길(문서 전체)로 듣는다 —
+  // 한 페이지에 편집기가 둘이면 반드시 준다 (260823_013).
   readonly surface?: HTMLElement;
   readonly locale?: string;
   readonly translator?: Translator;
@@ -38,7 +44,14 @@ export interface ToolbarOptions {
   readonly onFiles?: (files: readonly File[]) => void;
   // 패널이 필요한 도구(로컬 히스토리)를 호스트가 받는다.
   readonly onHost?: (w: string, anchor: HTMLElement) => void;
+  // 저장 판이 배선 없이 서는 문 — 끼우면 저장 단추와 ⌘S 가 판을 연다. **안 끼우면 옛길이다**:
+  // `onHost('save')` 로 흘러 호스트가 제 손으로 받는다(로컬 기록과 같은 문). 둘 다 없으면 저장
+  // 단추는 아무 데도 안 닿고, 그때 ⌘S 는 **키를 안 삼킨다**.
+  readonly file?: FileMount;
   // 가속키(mod+s 류)를 여기서 듣는다. 끄고 싶으면 false.
+  //
+  // 듣는 것은 **등록된 wing 이 선언한 키뿐**이다 — 저장·열기 wing 을 안 든 편집기에는 ⌘S·⌘O 가
+  // 없다(기능은 코어에 살아도 그렇다: 코어의 문은 `mountFile` 이 돌려주는 손잡이다).
   readonly accelerators?: boolean;
 }
 
@@ -52,9 +65,12 @@ export interface ToolbarButton {
   readonly accelerator?: string;
   // 눌러 본다 — 힌트(Shift 연타)가 부르는 공식 문이다. **키보드 손이다** — 포인터 손은 이 문이
   // 아니라 DOM 클릭으로 온다(iconButton 이 `detail` 로 가른다).
-  press(): void;
+  //
+  // 답은 **닿았는가**다: 선언이 커맨드·판으로 가면 참이고, 호스트가 받기로 한 갈래(`host`)인데
+  // 받을 손이 하나도 안 끼워졌으면 거짓이다. 가속키가 키를 삼킬지 말지를 이 답으로 가른다.
+  press(): boolean;
   // 가속키가 부르는 문 — 선언이 따로 없으면 `press` 와 같다.
-  accelerate(): void;
+  accelerate(): boolean;
 }
 
 export interface Toolbar {
@@ -63,6 +79,51 @@ export interface Toolbar {
   readonly buttons: readonly ToolbarButton[];
   refresh(): void;
   unmount(): void;
+}
+
+// --- 가속키의 두 문턱 — 순수부 (260823_013) ---------------------------------------------------
+//
+// 셋째 문턱은 코드가 아니라 **모양**이다: 가속키는 `buttons` 목록에서만 나오고 그 목록은 등록된
+// wing 의 선언에서 나온다. 그래서 **wing 을 안 든 편집기에는 그 키가 아예 없다** — 저장·열기가
+// 코어(mountFile)에 살아도 마찬가지다. 코어의 문은 호스트가 손으로 부르는 것이지 키가 아니다.
+
+// 우리 땅에서 온 키인가.
+//
+// 귀는 **문서**에 달려 있다(툴바 단추에 겨눔이 가 있어도 들어야 하니까). 그래서 한 페이지에
+// 편집기가 둘이면 서로의 키를 먹었다 — 실측: 데모의 아래 편집기(저장 배선이 없는 쪽)에서 ⌘S 를
+// 치면 **위 편집기의** 저장 판이 떴고, 호스트의 평범한 textarea 에서 쳐도 떴다. 우리 땅은 편집
+// 표면과 툴바 줄 둘이다.
+//
+// 표면을 안 준 호스트에게는 옛길이 답이다 — 그 호스트는 제 편집 자리를 우리에게 말한 적이 없어서
+// 땅을 그릴 수가 없다.
+export interface KeyBox {
+  contains(node: unknown): boolean;
+}
+
+export interface KeyScope {
+  readonly surface?: KeyBox | null;
+  readonly root?: KeyBox | null;
+}
+
+export function ownsKey(scope: KeyScope, target: unknown): boolean {
+  const { surface, root } = scope;
+  if (!surface) return true;
+  if (target === null || target === undefined) return false;
+  return surface.contains(target) || root?.contains(target) === true;
+}
+
+// 이 몸짓이 닿을 데가 있는가 — **`host` 갈래만 배선을 문다.**
+//
+// 닿을 데가 없으면 키를 안 삼킨다: 우리가 안 하는 일의 단축키를 브라우저에게서 뺏을 까닭이 없다
+// (주인 판단, 260823_013). 나머지 갈래는 언제나 닿는다 — 커맨드는 registry 가 이름을 들고 있고
+// 판은 우리가 직접 연다.
+export function actionReaches(
+  action: WingAction | undefined,
+  wired: { readonly savePanel: boolean; readonly onHost: boolean },
+): boolean {
+  if (!action) return false;
+  if (action.kind !== 'host') return true;
+  return wired.savePanel || wired.onHost;
 }
 
 export function mountToolbar(options: ToolbarOptions): Toolbar {
@@ -227,40 +288,58 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     input.click();
   };
 
-  const fire = (wing: Wing, button: HTMLButtonElement, decl?: WingButton, by?: CommandHand): void => {
+  const fire = (wing: Wing, button: HTMLButtonElement, decl?: WingButton, by?: CommandHand): boolean => {
     const action = (decl ?? wing.button)?.action;
-    if (action) act(wing, button, action, by);
+    return action ? act(wing, button, action, by) : false;
   };
 
   // 선언 하나를 실제로 돌린다 — 누름과 가속키가 같은 문을 지난다(답만 다를 수 있다).
   // `by` 는 부른 손이다 — 커맨드로 바로 가는 갈래(mark·command)만 문에 실어 보낸다.
   // 판을 여는 갈래는 안 싣는다: 판 안에서 고르는 그 몸짓이 제 손을 새로 밝힌다.
-  const act = (wing: Wing, button: HTMLButtonElement, action: WingAction, by?: CommandHand): void => {
+  //
+  // **답은 닿았는가**다 — 가속키가 키를 삼킬지 말지를 이것으로 가른다 (`actionReaches`).
+  const act = (wing: Wing, button: HTMLButtonElement, action: WingAction, by?: CommandHand): boolean => {
     // 같은 버튼을 다시 누르면 열린 판이 닫힌다.
     const wasOpen = button.getAttribute('aria-expanded') === 'true';
     closePicker();
-    if (wasOpen) return;
+    if (wasOpen) return true;
     switch (action.kind) {
       case 'mark':
         run('toggleMark', { mark: markNode(wing.w) }, by);
-        return;
+        return true;
       case 'command':
         run(action.command, action.args, by);
-        return;
+        return true;
       case 'menu':
         openMenu(wing, button, action);
-        return;
+        return true;
       case 'grid':
         openGrid(button, action);
-        return;
+        return true;
       case 'prompt':
         openAsk(wing, button, action);
-        return;
+        return true;
       case 'file':
         openFiles(action);
-        return;
-      default:
+        return true;
+      default: {
+        // 저장은 부속을 끼운 편집기에서 **판이 받는다** — 데모도 남의 페이지도 저장 판을 베껴
+        // 짓지 않는다(기록 판을 부품 하나로 내놓은 것과 같은 판단). 안 끼웠으면 아래 옛길이다.
+        const savePanel = options.file !== undefined && wing.w === saveFileWing.w;
+        // 저장 판도 호스트의 손도 없다 — 이 단추는 아무 데도 안 닿는다.
+        if (!actionReaches(action, { savePanel, onHost: options.onHost !== undefined })) return false;
+        if (savePanel && options.file) {
+          openSavePanel({
+            file: options.file,
+            surface: options.surface ?? root,
+            ...(options.locale !== undefined ? { locale: options.locale } : {}),
+            ...(options.translator ? { translator: options.translator } : {}),
+          });
+          return true;
+        }
         options.onHost?.(wing.w, button);
+        return true;
+      }
     }
   };
 
@@ -366,15 +445,20 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
   });
 
   // 가속키 — 선언한 버튼을 누른다(커맨드를 직접 부르지 않는다: 피커가 걸린 것도 있다).
+  //
+  // **삼키는 것은 실제로 무언가를 한 뒤뿐이다.** 문턱 셋을 차례로 넘는다 (260823_013):
+  // 우리 땅에서 온 키인가 → 그 이름의 단추가 서 있는가(= wing 이 등록됐고 지금 보이는가) →
+  // 그 몸짓이 닿을 데가 있는가. 하나라도 아니면 키는 브라우저의 것으로 그냥 흘러간다.
   const onKey = (event: Event): void => {
     const key = event as KeyboardEvent;
     if (!(key.metaKey || key.ctrlKey) || key.altKey) return;
+    if (!ownsKey({ surface: options.surface ?? null, root }, key.target)) return;
     const want = `mod+${key.key.toLowerCase()}`;
     const found = buttons.find((button) => button.accelerator === want);
     if (!found || found.el.hidden) return;
-    event.preventDefault();
     // 가속키가 제 답을 따로 들면 그것을 쓴다 — 누르는 손과 뜻이 다른 자리다(저장의 ⌘S).
-    found.accelerate();
+    if (!found.accelerate()) return;
+    event.preventDefault();
   };
   if (options.accelerators !== false) owner.addEventListener('keydown', onKey, true);
 
@@ -382,6 +466,18 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
   // 호스트에게 시키지 않는 까닭: "콜백을 안 주면 core 기본이 뜬다" 가 계약이라, 배선 없이도
   // 서 있어야 한다. 콜백을 끼운 인스턴스에서는 이 그릇이 안 불려 DOM 이 아예 안 생긴다.
   const toast: ToastMount = mountToast({ nabi, root });
+
+  // 고르는 판도 같은 자리에서 선다 — 툴바를 세운 편집기는 붙여넣기 판을 갖는다(호스트 배선이
+  // 하나도 안 는다). surface 는 ui 아래층이라 판을 직접 못 띄우고, 이 한 줄이 그 문을 잇는다.
+  const unbindChoose = nabi.$bindChoose((question, choices) =>
+    openChoosePanel({
+      question,
+      options: choices,
+      surface: options.surface ?? root,
+      ...(options.locale !== undefined ? { locale: options.locale } : {}),
+      ...(options.translator ? { translator: options.translator } : {}),
+    }),
+  );
 
   // 화면의 말을 코어에 걸어 준다 — 코어의 문도 제 이름으로 말할 때가 있고(포인터 손의 "선택된
   // 글자가 없습니다"), 그 말이 툴바와 다른 언어면 안 된다. **호스트는 로케일을 한 번만 선언한다**:
@@ -398,6 +494,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     unmount() {
       closePicker();
       unbindLocale?.();
+      unbindChoose();
       toast.unmount();
       stopChange();
       stopSettle();

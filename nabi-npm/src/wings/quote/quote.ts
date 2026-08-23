@@ -21,8 +21,11 @@ const QUOTE_CSS = `
 export const quoteWing: Wing = {
   w: 'quote',
   place: 'container',
+  basic: true,
   holds: 'blocks',
   toHtml: DEFAULT_BUILDERS['quote'],
+  // 속의 **모든 줄**에 `> ` 를 단다 — 빈 줄에는 `>` 하나가 붙는다(그것이 인용 속의 문단 경계다).
+  toMd: (_node, ctx) => ctx.children('\n\n', '> '),
   commands: {
     toggleQuote: (doc, sel, _args, env) => {
       const r = toggleWrap(doc, sel, 'quote', env);

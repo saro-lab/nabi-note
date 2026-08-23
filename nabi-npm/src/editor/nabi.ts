@@ -31,7 +31,7 @@ import {
 } from '../html/index.js';
 import { attrsArg, coreCommands, markArg, type Command, type CommandArgs } from './commands.js';
 import { diffParagraphs, type NabiChange } from './signal.js';
-import { toastAsk, type Ask } from './ask.js';
+import { toastAsk, type Ask, type Choose } from './ask.js';
 import { TOAST_MAX, TOAST_MS, type Toast } from './toast.js';
 import { translate } from '../locale/index.js';
 
@@ -104,6 +104,9 @@ export interface Nabi {
   // 기본 그릇이 서는 자리 — ui/toast 가 스스로 건다. 답은 떼는 함수 하나이고, 나중에 선
   // 그릇이 이긴다(한 인스턴스에 그릇은 하나면 된다).
   $bindToast(sink: Toast): () => void;
+  // 고르는 판이 서는 자리 — ui/choose 가 스스로 건다(toast 그릇과 같은 결이다). 걸린 판도
+  // 호스트 콜백(`ask.choose`)도 없으면 답은 첫째(0)다 — silentAsk 의 그 답이다.
+  $bindChoose(sink: Choose): () => void;
   // 기본 그릇이 읽는 결 — 옵션 `toastMs`·`toastMax` 의 확정값.
   readonly $toastMs: number;
   readonly $toastMax: number;
@@ -180,6 +183,8 @@ export function createNabi(options: NabiOptions): Nabi {
   const localeNow = (): string => localeSink ?? options.locale ?? 'en';
   // 기본 toast 그릇 — ui 가 $bindToast 로 건다. 인스턴스의 것이라 여기 산다(편집기 둘이면 그릇도 둘).
   let toastSink: Toast | null = null;
+  // 고르는 판 그릇 — ui 가 $bindChoose 로 건다. toast 그릇과 같은 자리, 같은 규칙이다.
+  let chooseSink: Choose | null = null;
   // 알리는 문 — 호스트 콜백이 먼저다. 그릇도 콜백도 없으면(머리 없는 환경) 말은 조용히 사라진다:
   // 알림은 잃어도 되는 말이라 침묵이 맞다(잃으면 안 되는 물음은 `Ask.confirm` 의 길이다).
   const toast: Toast = (level, message, ms) => {
@@ -505,6 +510,10 @@ export function createNabi(options: NabiOptions): Nabi {
     $ask: {
       message: (text) => (options.ask?.message ? options.ask.message(text) : fallbackAsk.message(text)),
       confirm: (text) => (options.ask?.confirm ? options.ask.confirm(text) : fallbackAsk.confirm(text)),
+      // 3단이다 — 호스트가 끼운 상자, 화면이 건 판, 그리고 아무도 없으면 첫째(0).
+      // 취소(-1)를 기본으로 두지 않는 까닭은 silentAsk 의 주석에 있다.
+      choose: (question, choices) =>
+        options.ask?.choose ? options.ask.choose(question, choices) : chooseSink ? chooseSink(question, choices) : 0,
     },
     $toast: toast,
     $bindToast(sink) {
@@ -512,6 +521,13 @@ export function createNabi(options: NabiOptions): Nabi {
       // 자기 것일 때만 걷는다 — 나중에 선 그릇을 먼저 선 그릇의 unmount 가 밀어내면 안 된다.
       return () => {
         if (toastSink === sink) toastSink = null;
+      };
+    },
+    $bindChoose(sink) {
+      chooseSink = sink;
+      // 자기 것일 때만 걷는다 — 나중에 선 판을 먼저 선 판의 unmount 가 밀어내면 안 된다.
+      return () => {
+        if (chooseSink === sink) chooseSink = null;
       };
     },
     $toastMs: options.toastMs ?? TOAST_MS,

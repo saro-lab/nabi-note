@@ -7,6 +7,7 @@
 //
 // 아래 CATALOG 가 **공식 wing 의 유일한 차례표**다: `defaultWings` 도, `.all()` 의 답도,
 // TS 유니온(`WingName`)도 전부 이 한 목록에서 나온다 — 둘로 적으면 곧 갈린다.
+// `.allBasic()` 은 그 차례표에서 **wing 이 스스로 `basic: true` 라 말한 것만** 든다.
 //
 // 무게에 대해: 이 빌더는 이름표를 들므로 `defaultWings` 와 같은 무게다(wing 전부가 딸려
 // 온다). CDN 묶음은 어차피 통짜라 손해가 없고, npm 으로 몇 개만 쓰는 사람의 가벼운 길은
@@ -92,6 +93,10 @@ export interface WingsBuilder {
   // 공식 wing 전부 — 이미 든 것은 그대로 두고 빈자리만 채운다(`.use(w, options)` 로 좁힌
   // 것이 `.all()` 에 씻기면 안 된다). 새 공식 wing 이 늘면 여기로 저절로 들어온다(087 §7-6).
   all(): WingsBuilder;
+  // 배선 없이 그대로 도는 공식 wing 전부 — wing 이 스스로 말한 `basic: true` 만 든다
+  // (안 적은 것은 안 든다). 빠지는 셋(upload·save·open)은 호스트가 제 손으로 부른다:
+  // `.allBasic().use('save').use('open')`. `.all()` 과 마찬가지로 이미 든 것은 안 씻는다.
+  allBasic(): WingsBuilder;
   // 이름으로 하나 — 이미 들어 있으면 옵션만 얹는(갈아 끼우는) 뜻이다. 딛는 wing 이 있으면
   // (upload → img·a) 조용히 함께 끌어온다 — 더하는 쪽의 자동은 사람이 바란 것을 이루어 준다.
   use<N extends WingName>(name: N, options?: WingUseOptions<N>): WingsBuilder;
@@ -212,6 +217,14 @@ function optioned(entry: Entry, options: object): Wing {
 // 같은 까닭이 커스텀 wing 이 만드는 attr 키에도 한 겹 아래에 그대로 있다 — 그 검사는 다음 판이다.
 const EX_SHAPE = /^ex[A-Z0-9]/;
 
+// `allBasic()` 의 유일한 잣대 — **선언만 본다.** `if (w === 'upload')` 같은 줄은 어디에도 안
+// 짓는다. 공식이든 커스텀이든 같은 문이다: 안 적으면 false(모르는 것은 안 든다).
+// 차례표(ENTRIES) 밖의 커스텀 wing 은 `.use(객체)` 로만 들어오므로 `allBasic()` 이 훑는 것은
+// 공식 목록이지만, 판정하는 잣대는 이 한 줄로 같다.
+export function $isBasic(wing: Wing): boolean {
+  return wing.basic === true;
+}
+
 export function wings(): WingsBuilder {
   // 공식 — 이름 → 지금 든 인스턴스. 차례는 이 맵이 아니라 CATALOG 가 정한다(부르는 차례가
   // 차례가 되면 툴바 단추가 사람마다 다른 자리에 선다).
@@ -244,6 +257,14 @@ export function wings(): WingsBuilder {
 
   const all = (): WingsBuilder => {
     for (const entry of ENTRIES) {
+      if (!official.has(entry.w)) official.set(entry.w, entry.wing);
+    }
+    return self;
+  };
+
+  const allBasic = (): WingsBuilder => {
+    for (const entry of ENTRIES) {
+      if (!$isBasic(entry.wing)) continue;
       if (!official.has(entry.w)) official.set(entry.w, entry.wing);
     }
     return self;
@@ -289,7 +310,7 @@ export function wings(): WingsBuilder {
     if (!has(w)) {
       // 공식 이름이나 ex 꼴이면 "안 들었다" 가 답이고, 그 밖은 오타다 — 각각의 고칠 길을 준다.
       if (!ENTRIES.some((entry) => entry.w === w) && !EX_SHAPE.test(w)) unknownName(w);
-      die(`'${w}' 는 지금 목록에 없다 — .all() 이나 .use() 로 든 것만 뺄 수 있다`);
+      die(`'${w}' 는 지금 목록에 없다 — .all()·.allBasic() 이나 .use() 로 든 것만 뺄 수 있다`);
     }
     // 빼기 전에 남는 목록이 성립하는지 본다 — 지금의 makeRegistry 도 잡지만 그건 mount 때다.
     // 빌더를 쓰는 뜻이 "일찍 알려 준다" 인데, 여기서 안 던지면 그 값을 잃는다(087 §검토 C).
@@ -312,7 +333,7 @@ export function wings(): WingsBuilder {
     ...customs.values(),
   ];
 
-  const self: WingsBuilder = { all, use, drop, build };
+  const self: WingsBuilder = { all, allBasic, use, drop, build };
   return self;
 }
 

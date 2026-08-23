@@ -6,9 +6,10 @@ only built-in markup is the paragraph slot and `<br>`; every other feature, incl
 listed below, is implemented the same way a custom wing would be (see `llms/custom-wing.md`).
 
 `defaultWings` (equivalently, `wings().all()`) is the full catalog of 29 official wings below.
-Most are ready-made constants; a few take an options factory. Order in the array is scan order -
-when incoming HTML could belong to more than one wing, the first one in the array to claim it
-wins.
+`wings().allBasic()` is the subset that runs with no host wiring at all - **26**, everything
+except the three marked "needs wiring" in the tables below (`upload`, `save`, `open`). Most are
+ready-made constants; a few take an options factory. Order in the array is scan order - when
+incoming HTML could belong to more than one wing, the first one in the array to claim it wins.
 
 ## Marks (`place: 'mark'`) - apply to a span of text
 
@@ -58,11 +59,11 @@ wins.
 
 | `w` | Export | Note |
 |---|---|---|
-| `upload` | `uploadWing` | Needs `mountUpload`/`mountUploadView` wired in; requires an `img` or `a` wing also registered (`requiresAnyOf`), since uploads land as one of those. Constant, or `makeUploadWing({ allowLocalUrls })` |
-| `save` | `saveFileWing` | Needs `mountFile({ nabi, store })`; writes/reads a `.nabi` file |
-| `open` | `openFileWing` | Same `mountFile` |
-| `localHistory` | `localHistoryWing` | Needs `mountLocalHistory({ nabi, storage })`; periodic snapshot in the browser. Mount it even when `storage` is `null` (e.g. blocked on `file://`) so the button can explain why it is disabled |
-| `clearFormat` | `clearFormatWing` | The eraser - strips character-level marks only, blocks are untouched |
+| `upload` | `uploadWing` | **Needs wiring** (not in `allBasic()`): `mountUpload`/`mountUploadView`; requires an `img` or `a` wing also registered (`requiresAnyOf`), since uploads land as one of those. Constant, or `makeUploadWing({ allowLocalUrls })` |
+| `save` | `saveFileWing` | **Needs wiring** (not in `allBasic()`): `mountFile({ nabi, registry, store })` - `registry` is required, and `parse` too if you are headless and want `.nhtml`/`.html`. Saves in **three** formats, not one: `.nabi`, `.nhtml`, `.md`. Carries the save button and `mod+s`; without this wing that key does not exist |
+| `open` | `openFileWing` | Same `mountFile`. Opens **four** extensions: `.nabi`, `.nhtml`, `.html`, `.md`. Carries `mod+o` |
+| `localHistory` | `localHistoryWing` | Needs `mountLocalHistory({ nabi, storage })`; periodic snapshot in the browser. Mount it even when `storage` is `null` (e.g. blocked on `file://`) so the button can explain why it is disabled. **Still `basic`** - the storage and the panel both ship inside the package |
+| `clearFormat` | `clearFormatWing` | The eraser - strips **both** character-level marks (`b`, `i`, `u`, `s`, `sub`, `sup`, `hl`, `tc`, `fs`, `tf`, `a`) **and the three paragraph attributes** (`h` heading, `a` alignment, `dc` drop cap). Two exceptions: a wrapper paragraph keeps its alignment (that is where the object stands, not text formatting), and an attachment link (`a` carrying `file`) is never peeled, since peeling it would kill the attachment rather than unformat it. Also reachable by **pressing Esc twice** within 350ms (`doubleKeys`) - a bare caret does exactly what the button does, and the double-tap has the lowest priority of all, so it is heard only after every other Esc job has passed |
 
 ## Getting the list at runtime
 
@@ -78,4 +79,5 @@ a typo (`N.wings().use('bod')`).
 
 - `llms/custom-wing.md` - the contract for building a wing that is not in this list
 - `llms/api-reference.md` - `boxObject`/`listFamily`/`simpleMark`/`valueMark` helper signatures
-- `llms/quickstart-cdn.md` - the `wings().all().drop().use()` picker builder
+- `llms/quickstart-cdn.md` - the `wings().all()` / `wings().allBasic()` `.drop().use()` picker
+  builder

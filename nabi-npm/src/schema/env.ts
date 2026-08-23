@@ -17,6 +17,11 @@ export interface SchemaEnv {
   readonly inlineHolders: ReadonlySet<string>;
   // 값이 1/0 뿐인 불리언 attr 이름 — 0 과 숫자 아닌 값은 "없음"이므로 걷는다.
   readonly boolAttrs: ReadonlySet<string>;
+  // 정렬(a)을 마다하는 물건 — 이 물건을 입은 래퍼문단에는 정렬조차 안 실린다.
+  // 래퍼문단이 드는 문단 속성은 정렬 하나뿐인데(Q11), 그 하나마저 뜻이 없는 물건이 있다:
+  // 코드 상자는 속이 글자 자리로 말하는 평문이라 가운데로 밀면 코드가 흐트러질 뿐이다.
+  // wing 의 `noAlign` 선언이 registry 를 지나 여기로 접힌다 — 아래층은 wing 이름을 모른다.
+  readonly noAlign?: ReadonlySet<string>;
   // 타입별 복구 훅 — 자기 속 구조(표 격자 등)는 그 타입의 wing 이 고친다.
   // cocoon 은 위임 호출만 하고, 훅의 결과는 그 타입 안에서 유효하다고 믿는다.
   readonly repair?: Readonly<Record<string, (node: ElementNode) => ElementNode | null>>;
@@ -29,6 +34,7 @@ export function makeEnv(draft: {
   readonly blockHolders?: readonly string[];
   readonly inlineHolders?: readonly string[];
   readonly boolAttrs?: readonly string[];
+  readonly noAlign?: readonly string[];
   readonly repair?: Readonly<Record<string, (node: ElementNode) => ElementNode | null>>;
 }): SchemaEnv {
   return {
@@ -37,6 +43,7 @@ export function makeEnv(draft: {
     blockHolders: new Set(draft.blockHolders ?? []),
     inlineHolders: new Set(draft.inlineHolders ?? []),
     boolAttrs: new Set(draft.boolAttrs ?? []),
+    ...(draft.noAlign && draft.noAlign.length > 0 ? { noAlign: new Set(draft.noAlign) } : {}),
     ...(draft.repair ? { repair: draft.repair } : {}),
   };
 }
@@ -49,4 +56,18 @@ export function isLump(node: NabiNode, env: SchemaEnv): node is ElementNode {
 // 래퍼문단인가 — 자식이 물건 하나뿐인 p. 저장 표식 없이 이 판별식만 진실을 말한다 (결정 Q14).
 export function isWrapper(node: NabiNode, env: SchemaEnv): boolean {
   return isElement(node) && node.w === P && node.ch.length === 1 && isLump(node.ch[0] as NabiNode, env);
+}
+
+// 이 물건이 정렬을 마다하는가 — wing 의 `noAlign` 선언이 접힌 자리다.
+export function refusesAlign(w: string, env: SchemaEnv): boolean {
+  return env.noAlign?.has(w) ?? false;
+}
+
+// 이 문단이 정렬을 받는가 — 글 문단은 언제나 받고, 래퍼문단은 제가 입은 물건에 달렸다.
+// 노출(ui)·커맨드(doc·정렬 wing)·고치(cocoon)가 이 한 문으로 같은 답을 낸다: 세 자리가
+// 각자 판정을 적으면 셋이 조금씩 어긋나고, 그 틈이 곧 "숨었는데 눌리는 단추"다.
+export function takesAlign(node: NabiNode, env: SchemaEnv): boolean {
+  if (!isElement(node) || node.w !== P) return false;
+  if (!isWrapper(node, env)) return true;
+  return !refusesAlign((node.ch[0] as ElementNode).w, env);
 }

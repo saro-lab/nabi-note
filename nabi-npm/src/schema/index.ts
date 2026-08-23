@@ -2,7 +2,7 @@
 export { isElement, isText } from './types.js';
 export type { AttrValue, Attrs, ElementNode, NabiDoc, NabiNode } from './types.js';
 export { BR, P, RESERVED } from './reserved.js';
-export { isLump, isWrapper, makeEnv } from './env.js';
+export { isLump, isWrapper, makeEnv, takesAlign } from './env.js';
 export type { SchemaEnv } from './env.js';
 export { cocoon } from './cocoon.js';
 export { $fromJson, $guarded, $parseJson, $toJson } from './json.js';

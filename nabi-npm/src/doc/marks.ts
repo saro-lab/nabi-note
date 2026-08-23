@@ -3,6 +3,7 @@
 import {
   P,
   isWrapper,
+  takesAlign,
   type Attrs,
   type AttrValue,
   type ElementNode,
@@ -137,7 +138,8 @@ function validParagraphAttr(key: string, value: AttrValue): boolean {
   return false;
 }
 
-// 문단 속성 — 범위가 덮는 문단마다 얹거나(value) 벗긴다(null). 래퍼문단은 정렬(a)만 받는다.
+// 문단 속성 — 범위가 덮는 문단마다 얹거나(value) 벗긴다(null). 래퍼문단은 정렬(a)만 받고,
+// 물건이 정렬을 마다하면(`noAlign` — 코드 상자) 그것도 안 받는다.
 export function setParagraphAttr(
   doc: NabiDoc,
   range: DocRange,
@@ -167,6 +169,8 @@ export function setParagraphAttr(
     const node = nodeAt(next, target.path);
     if (!node || node.w !== P) continue; // 인라인 홀더(summary·code)는 문단 속성의 자리가 아니다
     if (isWrapper(node, env) && key !== 'a') continue;
+    // 정렬을 마다한 물건(`noAlign` — 코드 상자)의 래퍼문단은 그 정렬도 안 받는다.
+    if (key === 'a' && !takesAlign(node, env)) continue;
     const attrs: Record<string, AttrValue> = { ...(node.a ?? {}) };
     if (value === null) delete attrs[key];
     else attrs[key] = value;

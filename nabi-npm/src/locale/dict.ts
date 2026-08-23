@@ -146,6 +146,9 @@ export const DICTIONARY: Dictionary = {
   gridSize: { ko: '{rows} × {cols}', en: '{rows} × {cols}' },
   // 힌트(Shift 연타) 안내 — 버튼 툴팁 꼬리에 붙는다.
   hintTail: { ko: '{label} (⇧⇧ {key})', en: '{label} (⇧⇧ {key})' },
+  // 연타 이름표 — 힌트의 `⇧⇧` 와 같은 무늬로 "그 키를 두 번" 을 그린다. 자판 글자뿐이라
+  // 옮길 말이 없다(hintTail 과 같은 판단 — 열넷을 채우면 같은 글자가 열넷 는다).
+  twiceTail: { ko: '{label} ({key} {key})', en: '{label} ({key} {key})' },
   hintsOn: { ko: '단축 힌트', en: 'Shortcut hints' },
   lightbox: { ko: '크게 보기', en: 'View image' },
   chooseFile: { ko: '파일 선택', en: 'Choose files' },
@@ -222,6 +225,64 @@ export const DICTIONARY: Dictionary = {
   'history.minutes': { ko: '{n}분 전', en: '{n} min ago' },
   'history.hours': { ko: '{n}시간 전', en: '{n} h ago' },
   'history.days': { ko: '{n}일 전', en: '{n} d ago' },
+
+  // --- 붙여넣기 판 (14 로케일 — 사람이 읽고 고르는 자리다) -------------------------------------
+  //
+  // 판이 뜨는 자리는 하나다: 붙여넣은 것을 읽는 길이 둘 이상일 때. 제목은 **지금 무슨 몸짓
+  // 중인가**를 한 낱말로 말한다 — 무엇이 감지됐는지는 나란히 선 형식 셋이 이미 보여 준다.
+  //
+  // 형식의 이름(`HTML`·`MARKDOWN`·`TEXT`·`NABI`)은 사전에 안 산다: 번역하는 낱말이 아니라
+  // 확장자에 가깝고, 판에서 나란히 견주는 자리라 말마다 길이가 달라지면 줄이 흔들린다.
+  // 그 넷은 `io/marks.ts` 에 영어 고정 대문자로 서 있고, 아이콘도 거기서 함께 온다.
+  'io.title': {
+    ko: '붙여넣기', en: 'Paste',
+    ja: '貼り付け', zh: '粘贴',
+    de: 'Einfügen', fr: 'Coller',
+    es: 'Pegar', pt: 'Colar',
+    ru: 'Вставка', ar: 'لصق',
+    hi: 'चिपकाएँ', bn: 'পেস্ট করুন',
+    ur: 'پیسٹ کریں', id: 'Tempel',
+  },
+  // --- 저장 판 (14 로케일 — 사람이 읽고 누르는 자리다) -----------------------------------------
+  //
+  // 판이 뜨는 자리는 하나다: 저장 단추와 ⌘S. 두 손이 같은 판을 연다 — 형식이 여럿이 된 뒤로는
+  // "지금 그대로 저장"이라는 뜻 하나로 답할 수가 없다(무엇으로 저장할지가 먼저다).
+  // 제목은 **한 낱말**이다(주인 지시 2026-08-23: "문서저장 → 저장"). 판 가운데에 서는 글자라
+  // 길면 아래 격자 셋과 무게가 안 맞는다 — 무엇을 저장하는지는 이미 화면이 말하고 있다.
+  'save.title': {
+    ko: '저장', en: 'Save', ja: '保存', zh: '保存',
+    de: 'Speichern', fr: 'Enregistrer', es: 'Guardar',
+    pt: 'Salvar', ru: 'Сохранить', ar: 'حفظ',
+    hi: 'सहेजें', bn: 'সংরক্ষণ', ur: 'محفوظ کریں',
+    id: 'Simpan',
+  },
+  // 이름 칸의 이름 — 저장 wing 의 선언에서 옮겨 왔다(칸이 wing 이 아니라 판의 것이 되었다).
+  'save.name': {
+    ko: '파일 이름', en: 'File name', ja: 'ファイル名', zh: '文件名', de: 'Dateiname',
+    fr: 'Nom du fichier', es: 'Nombre del archivo', pt: 'Nome do arquivo', ru: 'Имя файла',
+    ar: 'اسم الملف', hi: 'फ़ाइल नाम', bn: 'ফাইলের নাম', ur: 'فائل کا نام', id: 'Nama berkas',
+  },
+  // 형식 한 칸의 **도우미가 읽는 말** — 자리표(`{ext}`)는 확장자다(판에는 점 없는 대문자 `MD`
+  // 가 서고 이 말이 그 칸의 aria-label 이 된다). **칸이 곧 저장이다**(확인 단추 없음).
+  'save.as': {
+    ko: '{ext} 로 저장', en: 'Save as {ext}', ja: '{ext} で保存', zh: '保存为 {ext}',
+    de: 'Als {ext} speichern', fr: 'Enregistrer en {ext}', es: 'Guardar como {ext}',
+    pt: 'Salvar como {ext}', ru: 'Сохранить как {ext}', ar: 'حفظ بصيغة {ext}',
+    hi: '{ext} के रूप में सहेजें', bn: '{ext} হিসেবে সংরক্ষণ করুন', ur: '{ext} کے طور پر محفوظ کریں',
+    id: 'Simpan sebagai {ext}',
+  },
+  // 되돌아오지 못한다는 한 마디 — 막는 것이 아니라 알리는 것이다(md 가 그 자리다).
+  // **이름 아래 아주 작은 글씨**로 서므로 짧아야 한다(주인 지시 2026-08-23: "(손실저장)").
+  // 긴 설명("일부 서식이 사라집니다")은 칸 하나를 두 줄로 늘려 셋의 키가 갈린다.
+  'save.lossy': {
+    ko: '(손실저장)', en: '(lossy)', ja: '(劣化保存)',
+    zh: '(有损保存)', de: '(verlustbehaftet)',
+    fr: '(avec perte)', es: '(con pérdida)',
+    pt: '(com perda)', ru: '(с потерями)',
+    ar: '(بفقدان)', hi: '(हानिपूर्ण)',
+    bn: '(ক্ষতিসহ)', ur: '(نقصان کے ساتھ)',
+    id: '(ada yang hilang)',
+  },
 
   // --- 업로드가 거절할 때의 말 (14 로케일 — 이건 사람이 읽고 **무엇을 고쳐야 하는지** 아는 자리라
   //     폴백으로 en 을 보이면 안 된다) ----------------------------------------------------------
