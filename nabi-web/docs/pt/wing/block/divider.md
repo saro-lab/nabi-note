@@ -6,29 +6,24 @@ title: Separador
 
 ## Descrição
 
-`dividerWing` (id `hr`) é dono de um único `<hr>`. **`place: 'void'`** — é um
-objeto sem interior, então não há onde o cursor entrar. Pressionar Backspace ou
-Delete imediatamente antes ou depois do separador apaga o bloco inteiro de uma
-vez, e selecionar um trecho que o contenha dá o mesmo resultado.
+O `dividerWing` (id `hr`) cuida do separador horizontal (`<hr>`). É um objeto **`place: 'void'`**,
+sem espaço para texto por dentro; pressionar Backspace ou Delete imediatamente antes ou depois do
+separador apaga o bloco inteiro de uma vez.
 
-Pressionar o botão faz o separador entrar **com seu próprio
-parágrafo-invólucro**. Não nasce junto um parágrafo vazio à parte — o cursor
-fica em cima desse parágrafo-invólucro, logo depois do separador.
+Clicar no botão insere o separador **envolvido em seu próprio parágrafo-invólucro
+(`<div data-nabi-p>`)**. O cursor fica logo depois do separador.
 
-Onde ele se instala depende de o parágrafo em que o cursor estava ter texto ou
-não.
+Onde ele é inserido depende do estado do parágrafo em que o cursor está:
 
-| Onde o cursor estava | Resultado |
+| Posição do cursor | Comportamento da inserção |
 |---|---|
-| Parágrafo com texto | Entra **depois** desse parágrafo |
-| Parágrafo vazio | **Substitui** esse parágrafo — não sobra uma linha vazia |
+| Parágrafo com texto | O novo separador entra **depois** desse parágrafo |
+| Parágrafo vazio | Esse parágrafo vazio é **substituído pelo separador** (evita uma linha vazia desnecessária) |
 
-Ao substituir um parágrafo vazio, o alinhamento que aquele parágrafo carregava
-sobrevive.
+Ao substituir um parágrafo vazio, o alinhamento de texto que ele tinha é mantido.
 
-Escrever três ou mais hifens (`---`) sozinhos no começo da linha e pressionar
-Enter dá o mesmo resultado — nessa conversão automática, **o gatilho é o
-Enter**.
+Digite três ou mais hifens em uma linha vazia e pressione Enter (`---` + Enter) para converter
+automaticamente em separador.
 
 ## Exemplo de uso
 

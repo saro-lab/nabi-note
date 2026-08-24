@@ -6,21 +6,13 @@ title: Letra capital
 
 ## Descripción
 
-`dropCapWing` es un atributo de párrafo de valor único que pega
-`data-nabi-dropcap="1"` al párrafo. No crea ningún bloque nuevo: solo pone una marca
-sobre un párrafo que ya existe.
+`dropCapWing` es un wing de atributo de párrafo que muestra la primera letra del párrafo como una letra decorativa de gran tamaño (`data-nabi-dropcap="1"`).
 
-- El valor es uno solo, encendido o apagado — si vuelve a pulsar el botón, el atributo
-  se cae.
-- **No hay ninguna opción ni variable que decida cuántas líneas abarca.** Una única
-  regla `::first-letter` en la hoja de estilos del núcleo fija el tamaño —
-  `font-size: 5.9em; line-height: .83`. Cuántas líneas cubra en realidad la letra lo
-  decide la altura de línea de ese párrafo.
-- Como lo único que toca es la primera letra, Enter trata este atributo como si fuera
-  una marca — aunque parta el párrafo en dos, no se duplica a ambos lados, sino que
-  sigue a esa letra.
+- Funciona como un simple interruptor de encendido/apagado.
+- El tamaño de la primera letra queda fijado por una regla `::first-letter` en la hoja de estilos del núcleo (`font-size: 5.9em; line-height: .83`).
+- Si divide el párrafo con Enter, el atributo de letra capital no se duplica: se queda únicamente con la letra inicial original.
 
-Para cambiar el tamaño, sobrescriba esa regla.
+Para personalizar el tamaño, puede sobrescribir la siguiente regla CSS:
 
 ```css
 .nabi-content [data-nabi-dropcap="1"]::first-letter { font-size: 4.6em; line-height: .86; }

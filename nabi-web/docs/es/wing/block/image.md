@@ -6,57 +6,51 @@ title: Imagen
 
 ## Descripción
 
-`imageWing` (nombre `img`) posee la imagen (`<img>`). Es, como `hr` y `youtube`, **un
-objeto sin interior.** Al pulsar el botón se abre un panel de entrada de dirección.
+`imageWing` (nombre `img`) posee el elemento de imagen (`<img>`). Igual que `hr` y
+`youtube`, es un objeto `place: 'void'` sin nada dentro. Al pulsar el botón de la
+barra de herramientas se abre un cuadro para introducir la dirección de la imagen.
 
-**La dirección se filtra por esquema, no por extensión.** Solo pasan `http:`, `https:`
-y las rutas relativas; una dirección relativa al protocolo como `//example.com/a.png` se
-rechaza. **A nadie le importa si termina en `.png`** — porque es común que una dirección
-entregue una imagen sin ninguna extensión.
+**La dirección se valida por esquema, no por extensión de archivo.** Solo se
+permiten `http:`, `https:` y las rutas relativas — los esquemas maliciosos como
+`javascript:` y las direcciones relativas al protocolo (`//example.com/a.png`) se
+filtran. Una URL de API dinámica que devuelve una imagen sin extensión de archivo
+se admite sin problema.
 
-El cursor no entra dentro de la imagen, así que al hacer clic en ella se selecciona
-entera y aparece la barra contextual.
+El cursor nunca entra dentro de una imagen, así que al hacer clic en ella se
+selecciona el objeto de imagen entero y aparece una barra contextual dedicada:
 
-| Grupo | Casillas |
+| Control | Descripción |
 |---|---|
-| Ancho | Ocho casillas de diez en diez, de `30` a `100` (predeterminado `60`) — es una escala, y se muestra junto el valor actual |
-| Ver | Solo la imagen, en grande — no modifica el documento |
+| Ancho | un control deslizante que ajusta el ancho de `30%` a `100%` en pasos de 10% (por omisión `60%`) |
+| Ver en grande (lightbox) | amplía la imagen a su tamaño original en una ventana modal |
 
-**La barra contextual solo tiene estas dos.** Aquí no están las casillas de izquierda,
-centro y derecha — el lugar de la imagen no lo lleva la imagen, sino **el párrafo
-envoltorio que la contiene**, así que ese trabajo lo hace el botón de alineación de la
-barra de herramientas.
+La alineación izquierda/centro/derecha de una imagen es una propiedad del
+**párrafo envoltorio (`<div data-nabi-p>`)** que la contiene, así que se alinea
+con los botones de alineación de la barra de herramientas principal.
 
-**Una imagen recién insertada queda centrada** — porque `insertLump` viste el párrafo
-envoltorio con la alineación `c` al levantarlo.
-
-Al salir, el ancho se pega a la imagen, y la alineación al párrafo que la envuelve.
+Una imagen recién insertada queda centrada (`data-nabi-align="c"`) por omisión.
 
 ```html
 <div data-nabi-p data-nabi-align="c"><img src="…" alt="" data-nabi-width="70"/></div>
 ```
 
-Los valores de alineación son `l`, `c`, `r`. No sale ningún `style` en línea — el
-aspecto real lo dibuja la hoja de estilos que lee ese atributo dentro de un
-`.nabi-content` con `nabi.css` aplicado.
+Se guarda como atributos semánticos sin `style` en línea — el tamaño y la
+alineación reales los dibuja `nabi.css`.
+
+### Permitir direcciones locales (`allowLocalUrls`)
 
 ```ts
 makeImageWing({ allowLocalUrls?: boolean })
 ```
 
-Al activar `allowLocalUrls` se permiten también las direcciones `blob:` y
-`data:image/...` — actívelo solo en escenarios de demostración o de subida en los que se
-muestra el archivo sin servidor. Por omisión está desactivado.
+Active `allowLocalUrls: true` y también se permiten direcciones locales en
+formato `blob:` y `data:image/...` — útil, por ejemplo, para una vista previa
+local antes de subir un archivo (por omisión `false`).
 
-Cuando la imagen está rota (porque la dirección ha muerto, ha caducado o el blob ha
-desaparecido), el marcador de posición aparece por sí solo — el wing lleva eso consigo
-con `attach`, y `mountSurface` conecta junto con el resto el `attach` de los wings
-registrados. **No hay nada que montar aparte.** Esta marca es solo de pantalla y jamás
-queda en el valor guardado.
-
-`allowLocalUrls` se puede activar en dos lugares — para todo el editor
-(`createNabiWith(wings, { allowLocalUrls: true })`), o solo para el wing de imagen
-(`makeImageWing({ allowLocalUrls: true })`).
+Si la dirección de una imagen no es válida, o una URL `blob:` ha caducado y la
+imagen no carga, el hook `attach` del wing muestra automáticamente un marcador
+de posición de imagen rota. Funciona sin configuración de montaje adicional y,
+al ser una interfaz solo de pantalla, no afecta a los datos guardados.
 
 ## Ejemplo de uso
 
@@ -76,7 +70,7 @@ mountContextToolbar({ nabi, registry, surface, root: document.querySelector<HTML
 // nabi.onChange(() => user_callback(nabi.getHtml()))
 ```
 
-Para dejar abierto tal cual un archivo recibido por subida (dirección `blob:`):
+Para permitir direcciones `blob:`, use la función factory:
 
 ```ts
 makeImageWing({ allowLocalUrls: true })

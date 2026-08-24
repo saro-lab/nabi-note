@@ -6,26 +6,12 @@ title: Tiefgestellt
 
 ## Beschreibung
 
-`subscriptWing` ist der Eigentümer (claim) von `<sub>`. Es dient chemischen
-Formeln oder Nummern, die nach unten gesetzt werden.
+`subscriptWing` ist ein Inline-Mark-Flügel, der die Formatierung als tiefgestellt (`<sub>`)
+übernimmt. Nützlich für chemische Formeln, Fußnotenzahlen und Ähnliches.
 
-- Anerkannt wird ein einziges Tag: `<sub>`. Attribute überleben nicht.
-- Weder ein Hinweismodus-Kürzel noch ein Beschleuniger existiert dafür. Die
-  Werkzeugleisten-Gruppe ist `script`, neben Hochgestellt (Hochgestellt steht in
-  der Registrierungsreihenfolge zuerst).
-- Wird die Taste bei ausgewähltem Text gedrückt, ist es ein Umschalter.
-- Das Aussehen liefert das Stylesheet, das dieser Flügel über `Wing.styles` trägt.
-
-```css
-.nabi-content sub, .nabi-content sup { font-size: .72em; line-height: 0; position: relative; }
-.nabi-content sub { vertical-align: sub; }
-```
-
-**Dieses Stylesheet ist ein Satz, den sich Tief- und Hochgestellt teilen.** Beide
-Flügel tragen denselben Text, registrieren Sie also beide, landet er im Dokument
-trotzdem nur **einmal** (`collectSheets` filtert Stylesheets mit gleichem Inhalt
-heraus). Im gespeicherten Wert (HTML) bleibt nur das Tag `<sub>` zurück, der Stil
-selbst reist nicht mit.
+- Erkennt beim Import das Tag `<sub>` und gibt beim Export dasselbe Tag wieder aus.
+- Sitzt in der Werkzeugleisten-Gruppe `script`, direkt neben Hochgestellt.
+- Bei ausgewähltem Text wirkt ein Druck auf die Taste als Umschalter.
 
 ## Anwendungsbeispiel
 
@@ -35,7 +21,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// Die Flügelliste baut Sortenwissen, Commands und Baukästen zusammen — das ist die `registry`
 const { nabi, registry } = createNabiWith([subscriptWing])
 
 mountSurface({ nabi, registry, root: surface })

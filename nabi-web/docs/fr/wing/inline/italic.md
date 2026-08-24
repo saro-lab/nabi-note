@@ -6,16 +6,11 @@ title: Italique
 
 ## Description
 
-`italicWing` est propriétaire (par `claim`) de `<i>`. À utiliser pour un mot étranger, une
-citation, ou tout texte au ton différent.
+`italicWing` est le wing de marque en ligne qui gère la mise en italique (`<i>`). Il sert à distinguer le ton d'un texte — emphase, mot étranger, etc.
 
-- À l'entrée, elle accepte à la fois `<i>` et `<em>` ; à la sortie, elle les rassemble en un seul
-  `<i>`. Aucun attribut ne survit.
-- Le raccourci du mode indice (Shift deux fois) est `I` — capté par la touche physique
-  (`KeyI`), donc il fonctionne aussi sur un clavier AZERTY. L'accélérateur est `Ctrl`/`⌘`+`I`
-  (`mod+i`).
-- L'appuyer avec du texte sélectionné est un bascule.
-- Laissez-la non enregistrée et `<i>` perd son enveloppe et retombe en texte brut.
+- À l'entrée, il reconnaît aussi bien `<i>` que `<em>` ; à la sortie, il produit toujours la balise standard `<i>`.
+- Prend en charge le mode indice (Shift deux fois, puis `I`) et le raccourci `Ctrl`/`⌘`+`I`.
+- Appliqué avec du texte sélectionné, il fonctionne comme un bascule.
 
 ## Exemple d'utilisation
 
@@ -25,7 +20,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// La liste des wings bâtit ensemble la connaissance des sortes, les commandes et les assembleurs — c'est le `registry`
 const { nabi, registry } = createNabiWith([italicWing])
 
 mountSurface({ nabi, registry, root: surface })

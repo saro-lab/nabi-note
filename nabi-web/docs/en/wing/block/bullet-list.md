@@ -6,49 +6,32 @@ title: Bullet list
 
 ## Description
 
-`bulletListWing` (name `ul`, shortcut `L`) owns `<ul>`. The item comes along
-through `parts`, so `li` is never registered separately — and `parts` is a record,
-not an array.
+`bulletListWing` (id `ul`, shortcut `L`) handles unordered lists (`<ul>`). List items (`<li>`) are embedded via the `parts` attribute, so there's no need to register `li` separately.
 
 ```ts
 parts: { li: { holds: 'blocks' } }
 ```
 
-Press the button and the block the caret sits in (or every block the selection
-covers) is wrapped into a list; press it again and the wrapping comes off and you
-are back to paragraphs. Press another list button and it changes into that kind.
+Click the toolbar button and the block the caret is in (or every selected block) turns into a bullet list; click it again to restore plain paragraphs. Pressing another list button (numbered, checklist, etc.) switches straight to that list type.
 
-Typing a hyphen at the start of a line and then a space (`- `) gets the same
-result. **The line does not have to be empty** — all that is measured is the line
-prefix in front of the caret, so `- some text` fires on the space and the text
-stays inside the new item. It only fires on the **first line** of a paragraph.
+Typing `- ` (a hyphen and a space) at the start of a paragraph also converts it into a list automatically. Since it checks the character pattern right before the caret, typing the space after `- text` still converts correctly, and whatever you'd already written stays as the list item's content (this only fires on a paragraph's first line, though).
 
-- `Tab` indents one step, under the sibling item directly above. The first item has
-  nothing to go under, so nothing happens — inside a list `Tab` never inserts
-  spaces.
-- `Shift+Tab` outdents to the parent's next sibling — outdent at the top level and
-  it leaves the list and becomes a paragraph. With a selection spanning several
-  items, every item it covers moves together.
-- **Enter on an empty item outdents it** — at the top level the list ends there and
-  the caret stands in a new paragraph below it. That is how you end a list.
-- **Backspace at the very start of an item joins it into the item above.** With no
-  item above to join, it falls back to outdenting. Delete at the very end does the
-  mirror image, pulling the next item up.
-- An item holds blocks, so there is a paragraph inside it. Marks (bold and the
-  rest) and other inline wings work inside that paragraph as usual.
-- Attributes the tag was carrying, such as `type`, do not survive. Anything that is
-  not an item found inside a list is not thrown away — it gets wrapped into one.
-- Checklist shares the tag (`<ul>`) but is a different wing — they are told apart
-  by a marker attribute (`data-nabi-list="task"` means checklist).
+### Shortcuts and editing behavior
 
-## Nesting is real markup
+- <kbd>Tab</kbd>: indents the current item one level, nesting it under the item directly above. On the first item there's no parent to nest under, so nothing happens — and inside a list, <kbd>Tab</kbd> never inserts a space character.
+- <kbd>Shift</kbd>+<kbd>Tab</kbd>: outdents the current item one level. Outdenting a top-level item takes it out of the list and turns it into a plain paragraph. With several items selected, the whole selection moves together.
+- **Pressing <kbd>Enter</kbd> on an empty item**: outdents it. If it was an empty top-level item, the list ends there and a new paragraph appears below.
+- **Pressing <kbd>Backspace</kbd> at the very start of an item**: merges its content onto the end of the previous item. If there's no previous item to merge into, it outdents instead. Conversely, pressing <kbd>Delete</kbd> at the very end of an item pulls the next item up onto the current line.
+- Since an item (`li`) is a block container, it holds a paragraph (`p`), and any inline formatting — bold, italics, and the rest — is free to use inside it.
+- Non-standard attributes on the tag are stripped during normalization, and anything other than an `li` found inside a list is automatically wrapped into an `li` item to correct it.
+- Task checklists share the same `<ul>` tag, but the two wings are told apart by whether the `data-nabi-list="task"` attribute is present.
 
-The structure survives into the saved value as it stands. Because **an item holds
-blocks rather than text**, though, the text wears a paragraph and a nested list
-stands inside a wrapper paragraph.
+## Markup and nesting structure
+
+The Nabi tree's nested structure is carried straight into the HTML. Because a list item (`li`) holds blocks rather than text, the text inside an item is wrapped in a `<p>` paragraph, and a nested sub-list is placed safely inside a wrapper paragraph (`<div data-nabi-p>`).
 
 ```html
-<li><p>a</p><div data-nabi-p><ul><li><p>b</p></li></ul></div></li>
+<li><p>Parent item</p><div data-nabi-p><ul><li><p>Child item</p></li></ul></div></li>
 ```
 
 ## Usage
@@ -59,7 +42,7 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// The wing list builds the kind knowledge, the commands and the builders together — that is the `registry`
+// Builds the registry and the nabi instance from the registered list of wings.
 const { nabi, registry } = createNabiWith([bulletListWing])
 
 mountSurface({ nabi, registry, root: surface })
@@ -68,7 +51,7 @@ mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement
 // nabi.onChange(() => user_callback(nabi.getHtml()))
 ```
 
-`li` follows automatically through `parts`, so it never goes into the array by hand.
+`li` is registered automatically through `parts`, so it's never passed into the array directly.
 
 ## Demo
 

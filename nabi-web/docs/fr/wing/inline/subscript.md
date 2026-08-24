@@ -6,25 +6,12 @@ title: Indice
 
 ## Description
 
-`subscriptWing` est propriétaire (par `claim`) de `<sub>`. À utiliser pour une formule chimique
-ou un numéro écrit en indice.
+`subscriptWing` est une wing de marque en ligne qui gère la mise en forme en indice
+(`<sub>`). Utile pour les formules chimiques, les numéros de note, etc.
 
-- La seule balise acceptée est `<sub>`. Aucun attribut ne survit.
-- Il n'y a ni raccourci en mode indice ni accélérateur. Le groupe de la barre d'outils est
-  `script`, où elle se tient à côté de l'exposant (dans l'ordre d'enregistrement, l'exposant
-  vient en premier).
-- L'appuyer avec du texte sélectionné est un bascule.
-- L'allure vient de la feuille que cette wing porte via `Wing.styles`.
-
-```css
-.nabi-content sub, .nabi-content sup { font-size: .72em; line-height: 0; position: relative; }
-.nabi-content sub { vertical-align: sub; }
-```
-
-**Cette feuille est partagée avec l'exposant.** Les deux wings portent le même texte, donc même
-enregistrées toutes les deux, il n'atterrit dans le document **qu'une seule fois**
-(`collectSheets` retire les feuilles au même texte). Dans la valeur enregistrée (HTML), seule la
-balise `<sub>` reste — le style lui-même n'est pas embarqué.
+- Reconnaît la balise `<sub>` à l'entrée, et la restitue telle quelle à la sortie.
+- Se trouve dans le groupe `script` de la barre d'outils, juste à côté de l'exposant.
+- Avec du texte sélectionné, appuyer sur le bouton fait basculer la marque.
 
 ## Exemple d'utilisation
 
@@ -34,7 +21,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// La liste des wings bâtit ensemble la connaissance des sortes, les commandes et les assembleurs — c'est le `registry`
 const { nabi, registry } = createNabiWith([subscriptWing])
 
 mountSurface({ nabi, registry, root: surface })

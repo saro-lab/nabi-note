@@ -90,9 +90,6 @@ dans ce cas `owner.node` est le nœud de la part tandis que l'`onKey` qui tourne
 wing qui l'a déclarée. C'est pourquoi la convention est de d'abord brancher sur `owner.node.w`
 pour voir laquelle a été choisie.
 
-Une marque ne peut jamais être propriétaire — la raison se trouve sur la
-[page des marques en ligne](./inline).
-
 ---
 
 ## `inputRules` — bâtir une mise en forme à la seule frappe
@@ -117,10 +114,6 @@ inputRules: [
 Elle regarde le **début de la ligne** devant le caret. En cas de correspondance, elle supprime ce
 préfixe (et le caractère déclencheur) et exécute la commande.
 
-```
-taper "> "   →   le "&gt;" est supprimé et toggleQuote s'exécute
-```
-
 Elle ne se déclenche que sur la **première ligne** d'un paragraphe. Sur une ligne atteinte par
 <kbd>Maj</kbd>+<kbd>Entrée</kbd>, elle ne se déclenche pas — cela empêche une mise en forme de
 surgir au milieu d'une prose déjà en train de s'écrire.
@@ -130,20 +123,6 @@ surgir au milieu d'une prose déjà en train de s'écrire.
 Elle regarde le **seul mot** devant le caret. En cas de correspondance, elle sélectionne ce mot,
 exécute la commande, et replace le caret où il était. Aucun texte n'est supprimé — c'est la forme
 pour les règles qui posent une marque.
-
-Si ce mot **porte déjà la marque de cette wing, la règle est sautée.** Elle ne peut pas se
-déclencher deux fois au même endroit.
-
-### Règles communes
-
-- Elle ne s'exécute que tant que le caret est **replié**. Appuyer sur espace avec une plage
-  sélectionnée ne fait rien.
-- Elle ne s'exécute que dans un paragraphe ordinaire — jamais dans un paragraphe enveloppe qui
-  porte un bloc.
-- Les règles sont mesurées dans l'ordre du tableau des wings, et **la première règle qui réussit**
-  l'emporte.
-- Si la commande répond `null` (rien à faire), elle **annule et passe à la règle suivante.** Une
-  transformation automatique ratée ne laisse aucune trace dans le document.
 
 ---
 
@@ -172,9 +151,7 @@ const attachNote: Attach = (host) => {
 | `host.pathOfKey(id)` | transforme un `data-key` de l'écran en chemin dans le document |
 
 `mountSurface` attache l'`attach` de chaque wing enregistrée en même temps que lui-même, et
-appelle les fonctions de démontage que vous avez renvoyées quand il redescend. C'est **la seule
-et unique maison où vit du code qui connaît le DOM** — ne touchez jamais `document` à
-l'intérieur d'une commande, de `toHtml`, ou de `repair`.
+appelle les fonctions de démontage que vous avez renvoyées quand il redescend.
 
 ::: tip Retrouver le document par `data-key`
 L'assemblage de l'éditeur (`getEditorHtml()`) marque chaque nœud d'un `data-key`. Trouvez le
@@ -184,40 +161,31 @@ place dans le document.
 
 ---
 
-## Le collage et le HTML initial
+## Le collage et le pipeline d'analyse HTML
 
-Les trois — coller, `setHtml()`, et charger une valeur enregistrée — passent tous par **la même
-porte** à la fin. Le seul travail de la wing ici est `claim` — c'est écrit sous
-[`claim` sur la page des marques en ligne](./inline#claim). **Le collage seul a une étape avant**,
-cependant : avant d'atteindre `claim`, il passe les filtres IO et la plate-forme de candidates.
+Le collage, `setHtml()` et le chargement du HTML initial passent tous par le même pipeline
+d'analyse et de normalisation.
 
 ```
-collage        ─→ filtres IO ─→ plate-forme de candidates (seulement s'il y en a deux ou plus) ─┐
-setHtml        ───────────────────────────────────────────────────────────────────────────────┼→ analyse → le claim des wings → la gestion par défaut des balises du cœur → repair → cocoon → document
-HTML initial   ───────────────────────────────────────────────────────────────────────────────┘
+collage        ─→ filtres IO ─→ fenêtre de choix du format (si deux candidats ou plus) ─┐
+setHtml        ──────────────────────────────────────────────────────────────────────────┼→ analyse HTML → le claim des wings → correspondance de balises par défaut du cœur → repair → cocoon → arbre nabi
+HTML initial   ──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**`setHtml()` et le HTML initial ne passent pas la plate-forme.** C'est là que l'hôte pousse une
-valeur, si bien qu'il n'y a rien à demander — pas de filtres, pas de candidates, droit à
-l'analyse.
-
-Une candidate n'est réellement bâtie (et `claim` appelé) **qu'une fois que la personne en choisit
-une sur la plate-forme**. Bâtir les quatre candidates pour n'en utiliser qu'une serait gaspiller.
-Bâtir un filtre du vôtre est couvert par
-[Brancher un filtre IO](../custom#brancher-un-filtre-io).
-
-Sans `claim`, **cette balise perd son enveloppe et seul le texte à l'intérieur survit.** Cette
-règle est ce qui empêche un balisage inconnu, copié depuis l'éditeur de quelqu'un d'autre, de se
-loger tel quel dans le document.
-
-Le chemin d'entrée par JSON (`setJson()`) porte des nœuds plutôt que des balises, donc le gardien
-là-bas est `repair`, pas `claim`.
+- **`setHtml()` et le chargement du HTML initial ne passent pas par la fenêtre de choix** — ils
+  vont directement au pipeline d'analyse.
+- Lors d'un collage depuis le presse-papiers, la fenêtre de choix du format n'apparaît que s'il y
+  a deux candidats ou plus ; l'analyse réelle (`claim`) n'a lieu qu'après que la personne a choisi
+  un format.
+- Une balise étrangère pour laquelle aucune wing ne définit `claim` est retirée en toute sécurité
+  — seul le texte à l'intérieur est conservé.
 
 ---
 
 ## Documents suivants
 
 - [Interface et actions](../custom/ui) — les boutons de barre d'outils et la ligne contextuelle
+- [Brancher un filtre IO](../custom#brancher-un-filtre-io) — le point d'extension pour le collage, l'enregistrement et l'ouverture
 - [Écrire une marque en ligne](../custom/inline) · [Blocs et attributs de paragraphe](../custom/block)
 
 <script setup lang="ts">

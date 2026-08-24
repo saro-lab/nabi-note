@@ -7,37 +7,42 @@ description: NABI NOTE es un editor WYSIWYG de código abierto que corre en el n
 
 NABI NOTE es un editor WYSIWYG **de código abierto** que corre en el navegador.
 
-## Árbol de nabi
 
-Procesar HTML de forma directa trae problemas irresolubles en un servidor sin DOM, así
-que el documento se maneja como un objeto de JavaScript llamado **árbol de nabi**, que se
-serializa en ambos sentidos hacia JSON y HTML. Además, durante la conversión entre el
-árbol de nabi y HTML se eliminan los elementos de XSS.
+## El árbol de nabi
 
-> Todos los wings que trae NABI NOTE soportan la eliminación de XSS, pero en el caso de
-> un `wing personalizado (plugin externo)` hay que confirmar con su propio desarrollador
-> si ofrece o no esa protección.
+Manipular HTML directamente trae problemas en el lado del servidor (Node.js y similares),
+donde no hay DOM disponible. Por eso NABI NOTE administra el documento como un objeto de
+árbol de JavaScript puro llamado **árbol de nabi**, con serialización en ambos sentidos
+hacia JSON y HTML. Además, durante esa conversión entre el árbol de nabi y HTML se
+eliminan automáticamente los elementos maliciosos que podrían provocar XSS.
+
+> Todos los wings por defecto que NABI NOTE soporta oficialmente manejan la prevención de
+> XSS. Sin embargo, al escribir o incorporar un `wing personalizado (plugin externo)`,
+> hay que confirmar con su propio autor si hace lo mismo.
 
 <FlowHub :sources="hubSources" :core="hubCore" :targets="hubTargets" caption="" />
 
-## Soporte de SSR sin DOM (lado del servidor)
+## Soporte de SSR sin DOM (renderizado en el servidor)
 
-Se puede **leer tal cual en el servidor (Node.js)** el árbol de nabi guardado y ensamblar
-con él el HTML que se va a enviar. Lo único que necesita DOM es la **entrada**
-(`setHtml()`) y los `mount*` que se pegan a la pantalla.
+Un árbol de nabi guardado en una base de datos o en otro lugar puede **leerse tal cual en
+el servidor (Node.js y similares)** y ensamblarse en el HTML que se envía al cliente. El
+único trabajo que necesita una API de DOM es la **entrada** desde una cadena HTML externa
+(`setHtml()`) y las funciones `mount*` que renderizan el editor en la pantalla.
 
-Un lugar que solo muestra el documento no necesita ni levantar el editor — basta una sola
-función. Recibe el valor guardado y el `registry` (la lista de wings registrados), y
-devuelve una cadena HTML.
+Una pantalla que solo muestra un documento de forma de solo lectura no necesita levantar
+ningún editor — basta con llamar a la función de renderizado única (`renderStoredHtml`).
+Recibe como argumentos el valor del árbol de nabi guardado y el `registry` (la lista de
+wings registrados), y devuelve una cadena HTML segura.
 
-**En el servidor se importa desde `nabi-note/ssr`** — es el punto de entrada que solo
-trae lo necesario para dibujar, así que ni la superficie de edición ni las herramientas
-de pantalla se cargan en absoluto.
+**En un entorno de servidor, se usa la entrada `nabi-note/ssr`** — un punto de entrada
+ligero que solo trae la lógica central que necesita el renderizado, de modo que el código
+del área de edición (`surface`) o de las herramientas de pantalla (`ui`) nunca termina en
+el paquete del servidor.
 
 ```ts
 import { makeRegistry, defaultWings, renderStoredHtml } from 'nabi-note/ssr'
 
-// La lista de wings se arma una sola vez cuando arranca el servidor — todos los valores guardados la comparten.
+// La lista de wings se arma una sola vez cuando arranca el servidor, y se reutiliza en cada solicitud.
 const registry = makeRegistry(defaultWings)
 
 const saved = [{ w: 'p', ch: ['una línea de comentario'] }]   // árbol de nabi leído de la base de datos
@@ -45,13 +50,15 @@ renderStoredHtml(saved, registry)
 // '<p>una línea de comentario</p>'
 ```
 
-**Si no es un árbol de nabi, devuelve `null`** — la regla de rechazo es la misma que en
-`setJson()`. El valor que pasa **no difiere ni un carácter** del `getHtml()` que produce
-el editor, porque atraviesa los mismos pasos (normalización → ensamblaje), así que el
-filtrado de XSS ocurre en el mismo lugar.
+**Cualquier valor que no sea un árbol de nabi válido recibe `null` de vuelta** — la regla
+de validación es idéntica a la de `setJson()`. Un valor que pasa la validación **coincide
+exactamente** con el resultado de `getHtml()` llamado sobre una instancia del editor,
+porque atraviesa el mismo proceso de normalizar y luego ensamblar — así que el filtrado
+de XSS se aplica en el mismo punto.
 
-Para dibujar de antemano el editor en el servidor se usa la función pareja — lo único que
-se agrega es `data-key`.
+Para pre-renderizar (SSR) en el servidor la propia pantalla de edición del editor, se usa
+la función `renderStoredEditorHtml`. Produce HTML con un atributo `data-key` agregado a
+cada nodo.
 
 ```ts
 import { renderStoredEditorHtml } from 'nabi-note/ssr'
@@ -60,29 +67,32 @@ renderStoredEditorHtml(saved, registry)
 // '<p data-key="n0">una línea de comentario</p>'
 ```
 
-El mismo valor guardado siempre obtiene la misma `data-key`, así que se puede enviar tal
-cual este HTML y, en el navegador, recogerlo con
-`mountSurface({ nabi, registry, root, hydrate: true })` sin que la pantalla se vuelva a
-dibujar. **La demo de inicio de este sitio funciona exactamente así** — el documento de
-la primera pantalla lo dibujó el servidor, y el editor despierta encima de él.
+Los mismos datos guardados siempre producen el mismo `data-key`. Así que se puede enviar
+el HTML renderizado en el servidor tal cual y, en el navegador, hidratarlo con
+`mountSurface({ nabi, registry, root, hydrate: true })` — el editor toma el control sin
+volver a dibujar la pantalla. **La propia demo de inicio de este sitio funciona
+exactamente así** — el documento de la primera pantalla fue pre-renderizado por el
+servidor, y en el cliente el editor se activa directamente sobre ese DOM.
 
-### Tres puntos de entrada
+### Puntos de entrada del paquete
 
-| Se importa | Qué trae | Cuándo |
+| Entrada | Qué trae | Cuándo |
 |---|---|---|
-| `nabi-note` | El editor completo — ensamblaje, superficie, herramientas de pantalla | Donde se **escribe** |
-| `nabi-note/ssr` | Solo lo necesario para dibujar el valor guardado como HTML | En el servidor, o en una página de solo lectura |
-| `nabi-note/viewer` | Comportamiento del lado de lectura (ordenar tablas, colorear código) | Donde se **muestra** el HTML publicado |
+| `nabi-note` | El editor completo (el modelo del documento, el área de edición, la barra de herramientas y las herramientas de UI) | Una pantalla para **escribir/editar** un documento |
+| `nabi-note/ssr` | Un módulo ligero, solo para SSR, que renderiza un árbol de nabi a HTML | Un entorno de servidor o una página de solo lectura |
+| `nabi-note/viewer` | Comportamiento de solo lectura (ordenar columnas de tablas, resaltado de código, etc.) | Una pantalla para **ver** HTML publicado |
 
-`nabi-note/ssr` **no carga ni un solo archivo** de la superficie de edición (`surface`)
-ni de las herramientas de pantalla (`ui`) — una red que recorre el código fuente lo
-garantiza. Así no hay forma de que código con DOM se mezcle en el paquete de servidor.
+`nabi-note/ssr` **nunca hace referencia** al área de edición (`surface`) ni a las
+herramientas de UI (`ui`). Una prueba unitaria a nivel de arquitectura verifica esto de
+forma estricta, así que no hay riesgo de que código dependiente del DOM se filtre en el
+paquete del servidor.
 
-## Todo el formato son wings
+## Todo formato es un wing
 
-Lo que en otros editores se llama "plugin" aquí se llama **wing**. Lo único que el
-núcleo ve directamente es el párrafo (`p`), la línea (`br`) y el texto plano — el
-encabezado, la lista, la tabla, la negrita, todo eso son wings.
+Lo que otros editores llaman "plugin", NABI NOTE lo llama **wing**. El núcleo del editor
+maneja directamente solo el párrafo base (`p`), el salto de línea (`br`) y el texto
+plano — todo formato y extensión, desde encabezados y listas hasta tablas y negrita, se
+ofrece como un wing independiente.
 
 ```ts
 import { createNabiWith, parseNodes, boldWing } from 'nabi-note'
@@ -90,102 +100,106 @@ import { createNabiWith, parseNodes, boldWing } from 'nabi-note'
 const bare = createNabiWith([], { parseHtml: parseNodes }).nabi
 bare.setHtml('<p><b>negrita</b> <i>cursiva</i></p>')
 bare.getHtml()
-// '<p>negrita cursiva</p>'                    — sin wings declarados, todo cae a texto plano.
+// '<p>negrita cursiva</p>'                    — no hay ningún wing registrado, así que las etiquetas se eliminan y todo cae a texto plano.
 
 const bold = createNabiWith([boldWing], { parseHtml: parseNodes }).nabi
 bold.setHtml('<p><b>negrita</b> <i>cursiva</i></p>')
 bold.getHtml()
-// '<p><b>negrita</b> cursiva</p>'              — solo se declaró boldWing, así que solo la negrita sobrevive y el resto cae a texto plano.
+// '<p><b>negrita</b> cursiva</p>'              — solo boldWing está registrado, así que solo la negrita se conserva y el resto cae a texto plano.
 ```
 
-El marcado no registrado como wing **se convierte en texto plano.** Por eso el HTML no
-declarado queda excluido, y todos los wings que NABI NOTE soporta oficialmente eliminan
-los scripts maliciosos.
+El marcado no registrado como wing **se convierte automáticamente en texto plano.** Por
+eso cualquier elemento HTML no declarado queda excluido de forma segura, y todos los
+wings que NABI NOTE soporta oficialmente filtran a fondo los scripts maliciosos.
+
 
 ## Interfaz
 
-El documento solo se puede cambiar a través de `applyCommand()`.
+El documento solo puede cambiarse de forma segura a través de `applyCommand()`.
 
 ```ts
-nabi.applyCommand('toggleMark', { w: 'b' })     // Negrita
-nabi.applyCommand('setHeading', { value: 2 })   // H2
+nabi.applyCommand('toggleMark', { w: 'b' })     // Alternar negrita
+nabi.applyCommand('setHeading', { value: 2 })   // Establecer encabezado H2
 nabi.undo()
 nabi.redo()
 ```
+Un comando **devuelve si tuvo éxito como un `boolean`.** Cuando no cambia nada, devuelve
+`false` y no deja ni una entrada de historial ni realiza ningún trabajo innecesario.
 
-El comando **devuelve si tuvo éxito como `boolean`.** Si no cambia nada, responde
-`false` y no deja historial ni hace ninguna modificación.
 
 ## Capas del código
 
-**No significa que el valor fluya en este orden.** Estas son las **catorce carpetas** que ves
-cuando abres `src`, una carpeta por capa, y la regla es una sola — **la capa de abajo no conoce
-la de arriba.** Por eso las capas escritas cerca de la cima (`schema`, `doc`, `html`) no tocan
-el DOM, y por eso corren igual en el servidor. El camino por donde entra y sale el valor es el
-diagrama del árbol de nabi de arriba.
+La estructura de abajo no es el orden en que se ejecutan los datos — muestra las
+**catorce capas** organizadas en el directorio `src/`. El principio central es que
+**una capa inferior nunca hace referencia a una superior.** Por eso las capas inferiores
+(`schema`, `doc`, `html`, etc.) no dependen del DOM en absoluto, y corren sin cambios
+también en un entorno de servidor (Node.js).
 
 ```
 src/
-├── style/     la hoja principal — el CSS que comparten la pantalla de edición y el texto publicado
-├── locale/    idioma
-├── code/      el tokenizador puro que comparten la pantalla de edición y el lado de lectura
-├── schema/    la forma del árbol de nabi y la definición de Cocoon
-├── doc/       insertar · borrar · dividir · rango — sin DOM
-├── caret/     la posición del cursor, la selección y los bordes
-├── html/      árbol de nabi ↔ HTML
-├── io/        las puertas de entrada y salida — candidatos de pegado, guardar, abrir, markdown
-├── editor/    la instancia con la interfaz de comandos
-├── wing/      verificación de los wings en el momento del registro
-├── wings/     los wings oficiales (negrita · cursiva … tabla · carga)
-├── surface/   ajusta el caret, el IME y la entrada al árbol
-├── ui/        la capa de UI
-├── viewer/    solo lectura
+├── style/     la hoja de estilos principal — el CSS que comparten la pantalla de edición y el visor
+├── locale/    el diccionario multilingüe
+├── code/      el tokenizador puro compartido por la pantalla de edición y el visor
+├── schema/    la estructura del árbol de nabi y la definición del cocoon (normalización)
+├── doc/       operaciones de insertar · borrar · dividir · rango sobre nodos — sin DOM
+├── caret/     posición del cursor · selección · manejo de bordes
+├── html/      serialización bidireccional árbol de nabi ↔ HTML
+├── io/        manejo de entrada/salida — candidatos de pegado · guardar · abrir · markdown
+├── editor/    la interfaz de comandos y la instancia del editor
+├── wing/      validación de wings y gestión del registro
+├── wings/     la colección oficial de wings (negrita · cursiva … tabla · carga)
+├── surface/   sincroniza el caret · IME · eventos de entrada con el árbol
+├── ui/        la capa de UI — barra de herramientas · barra contextual · popups
+├── viewer/    comportamiento del visor de solo lectura
 ├── index.ts   el punto de entrada principal — `nabi-note`
-└── ssr.ts     el punto de entrada del SSR — `nabi-note/ssr` (no toca ni un solo archivo de surface o ui)
+└── ssr.ts     el punto de entrada solo para SSR — `nabi-note/ssr` (no hace referencia a surface · ui)
 ```
 
-**El orden de las líneas es el orden de las capas** — no alfabético sino **la capa de abajo
-primero.** `style` es el suelo y `viewer` es la cima.
+**El orden de las líneas es el orden de las capas** — dispuesto no alfabéticamente sino
+**de la capa más baja a la más alta.** `style` es la capa más baja y `viewer` es la más
+alta.
 
-Este orden no es una promesa escrita — **una red lo vigila mecánicamente.** Si aparece un
-solo import que vaya contra la capa, la prueba falla en el acto.
+Esta regla de dependencia entre capas no es solo una recomendación — se **verifica
+mecánicamente mediante pruebas unitarias.** En el momento en que aparece un `import` que
+viola la regla de capas, la etapa de compilación y pruebas falla de inmediato.
+
 
 ## Glosario
 
-| Palabra | Sentido |
-|---|-------------------------------------------------------|
-| **marca (mark)** | Formato de texto, p. ej. `<b>` · `<i>` · `<a>` |
-| **bloque (block)** | p. ej. párrafo · encabezado · lista · tabla · imagen |
-| **atributo de párrafo (paragraph attribute)** | Un atributo del párrafo, p. ej. alineación · letra capital |
-| **párrafo envoltorio** | El párrafo que envuelve objetos de un solo párrafo como tablas, listas o imágenes |
-| **posesión (claim)** | El juicio de a qué wing pertenece un marcado dado |
-| **piezas (parts)** | Una pieza interna de un wing, p. ej. las filas y celdas de una tabla, la línea de resumen de un plegable |
-| **filtro IO (IO filter)** | el punto de extensión que maneja la entrada (pegar) y la salida (guardar y abrir) como un conjunto. Se ubica **fuera del contrato de wing**, así que no levanta su propio nodo en el documento |
+| Palabra | Significado |
+|---|---|
+| **marca (mark)** | Formato de texto en línea — p. ej. `<b>`, `<i>`, `<a>` |
+| **bloque (block)** | Un elemento de nivel de bloque — p. ej. párrafo, encabezado, lista, tabla, imagen |
+| **atributo de párrafo (paragraph attribute)** | Un atributo aplicado a un párrafo completo — p. ej. alineación, letra capital |
+| **párrafo envoltorio** | El párrafo contenedor que envuelve un objeto de bloque independiente como una tabla o una imagen |
+| **posesión (claim)** | La regla que decide a qué wing pertenece un fragmento de marcado HTML de entrada |
+| **piezas (parts)** | Los subelementos que forman el interior de un wing — p. ej. las filas/columnas de una tabla, la línea de resumen de un bloque plegable |
+| **filtro IO (IO filter)** | Un punto de extensión que maneja el pegado desde el portapapeles (entrada) y guardar/abrir (salida). Opera fuera del contrato de wing, así que no crea ningún nodo propio en el árbol de nabi |
 
-### Pantalla de edición
+### En la pantalla de edición
 
-| Palabra                      | Sentido                                                                                                                  |
-|-------------------------------|---------------------------------------------------------------------------------------------------------------------------|
-| **cursor (caret)**            | El cursor de selección dentro del editor                                                                                 |
-| **barra contextual (context row)** | La barra de herramientas que controla lo que el cursor tiene seleccionado ahora mismo, p. ej. los comandos de fila y columna de una tabla, la casilla de lenguaje del código, las casillas de dirección y nombre de un enlace, los niveles H1~H6 de un encabezado |
+| Palabra | Significado |
+|---|---|
+| **cursor (caret)** | El cursor de texto y la selección dentro del editor |
+| **barra contextual (context row)** | La barra de herramientas auxiliar que se muestra dinámicamente según el estado de bloque/formato en el que está el cursor — p. ej. los controles de fila/columna de una tabla, el selector de lenguaje de código, el campo de dirección de un enlace, el selector de nivel de un encabezado |
 
 ### Núcleo
 
-| Palabra | Sentido                                                                                                                                                              |
-|---|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **cocoon** | El paso de normalización del árbol de nabi. **Corre después de cada comando**, así que ningún comando puede dejar un documento que rompa las reglas               |
-| **conexión (attach)** | El gancho que un wing declara cuando necesita tocar la pantalla, p. ej. arrastrar celdas de una tabla, colorear código, alternar una casilla — todo eso es esto. `mountSurface` conecta junto con el resto lo que traen los wings registrados |
-| **conversión automática (input rule)** | Una conversión que ocurre solo con escribir, p. ej. un guion y un espacio se vuelven lista, `#` y un espacio se vuelven encabezado                                  |
+| Palabra | Significado |
+|---|---|
+| **cocoon** | El paso de normalización del árbol de nabi. **Se ejecuta justo después de cada comando**, garantizando que nunca se produzca un árbol anómalo que rompa las reglas del esquema |
+| **conexión (attach)** | Un gancho que un wing declara cuando necesita controlar el DOM directamente — p. ej. arrastrar para seleccionar celdas de una tabla, resaltado de sintaxis de código, alternar una casilla. Los ganchos de cada wing registrado se conectan juntos cuando se ejecuta `mountSurface` |
+| **regla de entrada (input rule)** | Una regla abreviada que convierte el formato automáticamente al escribir — p. ej. escribir `- ` se convierte en una lista, escribir `# ` se convierte en un encabezado |
+
 
 ## Próximos documentos
 
-- [{{ t('menu_intro_usage') }}](./intro/usage) — ensamblaje, entrada y salida completos
-- [{{ t('menu_intro_cdn') }}](./intro/cdn) — con un solo `<script>`, sin herramientas de compilación
-- [{{ t('menu_wing_custom') }}](./wing/custom) — crear a mano un formato que no existe
+- [{{ t('menu_intro_usage') }}](./intro/usage) — la guía completa de ensamblaje, entrada y salida
+- [{{ t('menu_intro_cdn') }}](./intro/cdn) — usar una sola etiqueta `<script>` sin herramientas de compilación
+- [{{ t('menu_wing_custom') }}](./wing/custom) — construye tú mismo un wing de formato personalizado totalmente nuevo
 
 <script setup lang="ts">
 import FlowHub from '../.vitepress/ui/FlowHub.vue'
-import LayerStack from '../.vitepress/ui/LayerStack.vue'
 import { useTranslate } from '../.vitepress/src/langs.ts'
 
 const { t } = useTranslate()
@@ -203,18 +217,4 @@ const hubTargets = [
   { label: 'getEditorHtml()', note: 'HTML del editor', kind: 'out' },
 ];
 
-const layers = [
-  { name: 'locale', what: 'idioma' },
-  { name: 'code', what: 'el tokenizador puro que comparten la pantalla de edición y el lado de lectura' },
-  { name: 'schema', what: 'la forma del árbol de nabi y la definición de Cocoon' },
-  { name: 'doc', what: 'insertar · borrar · dividir · rangos — sin DOM' },
-  { name: 'caret', what: 'posición del cursor, selección, bordes' },
-  { name: 'html', what: 'árbol de nabi ↔ HTML' },
-  { name: 'editor', what: 'la instancia con la interfaz de comandos' },
-  { name: 'wing', what: 'verificación de los wings en el momento del registro' },
-  { name: 'wings', what: 'los wings oficiales (bold, italic ... table, upload...)' },
-  { name: 'surface', what: 'ajusta el caret, el IME y la entrada al árbol' },
-  { name: 'ui', what: 'la capa de UI' },
-  { name: 'viewer', what: 'solo lectura' },
-]
 </script>

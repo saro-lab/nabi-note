@@ -6,26 +6,24 @@ title: Separador
 
 ## Descripción
 
-`dividerWing` (id `hr`) posee una sola etiqueta, `<hr>`. **`place: 'void'`** — es un
-objeto sin interior, así que el cursor no tiene dónde entrar. Si pulsa Retroceso o
-Suprimir justo antes o justo después del separador, ese bloque desaparece entero, y el
-resultado es el mismo si lo selecciona por tramo.
+`dividerWing` (id `hr`) gestiona la línea divisoria horizontal (`<hr>`). Es un objeto
+`place: 'void'`, sin texto en su interior — pulsar Retroceso o Suprimir justo antes o
+justo después del separador borra el bloque completo.
 
-Al pulsar el botón, el separador se sitúa **con su propio párrafo envoltorio**. No se
-crea a la vez un párrafo vacío aparte — el cursor se posa encima de ese párrafo
-envoltorio, justo detrás del separador.
+Al hacer clic en el botón, el separador se inserta **envuelto en un párrafo contenedor
+propio (`<div data-nabi-p>`)**. El cursor queda justo detrás del separador.
 
-Dónde se sitúa depende de si el párrafo donde estaba el cursor tenía texto.
+Dónde se inserta depende del estado del párrafo en el que estaba el cursor:
 
-| Dónde estaba el cursor | Resultado |
+| Dónde estaba el cursor | Resultado de la inserción |
 |---|---|
-| Un párrafo con texto | Se sitúa **detrás** de ese párrafo |
-| Un párrafo vacío | **Sustituye** a ese párrafo — no queda una línea vacía de más |
+| Un párrafo con texto | El nuevo separador se inserta **detrás** de ese párrafo |
+| Un párrafo vacío | Ese párrafo vacío **se sustituye** por el separador (evita una línea vacía de más) |
 
-Al sustituir un párrafo vacío, la alineación que llevara ese párrafo sobrevive.
+Al sustituir un párrafo vacío, la alineación de texto que llevaba se conserva.
 
-Escribir tres guiones o más (`---`) en una línea vacía y pulsar Enter da el mismo
-resultado — en esta conversión automática **el disparador es Enter**.
+Escribir tres o más guiones en una línea vacía y pulsar Enter (`---` + Enter) lo convierte
+automáticamente en un separador.
 
 ## Ejemplo de uso
 

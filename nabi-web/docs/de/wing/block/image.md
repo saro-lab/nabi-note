@@ -6,54 +6,50 @@ title: Bild
 
 ## Beschreibung
 
-`imageWing` (id `img`) besitzt das Bild (`<img>`). Wie `hr` und `youtube` ist es ein Klotz ohne
-Inneres. Ein Druck auf die Schaltfläche öffnet eine Adresseingabe.
+`imageWing` (Kennung `img`) besitzt das Bildelement (`<img>`). Wie `hr` und `youtube` ist es ein
+Klotz vom Typ `place: 'void'` ohne Inhalt. Ein Klick auf die Werkzeugleisten-Schaltfläche öffnet
+eine Eingabe für die Bildadresse.
 
-Eine Adresse kommt anhand ihres **Schemas** durch, nicht ihrer Endung: `http:` und `https:`, dazu
-einfache relative Pfade. Protokollrelative `//host/…` werden abgelehnt, ebenso alles andere —
-`javascript:` und Verwandte kommen nie in die Nähe des Dokuments. Ein Bild ohne brauchbare Adresse
-ist überhaupt kein Bild, wird also verworfen, statt als Geist gespeichert zu werden.
+**Die Adresse wird anhand ihres Schemas geprüft, nicht anhand der Dateiendung.** Nur `http:`,
+`https:` und relative Pfade sind erlaubt — bösartige Schemata wie `javascript:` und
+protokollrelative Adressen (`//example.com/a.png`) werden herausgefiltert. Eine dynamische
+API-Adresse, die ein Bild ohne Dateiendung liefert, wird ganz normal unterstützt.
 
-Da der Caret nie in ein Bild hineingelangt, wählt ein Klick darauf das ganze Bild aus und ruft die
-Kontextzeile auf.
+Der Caret kann nie in ein Bild hineingelangen — ein Klick darauf wählt also das ganze Bildobjekt
+aus und ruft eine eigene Kontextzeile auf:
 
-| Steuerelement | Was es tut |
+| Steuerelement | Beschreibung |
 |---|---|
-| Breite | ein Schieberegler über `30` `40` `50` `60` `70` `80` `90` `100` (Prozent, `60` standardmäßig) |
-| Ansehen | nur das Bild, groß — es ändert nichts im Dokument |
+| Breite | ein Schieberegler, der die Breite von `30 %` bis `100 %` in 10-%-Schritten einstellt (Standard `60 %`) |
+| Groß ansehen (Lightbox) | vergrößert das Bild in Originalgröße in einem modalen Popup |
 
-**Hier gibt es kein Ausrichtungs-Steuerelement.** Die Ausrichtung eines Klotzes gehört dem
-Wrapper-Absatz, der ihn hält, sie kommt also vom Flügel [Ausrichtung](../etc/align), dessen
-Schaltflächen genau aus diesem Grund auf einem Wrapper-Absatz aktiv bleiben. Ein Bild wird
-standardmäßig in einen zentrierten Wrapper-Absatz eingefügt.
+Die Links-/Zentriert-/Rechts-Ausrichtung eines Bildes ist eine Eigenschaft des **Wrapper-Absatzes
+(`<div data-nabi-p>`)**, der es hält — daher wird sie über die Ausrichtungs-Schaltflächen der
+Haupt-Werkzeugleiste gesetzt.
 
-Auf dem Weg hinaus landet die Breite auf dem Bild und die Ausrichtung auf dem umhüllenden Absatz.
+Ein neu eingefügtes Bild wird standardmäßig zentriert (`data-nabi-align="c"`).
 
 ```html
 <div data-nabi-p data-nabi-align="c"><img src="…" alt="" data-nabi-width="70"/></div>
 ```
 
-Die Ausrichtungswerte sind `l`, `c` und `r`. Kein Inline-`style` geht hinaus. Die tatsächliche
-Gestalt des Bildes zeichnet das Stylesheet, das dieses Attribut innerhalb eines `.nabi-content` mit
-eingebundenem `nabi.css` liest. Eine Breite außerhalb der Liste wird abgelehnt, statt auf die
-nächste Stufe gerundet zu werden.
+Es wird als semantisches Attribut ohne Inline-`style` gespeichert — die tatsächliche Größe und
+Ausrichtung zeichnet `nabi.css`.
+
+### Lokale Adressen erlauben (`allowLocalUrls`)
 
 ```ts
 makeImageWing({ allowLocalUrls?: boolean })
 ```
 
-Schalten Sie `allowLocalUrls` ein, sind auch `blob:`- und `data:image/...`-Adressen erlaubt —
-schalten Sie es nur für Demos und Upload-Szenarien ein, die eine Datei ohne Server vorab anzeigen.
-Standardmäßig ist es aus, und `data:image/svg` bleibt in beiden Fällen abgelehnt.
+Setzen Sie `allowLocalUrls: true`, sind auch lokale Adressen im Format `blob:` und
+`data:image/...` erlaubt — nützlich etwa für eine lokale Vorschau vor einem Datei-Upload
+(Standard `false`).
 
-Sie können es an zwei Stellen einschalten — für den ganzen Editor mit `createNabiWith(wings, {
-allowLocalUrls: true })`, oder allein für den Bild-Flügel mit `makeImageWing({ allowLocalUrls: true
-})`. `imageWing` ist die fertige Konstante damit ausgeschaltet.
-
-Ist ein Bild kaputt (eine tote Adresse, eine abgelaufene, ein verschwundenes Blob), erscheint ein
-Platzhalter von selbst — der Flügel trägt das in seinem eigenen `attach`, und `mountSurface`
-verdrahtet das `attach` jedes registrierten Flügels. **Es gibt nichts zusätzlich zu mounten.** Das
-Kennzeichen gilt nur für den Bildschirm und überlebt nie in den gespeicherten Wert.
+Ist eine Bildadresse ungültig oder eine Blob-Adresse abgelaufen und das Laden schlägt fehl, zeigt
+der `attach`-Hook des Flügels automatisch einen Platzhalter für das defekte Bild. Das
+funktioniert ohne zusätzliche Mount-Einrichtung, und da es sich um eine reine Bildschirm-UI
+handelt, hat es keinen Einfluss auf die gespeicherten Daten.
 
 ## Anwendung
 
@@ -73,7 +69,7 @@ mountContextToolbar({ nabi, registry, surface, root: document.querySelector<HTML
 // nabi.onChange(() => user_callback(nabi.getHtml()))
 ```
 
-Um eine per Upload erhaltene Datei (eine `blob:`-Adresse) unverändert offen zu halten:
+Um `blob:`-Adressen zu erlauben, verwenden Sie die Factory-Funktion:
 
 ```ts
 makeImageWing({ allowLocalUrls: true })

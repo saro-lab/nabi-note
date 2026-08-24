@@ -161,7 +161,7 @@ Pour ne changer que la couleur, vous n'avez même pas besoin de réécrire la r�
 | `mountSticky({ root, surface, chrome?, nabi? })` | non | redonne ce qu'un clavier mobile a poussé hors de l'écran de la barre d'outils collée. Donnez `nabi` et **après une édition il repousse le caret pour qu'il sorte de sous la barre d'outils de lui-même** — laissez-le dehors et il marche comme avant, seulement quand l'hôte appelle `aim()` (voir [Clavier mobile et barre d'outils collée](#clavier-mobile-et-barre-doutils-collée)) |
 | `mountPickedMark({ nabi, surface })` | non | le repère d'une image ou d'une vidéo choisie (le navigateur ne le dessine pas) |
 | `mountFile({ nabi, store, registry, parse?, name? })` | avec save et open | enregistre en **trois** formats — `.nabi` · `.nhtml` · `.md` — et ouvre **quatre**, ces trois-là plus un `.html` ordinaire de dehors. **`registry` est obligatoire** — la liste des formats et l'assemblage du md et du HTML viennent tous d'elle. `parse` est la porte qui lit le HTML ; en navigateur on peut la laisser dehors et `parseNodes` prend sa place, mais en endroit sans tête (serveur, tests) il faut la passer pour que `.nhtml` et `.html` s'ouvrent. La `FileMount` qu'elle répond est **la manière canonique d'enregistrer et d'ouvrir sans wings** (`file.save()` · `file.saveAs(id, name)` · `file.formats()` · `await file.open()`) |
-| `mountLocalHistory({ nabi, storage })` | avec localHistory | un enregistrement dans le navigateur à intervalle fixe |
+| `mountLocalHistory({ nabi, storage })` | avec localHistory | un enregistrement dans le navigateur à intervalle fixe et une restauration. Se dresse sans erreur même quand `storage` vaut `null` (un endroit restreint comme `file://`) et prévient alors par un toast |
 | `mountUpload({ … })` + `mountUploadView({ … })` | avec upload | le déroulement du téléversement au dépôt, au collage et au choix de fichier, et son affichage |
 
 **Les images, les cases à cocher, le glisser de cellules de tableau et la coloration du code
@@ -385,11 +385,13 @@ le DOM, donc le chemin qui lit du JSON côté serveur pour en ressortir du HTML 
 **Le collage lit un seul presse-papiers par plusieurs yeux** — `HTML`, `MARKDOWN`, `TEXT`, `NABI`.
 Quand plus d'une porte de lecture existe, une petite plate-forme se dresse et en laisse choisir une ;
 quand il n'en existe qu'une, elle ne demande rien. Un collage sans aucune lettre (fichiers seuls)
-va à l'envoi.
+saute la plate-forme et va vers [{{ t('menu_etc_upload') }}](../wing/etc/upload).
 
 **L'enregistrement porte trois formats** — `.nabi` pour l'original, `.nhtml` pour une page
-autonome, `.md` pour la markdown qui tombe. **L'ouverture en reçoit quatre** — ces trois-là plus
-un `.html` ordinaire de dehors. Pour que ces portes se dressent, `mountFile()` doit être branchée.
+autonome, `.md` pour la markdown (ce qui n'y a pas sa place se mélange en HTML, et pourrait ne
+pas revenir tel quel). **L'ouverture en reçoit quatre** — ces trois-là plus un `.html` ordinaire
+de dehors. La porte a besoin du `mountFile()` de la table ci-dessus, et brancher un format de plus
+se trouve dans [{{ t('menu_wing_custom') }}](../wing/custom#brancher-un-filtre-io).
 
 ---
 
@@ -484,9 +486,16 @@ nabi.$markSaved(savedDoc)   // une fois l'enregistrement réussi — donnez le d
 
 **Donnez l'arbre du moment où l'enregistrement a eu lieu** (pas l'arbre actuel). Le texte tapé
 pendant un enregistrement lent doit rester « changé ». La wing de sauvegarde (`save`) appelle
-ceci une fois le fichier réellement écrit. Enregistrer en `.nabi` fait passer `isChanged()` à
-`false` — c'est l'original, donc le baseline se déplace. **Les sauvegardes en `.html` et `.md`
-ne bougent pas le baseline** — ce sont des copies, et le document reste « changé ».
+ceci une fois le fichier réellement écrit, donc enregistrer en `.nabi` fait passer `isChanged()`
+à `false`.
+
+::: warning Seul `.nabi` déplace la ligne de référence
+Ce qui sort en `.nhtml` ou en `.md` est une **copie**, et une copie ne déplace pas la ligne de
+référence — après l'avoir enregistrée, `isChanged()` reste `true`. Traiter une copie comme
+« enregistrée » ferait que la fenêtre se ferme sans demander, emportant l'original resté à
+moitié écrit. Quand l'enregistrement est asynchrone, la ligne de référence ne se déplace
+**qu'une fois qu'il a réussi** — un enregistrement raté ne la touche pas.
+:::
 
 **Annuler jusqu'au point de départ redonne `false`** — le nabi-tree est immuable et se
 renouvelle entièrement à chaque édition, donc on le sait sur place, sans parcourir ni hacher

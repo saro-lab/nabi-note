@@ -1,66 +1,55 @@
 ---
 title: SSR 支持
-description: 在服务器上预先画好存好的值，编辑器、工具栏都能用 hydrate 接手。
+description: 在服务器上预先渲染保存的文档，浏览器端通过 hydrate 接管编辑器和工具栏，立即激活。
 ---
 
-# SSR 支持
+# SSR（服务器端渲染）支持
 
-## 只画存好的值
+## 渲染已保存的文档（只读页面）
 
-像评论列表这种**只给人看**的地方，不需要编辑器。画文档要用到的只有注册过的
-翅膀清单（`registry`）这一样东西，为它单独开了一道门。
+像评论列表、文章查看页这类**只需要展示文档**的页面，不需要创建编辑器实例。渲染文档为 HTML 所需的只有注册过的翅膀清单（`registry`），因此提供了专用于服务器的渲染函数。
 
 ```ts
 import { makeRegistry, defaultWings, renderStoredHtml, renderStoredEditorHtml } from 'nabi-note/ssr'
 
-// 服务器起来时搭一次 —— 不管存了多少份，都分着用这一份
+// 服务器启动时创建一次，之后在多个请求间复用。
 const registry = makeRegistry(defaultWings)
 
-const saved = [{ w: 'p', ch: ['一条评论'] }]   // 从数据库读出来的 nabi-tree
+const saved = [{ w: 'p', ch: ['一条评论'] }]   // 从数据库读取的 nabi-tree
 
 renderStoredHtml(saved, registry)        // '<p>一条评论</p>'
 renderStoredEditorHtml(saved, registry)  // '<p data-key="n0">一条评论</p>'
 ```
 
-**`nabi-note/ssr` 是只装了画图所需东西的入口。** 编辑表面（`surface`）和界面
-工具（`ui`）一个文件都不占（有网在源码上守着这条规矩），所以服务器打的包里
-不会混进 DOM 代码。`nabi-note` 里也有同一道门，已经装着编辑器的页面照旧用那边
-就行。
+**`nabi-note/ssr` 是只包含核心渲染逻辑的轻量入口。** 它完全不引用编辑区域（`surface`）和界面工具（`ui`），并通过架构层单元测试严格保证服务器打包结果中不会混入 DOM 代码。如果所处环境已经加载了完整的编辑器包，也可以直接从 `nabi-note` 包中使用同样的函数。
 
-| | |
+| 函数 | 说明 |
 |---|---|
-| `renderStoredHtml(json, registry, options?)` | 拿去保存、发布的 HTML —— 和 `getHtml()` 是同一个值 |
-| `renderStoredEditorHtml(json, registry, options?)` | 编辑器的 HTML —— 和 `getEditorHtml()` 是同一个值（挂着 `data-key`）|
+| `renderStoredHtml(json, registry, options?)` | 用于保存、发布的 HTML —— 与编辑器 `getHtml()` 的值相同 |
+| `renderStoredEditorHtml(json, registry, options?)` | 用于初始化编辑器的 HTML —— 与 `getEditorHtml()` 的值相同（带有 `data-key`）|
 
-- **两个都不用 DOM**——在服务器上原样能跑。
-- **不是 nabi-tree 就答 `null`**——拒绝的规矩和 `setJson()` 一样（整份文档得是
-  数组）。不会抛出异常。
-- **和编辑器给出的值一字不差。** 走的是同一趟步骤（规范化 → 组装），所以过滤
-  XSS 的地方也一样——不会出现"只给看的这份洗得比较松"的情况。
-- `options` 只有 `{ allowLocalUrls }` 一项——和 `createNabiWith` 里那个选项是
-  同一个意思。
+- **完全不使用 DOM API。** 可以直接在 Node.js 等服务器环境中运行。
+- **不是有效的 nabi-tree 结构时返回 `null`。** 校验规则与 `setJson()` 相同；即便传入了错误的数据，也不会抛出异常，而是返回 `null` 并通过 `console.error` 记录原因。
+- **与编辑器实例生成的结果完全一致。** 因为经过的是同一套规范化与组装流程，XSS 过滤也在同样的地方生效。
+- `options` 参数支持 `{ allowLocalUrls?: boolean }`，作用与 `createNabiWith` 中的同名选项一致。
 
-**同一份存好的值永远拿到同一个 `data-key`。** 所以服务器用 `renderStoredEditorHtml`
-把编辑器预先画好送下去，浏览器再用 `hydrate` 接手的话，画面不会被重画。
+**同一份 nabi-tree 数据总会生成相同的 `data-key`。** 因此可以在服务器上用 `renderStoredEditorHtml` 预先渲染编辑器初始 HTML 并发送给客户端，浏览器端再以 `hydrate: true` 选项挂载，即可在没有重绘、没有闪烁的情况下立即激活编辑器。
 
 ```ts
 mountSurface({ nabi, registry, root: surface, hydrate: true })
 ```
 
-一旦对不上就在原地重画，所以只要服务器和客户端用的翅膀清单一致就行。
+即便服务器端与客户端的渲染结果出现不一致，客户端也会自动正常重新渲染，因此只需保证服务器和客户端使用相同的翅膀清单（`registry`）即可安全运作。
 
-::: tip 这个站点自己的首页就是这个样板
-首页演示的文档是**构建的时候用 `renderStoredEditorHtml` 预先画好**埋进页面里
-的，编辑器就在这份画面上用 `hydrate` 醒过来。所以编辑器代码到达之前文字就已经
-能读——不会有一段先空着、忽然被填满的过程。
+::: tip 本站首页演示正是以 SSR hydration 方式运行
+首页演示的文档在**构建阶段就通过 `renderStoredEditorHtml` 预先渲染**并嵌入 HTML 中，客户端脚本加载完成后再通过 `hydrate` 激活编辑器。因此在 JS 加载完成之前正文内容就已经可见，不会出现布局偏移（CLS）。
 :::
 
 ---
 
-## 工具栏也能预先画好
+## 预先渲染工具栏
 
-按钮行**不看文档**。它看的只是注册的翅膀清单、文字和分组顺序，所以画出来的字
-是**常量**——服务器起来时调一次，之后一直用这份字。不用每个请求都重新调。
+工具栏的按钮结构**不依赖文档内容。** 它只根据已注册的翅膀清单、显示语言（locale）和分组顺序生成，因此结果是确定性的。可以在服务器启动时渲染一次并缓存，供多个请求复用。
 
 ```ts
 import { makeRegistry, defaultWings, renderToolbarHtml } from 'nabi-note/ssr'
@@ -71,33 +60,21 @@ const toolbarHtml = renderToolbarHtml({ registry, locale: 'zh' })
 // '<div class="nabi-group" data-group="font">…</div>'
 ```
 
-把这段字原样塞进工具栏容器送下去，浏览器这边 `mountToolbar` 会用**同一个函数**
-画。已经立着同样一行的话，就**不重画，只接线**。
+将这段 HTML 字符串嵌入工具栏容器并发送给客户端，浏览器端的 `mountToolbar` 会识别出已有的标记，**只绑定事件监听，而不会重新渲染。**
 
 ```ts
 mountToolbar({ nabi, registry, surface, root: toolbar })
 ```
 
-::: warning 容器上要一并写上 `class="nabi-toolbar-row"`
-送出预先画好的那一行时，**从第一次画面起**就要有这个类名。内核在 mount 的
-时候，如果没有这个类会自己补上，但那样左右留白会在那一刻才贴上去，**按钮行
-会跟着往旁边挪一下。** 宿主先写好的话内核就不会碰它（只会摘掉自己贴上的那些）。
-
-```html
-<div class="nabi-toolbar-row">预先画好的那一行</div>
-```
+::: warning 请在容器元素上一并写出 `class="nabi-toolbar-row"`
+发送预先渲染好的工具栏时，工具栏行元素**从一开始**就必须带有 `class="nabi-toolbar-row"`。如果缺失，挂载时会自动补上这个类，而随之附加的内边距会在那一刻才生效，**导致按钮行出现瞬间的位移。**
 :::
 
-- **对不上也不会坏**——立着的那一行要是和现在的翅膀清单不一样，就在原地重画。
-  丢掉的只是预先画好的那份，画面永远是对的。
-- **预先画好的那一行处于"什么都没按下、什么都没藏起来"的状态。** 按下
-  （`aria-pressed`）和隐藏是由光标决定的，服务器不知道。要是配置成按钮会随
-  光标位置隐藏，mount 之后可能有几个会消失，行会跟着重新收拢。
-- **只放在要搭编辑器的地方。** 只给看的页面没有工具栏，没有理由接收这段字。
+- **结构不一致也是安全的。** 如果传入的 HTML 与当前翅膀清单不同，客户端会立即在原地重新渲染，画面不会损坏。
+- **预先渲染的工具栏处于默认状态**（未激活、未隐藏）。按钮的激活状态（`aria-pressed`）和上下文可见性由光标位置决定，客户端挂载后会自动根据光标位置同步状态。
+- **仅在包含编辑器的页面中使用。** 单纯的只读页面不需要工具栏。
 
-**预览、全屏这两个按钮走的也是同一条路。** 它们不是翅膀而是遮罩的部件，不算
-在上面的工具栏文字里——要单独画出来，放进 `mountViewTools` 要立起来的那个
-容器。
+**预览与全屏按钮也可以用同样的方式预先渲染。** 这两个是视图工具组件而非翅膀，需要用 `renderViewToolsHtml` 单独渲染。
 
 ```ts
 import { renderViewToolsHtml } from 'nabi-note/ssr'
@@ -106,18 +83,16 @@ renderViewToolsHtml({ locale: 'zh' })
 // '<span class="nabi-tools">…</span>'
 ```
 
-::: tip 这个站点自己的首页就是这个样板
-首页演示的工具栏是**构建时用 `renderToolbarHtml`·`renderViewToolsHtml` 预先
-画好**埋进去的，`mountToolbar`·`mountViewTools` 认出这一行只接线。所以不会有
-三十五个图标姗姗来迟才填满的过程。
+::: tip 首页演示的工具栏同样应用了预先渲染
+首页演示的工具栏在**构建阶段就通过 `renderToolbarHtml` 和 `renderViewToolsHtml` 预先渲染**好并嵌入页面，`mountToolbar` 与 `mountViewTools` 只识别该行并绑定事件。因此不会出现数十个工具栏图标延迟逐一出现的现象。
 :::
 
 ---
 
-## 接下来的文档
+## 下一步
 
-- [{{ t('menu_intro_usage') }}](./usage) —— 用 npm 装进来的路子，装配、输入、输出全套
-- [{{ t('menu_intro_cdn') }}](./cdn) —— 不用构建工具，一个 `<script>` 就够
+- [{{ t('menu_intro_usage') }}](./usage) —— 通过 npm 安装及编辑器详细使用方法
+- [{{ t('menu_intro_cdn') }}](./cdn) —— 无需构建工具，仅用一个 `<script>` 标签即可使用
 
 <script setup lang="ts">
 import { useTranslate } from '../../.vitepress/src/langs.ts'

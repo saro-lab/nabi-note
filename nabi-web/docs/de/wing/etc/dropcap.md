@@ -6,24 +6,16 @@ title: Initiale
 
 ## Beschreibung
 
-`dropCapWing` ist ein einwertiges Absatzattribut, das `data-nabi-dropcap="1"` auf einen Absatz
-setzt. Es erzeugt keinen neuen Block; es legt nur eine Markierung auf einen bereits bestehenden
-Absatz.
+`dropCapWing` ist ein Absatzattribut-Wing, der den ersten Buchstaben eines Absatzes als große
+Zierbuchstabe darstellt (`data-nabi-dropcap="1"`).
 
-- Es ist ein **boolesches Attribut**: Der einzige Wert ist `1`. „Aus" ist nicht `0` — es ist, dass
-  der Schlüssel überhaupt fehlt. Drücken Sie die Schaltfläche erneut, geht das Attribut ab.
-- Weil seine Reichweite allein der erste Buchstabe ist, behandelt Enter es wie einen Mark: Spalten
-  Sie den Absatz, wird es nicht in beide Hälften kopiert, sondern folgt diesem Buchstaben. Spalten
-  Sie ganz am Anfang, geht die Initiale mit dem hinteren Teil; spalten Sie irgendwo später, bleibt
-  sie beim vorderen.
-- Es gibt keine Kontextzeile dafür. Eine Werkzeugleisten-Schaltfläche schaltet es bereits um, und
-  eine zweite Stelle, die dasselbe sagt, wäre nur ein Weg, „aus" zweimal zu sagen.
-- **Es gibt keine Option und keine Variable dafür, wie viele Zeilen sie umschließt.** Eine einzige
-  `::first-letter`-Regel im Kern-Stylesheet legt die Größe fest — `font-size: 5.9em; line-height:
-  .83`. Wie viele Zeilen der Buchstabe tatsächlich abdeckt, ergibt sich aus der Zeilenhöhe dieses
-  Absatzes.
+- Es funktioniert als einzelner Ein/Aus-Schalter.
+- Die Größe des ersten Buchstabens ist über eine `::first-letter`-Regel im Kern-Stylesheet fest
+  vorgegeben (`font-size: 5.9em; line-height: .83`).
+- Teilen Sie den Absatz beim Tippen mit der Eingabetaste, wird das Initialen-Attribut nicht auf
+  beide Hälften verdoppelt — es bleibt allein beim ursprünglichen ersten Buchstaben.
 
-Um die Größe zu ändern, überschreiben Sie diese Regel:
+Um die Größe anzupassen, überschreiben Sie die folgende Regel:
 
 ```css
 .nabi-content [data-nabi-dropcap="1"]::first-letter { font-size: 4.6em; line-height: .86; }

@@ -54,7 +54,7 @@ const starWing: Wing = {
   commands: { insertStar },
   button: {
     group: 'insert',
-    label: { en: 'Star' },
+    label: { es: 'Estrella' },
     action: { kind: 'command', command: 'insertStar' },
   },
 }
@@ -112,7 +112,7 @@ const noteWing: Wing = {
   inputRules: [{ trigger: 'space', pattern: /^!$/, run: () => ({ name: 'toggleNote' }) }],
   button: {
     group: 'container',
-    label: { en: 'Note' },
+    label: { es: 'Nota' },
     action: { kind: 'command', command: 'toggleNote' },
   },
 }
@@ -173,8 +173,6 @@ Cuatro reglas.
 - El nombre de una pieza no puede repetir el nombre de un wing ni el de otra pieza.
 - Si hace falta pulir una pieza, se escribe en `partRepair` bajo el nombre de la pieza.
 
-`StructureDecl` acepta tres campos — `holds`, `singleParagraph`, `boolAttrs`.
-
 ### `singleParagraph`
 
 Su contenido **queda fijo en un solo párrafo.** La celda de una tabla es así — al pulsar
@@ -206,9 +204,6 @@ Un valor guardado corregido a mano, un documento venido de otra versión, un JSO
 por otra persona — todos pasan por esta puerta. Solo lo que la atraviesa se convierte en
 documento, así que este es **el único lugar donde un wing puede garantizar por sí mismo
 la forma de su propio nodo.**
-
-Si se escriben `allows` y `repair` juntos, primero corre el saneado de `allows` y
-**después** su resultado pasa a `repair`.
 
 ---
 
@@ -245,13 +240,6 @@ Por la misma razón, estas tres ya las ocupan `headingWing`, `alignWing` y
 en un contenedor.
 :::
 
-Dos casillas manejan el valor.
-
-| | |
-|---|---|
-| `attrValues` | La lista de valores que puede recibir (para el encabezado, `[1,2,3,4,5,6]`) |
-| `currentValue` | El valor que lleva este párrafo ahora mismo. Con esta respuesta la barra de herramientas y la contextual pintan la casilla pulsada |
-
 ---
 
 ## Ayudantes de documento públicos
@@ -271,13 +259,6 @@ que espera un comando.
 ```ts
 return { doc: r.doc, selection: { anchor: r.caret, focus: r.caret } }
 ```
-
-::: tip Si hace falta una edición más fina que esto
-Los ayudantes internos que cortan y unen a nivel de carácter (poner una marca, escribir
-un atributo de párrafo, etc.) todavía no son una API pública. Hasta entonces, se puede
-construir a mano el arreglo `doc` nuevo y devolverlo — el documento devuelto vuelve a
-pasar por `cocoon`, así que nunca queda un documento que rompa las reglas.
-:::
 
 ---
 

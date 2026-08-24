@@ -1,70 +1,29 @@
 ---
-title: Enviar arquivo
+title: Envio de arquivo
 ---
 
-# Enviar arquivo
+# Envio de arquivo
 
 ## Descrição
 
-O envio se divide em três peças — só registrar o wing não faz nada acontecer.
+O envio de arquivo funciona pela integração de três módulos:
 
-1. **`uploadWing`** — põe na barra de ferramentas o botão de escolher arquivo. Este wing, por
-   si, não cria nem `img` nem `a` — o arquivo enviado é confirmado nos blocos que os wings de
-   imagem e de link desenham, então **é preciso registrar junto o `imageWing` ou o `linkWing`**
-   para que o resultado permaneça no documento. Se nenhum dos dois estiver ali, **uma exceção é
-   lançada já no registro** (não estoura mais tarde).
-2. **`mountUpload({ … })`** — é o lado que de fato recebe os arquivos e roda o `uploader`.
-   Arrastar-e-soltar, colar e o botão de escolher arquivo, tudo flui para cá. **Sem este mount,
-   o botão fica ali sem que nada aconteça.**
+1. **`uploadWing`**: adiciona à barra de ferramentas um botão para anexar arquivo. Como o resultado do envio é inserido no documento como um nó de imagem ou de link de arquivo, **`imageWing` ou `linkWing` precisa estar registrado junto**. Se nenhum dos dois estiver presente, uma exceção é lançada na inicialização.
+2. **`mountUpload({ … })`**: recebe os arquivos que chegam por arrastar-e-soltar, colar da área de transferência ou seleção pela barra de ferramentas, e os passa para a função `uploader` do host.
+3. **`mountUploadView({ … })`**: renderiza na tela a interface de espaço reservado para o progresso do envio.
 
-::: warning Só metade da cola vem por aqui
-Se uma cola carrega **nem que seja um pedaço de texto** (`text/html` ou `text/plain`), o envio não é
-chamado de jeito nenhum — o texto vira um candidato e vai para o [painel de cola](../../intro/usage)
-em vez disso. Arquivos entram no envio só de uma cola **sem texto algum nela.**
-
-Copie células de uma planilha e tanto uma tabela quanto texto vêm junto, então o resultado é
-**uma tabela, não uma imagem.** Para enviar como imagem, copie a imagem sozinha. Um arrastar-e-soltar (puxar um arquivo) vem para o envio sempre, independentemente dessa regra.
+::: warning Regra de tratamento do envio de arquivo ao colar da área de transferência
+Se os dados da área de transferência **contiverem texto ou HTML** (`text/html` ou `text/plain`), o colar segue o fluxo normal de texto/Markdown em vez do envio. O fluxo de envio só é chamado quando o colar da área de transferência traz apenas dados de arquivo. (Um anexo via arrastar-e-soltar sempre segue o fluxo de envio.)
 :::
 
-3. **`mountUploadView({ … })`** — é o lado que exibe o marcador de progresso na tela. Sem ele o
-   envio ainda funciona, mas a tela fica muda enquanto o arquivo sobe.
+A função `uploader` tem a assinatura `(task) => Promise<{ uri: string } | null>`. Ela retorna um objeto `{ uri }` quando o envio ao servidor é bem-sucedido, e `null` em caso de falha. O progresso é reportado pelo callback `task.onProgress(0~100)`, e o cancelamento é tratado por `task.signal`.
 
-O `uploader` tem a forma `(task) => Promise<{ uri } | null>` — **devolver um endereço é
-sucesso, `null` é falha**, e nesse caso o marcador é removido. `task.onProgress(0~100)` informa
-o progresso, e se `task.signal` for abortado, o envio para.
+Opções de limite de extensão e tamanho: `extensions`, `maxFileSize`, `maxTotalSize` (sem limite se omitidas). Arquivos inválidos são passados para o callback `onReject`.
 
-Os limites são três: `extensions`, `maxFileSize`, `maxTotalSize`, todos opcionais (0 ou omitido
-= sem limite). Arquivos filtrados chegam por `onReject`.
+## O que o documento renderiza depois do envio
 
-## O que fica depois do envio
-
-Imagens são confirmadas como bloco do `imageWing`; os demais arquivos, como link de anexo do
-`linkWing`.
-
-- **O nome do anexo não é o nome do arquivo, e sim um rótulo de i18n** — em português, "Anexo".
-  Nomes de arquivo costumam ser longos demais para ficar no documento e, acima de tudo,
-  precisam poder ser trocados. O nome se troca deixando o cursor naquele link e usando o
-  [campo de nome da linha de contexto](../inline/link).
-- **A extensão fica como marcação** — `data-nabi-file="pdf"`. Esse valor é extraído do nome de
-  arquivo verdadeiro, e a folha de estilo o desenha como um selo. Trocar o nome não desfaz a
-  marcação: ela vai junto.
-- Endereços que o link não aceita (um `blob:` que chega sem `allowLocalUrls` ligado, por
-  exemplo) são rebaixados ao nome de arquivo em texto puro — a lista branca não é contornada.
-
-## O que se vê durante o envio
-
-Durante o envio, uma caixa temporária fica naquele lugar — ela existe apenas no DOM do editor,
-não na árvore do nabi, então nem um caractere dela sobra no valor salvo.
-
-- **Imagens** recebem de imediato uma pré-visualização feita do próprio arquivo escolhido, e uma
-  grade cobre a figura por cima. As células vão sendo retiradas conforme o progresso, até a
-  figura ficar nítida. A ordem em que as células somem é embaralhada por arquivo, então subir
-  várias de uma vez não repete o mesmo padrão.
-- **Arquivos que não são imagem** recebem uma caixa sem grade, com um 📎 e o rótulo "Anexo", e a
-  extensão aparece junto como um selo em maiúsculas (`PDF`, etc.). Imagens que não conseguem
-  gerar pré-visualização também caem aqui.
-- O progresso vai na caixa como `data-nabi-per`, e a folha de estilo o desenha. Enquanto sobe,
-  cada caixa ganha um botão de cancelar (×), e a edição fica travada enquanto o lote roda.
+- **Arquivos de imagem** são inseridos como um bloco `<img>` do `imageWing`.
+- **Outros anexos** são inseridos como um link de download de arquivo do `linkWing` (`<a data-nabi-file="pdf" href="...">`). O texto exibido do anexo é gerado conforme a locale como "Anexo", e pode ser livremente alterado posicionando o cursor no link e usando a barra de contexto.
 
 ## Exemplo de uso
 
@@ -83,23 +42,23 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// o envio só deixa resultado se houver wing de imagem ou de link — sem eles, exceção já aqui
+// O wing de envio precisa do wing de imagem ou de link registrado junto
 const { nabi, registry } = createNabiWith([imageWing, linkWing, uploadWing])
 
 mountSurface({ nabi, registry, root: surface })
 
-// o lado que exibe o marcador de progresso — cria-se primeiro para poder passar adiante
+// Monta a view de interface do progresso do envio
 const view = mountUploadView({ nabi, surface, locale: 'pt' })
 
 const upload = mountUpload({
   nabi,
   root: surface,
   locale: 'pt',
-  extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'],
-  maxFileSize: 10 * 1024 * 1024,
+  extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'zip'],
+  maxFileSize: 10 * 1024 * 1024,   // 10MB
   uploader: async (task) => {
-    // aqui entra o código que de fato envia ao servidor. devolver um endereço é sucesso, null é falha
-    // const uri = await user_callback(task.file, task.onProgress, task.signal)
+    // Implemente aqui a lógica real de envio do arquivo ao servidor backend
+    // const uri = await myUploadApi(task.file, task.onProgress, task.signal)
     // return { uri }
     return null
   },
@@ -110,18 +69,15 @@ const upload = mountUpload({
 })
 
 mountToolbar({
-  nabi, registry, surface,
+  nabi,
+  registry,
+  surface,
   root: document.querySelector<HTMLElement>('#toolbar')!,
-  // para onde vão os arquivos escolhidos pelo botão da barra de ferramentas
   onFiles: (files) => upload.take(files),
 })
 ```
 
 ## Demo
-
-Este site não tem servidor para onde enviar, então ele apenas finge: devolve tal e qual um
-endereço `blob:` criado com `URL.createObjectURL()`. O resultado só permanece dentro desta
-página.
 
 <WingDemo path="/wing/etc/upload" />
 

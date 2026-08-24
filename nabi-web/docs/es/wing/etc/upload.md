@@ -6,72 +6,24 @@ title: Subir archivo
 
 ## Descripción
 
-La subida se reparte en tres piezas — registrar el wing por sí solo no hace nada.
+La subida de archivos se compone de la integración de tres módulos:
 
-1. **`uploadWing`** — coloca en la barra de herramientas el botón de selección de
-   archivo. Este wing no crea por sí mismo ni `img` ni `a` — el archivo subido se
-   confirma como lo dibujan los wings de imagen y de enlace, así que **hay que registrar
-   junto a él `imageWing` o `linkWing`** para que el resultado quede en el documento. Si
-   no hay ninguno de los dos, **salta una excepción en el mismo momento del registro**
-   (no revienta más tarde).
-2. **`mountUpload({ … })`** — es la parte que realmente recibe los archivos y hace girar
-   el `uploader`. Por aquí llega todo: arrastre y selección de archivo. **Si se
-   olvida este montaje, el botón estará ahí pero no ocurrirá nada.**
+1. **`uploadWing`**: agrega un botón de adjuntar archivo en la barra de herramientas. Como el resultado subido se inserta en el documento como un nodo de imagen o de enlace de archivo, **hay que registrar junto a él `imageWing` o `linkWing`**. Si faltan ambos, se produce una excepción en el momento de la inicialización.
+2. **`mountUpload({ … })`**: recibe los archivos que llegan por arrastrar y soltar, pegado desde el portapapeles o selección desde la barra de herramientas, y los pasa a la función `uploader` del host.
+3. **`mountUploadView({ … })`**: dibuja en pantalla la interfaz de marcador de progreso de la subida.
 
-::: warning Solo la mitad del pegado viene por aquí
-Si un pegado lleva **aunque sea un solo fragmento de texto** (`text/html` o `text/plain`), la subida no
-se llama en absoluto — el texto se convierte en candidato y va al
-[panel de pegado](../../intro/usage) en su lugar. Los archivos solo fluyen hacia la subida desde
-**un pegado sin ningún texto en absoluto.**
-
-Copiar celdas de una hoja de cálculo trae consigo tanto una tabla como texto, así que el resultado es
-**una tabla, no una imagen.** Para subirla como imagen, copia la imagen por sí sola. Un arrastre (arrastrar un archivo dentro)
-llega a la subida siempre, sin importar esta regla.
+::: warning Cómo se enruta un pegado del portapapeles a la subida
+Si los datos del portapapeles **contienen texto o HTML** (`text/html` o `text/plain`), se procesan mediante el flujo normal de pegado de texto/Markdown, no como subida de archivo. El flujo de subida solo se activa cuando el pegado del portapapeles trae únicamente datos de archivo. (Un adjunto por arrastrar y soltar siempre se procesa mediante el flujo de subida.)
 :::
-3. **`mountUploadView({ … })`** — es la parte que levanta en pantalla el marcador de
-   progreso. Sin él la subida funciona igual, pero mientras sube la pantalla no dice
-   nada.
 
-`uploader` tiene la forma `(task) => Promise<{ uri } | null>` — **si devuelve una
-dirección es éxito, y si devuelve `null` es fallo**, y con eso se retira el marcador de
-posición. Con `task.onProgress(0~100)` se informa del progreso, y si `task.signal` se
-aborta, la subida se detiene.
+La función `uploader` tiene la firma `(task) => Promise<{ uri: string } | null>`. Devuelve un objeto `{ uri }` cuando la subida al servidor tiene éxito, y `null` si falla. El progreso se informa mediante el callback `task.onProgress(0~100)`, y la cancelación se maneja mediante `task.signal`.
 
-Los límites son tres — `extensions`, `maxFileSize`, `maxTotalSize` — y los tres son
-opcionales (con 0 o sin ponerlos no hay límite). Los archivos rechazados llegan por
-`onReject`.
+Opciones de límite de extensión y tamaño de archivo: `extensions`, `maxFileSize`, `maxTotalSize` (sin límite si se omiten). Los archivos que no cumplen se pasan al callback `onReject`.
 
-## Lo que queda después de subir
+## Cómo se renderiza el documento tras la subida
 
-Las imágenes se confirman como bloque de `imageWing`, y los demás archivos como enlace
-de adjunto de `linkWing`.
-
-- **El nombre del adjunto no es el del archivo, sino una etiqueta i18n** — en español,
-  "Adjunto". El nombre del archivo suele ser demasiado largo para dejarlo en el
-  documento y, sobre todo, tiene que poder cambiarse. El nombre se cambia poniendo el
-  cursor en ese enlace, desde [la casilla de nombre de la barra contextual](../inline/link).
-- **La extensión queda como distintivo** — `data-nabi-file="pdf"`. Ese valor se extrae
-  del nombre real del archivo, y la hoja de estilos lo dibuja como una insignia. Aunque
-  cambie el nombre, el distintivo lo sigue.
-- Una dirección que el enlace no admita (por ejemplo un `blob:` que llega sin haber
-  activado `allowLocalUrls`) se degrada al nombre del archivo en texto plano — no se
-  esquiva la lista blanca.
-
-## Lo que se ve mientras sube
-
-Mientras sube, en ese lugar se levanta una caja temporal — que solo existe en el DOM del
-editor y no en el árbol de nabi, de modo que en el valor guardado no queda ni una letra.
-
-- En las **imágenes**, la vista previa hecha con el archivo elegido aparece de
-  inmediato, y encima se echa una rejilla. Las casillas se van retirando una a una
-  conforme avanza el progreso, hasta quedar nítida. El orden en que se retiran se
-  mezcla en cada archivo, así que al subir varias a la vez no se repite el mismo dibujo.
-- Los **archivos que no son imagen** reciben, sin rejilla, una caja con el icono 📎 y la
-  etiqueta "Adjunto", junto con la extensión como insignia en mayúsculas (`PDF`, etc.).
-  Las imágenes que no se pueden previsualizar también caen aquí.
-- El progreso viaja en la caja como `data-nabi-per` y lo dibuja la hoja de estilos.
-  Mientras sube, cada caja lleva un botón de cancelar (×), y mientras el lote está en
-  marcha la edición queda bloqueada.
+- **Los archivos de imagen** se insertan como un bloque `<img>` de `imageWing`.
+- **Los demás adjuntos** se insertan como un enlace de descarga de archivo (`<a data-nabi-file="pdf" href="...">`) de `linkWing`. El texto que se muestra del adjunto se genera según el idioma como "Adjunto", y se puede cambiar libremente colocando el cursor en el enlace y usando la barra contextual.
 
 ## Ejemplo de uso
 
@@ -90,23 +42,23 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// la subida solo puede dejar un resultado si hay wings de imagen o enlace — si no, salta aquí mismo
+// El wing de subida necesita tener registrado junto a él el wing de imagen o de enlace
 const { nabi, registry } = createNabiWith([imageWing, linkWing, uploadWing])
 
 mountSurface({ nabi, registry, root: surface })
 
-// la parte que levanta el marcador de progreso — se crea antes y se conecta abajo
+// Montar la vista de la UI de progreso de subida
 const view = mountUploadView({ nabi, surface, locale: 'es' })
 
 const upload = mountUpload({
   nabi,
   root: surface,
   locale: 'es',
-  extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'],
-  maxFileSize: 10 * 1024 * 1024,
+  extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'zip'],
+  maxFileSize: 10 * 1024 * 1024,   // 10MB
   uploader: async (task) => {
-    // aquí va el código que sube realmente al servidor. Si devuelve una dirección es éxito, si devuelve null es fallo
-    // const uri = await user_callback(task.file, task.onProgress, task.signal)
+    // Implementa aquí la lógica que realmente sube el archivo a tu servidor backend
+    // const uri = await myUploadApi(task.file, task.onProgress, task.signal)
     // return { uri }
     return null
   },
@@ -117,18 +69,15 @@ const upload = mountUpload({
 })
 
 mountToolbar({
-  nabi, registry, surface,
+  nabi,
+  registry,
+  surface,
   root: document.querySelector<HTMLElement>('#toolbar')!,
-  // aquí llegan los archivos que elige el botón de selección de la barra de herramientas
   onFiles: (files) => upload.take(files),
 })
 ```
 
 ## Demo
-
-Este sitio no tiene servidor al que subir, así que solo finge devolver tal cual una
-dirección `blob:` creada con `URL.createObjectURL()`. El resultado queda únicamente
-dentro de esta página.
 
 <WingDemo path="/wing/etc/upload" />
 

@@ -6,59 +6,52 @@ title: Image
 
 ## Description
 
-`imageWing` (id `img`) owns the image (`<img>`). Like `hr` and `youtube`, it is a
-lump that holds nothing. Press the button and an address prompt appears.
+`imageWing` (id `img`) owns the image element (`<img>`). Like `hr` and `youtube`, it
+is a `place: 'void'` lump with nothing inside it. Click the toolbar button and an
+image URL prompt appears.
 
-An address gets through on its **scheme**, not its extension: `http:` and
-`https:`, plus plain relative paths. Protocol-relative `//host/…` is refused, and
-so is everything else — `javascript:` and friends never get near the document. An
-image with no usable address is not an image at all, so it is dropped rather than
-stored as a ghost.
+**The URL is validated by protocol scheme, not by file extension.** Only `http:`,
+`https:`, and relative paths are allowed — malicious schemes like `javascript:` and
+protocol-relative addresses (`//example.com/a.png`) are filtered out. A dynamic API
+URL that returns an image with no file extension is supported just fine.
 
-The caret never goes inside an image, so clicking one selects the whole image and
-brings up the context row.
+The caret can never enter an image, so clicking one selects the whole image object
+and brings up a dedicated context toolbar:
 
-| Control | What it does |
+| Control | Description |
 |---|---|
-| Width | a slider over `30` `40` `50` `60` `70` `80` `90` `100` (per cent, `60` by default) |
-| View | the picture alone, large — it changes nothing in the document |
+| Width | a slider adjusting width from `30%` to `100%` in 10% steps (default `60%`) |
+| View large (lightbox) | enlarges the image to its original size in a modal popup |
 
-**There is no alignment control here.** A lump's alignment belongs to the wrapper
-paragraph that holds it, so it comes from the [Align](../etc/align) wing, whose
-buttons stay live on a wrapper paragraph for exactly this reason. An image is
-inserted into a centred wrapper paragraph by default.
+Left/center/right alignment of an image is a property of the **wrapper paragraph
+(`<div data-nabi-p>`)** that holds it, so you align it with the alignment buttons on
+the main toolbar.
 
-On the way out the width lands on the picture and the alignment on the paragraph
-wrapping it.
+A newly inserted image is centered (`data-nabi-align="c"`) by default.
 
 ```html
 <div data-nabi-p data-nabi-align="c"><img src="…" alt="" data-nabi-width="70"/></div>
 ```
 
-Alignment values are `l`, `c` and `r`. No inline `style` goes out. The actual shape of the picture is drawn by the sheet
-that reads that attribute inside a `.nabi-content` with `nabi.css` linked. A width
-outside the list is refused rather than snapped to the nearest step.
+It goes out as semantic attributes with no inline `style` — the actual size and
+alignment are rendered by `nabi.css`.
+
+### Allowing local URLs (`allowLocalUrls`)
 
 ```ts
 makeImageWing({ allowLocalUrls?: boolean })
 ```
 
-Turn `allowLocalUrls` on and `blob:` and `data:image/...` addresses are allowed
-too — turn it on only for demos and upload scenarios that preview a file without a
-server. It is off by default, and `data:image/svg` stays refused either way.
+Set `allowLocalUrls: true` and local URLs in the `blob:` and `data:image/...`
+formats are allowed too — useful for a local preview before a file upload, for
+instance (default `false`).
 
-You can turn it on in two places — for the whole editor with
-`createNabiWith(wings, { allowLocalUrls: true })`, or for the image wing alone with
-`makeImageWing({ allowLocalUrls: true })`. `imageWing` is the ready-made constant
-with it off.
+If an image address is invalid, or a blob URL has expired and the image fails to
+load, the wing's `attach` hook automatically shows a broken-image placeholder. It
+works with no extra mount setup, and being a screen-only UI, it has no effect on
+the saved data.
 
-When an image is broken (a dead address, an expired one, a blob that is gone) a
-placeholder appears by itself — the wing carries that in its own `attach`, and
-`mountSurface` wires up the `attach` of every registered wing. **There is nothing
-extra to mount.** The marker is for the screen only and never survives into the
-saved value.
-
-## Usage
+## Usage example
 
 ```ts
 import { createNabiWith, mountSurface, mountToolbar, mountContextToolbar, imageWing } from 'nabi-note'
@@ -76,7 +69,7 @@ mountContextToolbar({ nabi, registry, surface, root: document.querySelector<HTML
 // nabi.onChange(() => user_callback(nabi.getHtml()))
 ```
 
-To leave a file received from an upload (a `blob:` address) open as it is:
+To allow `blob:` addresses, use the factory function:
 
 ```ts
 makeImageWing({ allowLocalUrls: true })

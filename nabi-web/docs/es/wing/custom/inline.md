@@ -95,9 +95,6 @@ claim: (el, inner) => (el.tag === 'kbd' ? [{ w: 'kbd', ch: inner(false) }] : nul
 | `inner(block)` | Lee el contenido. Si es marca, `false` (posición de texto); si es bloque, `true` |
 | Respuesta | Un arreglo de nodos, o **`null`** (no es mío → pasa al siguiente wing) |
 
-Se pregunta en el orden del arreglo de wings, y **el primero que levante la mano** se lo
-lleva.
-
 Hay dos lugares donde se responde `null` — cuando no es mi etiqueta, y **cuando es mi
 etiqueta pero el valor está fuera de la lista.** Si en este segundo caso se responde
 `inner(false)`, solo se le quita la envoltura y el texto sobrevive.
@@ -136,17 +133,9 @@ Dos cosas que aporta `valueMark`:
 
 - **`currentValue`** — el valor en el lugar donde está el cursor ahora mismo. Con esta
   respuesta, la barra de herramientas y la contextual pintan qué casilla está pulsada.
-- **`repair`** — vuelve a validar el valor en la entrada de JSON. Si está fuera de la
-  lista o no existe, responde `null` y **se retira junto con su envoltura.** Un valor
-  guardado corregido a mano también queda atrapado aquí.
-
-::: tip Comando para cambiar el valor
-El comando "cambia a este valor" de una marca de valor todavía no tiene un ayudante
-público. El interruptor simple con `action: { kind: 'mark' }`, activado solo con el
-botón de la barra de herramientas, se puede usar tal cual, y si hace falta elegir un
-valor, por ahora conviene usar una de las cuatro marcas de valor por defecto
-(resaltado, color de texto, tamaño de letra, tipografía) o extender su declaración.
-:::
+- **`repair`** — vuelve a comprobar en la entrada de JSON si el valor sigue en la
+  lista y, si no lo está, **normaliza el nodo automáticamente.** Un valor guardado
+  corregido a mano también queda atrapado aquí.
 
 ---
 
@@ -171,21 +160,22 @@ verdad dentro de esa marca en ese momento, así que entre marcas superpuestas so
 sale de las que correspondan. <kbd>Escape</kbd> también sirve para **deshacer** una
 reserva ya puesta.
 
-Si se pulsa Esc dos veces seguidas, el primer Esc cumple la reserva aunque ya esté reservada, pero el segundo sigue con la remoción de formato.
+::: tip Pulsar <kbd>Esc</kbd> dos veces llega más allá
+El conteo del doble toque corre **sin importar si la rama anterior ya consumió la tecla.** Así
+que incluso cuando el primer <kbd>Esc</kbd> deshizo una reserva o armó la salida de una marca,
+el segundo <kbd>Esc</kbd> llega hasta [eliminar formato](../etc/clear-format) — un cursor en
+medio de un resaltado es el ejemplo. `escapeKeys` y `doubleKeys` solo se parecen en el nombre;
+no se bloquean entre sí.
+:::
 
 ---
 
 ## Una marca no puede tener tecla propia
 
-Aunque se escriba `onKey`, **a una marca no le llega.** La posición del cursor es
-`{ path, offset }`, y el final de `path` es **el contenedor que guarda el texto** — la
-marca es un nodo en línea dentro de ese contenedor, así que ni siquiera aparece en la
-ruta. Al decidir quién es el dueño de la tecla, el núcleo recorre esta ruta hacia
-arriba, así que nunca se encuentra con una marca.
-
-La razón es la superposición. Con negrita dentro de cursiva dentro de un enlace, al
-pulsar <kbd>Enter</kbd> no hay forma de decidir cuál de las tres es la dueña. La única
-puerta que tiene una marca frente a las teclas es `escapeKeys`.
+Aunque se escriba `onKey`, **a una marca no le llega.** La propiedad de un evento de
+teclado pertenece al contenedor de bloque que está más arriba en la ruta del cursor
+(un párrafo, una cita, una tabla, y similares) — una marca es un nodo en línea anidado
+dentro del texto, así que nunca puede tener la propiedad exclusiva del teclado.
 
 ---
 

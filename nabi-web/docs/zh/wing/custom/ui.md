@@ -1,91 +1,85 @@
 ---
-title: UI 与行为
-description: 工具栏按钮（button）·上下文工具栏（context）·样式表（styles）—— 翅膀站到人面前的三个地方。
+title: UI 与交互
+description: 工具栏按钮（button）、上下文工具栏（context）、翅膀专属样式表（styles）的对接方法说明。
 ---
 
-# UI 与行为
+# UI 与交互
 
-翅膀站到人面前的地方有三处。
-
-| 字段 | 在哪里 |
-|---|---|
-| `button` · `buttons` | 上面的**工具栏**——一直看得见的地方 |
-| `context` | **上下文工具栏**——只在光标碰到的东西上才出现的地方 |
-| `styles` | 这只翅膀携带的 **CSS** |
+翅膀能提供用户界面（UI）的地方有三处：**主工具栏**（`button`/`buttons`）、**上下文工具栏**（`context`）、**翅膀专属 CSS**（`styles`）。
 
 ---
 
-## 工具栏按钮
+## 工具栏按钮（`button` / `buttons`）
 
 ```ts
 button: {
-  group: 'emphasis',                   // 站在哪个分组——必需
-  svg: '<path d="…"/>',                // 16×16 坐标系里的内容。没有的话用文字顶替
+  group: 'emphasis',                   // 所属分组（必需）
+  svg: '<path d="…"/>',                // 16×16 viewBox 内的 SVG path 字符串
   label: { zh: '加粗' },
-  shortcut: 'B',                       // 提示模式下显示的字母
-  accelerator: 'mod+b',                // Ctrl/⌘ 组合键
-  action: { kind: 'mark' },
+  shortcut: 'B',                       // 提示模式（Shift 连按两次）下显示的快捷字符
+  accelerator: 'mod+b',                // 键盘快捷键（Ctrl/⌘ 组合）
+  action: { kind: 'mark' },            // 切换行内标记的动作
 }
 ```
 
-按钮有好几个的话写进 `buttons` 数组——像对齐翅膀立起左、中、右三个按钮那样。
-这时候用 `name` 互相区分，用 `value` 写各自代表的值。
+一只翅膀要提供多个按钮时，用 `buttons` 数组来定义（比如文本对齐翅膀提供左/中/右三个按钮）。每个按钮用 `name` 区分，`value` 写这个按钮代表的值。
 
-### `group`——顺序由分组决定
+### 按钮分组（`group`）顺序
+
+工具栏按钮分组的渲染顺序是固定的：
 
 ```
 font · heading · emphasis · script · color · link ·
 align · list · structure · media · container · clear · file
 ```
 
-**这个顺序是钉死的。** 不管翅膀放进数组的哪个位置，按钮都会站到自己分组的
-位置上。只有同一分组内部才按注册顺序排列。用了清单外的名字，就会在最后面
-立一个新分组。
+不管把翅膀写在数组的哪个位置，按钮都会自动排到所属分组的位置上，只有同一分组内部才按翅膀的注册顺序排列。指定清单之外的新分组名，就会在工具栏最末尾添加一个新分组。
 
-一个分组整个是空的时候（里面的按钮全都藏起来了），那个分组会从画面上消失
-——不会留下空的分隔线。
+某个分组下的按钮在当前状态下全部隐藏时，该分组连同分隔线也会自动隐藏。
 
-### `action`——按下去会发生什么
+### 按钮动作（`action`）类型
 
-| `kind` | 做什么 | 要一起写的 |
+| `kind` | 动作说明 | 附加属性 |
 |---|---|---|
-| `'mark'` | 走核心的标记切换。**不用写命令** | — |
-| `'command'` | 跑一个命令 | `command` · `args?` |
-| `'menu'` | 把值列表展开成面板 | `command` · `argKey` · `values` |
-| `'grid'` | 展开行×列格子（插入表格） | `command` · `rowsKey` · `colsKey` · `max?` |
-| `'prompt'` | 弹出输入框，把值传给命令 | `command` · `fields` |
-| `'file'` | 打开选文件窗口 | `accept?` · `multiple?` |
-| `'host'` | 交给宿主处理（`mountToolbar` 的 `onHost`） | — |
+| `'mark'` | 切换行内标记（走核心默认逻辑） | — |
+| `'command'` | 执行指定命令 | `command`、`args?` |
+| `'menu'` | 显示下拉值选择菜单 | `command`、`argKey`、`values` |
+| `'grid'` | 显示插入表格用的行×列格子选择器 | `command`、`rowsKey`、`colsKey`、`max?` |
+| `'prompt'` | 弹出输入框，把输入值传给命令 | `command`、`fields` |
+| `'file'` | 打开文件选择对话框 | `accept?`、`multiple?` |
+| `'host'` | 交给宿主回调处理（`mountToolbar` 的 `onHost`） | — |
 
-不写 `action` 的话，这个按钮按下去什么都不会发生。
+没有定义 `action` 的按钮，点击后不会有任何动作。
 
-### `shortcut` 和 `accelerator`
+### 快捷键（`shortcut` 与 `accelerator`）
 
-| | 形式 | 规则 |
+| 项目 | 形式 | 规则 |
 |---|---|---|
 | `shortcut` | `'B'` | 拉丁**大写字母或数字，一个字符** |
-| `accelerator` | `'mod+b'` | `mod+` 后面跟**一个小写字母** |
+| `accelerator` | `'mod+b'` | `mod+` 前缀后跟**一个小写字母** |
 
-两个都是**翅膀之间撞了就会在注册的那一刻失败。** 不会晚点悄悄哪个不生效。
+不同翅膀重复声明同一快捷键时，初始化阶段会立即抛出异常。
 
-单独写 `accelerated` 的话，用加速键按下时会走另一个动作——比如按按钮会打开
-面板，但用 <kbd>Ctrl</kbd>+键直接套用默认值。
+指定 `accelerated` 选项，可以让快捷键触发时执行不同的动作（比如点击按钮弹出选项面板，而用快捷键时直接套用默认值）。
+
+::: warning 快捷键只在指定的编辑区域内生效
+快捷键事件只会捕捉传给 `mountToolbar({ surface })` 的编辑区域内部发生的按键。一个页面上存在多个编辑器时，必须指定 `surface` 选项才能防止快捷键事件互相干扰。
+:::
 
 ---
 
-## 怎么显示成"按下状态"
+## 按钮"激活（Pressed）"状态的显示规则
 
-按钮被涂成"现在开着"的依据只有一个。
+工具栏按钮被判定为"当前处于激活状态（Pressed）"的依据，由翅膀类型（`place`）决定：
 
-| `place` | 看的是什么 |
+| `place` | 激活判定依据 |
 |---|---|
-| `'mark'` | 光标所在位置有没有这个标记 |
-| `'attr'` | 光标所在段落的 `currentValue` |
-| `'container'`·`'void'` | 光标是不是在那个块状物件里面或上面 |
-| `'tool'` | **永远是关闭状态** |
+| `'mark'` | 当前光标位置是否应用了该行内标记 |
+| `'attr'` | 当前段落节点的 `currentValue` 返回值是否与按钮的 `value` 一致 |
+| `'container'` · `'void'` | 当前光标是否位于该块状物件内部或上方 |
+| `'tool'` | 始终保持未激活状态 |
 
-有多个值的翅膀（对齐、标题）每个按钮各写一个 `value`，只有翅膀的
-`currentValue` 答出的值和它一样的按钮才会被涂色。
+拥有多个值的翅膀（标题、对齐等），只有 `value` 与 `currentValue` 函数返回的字符串一致的按钮才会被涂成激活状态。
 
 ```ts
 currentValue: (node) => {
@@ -94,32 +88,21 @@ currentValue: (node) => {
 }
 ```
 
-**`currentValue` 答的是字符串**——就算是数字值也要用 `String()` 转成字符串
-再答。`undefined` 代表"这个节点上没有我的值"。
+---
+
+## 按钮自动隐藏规则
+
+编辑器核心会在无法应用格式的情况下，自动禁用或隐藏相关工具栏按钮：
+
+- 在**代码块内部等格式受限的区域**，行内标记及其他新建区块的按钮会自动隐藏。
+- 在块状物件（图片、表格等）的包装段落上，标题等段落属性会被隐藏（但**文本对齐（`a`）作为对齐物件本身的例外会保留**）。
+- 不在上级容器 `allows` 允许清单中的翅膀按钮会自动隐藏。
 
 ---
 
-## 站不住的地方按钮会自己藏起来
+## 动态上下文工具栏（`context`）
 
-| `place` | 什么时候藏起来 |
-|---|---|
-| `'mark'` | 在只能有纯文字的地方（比如代码块里面），而且那个地方的主人是我时 |
-| `'attr'` | 光标在装着块状物件的包装段落上时。**只有对齐（`a`）例外** |
-| `'void'`·`'container'` | 在只能有纯文字的地方，或者现在这个容器的 `allows` 不接受我时 |
-| `'tool'` | 不会藏 |
-
-对齐之所以例外，原因和前面看到的一样——块状物件的对齐不是它自己的属性，
-而是包着它的包装段落的属性。在图片上面也得能按"居中"。
-
-写了 `allows` 的话，**工具栏会自动跟着走。** 代码块里面表格按钮会消失，
-不是另外写的规则，就是从 `allows` 这一个字段推出来的。
-
----
-
-## 上下文工具栏
-
-只在光标碰到的东西上才出现的一行。按图片时出现的调整大小、光标停在链接上时
-出现的地址框，都是这里。
+针对当前光标所在元素提供专属设置工具的辅助工具栏（比如点击图片时出现的尺寸调整滑块、点击链接时出现的 URL 输入框、光标位于表格内部时出现的增加行/列按钮）。
 
 ```ts
 context: {
@@ -131,7 +114,7 @@ context: {
       label: { zh: '语气' },
       command: 'setNoteTone',
       argKey: 'value',
-      attr: 't',                                    // 读取当前值的属性字段
+      attr: 't',                                    // 读取当前值的节点属性字段
       values: [
         { value: 'info', label: { zh: '提示' } },
         { value: 'warn', label: { zh: '警告' } },
@@ -141,73 +124,41 @@ context: {
 }
 ```
 
-### 什么时候出现
+### 上下文工具栏控件类型（`ContextControl`）
 
-光标所在位置**碰到的一切**都会各自展开自己那一行。
-
-- 光标路径上的所有容器（内层在前，外层在后）
-- 被瞄准的块状物件（比如在包装段落上被选中的图片）
-- 光标所在位置挂着的**标记们**——和工具栏按钮不同，标记也有自己的上下文行
-- 光标所在段落带值的**段落属性**翅膀
-
-在表格里的链接上放光标，链接那一行和表格那一行会一起出现。
-
-### `ContextControl` 的七种
-
-| `kind` | 是什么 | 要一起写的 |
+| `kind` | 控件形态 | 主要属性 |
 |---|---|---|
-| `'button'` | 按一下跑一个命令 | `command` · `args?` |
-| `'toggle'` | 开/关两种状态 | `command` · `token` |
-| `'select'` | 从列表选一个 | `command` · `argKey` · `values` · `attr?` |
-| `'range'` | 拖动刻度（调整大小） | `command` · `argKey` · `values` · `rest?` · `readout?` |
-| `'text'` | 一个文字输入框（链接地址） | `command` · `argKey` · `initial?` · `placeholder?` · `validate?` |
-| `'prompt'` | 好几个输入框合成一个面板 | `command` · `fields` |
-| `'lightbox'` | 放大看 | `src` · `alt?` |
+| `'button'` | 简单点击按钮 | `command`、`args?` |
+| `'toggle'` | 开/关切换开关 | `command`、`token` |
+| `'select'` | 下拉选择菜单 | `command`、`argKey`、`values`、`attr?` |
+| `'range'` | 滑动条（调整宽度等） | `command`、`argKey`、`values`、`rest?`、`readout?` |
+| `'text'` | 文本输入框（链接地址等） | `command`、`argKey`、`initial?`、`placeholder?`、`validate?` |
+| `'prompt'` | 复合表单输入弹窗 | `command`、`fields` |
+| `'lightbox'` | 图片放大弹窗 | `src`、`alt?` |
 
-七种共同都有 `name`（必需）· `label?` · `svg?` · `tip?` · `visible?`。
-
-`visible: (node) => boolean` 是**在同一只翅膀内部挑格子藏起来**的门——比如
-只在已经合并的格子上显示"取消合并"。
-
-写了 `attr` 就会直接从那个属性字段读当前值来上色。`'toggle'` 用 `token` 和
-`currentValue` 答出的字符串做比较。
+所有控件都共同支持 `name`（必需）、`label?`、`svg?`、`tip?`、`visible?` 属性。通过 `visible(node)` 函数，可以根据特定条件（比如仅在单元格已合并时才显示"取消合并"按钮）动态控制控件的显示与否。
 
 ---
 
-## `styles` ——翅膀携带的 CSS
+## 翅膀专属样式（`styles`）
+
+翅膀可以自带所需的 CSS 样式。
 
 ```ts
 styles: `
-.nabi-content aside[data-nabi-note] {
-  border-inline-start: 3px solid var(--nabi-accent);
-  padding: .6rem .9rem;
-  background: color-mix(in srgb, var(--nabi-accent) 8%, transparent);
-}
+  .nabi-content aside[data-nabi-note] {
+    border-left: 3px solid var(--nabi-accent);
+    padding: 0.5rem 1rem;
+    margin: 1rem 0;
+  }
 `
 ```
 
-四条规则。
-
-- **限定在 `.nabi-content` 下面。** 不能扩散到宿主页面的其他文字上。
-- **字号用 `rem` 或 `em`。**
-- **深色分支只用 `.dark` 类名来分。** 用媒体查询来分的话，宿主开着浅色画面
-  时编辑器会单独变暗。
-- **宽窄用容器查询来量。** 基准是编辑器所在容器的宽度，不是屏幕宽度。
-
-只想装注册过的部分，就自己收集、挂上去。
-
-```ts
-import { collectSheets, injectSheets } from 'nabi-note'
-
-const detach = injectSheets(document, collectSheets(registry))
-```
-
-同一段文字的样式表**只会加载一次**——好几只翅膀分着带同一段 CSS，文档里
-也只会挂上一份。答案是撤销函数，**只撤掉这次调用新挂上的部分。**
+通过 `collectSheets(registry)` 与 `injectSheets(document, sheets)`，可以只把已注册翅膀的样式动态注入文档，相同的样式字符串不会被重复注入。
 
 ---
 
-## 向人发问
+## 对接用户对话框（`ask`）
 
 ```ts
 const { nabi, registry } = createNabiWith(wings, {
@@ -218,50 +169,22 @@ const { nabi, registry } = createNabiWith(wings, {
 })
 ```
 
-`confirm` 既接受 `boolean` 也接受 `Promise<boolean>`——可以直接插浏览器自带的
-`confirm`，也可以弹出自己做的面板，晚点再给答案。
+- `message`：显示简单提示（`(text: string) => void`）
+- `confirm`：确认/取消选择窗（`(text: string) => boolean | Promise<boolean>`）
+- `choose`：多选项选择窗（`(question: string, options: ChooseOption[]) => number | Promise<number>`）
 
-第三个位置 `choose` 是**从好几个里选一个**——粘贴出现两个以上候选时会开这
-道门。
+`ChooseOption` 的结构是 `{ label: string, icon?: string }`，返回值是所选选项的从 0 开始的下标（取消时为 `-1`）。
 
-```ts
-choose: (question, options) => user_callback(question, options),   // 答案是下标
-```
-
-拿到的候选列表是 `ChooseOption` 数组，有两个字段。
-
-| | |
-|---|---|
-| `label` | 那个位置显示的名字 |
-| `icon?` | 一个 16×16 svg 的**内容**（几条 path）。外壳由面板自己套上，**不给的话就只显示名字** |
-
-答案是**一个下标**——`0` 是最上面那个，`-1`（或者超出范围的数字）代表取消，
-这种情况下什么都不会粘贴。`number` 和 `Promise<number>` 都接受。
-
-::: warning 不给的话，`confirm` 答"不"，`choose` 答最上面那个
-不插 `ask` 就会用一套安安静静的默认值。`message` 哪儿都不去，`confirm` 答
-`false`。这么定的理由是**该问却悄悄没问成**，总比**悄悄就那么做成了**要好。
-本地历史记录里"真的要删除吗"走的就是这道门。
-
-`choose` 单独反过来定——默认是 **0（最上面那个）**。这里要是答取消，粘贴就会
-整个消失，而列表里第一个候选永远是"最像的那种读法"，没人可问的时候答它就是
-对的。而且 `choose` 通常**不用另外插**——只要工具栏立着，它自己就会把面板挂
-到核心上。
-:::
-
-::: tip 命令没法发问
-命令是纯函数，不认识画面也不认识时间。需要发问的事要在命令外面问，**拿到
-答案之后**再调用命令。翅膀内部能做这件事的地方是 `attach`，在那里用
-`host.nabi.$ask` 就能问到。
+::: warning 未指定 ask 处理函数时的默认行为
+不传入 `ask` 处理函数时，`confirm` 出于安全考虑默认返回 `false`（取消）。`choose` 在没有处理函数时默认选中第一个候选项（下标 `0`）——像粘贴格式选择这类 UI，会在 `mountToolbar` 挂载时自动绑定核心内置的专属界面，因此一般环境下无需自己实现 `choose`。
 :::
 
 ---
 
 ## 接下来的文档
 
-- [行内标记](../custom/inline) · [块与段落属性](../custom/block) ·
-  [键、自动转换、粘贴](../custom/input)
-- [主题与 CSS 变量](../../style/custom) —— 样式表依赖的变量名
+- [创建行内标记](../custom/inline) · [创建块与段落属性](../custom/block) · [键位、自动转换、粘贴](../custom/input)
+- [样式自定义](../../style/custom) — CSS 变量与主题指南
 
 <script setup lang="ts">
 import { useTranslate } from '../../../.vitepress/src/langs.ts'

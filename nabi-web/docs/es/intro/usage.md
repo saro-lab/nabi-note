@@ -131,8 +131,7 @@ mountSurface({ nabi, registry, root: surface, placeholder: '' })   // sin texto 
 
 El salto de línea (`\n`) se convierte tal cual en una línea. Sin embargo, como el texto
 guía se coloca **fuera del flujo** (para no empujar el cursor), si el área de edición
-mide solo una línea de alto, un texto guía de varias líneas se desborda hacia abajo — si
-va a usar varias líneas, déle al área de edición esa misma altura mínima.
+mide solo una línea de alto, un texto guía de varias líneas se desborda hacia abajo.
 
 Un editor vacío ya se levanta `12.5rem` de alto por defecto, así que la mayoría de las veces lo dejas tal cual; cuando necesites más, súbelo con `--nabi-content-min-height`. Ese valor aplica **solo a la superficie de edición** — en un documento publicado o visto en vista previa, la altura es el texto en sí.
 
@@ -147,29 +146,84 @@ es la hoja de estilos. Para cambiar el color o el aspecto, reescriba esta regla.
 
 **El texto guía es una capa aparte.** Se ha movido hacia el `::before` de la raíz de edición, así que está **intacto a la disposición del documento** — sin importar si la primera línea es un encabezado, está centrada o lleva una letra capital. Solo la dirección del texto decide dónde se para.
 
-### No bloquees el zoom con la meta viewport
-
-iOS Safari amplía la página entera cuando el foco llega a un campo de formulario cuyo texto es menor que 16px. El núcleo detiene eso **haciendo el texto más grande** — `--nabi-touch-font-size` (`16px` por defecto). **No** tomamos el otro camino de bloquear el zoom mismo con `user-scalable=no` o `maximum-scale=1`: eso quita el derecho de quien lee a hacer zoom. Si el host escribe esa meta en su propia página, el piso que el núcleo fijó se vuelve sin sentido — así que no lo escribas.
-
 | Ensamblaje | Obligatorio | Qué hace |
 |---|---|---|
-| `createNabiWith(wings, options?)` | Sí | Devuelve `{ nabi, registry }`. No necesita DOM. También acepta el arreglo de wings o el constructor de selección (`wings()`, vea [{{ t('menu_intro_cdn') }}](./cdn#elegir-wings)) |
+| `createNabiWith(wings, options?)` | Sí | Devuelve `{ nabi, registry }`. No necesita DOM. Acepta el arreglo de wings tal cual, o el constructor de selección (`wings()`, vea [{{ t('menu_intro_cdn') }}](./cdn#elegir-wings)) |
 | `mountSurface({ nabi, registry, root })` | Sí | Ajusta cursor, IME y entrada al árbol de nabi. También conecta el `attach` de los wings registrados |
-| `mountToolbar({ nabi, registry, root, surface?, locale? })` | No | La barra de herramientas principal. Sin ella se puede editar igual con `applyCommand()`. Enchufa la respuesta de `mountFile()` en `file` y **el panel de guardado se levanta sin cableado** — el botón de guardar y <kbd>⌘</kbd><kbd>S</kbd> lo abren. Déjalo fuera y la pulsación llega al host por `onHost('save')`, como antes. |
+| `mountToolbar({ nabi, registry, root, surface?, locale?, file? })` | No | La barra de herramientas principal. Sin ella se puede editar igual con `applyCommand()`. Enchufa la respuesta de `mountFile()` en `file` y **el panel de guardado se levanta sin cableado** — el botón de guardar y <kbd>⌘</kbd><kbd>S</kbd> lo abren. Déjalo fuera y la pulsación llega al host por `onHost('save')`, como antes. `surface` es también **el terreno donde viven los atajos** (vea [Dónde se escuchan los atajos](#dónde-se-escuchan-los-atajos)) |
 | `mountContextToolbar({ nabi, registry, root, surface? })` | No | Barra contextual según el lugar del cursor (fila/columna de tabla, lenguaje de código, dirección/nombre de enlace, etc.) |
 | `mountHints({ toolbar, context?, root, surface? })` | No | La insignia de atajos que aparece al pulsar Shift dos veces seguidas |
 | `mountViewTools({ nabi, surface, root, container, onBody? })` | No | Los botones de vista previa y pantalla completa. `root` es la caja `.nabi` que fija la pantalla completa, y `onBody` es el gancho para conectar el runtime del lado de lectura al cuerpo de la vista previa (ver abajo) |
-| `mountSticky({ root, surface })` | No | Compensa la barra pegada por lo que el teclado móvil empujó la pantalla. Da el `nabi` y **después de editar empuja el cursor fuera de bajo la barra sin que se lo pidas** — déjalo fuera y funciona como antes, solo cuando el host llama `aim()` |
+| `mountSticky({ root, surface, chrome?, nabi? })` | No | Compensa la barra pegada por lo que el teclado móvil empujó la pantalla. Da el `nabi` y **después de editar empuja el cursor fuera de bajo la barra por sí solo** — déjalo fuera y funciona como antes, solo cuando el host llama `aim()` (vea [El teclado móvil y la barra pegada](#el-teclado-móvil-y-la-barra-pegada)) |
 | `mountPickedMark({ nabi, surface })` | No | La marca al seleccionar una imagen o un video (el navegador no la dibuja solo) |
-| `mountFile({ nabi, store, name? })` | Al usar save·open | Guardar y abrir como archivo `.nabi`, `.html`, `.nhtml` |
+| `mountFile({ nabi, store, registry, parse?, name? })` | Al usar save·open | Guarda en **tres** formatos — `.nabi`, `.nhtml`, `.md` — y abre **cuatro**, esos tres más un `.html` de afuera. **`registry` es obligatorio** — de ahí sale la lista de formatos y el ensamblaje de md y HTML. `parse` es la puerta que lee HTML; en el navegador se puede omitir y `parseNodes` entra por defecto, pero en un lugar sin cabeza (servidor, pruebas) hay que pasarlo para que `.nhtml` y `.html` se abran. El `FileMount` que devuelve es **el camino de referencia para guardar y abrir sin wings** (`file.save()` · `file.saveAs(id, name)` · `file.formats()` · `await file.open()`) |
 | `mountLocalHistory({ nabi, storage })` | Al usar localHistory | Registro en el navegador a intervalos fijos. Se levanta también cuando `storage` es `null` (un lugar bloqueado como `file://`) — así puede avisar por toast por qué el botón no funciona |
 | `mountUpload({ … })` + `mountUploadView({ … })` | Al usar upload | El progreso de subida por arrastre, pegado o selección de archivo, y su indicador |
 
-**Arrastrar una celda de tabla, alternar una casilla, colorear código o seleccionar una
-imagen no necesitan un `mount` aparte** — todos los trae el wing con `attach`, y
+**Arrastrar una celda de tabla, alternar una casilla, colorear código o cambiar el tamaño
+de una imagen no necesitan un `mount` aparte** — todos los trae el wing con `attach`, y
 `mountSurface` los conecta junto con el resto. Para el coloreado de código solo hace
 falta enchufar quién colorea
 (`makeCodeAttach`, vea [{{ t('menu_block_code') }}](../wing/block/code)).
+
+### Dónde se escuchan los atajos
+
+Un atajo como <kbd>⌘</kbd><kbd>S</kbd> lo escucha un solo lugar: la barra de
+herramientas. Hasta dónde llega ese oído lo traza `mountToolbar({ surface })` — **solo
+una tecla que ocurre dentro de esa superficie o de las filas de la barra** pertenece a
+ese editor.
+
+- **Si hay dos editores en una página, hay que pasar `surface` sin falta.** Sin él, la
+  barra vuelve a escuchar el documento entero, y <kbd>⌘</kbd><kbd>S</kbd> pulsado en el
+  editor de abajo guarda el texto del editor de arriba. Hasta una tecla pulsada en un
+  campo de formulario cualquiera del host puede quedar atrapada.
+- **Si no se registra el wing, la tecla no existe.** Guardar y abrir viven en el núcleo
+  (`mountFile`), pero el botón y el atajo son del wing — así que un editor construido
+  solo con `wings().allBasic()` no tiene <kbd>⌘</kbd><kbd>S</kbd> ni
+  <kbd>⌘</kbd><kbd>O</kbd>. El único camino de vuelta es `.use('save').use('open')`.
+- **Si no hay a dónde llegar, la tecla no se traga.** Cuando el botón de guardar no está
+  conectado a nada (ni `file` ni `onHost`), la tecla sigue de largo hacia el navegador
+  tal cual. No le quitamos un atajo al lector por un trabajo que no hacemos — tragárselo
+  en silencio haría pensar que el navegador está roto.
+
+Para guardar y abrir sin wings, se usa la manija que devuelve `mountFile` — en un editor
+sin botón ni atajo, el host mismo llama `file.save()` y `file.open()`.
+
+### El teclado móvil y la barra pegada
+
+`mountSticky` ahora hace más en móvil — vigila cuándo sube y baja el teclado, y saca el
+cursor **por debajo de la barra y por encima del teclado**. Tres cosas que el host debe
+saber.
+
+- **Solo se mueve mientras el editor tiene el foco.** Sin foco no da un paso — la
+  pantalla no debe saltar mientras el host empuja un valor con `setHtml()`.
+- **Mientras una mano desplaza la pantalla, no empuja ni un píxel.** Se queda quieto
+  250ms después de un desplazamiento — quitarle la pantalla a una mano que la está
+  moviendo es justamente lo que causa el temblor.
+- **Solo reacciona a un cambio del tamaño de un teclado.** Que la barra de direcciones se
+  pliegue (unos pocos píxeles) no mueve nada; la puerta solo se abre pasado
+  `max(120px, 15% de la altura de la ventana)`.
+
+Al escribir, empuja **solo lo justo** — arrastrar la pantalla hasta la barra en cada
+carácter sería inutilizable. En el instante en que sube el teclado, en cambio, alinea la
+vista para que **la barra quede pegada arriba del todo**, y una vez que el viewport se
+asienta, la alinea una vez más.
+
+`--nabi-bar-height` es el valor que usa este paso — `mountSticky` escribe la **altura
+medida** de la barra que conecta en la raíz `.nabi`, y la hoja de estilos suma ese valor
+a `scroll-margin-block-start` en `.nabi-content > *`. **No es un valor para que el host
+lo toque, sino la explicación de por qué el cursor nunca queda escondido bajo la
+barra** — sin este mount se usa una estimación de `3.5rem`, que se queda corta cuando la
+barra pasa a dos filas o aparece la contextual.
+
+::: warning No bloquees el zoom con la meta viewport
+iOS Safari amplía la página entera cuando el foco llega a un campo de formulario cuyo
+texto es menor que 16px. El núcleo detiene eso **haciendo el texto más grande** —
+`--nabi-touch-font-size` (`16px` por defecto). **No** tomamos el otro camino de bloquear
+el zoom mismo con `user-scalable=no` o `maximum-scale=1`: eso quita el derecho de quien
+lee a hacer zoom. Si el host escribe esa meta en su propia página, el piso que el núcleo
+fijó se vuelve sin sentido — así que no lo escribas.
+:::
 
 ### Se conecta el runtime del lado de lectura a la vista previa
 
@@ -409,6 +463,16 @@ las construye el host.
 `confirm`. Un `message` no conectado sale como el toast (info) del núcleo de arriba, y
 la respuesta de un `confirm` no conectado es "no".
 
+**`choose` normalmente no hace falta conectarlo.** El panel de elegir formato al pegar se
+cuelga solo del núcleo en cuanto se levanta la barra de herramientas (el mismo mecanismo
+que el del toast), así que una página que levanta una barra tiene el panel sin hacer
+nada. Conecte esta casilla solo cuando quiera reemplazarlo por un panel propio. Sin panel
+colgado y sin esta casilla conectada, **la respuesta es 0 (el primero de la lista)** —
+una dirección distinta a la de `confirm`, cuyo "no conectado" responde "no". Responder
+cancelar aquí haría que el pegado desapareciera del todo, y el primer candidato de la
+lista siempre es "la lectura más probable", así que sin nadie a quien preguntar, esa es
+la respuesta correcta.
+
 ::: warning Si no se da, la respuesta es "no"
 Una pregunta que nadie respondió no cuenta como "sí" — significa lo mismo que cancelar,
 pulsar Escape o cerrar la ventana. Como este es el lugar donde se decide "¿descarto el
@@ -449,6 +513,14 @@ porque, mientras el guardado tarda, lo que se escribió mientras tanto debe segu
 contando como "cambiado". El wing de guardado (`save`) llama a esto después de que el
 archivo ya se escribió de verdad, así que al guardar como `.nabi`, `isChanged()` pasa a
 `false`.
+
+::: warning Solo `.nabi` mueve la línea base
+Lo que sale como `.nhtml` o `.md` es una **copia**, y una copia no mueve la línea base —
+después de guardarla, `isChanged()` sigue en `true`. Tratar una copia como "ya guardado"
+haría que la ventana se cerrara sin preguntar, llevándose el original a medio escribir
+con ella. Cuando el guardado es asíncrono, la línea base se mueve **solo después de que
+tiene éxito** — un guardado fallido no la toca.
+:::
 
 **Si se deshace hasta volver al punto de partida, vuelve a ser `false`** — como el árbol
 de nabi es inmutable y en cada edición se reemplaza entero, se sabe en el acto si es el

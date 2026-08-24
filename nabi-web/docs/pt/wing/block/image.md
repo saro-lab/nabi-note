@@ -6,55 +6,50 @@ title: Imagem
 
 ## Descrição
 
-`imageWing` (nome `img`) é dono da imagem (`<img>`). É **um bloco sem interior**, como `hr` e
-`youtube`. Pressionar o botão abre um painel de entrada de endereço.
+`imageWing` (identificador `img`) é dono do elemento de imagem (`<img>`). Como `hr` e `youtube`,
+é um bloco `place: 'void'` sem nada dentro. Clique no botão da barra de ferramentas e aparece um
+painel para digitar o endereço da imagem.
 
-**O endereço é filtrado pelo esquema, não pela extensão.** Só `http:`, `https:` e caminhos
-relativos passam; um endereço relativo a protocolo, como `//example.com/a.png`, é recusado. Se
-termina em `.png` **ninguém verifica** — é comum um endereço servir uma imagem sem extensão
-nenhuma.
+**O endereço é validado pelo esquema, não pela extensão do arquivo.** Só `http:`, `https:` e
+caminhos relativos são permitidos — esquemas maliciosos como `javascript:` e endereços relativos
+a protocolo (`//example.com/a.png`) são filtrados. Um endereço de API dinâmico que devolve uma
+imagem sem extensão é suportado sem problema.
 
-Como o cursor não entra dentro da imagem, clicar nela seleciona a imagem inteira e faz a linha
-de contexto aparecer.
+Como o cursor nunca entra numa imagem, clicar nela seleciona a imagem inteira e abre uma linha de
+contexto dedicada:
 
-| Grupo | Campos |
+| Controle | Descrição |
 |---|---|
-| Largura | oito campos de dez em dez, de `30` a `100` (padrão `60`) — é uma escala, e o valor atual aparece junto |
-| Ver | Só a figura, em tamanho grande — não altera o documento |
+| Largura | um controle deslizante que ajusta a largura de `30%` a `100%` em passos de 10% (padrão `60%`) |
+| Ver grande (lightbox) | amplia a imagem no tamanho original numa janela modal |
 
-**A linha de contexto só tem esses dois.** Os campos de esquerda, centro e direita não estão
-aqui — o lugar da imagem não é responsabilidade dela mesma, e sim do **parágrafo wrapper que a
-envolve**, e esse trabalho é feito pelo botão de alinhamento da barra de ferramentas.
+O alinhamento esquerda/centro/direita de uma imagem é uma propriedade do **parágrafo wrapper
+(`<div data-nabi-p>`)** que a envolve, então ele é ajustado pelos botões de alinhamento da barra
+de ferramentas principal.
 
-**Uma imagem recém-inserida fica centralizada** — porque `insertLump` veste o alinhamento `c`
-no parágrafo wrapper ao construí-lo.
-
-Ao sair, a largura gruda na imagem, e o alinhamento, no parágrafo que a envolve.
+Uma imagem recém-inserida fica centralizada (`data-nabi-align="c"`) por padrão.
 
 ```html
 <div data-nabi-p data-nabi-align="c"><img src="…" alt="" data-nabi-width="70"/></div>
 ```
 
-Os valores de alinhamento são `l`, `c`, `r`. Nenhum `style` inline sai — a aparência real é
-desenhada pela folha de estilo que lê esses atributos dentro de um `.nabi-content` com
-`nabi.css` aplicado.
+Ela é salva como atributo semântico sem `style` inline — o tamanho e o alinhamento reais são
+desenhados pelo `nabi.css`.
+
+### Permitindo endereços locais (`allowLocalUrls`)
 
 ```ts
 makeImageWing({ allowLocalUrls?: boolean })
 ```
 
-Ligando `allowLocalUrls`, endereços `blob:` e `data:image/...` também são permitidos — ligue só
-em cenários de demo e envio, onde o arquivo é pré-visualizado sem servidor. O padrão é
-desligado.
+Defina `allowLocalUrls: true` e endereços locais nos formatos `blob:` e `data:image/...` também
+são permitidos — útil, por exemplo, para uma pré-visualização local antes de um upload de arquivo
+(padrão `false`).
 
-Quando uma imagem quebra (endereço morto, expirado, ou um blob que sumiu), um espaço reservado
-aparece sozinho — o wing carrega essa tarefa via `attach`, e `mountSurface` prende junto o
-`attach` dos wings registrados. **Não há nada separado para montar.** Essa marca é só de tela e
-nunca sobra no valor salvo.
-
-`allowLocalUrls` pode ser ligado em dois lugares — no editor inteiro
-(`createNabiWith(wings, { allowLocalUrls: true })`), ou só no wing de imagem
-(`makeImageWing({ allowLocalUrls: true })`).
+Se o endereço de uma imagem for inválido, ou um endereço blob tiver expirado e o carregamento
+falhar, o hook `attach` do wing mostra automaticamente um espaço reservado de imagem quebrada.
+Funciona sem configuração extra de montagem e, sendo uma interface só de tela, não afeta os dados
+salvos.
 
 ## Exemplo de uso
 
@@ -74,7 +69,7 @@ mountContextToolbar({ nabi, registry, surface, root: document.querySelector<HTML
 // nabi.onChange(() => user_callback(nabi.getHtml()))
 ```
 
-Para deixar aberto, tal e qual, um arquivo recebido por envio (endereço `blob:`):
+Para permitir endereços `blob:`, use a função fábrica:
 
 ```ts
 makeImageWing({ allowLocalUrls: true })

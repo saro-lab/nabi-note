@@ -6,69 +6,24 @@ title: Datei hochladen
 
 ## Beschreibung
 
-Der Upload zerfällt in drei Stücke — mit der bloßen Registrierung des Flügels geschieht nichts.
+Der Dateiupload läuft über das Zusammenspiel von drei Modulen:
 
-1. **`uploadWing`** — heftet der Werkzeugleiste die Schaltfläche zur Dateiauswahl an. Dieser Flügel
-   selbst erzeugt weder `img` noch `a` — eine hochgeladene Datei wird als das festgeschrieben, was der
-   Bild- oder Link-Flügel zeichnet, deshalb müssen Sie **`imageWing` oder `linkWing` mit
-   registrieren**, damit das Ergebnis im Dokument landet. Fehlt beides, **kommt die Ausnahme genau an
-   der Stelle der Registrierung** (nie später).
-2. **`mountUpload({ … })`** — die Seite, die die Dateien tatsächlich entgegennimmt und `uploader`
-   laufen lässt. Drop, Einfügen und die Auswahl-Schaltfläche fließen alle hierher. **Lassen Sie dieses
-   Mounten aus, steht zwar die Schaltfläche da, aber es geschieht nichts.**
+1. **`uploadWing`**: stellt der Werkzeugleiste eine Schaltfläche für Dateianhänge bereit. Das Ergebnis wird als Bild- oder Datei-Link-Knoten ins Dokument eingefügt, deshalb **müssen `imageWing` oder `linkWing` mit registriert sein**. Fehlen beide, wirft die Initialisierung eine Ausnahme.
+2. **`mountUpload({ … })`**: nimmt Dateien aus Drag-and-Drop, Zwischenablage-Einfügen oder der Dateiauswahl der Werkzeugleiste entgegen und übergibt sie an die `uploader`-Funktion des Hosts.
+3. **`mountUploadView({ … })`**: zeichnet die Platzhalter-UI für den Uploadfortschritt auf dem Bildschirm.
 
-::: warning Einfügen kommt nur zur Hälfte hier an
-Wenn Einfügen **Text enthält** (ob `text/html` oder `text/plain`), lädt Upload überhaupt nicht —
-stattdessen werden die Zeichen zu Kandidaten und gehen zum
-[Einfügen-Panel](../../intro/usage). Nur ein **Einfügen ohne Text** fließt zu Upload.
-
-Wenn Sie ein Feld aus Excel kopieren und einfügen, kommen Tabelle und Text zusammen, daher ist das
-Ergebnis **eine Tabelle, kein Bild**. Wenn Sie uploaden möchten, kopieren Sie nur das Bild allein.
-Drop (Dateien ziehen und ablegen) ist von dieser Regel unabhängig und fließt immer zum Upload.
+::: warning Regel für den Umgang mit Datei-Uploads beim Einfügen aus der Zwischenablage
+Enthalten die Zwischenablage-Daten **Text oder HTML** (`text/html` oder `text/plain`), läuft das Einfügen über die normale Text-/Markdown-Pipeline statt über den Upload. Die Upload-Pipeline wird nur aufgerufen, wenn die Zwischenablage ausschließlich Dateidaten enthält. (Ein per Drag-and-Drop angehängtes Bild läuft immer über die Upload-Pipeline.)
 :::
 
-3. **`mountUploadView({ … })`** — die Seite, die Fortschritts-Platzhalter auf dem Bildschirm
-   aufstellt. Ohne sie funktioniert der Upload trotzdem, nur sagt der Bildschirm während des Laufs
-   nichts.
+Die `uploader`-Funktion hat die Signatur `(task) => Promise<{ uri: string } | null>`. Bei erfolgreichem Upload zum Server gibt sie ein `{ uri }`-Objekt zurück, bei einem Fehlschlag `null`. Über den Callback `task.onProgress(0–100)` lässt sich der Fortschritt melden, über `task.signal` das Abbruchsignal behandeln.
 
-`uploader` hat die Gestalt `(task) => Promise<{ uri } | null>` — **eine URI bedeutet Erfolg, `null`
-bedeutet Fehlschlag**, und der Platzhalter wird entfernt. Mit `task.onProgress(0–100)` melden Sie den
-Fortschritt, und bricht `task.signal` ab, halten Sie an.
+Optionen für Dateierweiterung und Größenbegrenzung: `extensions`, `maxFileSize`, `maxTotalSize` (ohne Angabe kein Limit). Ungültige Dateien werden an den `onReject`-Callback übergeben.
 
-Die Grenzen sind `extensions`, `maxFileSize` und `maxTotalSize`, alle optional (0 oder weggelassen
-bedeutet keine Grenze). Herausgefilterte Dateien kommen bei `onReject` an.
+## Wie das Dokument nach dem Upload gerendert wird
 
-## Was nach dem Hochladen zurückbleibt
-
-Bilder werden als Block von `imageWing` festgeschrieben, alle übrigen Dateien als Anhang-Link von
-`linkWing`.
-
-- **Der Name eines Anhangs ist ein lokalisiertes Namensschild, nicht der Dateiname** — auf Deutsch
-  „Anhang". Ein Dateiname ist meist zu lang, um ihn im Dokument zu belassen, und vor allem muss er
-  änderbar sein. Setzen Sie den Caret in diesen Link und ändern Sie ihn im
-  [Namensfeld der Kontextzeile](../inline/link).
-- **Die Endung bleibt als Kennzeichen zurück** — `data-nabi-file="pdf"`. Dieser Wert wird aus dem
-  echten Dateinamen gezogen, und das Stylesheet zeichnet ihn als Abzeichen. Ändern Sie den Namen,
-  reist das Kennzeichen mit.
-- Eine Adresse, die der Link-Flügel ablehnen würde (etwa ein `blob:`, das ohne eingeschaltetes
-  `allowLocalUrls` hereinkommt), wird zum bloßen Dateinamen als reinem Text herabgestuft — die
-  Whitelist wird nie umgangen.
-
-## Was während des Hochladens zu sehen ist
-
-Während eine Datei hochlädt, steht an dieser Stelle ein vorläufiger Kasten — er lebt nur im DOM des
-Editors, nie im Nabi-Baum, sodass im gespeicherten Wert kein einziges Zeichen davon zurückbleibt.
-
-- **Bilder** zeigen sofort eine aus der gewählten Datei gebaute Vorschau, über die sich ein Raster
-  legt. Mit dem Fortschritt wird Feld für Feld abgetragen, bis das Bild scharf dasteht. Die Reihenfolge,
-  in der die Felder verschwinden, ist pro Datei gemischt, sodass beim gleichzeitigen Hochladen mehrerer
-  Bilder nie dasselbe Muster wiederkehrt.
-- **Dateien, die keine Bilder sind**, erhalten einen Kasten ohne Raster — eine 📎-Büroklammer mit dem
-  Namensschild „Anhang" — mit der Endung daneben als Großbuchstaben-Abzeichen (`PDF` und so weiter). Ein
-  Bild, dessen Vorschau sich nicht zeichnen lässt, fällt ebenfalls hierher.
-- Der Fortschritt reitet als `data-nabi-per` auf dem Kasten, und das Stylesheet zeichnet ihn. Jeder
-  Kasten trägt während des Hochladens eine Abbrechen-Schaltfläche (×), und während der Stapel läuft, ist
-  das Bearbeiten gesperrt.
+- **Bilddateien** werden als `<img>`-Blockobjekt von `imageWing` eingefügt.
+- **Sonstige Anhänge** werden als Datei-Download-Link von `linkWing` eingefügt (`<a data-nabi-file="pdf" href="...">`). Der Anzeigetext des Anhangs wird passend zur Locale als „Anhang" erzeugt und lässt sich frei ändern, indem Sie den Cursor in den Link setzen und die Kontextleiste nutzen.
 
 ## Anwendungsbeispiel
 
@@ -87,23 +42,23 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// Der Upload braucht den Bild- und Link-Flügel, damit ein Ergebnis zurückbleibt — ohne sie kommt hier sofort die Ausnahme
+// Der Upload-Flügel braucht den Bild- oder Link-Flügel mit registriert
 const { nabi, registry } = createNabiWith([imageWing, linkWing, uploadWing])
 
 mountSurface({ nabi, registry, root: surface })
 
-// Die Seite, die die Fortschritts-Platzhalter aufstellt — zuerst bauen, dann unten verdrahten
+// UI-View für den Uploadfortschritt mounten
 const view = mountUploadView({ nabi, surface, locale: 'de' })
 
 const upload = mountUpload({
   nabi,
   root: surface,
   locale: 'de',
-  extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'],
-  maxFileSize: 10 * 1024 * 1024,
+  extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'zip'],
+  maxFileSize: 10 * 1024 * 1024,   // 10 MB
   uploader: async (task) => {
-    // Hier kommt der Code hin, der wirklich auf Ihren Server hochlädt. Eine URI bedeutet Erfolg, null bedeutet Fehlschlag
-    // const uri = await user_callback(task.file, task.onProgress, task.signal)
+    // Hier die tatsächliche Upload-Logik zum Backend-Server implementieren
+    // const uri = await myUploadApi(task.file, task.onProgress, task.signal)
     // return { uri }
     return null
   },
@@ -114,18 +69,15 @@ const upload = mountUpload({
 })
 
 mountToolbar({
-  nabi, registry, surface,
+  nabi,
+  registry,
+  surface,
   root: document.querySelector<HTMLElement>('#toolbar')!,
-  // Wohin die von der Dateiauswahl-Schaltfläche der Werkzeugleiste gewählten Dateien fließen
   onFiles: (files) => upload.take(files),
 })
 ```
 
 ## Demo
-
-Diese Website hat keinen Server, auf den sich etwas laden ließe, und tut daher nur so — sie gibt die
-von `URL.createObjectURL()` erzeugte `blob:`-Adresse unverändert zurück. Das Ergebnis bleibt allein
-auf dieser Seite.
 
 <WingDemo path="/wing/etc/upload" />
 

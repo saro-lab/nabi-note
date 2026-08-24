@@ -6,19 +6,16 @@ title: Lettrine
 
 ## Description
 
-`dropCapWing` est un attribut de paragraphe à valeur unique qui pose `data-nabi-dropcap="1"` sur
-un paragraphe. Elle ne crée aucun nouveau bloc ; elle ne fait que poser une marque sur un
-paragraphe déjà existant.
+`dropCapWing` est un wing d'attribut de paragraphe qui affiche la première lettre d'un
+paragraphe comme une grande lettre décorative (`data-nabi-dropcap="1"`).
 
-- La valeur n'est qu'allumée/éteinte — appuyer de nouveau sur le bouton retire l'attribut.
-- **Il n'existe aucune option ni aucune variable pour fixer combien de lignes elle englobe.** Une
-  seule règle `::first-letter` de la feuille du cœur fixe la taille —
-  `font-size: 5.9em; line-height: .83`. Le nombre de lignes que la lettre couvre réellement
-  découle de l'interligne de ce paragraphe.
-- Comme sa portée se limite à la seule première lettre, Entrée traite cet attribut comme une
-  marque — fendre le paragraphe ne le duplique pas dans les deux moitiés, il suit cette lettre.
+- Il fonctionne comme un simple interrupteur marche/arrêt.
+- La taille de la première lettre est fixée par une règle `::first-letter` de la feuille de
+  style du cœur (`font-size: 5.9em; line-height: .83`).
+- Si vous scindez le paragraphe avec Entrée pendant la saisie, l'attribut de lettrine n'est pas
+  dupliqué dans les deux moitiés — il reste attaché à la lettre d'origine.
 
-Pour changer la taille, redéfinissez cette règle.
+Pour personnaliser la taille, redéfinissez la règle ci-dessous :
 
 ```css
 .nabi-content [data-nabi-dropcap="1"]::first-letter { font-size: 4.6em; line-height: .86; }

@@ -169,6 +169,28 @@ Untuk mengganti hanya warna, Anda tidak perlu menulis aturan baru — cukup `--n
 Untuk pewarnaan kode, cukup pasang siapa yang mewarnai
 (`makeCodeAttach`, lihat [{{ t('menu_block_code') }}](../wing/block/code)).
 
+### Tempat akselerator hidup
+
+Hanya satu tempat yang mendengarkan akselerator seperti <kbd>⌘</kbd><kbd>S</kbd>, dan itu adalah
+toolbar. Seberapa jauh telinganya menjangkau digambar oleh `mountToolbar({ surface })` — **hanya
+tombol yang ditekan di dalam `surface` itu atau baris toolbar** yang menjadi milik editor itu.
+
+- **Dengan dua editor di satu halaman, `surface` wajib diberikan.** Tanpanya toolbar jatuh
+  kembali mendengarkan seluruh dokumen, dan <kbd>⌘</kbd><kbd>S</kbd> yang ditekan di editor bawah
+  menyimpan teks editor atas. Bahkan tombol yang ditekan di kolom input biasa milik host pun ikut
+  tertangkap.
+- **Tidak daftarkan wing apa pun dan tombol itu sama sekali tidak ada.** Simpan dan buka hidup di
+  core (`mountFile`), tetapi tombol dan akseleratornya milik wing — jadi editor yang berdiri hanya
+  dengan `wings().allBasic()` tidak punya <kbd>⌘</kbd><kbd>S</kbd> maupun <kbd>⌘</kbd><kbd>O</kbd>.
+  Satu-satunya jalan baliknya adalah `.use('save').use('open')`.
+- **Tanpa tempat berlabuh, tombolnya tidak ditelan.** Pada susunan yang tombol simpannya tidak
+  menyentuh apa-apa (`file` maupun `onHost` tidak dipasang), tombolnya mengalir terus ke browser
+  sebagai miliknya sendiri — kami tidak mengambil pintasan untuk pekerjaan yang tidak kami
+  lakukan.
+
+Untuk menyimpan dan membuka tanpa wing, pakai pegangan yang dijawab `mountFile` — pada editor
+tanpa tombol dan tanpa akselerator, host sendiri yang memanggil `file.save()` dan `file.open()`.
+
 ### Keyboard mobile dan toolbar tempel
 
 `mountSticky` melakukan lebih banyak di mobile — menonton keyboard naik dan turun,

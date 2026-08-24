@@ -6,56 +6,50 @@ title: Image
 
 ## Description
 
-`imageWing` (nom `img`) est propriétaire de l'image (`<img>`). Comme `hr` et `youtube`, c'est
-**un bloc sans intérieur**. Appuyez sur le bouton et un panneau de saisie d'adresse apparaît.
+`imageWing` (identifiant `img`) est propriétaire de l'élément image (`<img>`). Comme `hr` et
+`youtube`, c'est un bloc `place: 'void'` sans rien à l'intérieur. Cliquez sur le bouton de la
+barre d'outils et un panneau de saisie d'adresse d'image apparaît.
 
-**L'adresse est filtrée par son schéma, pas par son extension.** Seuls `http:`, `https:` et les
-chemins relatifs passent ; une adresse relative au protocole comme `//example.com/a.png` est
-refusée. Que l'adresse se termine par `.png` **n'est vérifié par personne** — car il est courant
-qu'une adresse serve une image sans extension.
+**L'adresse est validée par son schéma, pas par son extension.** Seuls `http:`, `https:` et les
+chemins relatifs sont autorisés — les schémas malveillants comme `javascript:` et les adresses
+relatives au protocole (`//example.com/a.png`) sont filtrés. Une adresse d'API dynamique qui
+renvoie une image sans extension est prise en charge sans problème.
 
-Le caret ne peut jamais entrer dans une image, donc cliquer dessus sélectionne l'image entière et
-fait apparaître la ligne contextuelle.
+Le curseur ne peut jamais entrer dans une image, donc cliquer dessus sélectionne l'image entière
+et fait apparaître une ligne contextuelle dédiée :
 
-| Contrôle | Champ |
+| Contrôle | Description |
 |---|---|
-| Largeur | huit paliers de dix en dix, de `30` à `100` (par défaut `60`) — une échelle, avec la valeur actuelle affichée |
-| Aperçu | l'image seule, en grand — ne change rien au document |
+| Largeur | un curseur qui règle la largeur de `30 %` à `100 %` par paliers de 10 % (par défaut `60 %`) |
+| Voir en grand (visionneuse) | agrandit l'image à sa taille d'origine dans une fenêtre modale |
 
-**La ligne contextuelle ne contient que ces deux-là.** Les champs gauche, centre et droite ne
-sont pas ici — l'emplacement d'une image est porté non par l'image mais par **le paragraphe
-enveloppe qui la tient**, donc ce sont les boutons d'alignement de la barre d'outils qui font ce
-travail.
+L'alignement gauche/centre/droite d'une image est une propriété du **paragraphe enveloppe
+(`<div data-nabi-p>`)** qui la porte, donc on l'aligne avec les boutons d'alignement de la barre
+d'outils principale.
 
-**Une image nouvellement insérée est centrée** — parce que `insertLump` pose l'alignement `c`
-sur le paragraphe enveloppe en la dressant.
-
-À la sortie, la largeur se pose sur l'image et l'alignement sur le paragraphe qui l'enveloppe.
+Une image nouvellement insérée est centrée (`data-nabi-align="c"`) par défaut.
 
 ```html
 <div data-nabi-p data-nabi-align="c"><img src="…" alt="" data-nabi-width="70"/></div>
 ```
 
-Les valeurs d'alignement sont `l`, `c` et `r`. Aucun `style` en ligne ne sort — l'allure réelle
-est dessinée par la feuille qui lit cet attribut à l'intérieur d'un `.nabi-content` où `nabi.css`
-est lié.
+Elle est enregistrée comme attribut sémantique sans `style` en ligne — la taille et l'alignement
+réels sont dessinés par `nabi.css`.
+
+### Autoriser les adresses locales (`allowLocalUrls`)
 
 ```ts
 makeImageWing({ allowLocalUrls?: boolean })
 ```
 
-Activez `allowLocalUrls` et les adresses `blob:` et `data:image/...` sont aussi permises —
-n'activez cela que pour des démos et des scénarios de téléversement qui prévisualisent un fichier
-sans serveur. C'est désactivé par défaut.
+Réglez `allowLocalUrls: true` et les adresses locales aux formats `blob:` et `data:image/...`
+sont aussi autorisées — utile par exemple pour un aperçu local avant l'envoi d'un fichier (valeur
+par défaut `false`).
 
-Quand une image est cassée (une adresse morte, expirée, ou un blob disparu), un substitut
-apparaît tout seul — la wing porte cela dans son propre `attach`, et `mountSurface` branche
-l'`attach` de chaque wing enregistrée. **Il n'y a rien de plus à monter.** Cette marque est
-réservée à l'écran et ne survit jamais dans la valeur enregistrée.
-
-Vous pouvez l'activer à deux endroits — pour tout l'éditeur avec
-`createNabiWith(wings, { allowLocalUrls: true })`, ou pour la seule wing image avec
-`makeImageWing({ allowLocalUrls: true })`.
+Si l'adresse d'une image est invalide, ou qu'une adresse blob a expiré et que le chargement
+échoue, le crochet `attach` de la wing affiche automatiquement un substitut d'image cassée. Cela
+fonctionne sans configuration de montage supplémentaire, et comme c'est une interface purement
+visuelle, cela n'a aucun effet sur les données enregistrées.
 
 ## Exemple d'utilisation
 
@@ -75,7 +69,7 @@ mountContextToolbar({ nabi, registry, surface, root: document.querySelector<HTML
 // nabi.onChange(() => user_callback(nabi.getHtml()))
 ```
 
-Pour laisser ouvert tel quel un fichier reçu d'un téléversement (une adresse `blob:`) :
+Pour autoriser les adresses `blob:`, utilisez la fonction fabrique :
 
 ```ts
 makeImageWing({ allowLocalUrls: true })

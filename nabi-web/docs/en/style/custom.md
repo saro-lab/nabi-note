@@ -1,15 +1,13 @@
 ---
 title: Custom styles
-description: Colors and shapes are changed by overriding CSS variables.
+description: How to customize NABI NOTE's colors, fonts, spacing and other styles using CSS variables.
 ---
 
 # Custom styles
 
-**The host attaches the sheet** — one line of `import 'nabi-note/nabi.css'` with a bundler, or one
-`<link>` on a CDN. After that, overriding variables is all there is to it.
+**The host application loads the stylesheet itself** — `import 'nabi-note/nabi.css'` in a bundler environment, or a `<link>` tag on a CDN. After that, overriding just the CSS variables you need changes the entire editor theme consistently.
 
-The component rules carry **not one color literal.** Everything is drawn through `--nabi-*`
-variables, so override the variables and the rest follows.
+Every UI component in NABI NOTE is **styled solely through `--nabi-*` CSS variables, with no hard-coded color literals**, so overriding the variables alone is enough to match your branding.
 
 ```css
 .nabi.nabi.nabi {
@@ -17,80 +15,62 @@ variables, so override the variables and the rest follows.
 }
 ```
 
-Why the class is stacked three times is in [Staying clear of
-specificity](#staying-clear-of-specificity) below.
+For why the class selector is stacked three times, see the [CSS specificity guide](#css-specificity-guide) section below.
 
-::: tip The large premise of this page — a stored value does not stand on its own
-The outgoing HTML (`getHtml()`) contains **not one character of inline `style`.** The stored value
-says only *what* something is, through attributes (`data-nabi-align="center"`), and this
-stylesheet says how it looks. So when the reading side draws stored HTML, it has to be **inside a
-`.nabi-content` with this sheet on it** to look the way the editor did — see [Rendering stored HTML
-elsewhere](#rendering-stored-html-elsewhere) below.
+::: tip Stored HTML contains no inline styles
+The HTML the editor outputs (`getHtml()`) **contains no inline `style` attributes.** The markup carries only semantic structure and attributes (such as `data-nabi-align="center"`), while the stylesheet handles the visual presentation. So when you render stored HTML on an external page, you still need to place it **inside a `.nabi-content` container with `nabi.css` applied** for it to look the same as it did in the editor.
+
+See [Rendering stored HTML elsewhere](#rendering-stored-html-elsewhere) below for details.
 :::
 
-::: tip Dark and light are already in there
-There is **no** token the host has to override for the sake of a theme. The core sheet brings all
-three — the light defaults, the `.dark` redefinition and an explicit `.light` redefinition. Inside
-the editor, this site overrides nothing but four font tokens.
+::: tip Light and dark themes are built in by default
+The host doesn't need to define any extra variables for the default theme. The core stylesheet already ships with the light defaults, a `.dark` theme, and an explicit `.light` theme.
 :::
 
-## Color and shape tokens
+## Color and theme tokens
 
 | Token | Meaning | Default (light) |
 |---|---|---|
-| `--nabi-bg` · `--nabi-soft` | background · slightly pressed surface | `#fff` · `rgb(0 0 0 / 4.5%)` |
-| `--nabi-fg` · `--nabi-muted` · `--nabi-on-accent` | text · dimmed text · text on the accent | `#1b1b1f` · `#6b6b76` · `#fff` |
-| `--nabi-line` · `--nabi-accent` | lines · accent color | `#e2e2e8` · `#3b6fe0` |
-| `--nabi-danger` · `--nabi-on-danger` | danger · text on it | `#d93b3b` · `#fff` |
-| `--nabi-shadow` · `--nabi-scrim` | box shadow · preview backdrop | — |
-| `--nabi-radius` · `--nabi-radius-sm` · `--nabi-radius-xs` | corners | `6px` · `4px` · `3px` |
-| `--nabi-layer-radius` | corners of a layer (panel, preview, lightbox) | `.25rem` |
-| `--nabi-z-sticky` | layer number of the sticky row | `20` |
-| `--nabi-grid-cell` | cell size of the table size grid | `1.125rem` |
-| `--nabi-hl-yellow`·`green`·`cyan`·`pink`·`purple`·`orange` | the six highlight colors | translucent colors |
-| `--nabi-tc-green`·`coral`·`violet`·`amber`·`blue` | the five text colors | solid colors |
+| `--nabi-bg` · `--nabi-soft` | Base background · hover/soft background | `#fff` · `rgb(0 0 0 / 4.5%)` |
+| `--nabi-fg` · `--nabi-muted` · `--nabi-on-accent` | Base text · muted secondary text · text on the accent color | `#1b1b1f` · `#6b6b76` · `#fff` |
+| `--nabi-line` · `--nabi-accent` | Border/divider · main accent color (focus/active) | `#e2e2e8` · `#3b6fe0` |
+| `--nabi-danger` · `--nabi-on-danger` | Danger/warning color · text on the danger color | `#d93b3b` · `#fff` |
+| `--nabi-shadow` · `--nabi-scrim` | Dropdown shadow · modal/preview dim backdrop | — |
+| `--nabi-radius` · `--nabi-radius-sm` · `--nabi-radius-xs` | Corner rounding (default · small · minimal) | `6px` · `4px` · `3px` |
+| `--nabi-layer-radius` | Corner rounding for layered popups/modals | `.25rem` |
+| `--nabi-z-sticky` | z-index of the sticky header | `20` |
+| `--nabi-grid-cell` | Grid cell size for pickers such as the table insert grid | `1.125rem` |
+| `--nabi-hl-yellow`·`green`·`cyan`·`pink`·`purple`·`orange` | The six highlighter colors | translucent colors |
+| `--nabi-tc-green`·`coral`·`violet`·`amber`·`blue` | The five text colors | solid colors |
 
-This table holds only what the core sheet (`nabi.css`) **declares itself**. The declaration sits in
-three places, not just `.nabi` — `:is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *)))`.
-The preview overlay is a child of `body`, so inheritance from `.nabi` never reaches it, and a
-`.nabi-content` standing alone outside an editor has to receive the tokens directly too.
+The variables in the table above are tokens the core stylesheet (`nabi.css`) **declares directly.** They're bound not just to `.nabi` but to three selectors — `:is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *)))` — to support standalone rendering.
 
-The same list is written out three times over (light defaults, `.dark`, explicit `.light`). **The
-overriding side does not have to look at all three** — beat the specificity once and the value you
-wrote applies in all three cases. If you do want a different value in dark, though, you have to
-attach the `.dark` condition yourself.
+## Reference-only tokens (can be set on :root)
 
-## Tokens that are only referenced, never declared
+The variables below are tokens the core stylesheet **only references — as `var(--token, fallback)` — without declaring them itself.** If the host doesn't set a value, the given fallback applies. Since they aren't declared at the core level, you **can declare them on `:root` to apply them globally.**
 
-The variables below are ones the core **references without declaring**. Give them no value and the
-fallback in parentheses stands. Since there is no place they are declared, **writing them on
-`:root` works as it stands** — that is where they part ways with the color and shape tokens above
-(those are declared on `.nabi`, where inheritance cannot win).
-
-| Token | Meaning | Fallback |
+| Token | Meaning | Default fallback |
 |---|---|---|
-| `--nabi-font` · `--nabi-font-serif` · `--nabi-font-mono` · `--nabi-font-cursive` | the fonts actually bound to the typeface wing's four kinds | system fonts |
-| `--nabi-cursive-adjust` | the cursive's `font-size-adjust`. A handwriting face has a low x-height and looks smaller at the same px, and this value re-measures it against the x-height | `0.4` |
-| `--nabi-sticky-top` | how far down the sticky row sits. If the site has a fixed header, its height | `0px` |
-| `--nabi-preview-width` | the width of the preview card. **`openPreview` measures the editing surface as it opens and writes that width onto the card itself**, so an inline value beats anything you set from outside | `720px` |
-| `--nabi-placeholder` | the hint an empty editor shows, as a quoted string. **`mountSurface` writes the word from its own `placeholder` option (or the core dictionary) onto the editing root**, so an inline value beats anything you set from outside — to change its feel, write over `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` | none (no hint) |
-| `--nabi-placeholder-color` | the color of that hint. The core **does not declare** this name; behind it stands `--nabi-placeholder-color-fallback`, which knows light and dark (light `#6b6b76aa` · dark `#9a9aa6aa`) — write this token on `:root` and it wins in both themes | `--nabi-placeholder-color-fallback` |
-| `--nabi-content-min-height` | the minimum height an empty editor stands at. It applies **to the editing surface only** (`.nabi-content.nabi-editing`) — on a published or previewed `.nabi-content` the text itself is the height, so short text leaves no empty space below it | `12.5rem` |
-| `--nabi-touch-font-size` | the text size of the input fields the core draws (`.nabi-input` — a link address, a save name, a prompt) on a finger device (`pointer: coarse` **or** a width of `40rem` or less). **iOS Safari zooms the whole page when focus lands in a form field smaller than 16px**, and this is the floor that stops it. A mouse screen does not change by a single pixel | `16px` |
+| `--nabi-font` · `--nabi-font-serif` · `--nabi-font-mono` · `--nabi-font-cursive` | Font family for the editor and each branch of the typeface wing | system fonts |
+| `--nabi-cursive-adjust` | The `font-size-adjust` ratio for the cursive font | `0.4` |
+| `--nabi-sticky-top` | Top offset of the sticky toolbar (set to the height of a fixed site header, if any) | `0px` |
+| `--nabi-preview-width` | Default width of the preview modal card | `720px` |
+| `--nabi-placeholder` | Placeholder text shown in an empty editor | none |
+| `--nabi-placeholder-color` | Color of the placeholder text (falls back to a theme-specific color if unset) | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | Minimum height of an empty editing surface (applies only to the editing surface, `.nabi-editing`) | `12.5rem` |
+| `--nabi-touch-font-size` | Font size of form inputs (`.nabi-input`) on touch devices (`pointer: coarse` or width 40rem or less) — prevents iOS Safari's auto-zoom | `16px` |
 
-`--nabi-typeface-base` is not of this kind — **the core declares it** (left alone it follows
-`--nabi-font`). The typeface wing has no option for it, so override the token to change it.
+`--nabi-typeface-base` isn't reference-only — **the core declares it directly** (it references `--nabi-font` by default). To change the default font, override `--nabi-font`.
 
-`--nabi-keyboard-top` and `--nabi-keyboard-bottom` stand in the same place, but **the core writes
-them** — `mountSticky()` measures how far a mobile keyboard pushed the screen up and writes it
-here, and the sticky row and full screen read that value. They are not values to write by hand.
+`--nabi-keyboard-top` and `--nabi-keyboard-bottom` are internal variables that **`mountSticky()` measures and writes dynamically** from the mobile keyboard's height.
 
-## Where there is no token — override the rule
+`--nabi-bar-height` is likewise an internal variable that **`mountSticky()` measures and writes** from the toolbar's actual height. It's used as the `scroll-margin-block-start` on `.nabi-content > *` elements so they don't end up hidden under the toolbar when scrolled to.
 
-The three below have **no variable**. The core bakes the value into a rule, so to change one you
-override its selector.
+## Overriding fixed styles that have no variable
 
-**The four text sizes** — in `em`, so they follow the parent size.
+The three properties below are defined as fixed CSS rules rather than variables, so to change them you override the class selector directly.
+
+**The four text sizes** (in `em`, relative to the parent size):
 
 ```css
 .nabi-content [data-nabi-size="xs"] { font-size: .75em; }
@@ -99,15 +79,13 @@ override its selector.
 .nabi-content [data-nabi-size="xl"] { font-size: 1.5em; }
 ```
 
-**The drop cap's size** — not a count of lines to wrap, just a letter size. How many lines it
-actually covers is decided by that paragraph's line height.
+**The drop cap's first-letter size**:
 
 ```css
 .nabi-content [data-nabi-dropcap="1"]::first-letter { font-size: 5.9em; line-height: .83; }
 ```
 
-**Code token colors** — the code wing's sheet writes colors straight onto `[data-nabi-token]`.
-**Five** kinds currently get a color.
+**Code block token colors**:
 
 ```css
 .nabi-content [data-nabi-token="comment"] { color: #7a8a7a; font-style: italic; }
@@ -117,75 +95,49 @@ actually covers is decided by that paragraph's line height.
 .nabi-content [data-nabi-token="literal"] { color: #2f8f4e; }
 ```
 
-The `type` a highlighter answers with is a free-form string — any name outside those five draws
-with no color, so add a rule of the same shape for the kinds you want. For different colors in
-dark, attach the `.dark` condition yourself: the core ships no dark variant for these five.
+---
 
-The upload wing's progress animation (`--nabi-per`, `--nabi-t`, `--nabi-span`, `--nabi-clear`,
-`--nabi-blur-max`) is **internal to that wing** — the names start with `--nabi-`, but they are not
-a place opened up for the host to override.
+## Unit conventions
+
+Most UI dimensions — button size, spacing, toolbar height and so on — are defined in `rem`, so they **scale in proportion to the root (`html`) font size.** If a user enlarges the default font size in their browser or OS, the editor UI naturally scales up with it.
 
 ---
 
-## Outer sizing is `rem`
+## CSS specificity guide
 
-The outer sizing — buttons, spacing, toolbar chips and the rest — is mostly in `rem`, so it **grows
-with the root (`html`) font size.** Enlarge the text in the browser or the OS and the editor's frame
-grows with it. To change the size, change the root's `font-size`. A border is a *line* rather than a
-size, so there are places where `px` remains.
-
----
-
-## Staying clear of specificity
-
-To override a color or shape token, stack **three classes**.
+When overriding a theme color variable declared by the core, we recommend **stacking three classes** to reliably raise the style's priority.
 
 ```css
 .nabi.nabi.nabi,
 .nabi-scrim.nabi-scrim.nabi-scrim {
-  --nabi-accent: var(--my-accent);
+  --nabi-accent: #7c3aed;
 }
 ```
 
-Counted out, it goes like this. The light-default rule `:is(.nabi, …)` is **(0,1,0)**, since
-`:is()` takes the highest of its arguments; the dark rule `:where(html, body).dark :is(.nabi, …)`
-is **(0,2,0)**, since `:where()` counts zero and `.dark` and `:is()` are one class each. So
-`.nabi.nabi` only **ties** with dark — and on a tie the one loaded later wins, and the core sheet
-may well be loaded after the host's. Stack three to get to (0,3,0) and nothing rests on load order.
+- The light-default rule `:is(.nabi, …)` has a specificity of **(0, 1, 0)**.
+- The dark-mode rule `:where(html, body).dark :is(.nabi, …)` has a specificity of **(0, 2, 0)**.
+- So stacking three classes as in `.nabi.nabi.nabi` gets you a specificity of **(0, 3, 0)**, which reliably wins regardless of CSS load order.
 
-The preview overlay stands outside `.nabi` (as a child of `body`), so its selector has to be written
-alongside for it to get the same color.
-
-**A token the core does not declare, such as a font, needs none of this wrestling** — there is no
-place it is declared, so inheritance alone reaches it and one `:root` line is enough.
-
-```css
-:root {
-  --nabi-font: 'Noto Sans', system-ui, sans-serif;
-}
-```
+The preview modal is mounted as a direct child of `body`, so you also need to specify the `.nabi-scrim.nabi-scrim.nabi-scrim` selector for the same theme color to apply there too.
+Reference-only tokens the core doesn't declare, such as font tokens, apply correctly with a single declaration on `:root`.
 
 ---
 
-## Light and dark
+## Light / dark theme
 
-A `dark` class on **either** `html` or `body` means dark, `light` means light. With no class, light
-is the default, and with both, the explicit `light` wins (the `.light` rules are loaded after the
-`.dark` ones).
+The dark theme applies when the `html` or `body` element carries a `dark` class, and the light theme when it carries a `light` class. With no class, the default light theme applies, and if both classes are present, the explicit `light` class wins.
 
 ```html
 <html class="dark"><!-- or <body class="dark"> --></html>
 ```
 
-Toggle the class and the CSS reacts. There is no API to call. What a theme swaps is the color
-variables alone; the component rules stay as they are — styles you wrote yourself follow dark too,
-as long as they use only `--nabi-*` variables.
+Switching themes just means toggling the class — there's no separate JavaScript API to call. When you write custom styles, using `--nabi-*` variables means their colors automatically follow theme switches too.
 
 ---
 
-## Two ways to attach the sheet
+## Ways to load the stylesheet
 
-**① One file** — the most common road. Every wing's CSS is in it.
+**1. Import the whole CSS file** (the most common, recommended way)
 
 ```ts
 import 'nabi-note/nabi.css'
@@ -195,132 +147,64 @@ import 'nabi-note/nabi.css'
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note/dist/nabi.css">
 ```
 
-**② Inject only what you registered** — for when you want just the sheets of the wings actually
-turned on.
+**2. Dynamically inject only the registered wings' styles**
 
 ```ts
 import { collectSheets, injectSheets } from 'nabi-note'
 
 const drop = injectSheets(document, collectSheets(registry))
-// call drop() and only what this call put in is taken back out
+// calling drop() removes the injected styles from the DOM
 ```
 
-A sheet with the same text goes in **once** — the key it folds on is the sheet's **content**, so
-raising several editors in one document never stacks them, and mixing different wing sets gathers
-into a single union.
-
-:::: tip Two differences between them — what's included, and when it attaches
-**What's included.** A file cannot know which wings you registered, so it carries **all** of them.
-Injection reads the `registry` and carries **only what you registered**. A page that merely
-displays stored HTML has no editor and therefore no `registry`, so it takes the file route.
-
-**When it attaches.** A file arrives as a `<link>` in the head and **blocks rendering** until it
-loads. Injection attaches only **after the editor's JavaScript arrives**. So a page whose document
-is rendered ahead of time on the server and sent down should take the file route — over injection,
-the server-rendered document would first paint bare and then get restyled and relaid-out once the
-sheet lands.
-::::
-
-The sheets of the wings you registered go in **after** the core sheet, so at equal priority the wing
-wins.
+Identical stylesheet content is never injected twice — it's managed as a single tag.
+In a server-side rendering (SSR) setup, it's best to load the static CSS file rather than inject it, to avoid a flash of unstyled content (FOUC) before the client-side JS runs.
 
 ---
 
-## What you can target
+## Customizable CSS classes and UI elements
 
-What a variable cannot do, aim at the classes that actually exist.
-
-| Selector | What | Who attaches it |
+| Selector | What it is | Created by |
 |---|---|---|
-| `.nabi` | the shell wrapping the whole editor (chrome + writing area). The color and shape tokens hang here | the host |
-| `.nabi-content[contenteditable]` | the writing area itself | the host |
-| `.nabi-toolbar` | the slot wrapping the toolbar row and the context row. This class *is* "sticks to the top" | the host |
-| `.nabi-toolbar-row` | the container the toolbar sits in | `mountToolbar()` |
-| `.nabi-context` | the container the context row sits in | `mountContextToolbar()` |
-| `.nabi-tools` | the slot for the preview and full-screen buttons — the core floats it to the top right | `mountViewTools()` |
-| `.nabi-tool` | those two buttons themselves | `mountViewTools()` |
-| `.tb-group` | a group of toolbar buttons | `mountToolbar()` |
-| `.ctb-group` · `.ctb-button` · `.ctb-swatch` · `.ctb-input` | the context row's groups, buttons, color swatches and text fields | `mountContextToolbar()` |
-| `.tb-picker` · `.tb-picker-grid` · `.tb-picker-cell` | the box that opens under a button, such as the table size grid | `mountToolbar()` |
-| `.tb-prompt` · `.tb-prompt-input` | the address layer that opens when inserting something new | `mountToolbar()` |
-| `.nabi-hints [data-hint]` | the shortcut badges from a double tap of Shift — the badge is `::before` and the label `::after`, so the two show together | `mountHints()` |
-| `[data-nabi-tip]` | the tooltip — drawn with CSS `::after` alone | the core throughout |
-| `.nabi-content.nabi-dropping` | the writing area while a file is being dragged over it. The guidance text rides on the `data-nabi-drop` attribute | `mountUpload()` |
+| `.nabi` | Top-level container wrapping the whole editor (toolbar + editing area) | the host |
+| `.nabi-content[contenteditable]` | The actual body editing area | the host |
+| `.nabi-toolbar` | Sticky header container wrapping the toolbar and context bar | the host |
+| `.nabi-toolbar-row` | The main toolbar's button row | `mountToolbar()` |
+| `.nabi-context` | The dynamic context toolbar container | `mountContextToolbar()` |
+| `.nabi-tools` | Wrapper for the preview and full-screen buttons | `mountViewTools()` |
+| `.nabi-hints [data-hint]` | The shortcut-hint badge shown on a rapid double-press of Shift | `mountHints()` |
+| `[data-nabi-tip]` | Button tooltip (rendered with CSS `::after`) | core components |
+| `.nabi-content.nabi-dropping` | The editing area while a file is being dragged over it | `mountUpload()` |
 
-The preview and full screen are **built by the core** too.
+### Modals and popups
 
-| Selector | What | Who |
+| Selector | What it is | Created by |
 |---|---|---|
-| `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | the document preview overlay | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | the box showing one picture alone, large | `openLightbox()` |
-| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | the panel for picking a paste candidate | `openChoosePanel()` |
-| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | the save panel — name field, extension marker, format cells | `openSavePanel()` |
-| `.nabi.is-fullscreen` | full screen — pins the `.nabi` box to the screen | `setFullscreen()` (the class name is `FULLSCREEN_CLASS`) |
-
-::: tip The two panels share **one set of rules**
-The paste panel and the save panel are built from the same grid part, so their selectors come in
-pairs — `.nabi-choose-list`/`.nabi-save-list` · `.nabi-choose-row`/`.nabi-save-row` ·
-`.nabi-choose-icon`/`.nabi-save-icon` · `.nabi-choose-label`/`.nabi-save-label`. **Both** mark the
-aimed cell with `[aria-selected="true"]`, and that marking is a single `--nabi-accent` border —
-neither panel fills a cell.
-
-Three things belong to the save panel alone: `.nabi-save-name` (the name row), `.nabi-save-ext`
-(the extension marker), and `.nabi-save-note` (the lossy note — smaller than the name, and in no
-warning color).
-
-`--nabi-grid-cols` is the column count of the grid, but **the hand that stands the panel writes
-it** — the panel counts its cells and writes up to three inline onto the list itself, so it is not a
-value for the host to set from outside. `--nabi-save-ext-len` (the character width of the extension
-marker) is the same kind of value.
-:::
-
-::: warning `.nabi-save-format` is gone
-That was the name from when the save panel was a vertical list. A host that used it to override the
-hover fill **fails silently** — one cell of the grid is now `.nabi-save-row` (the same slot name as
-in the paste panel), and there is no inner fill on hover or on aim at all.
-:::
-
-Attach `mountViewTools()` and the two buttons open and close these by themselves. To open them
-yourself, call `openPreview({ nabi, surface })`,
-`openLightbox({ surface, src, alt?, locale })`, `setFullscreen(root, on)` or
-`isFullscreen(root)`.
-
-::: tip The tools slot builds itself
-`mountViewTools()` **raises its own box** and prepends it to the container you hand it — it does not
-turn that container into `.nabi-tools`. So pass it the toolbar itself and nothing breaks: the class
-that floats to the right end is on a span of the core's own making, standing first, and the buttons
-already in the row flow around it.
-:::
-
-The editor-screen markers can be targeted too — `[data-nabi-token]` (a code block's token colors),
-`[data-nabi-lang]` (a code block's language), `[data-color]` (highlight and text color — told apart
-by the `<mark>` and `<span>` tags), and `data-nabi-align`, `data-nabi-typeface`, `data-nabi-size`,
-`data-nabi-dropcap` (paragraph attributes). The canonical names of these markers are the `*_ATTR`
-constants in each wing's file.
+| `.nabi-scrim` > `.nabi-card` > `.nabi-content.nabi-preview-body` | The document preview modal | `openPreview()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | The image lightbox popup | `openLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` | The paste-format picker popup | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` | The save-file popup (filename input and format picker) | `openSavePanel()` |
+| `.nabi.is-fullscreen` | The class activating the editor's full-screen mode | `setFullscreen()` |
 
 ---
 
 ## Rendering stored HTML elsewhere
 
-The outgoing value (`getHtml()`) is HTML with `data-nabi-*` attributes left on it, and **not
-one character of inline `style`.** Which means the look is entirely the sheet's job, and so drawing
-it without the sheet gives you bare HTML with no alignment, no text sizes and no table lines.
-
-To draw it the way the editor did, wrap it in `.nabi-content` — this class receives the color and
-shape tokens directly, without a `.nabi` around it (the `.nabi-content:where(:not(.nabi *))` rule in
-`nabi.css`).
+The HTML string extracted with `getHtml()` consists only of semantic markup and `data-nabi-*` attributes, with no inline `style`.
+To render it on an external page with the same look as the editor, wrap the body in a `.nabi-content` class and load `nabi.css`.
 
 ```html
-<div class="nabi-content">your stored HTML</div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note/dist/nabi.css">
+
+<div class="nabi-content">
+  <!-- the HTML body saved via nabi.getHtml() -->
+</div>
 ```
 
-For the sheet itself, take route ① from the section above — a page with no editor has no
-`registry` to gather from.
+Even without wrapping it in `.nabi`, the theme and font tokens apply to `.nabi-content` itself, so you can reproduce exactly the styling you saw in the editor.
 
-### Viewer-side behavior — table sorting
+### Enabling read-only table sorting
 
-Right now **table sorting alone** ships as a reading-side function. There is no general system yet
-for an arbitrary wing to hang its own reading-side behavior.
+To enable column sorting for tables on a published HTML page, attach the `attachTableSort` function.
 
 ```ts
 import { attachTableSort } from 'nabi-note/viewer'
@@ -328,20 +212,18 @@ import { attachTableSort } from 'nabi-note/viewer'
 const detach = attachTableSort(document.querySelector('#article')!, { locale: 'en' })
 ```
 
-It finds tables carrying `data-nabi-sortable` and puts sort buttons in the header cells. The release
-function (`detach`) takes back the buttons it planted and the row order it changed.
+It detects tables carrying the `data-nabi-sortable` attribute and adds sort buttons to the column headers. Calling the returned `detach()` function removes the added DOM buttons and restores the original row order.
 
-::: danger Do not attach it to an element you edit
-`attachTableSort()` plants buttons in the DOM and changes the row order. Save the DOM while it is
-attached and that hardens into the value — on the reading side, attach it only to a read-only copy.
+::: warning Don't apply attachTableSort to a DOM you're editing
+`attachTableSort()` manipulates the DOM structure directly, so applying it to an editor area still being edited can permanently bake the sort-button UI into the document body. Only ever use it on a read-only viewer screen.
 :::
 
 ---
 
 ## Next
 
-- [{{ t('menu_wing_custom') }}](../wing/custom) — build a format that does not exist yet
-- [{{ t('menu_intro_index') }}](../intro) — the words this documentation uses
+- [{{ t('menu_wing_custom') }}](../wing/custom) — build your own custom formatting wing
+- [{{ t('menu_intro_index') }}](../intro) — introduction to NABI NOTE and its architecture
 
 <script setup lang="ts">
 import { useTranslate } from '../../.vitepress/src/langs.ts'

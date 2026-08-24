@@ -6,18 +6,18 @@ title: Gras
 
 ## Description
 
-`boldWing` est propriétaire (par `claim`) de `<b>`. Sélectionnez du texte et appuyez sur le
-**B** de la barre d'outils, ou passez par le mode indice (Shift deux fois puis `B`), et cette
-portée devient grasse.
+`boldWing` est la wing inline qui gère la mise en gras (`<b>`). Sélectionnez du
+texte et appuyez sur **B** dans la barre d'outils, passez par le mode indice
+(Shift deux fois, puis `B`), ou utilisez le raccourci (`Ctrl`/`⌘`+`B`).
 
-- À l'entrée, elle accepte à la fois `<b>` et `<strong>` ; à la sortie, c'est toujours un seul
-  `<b>`. Aucun attribut ne survit — `class`, `style`, `data-*` tombent et seule la balise reste.
-- Le raccourci en mode indice est `B`, l'accélérateur est `Ctrl`/`⌘`+`B` (`mod+b`).
-- L'appuyer avec du texte sélectionné est un bascule (`toggleMark`) — si tout est déjà en gras,
-  cela le retire, sinon cela l'applique. Cette wing ne pose aucune commande à elle — le bouton
-  utilise `action: { kind: 'mark' }`, qui va directement au `toggleMark` du cœur.
-- Laissez-la non enregistrée et `<b>` perd son enveloppe et retombe en texte brut (c'est ce qui
-  arrive à toute balise non enregistrée — une règle valable pour tout nabi).
+- À l'entrée, `<b>` et `<strong>` sont tous deux reconnus ; à la sortie, c'est
+  toujours la balise standard `<b>`.
+- Avec du texte sélectionné, c'est un bascule — si la sélection est déjà en gras,
+  elle est retirée, sinon elle est appliquée.
+- Sans sélection, avec seulement le curseur, le raccourci réserve la mise en gras
+  pour le prochain texte saisi.
+- Si la wing n'est pas enregistrée, la balise `<b>` est automatiquement retirée
+  et seul le texte brut est conservé.
 
 ## Exemple d'utilisation
 
@@ -27,7 +27,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// La liste des wings bâtit ensemble la connaissance des sortes, les commandes et les assembleurs — c'est le `registry`
 const { nabi, registry } = createNabiWith([boldWing])
 
 mountSurface({ nabi, registry, root: surface })

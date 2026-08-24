@@ -6,15 +6,14 @@ title: Cursiva
 
 ## Descripción
 
-`italicWing` es el propietario (claim) de `<i>`. Se usa en texto que cambia de
-textura, como una palabra extranjera o una cita.
+`italicWing` es el wing de marca en línea que aplica el formato de cursiva (`<i>`). Se
+usa para distinguir el tono del texto: énfasis, palabras extranjeras y similares.
 
-- Al entrar reconoce tanto `<i>` como `<em>`; al salir los reúne en un único `<i>`.
-  No conserva ningún atributo.
-- El atajo del modo pista (dos pulsaciones seguidas de Shift) es `I` — se captura por
-  la tecla física (`KeyI`), así que también funciona con un teclado coreano.
-- Si lo pulsa con texto seleccionado, funciona como interruptor.
-- Si no lo registra, a `<i>` se le arranca la cáscara y cae como texto plano.
+- Al entrar reconoce tanto `<i>` como `<em>`; al salir siempre se convierte en la
+  etiqueta estándar `<i>`.
+- Admite el modo de pista (doble pulsación de Shift y luego `I`) y el atajo
+  `Ctrl`/`⌘`+`I`.
+- Ejecutarlo con texto seleccionado actúa como interruptor (toggle).
 
 ## Ejemplo de uso
 

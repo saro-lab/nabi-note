@@ -75,6 +75,13 @@ Jika `accelerated` ditulis terpisah, menekan lewat accelerator memicu aksi yang
 berbeda — misalnya menekan tombol membuka panel, sementara <kbd>Ctrl</kbd>+huruf
 langsung memasang nilai bawaan.
 
+::: warning Akselerator hanya didengar di tanah editornya sendiri
+`mountToolbar({ surface })` sekarang juga **tanah tempat akselerator hidup.** Hanya tombol yang
+ditekan di dalam `surface` itu atau di baris toolbar yang menjadi milik editor itu. Dengan dua
+editor di satu halaman, `surface` **wajib diberikan** — tanpanya toolbar mendengarkan seluruh
+dokumen dan menelan akselerator editor lain.
+:::
+
 ---
 
 ## Cara terlihat sedang ditekan

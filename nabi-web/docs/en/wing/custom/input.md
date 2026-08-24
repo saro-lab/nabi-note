@@ -88,8 +88,6 @@ list. A part (`parts`) can be the owner too, and when it is, `owner.node` is the
 while the `onKey` that runs belongs to the wing that declared it. That is why the convention is
 to branch on `owner.node.w` first, to see which one was picked.
 
-A mark can never be the owner — the reason is on the [inline page](./inline).
-
 ---
 
 ## `inputRules` — building formatting out of typing alone
@@ -114,10 +112,6 @@ inputRules: [
 It looks at the **start of the line** in front of the caret. On a match it deletes that prefix
 (and the trigger character) and runs the command.
 
-```
-type "> "   →   the "&gt;" is deleted and toggleQuote runs
-```
-
 It only fires on the **first line** of a paragraph. On a line you reached with
 <kbd>Shift</kbd>+<kbd>Enter</kbd> it does not fire — that keeps formatting from erupting in the
 middle of prose you are already writing.
@@ -127,18 +121,6 @@ middle of prose you are already writing.
 It looks at the **single word** in front of the caret. On a match it selects that word, runs the
 command, and puts the caret back where it was. No text is deleted — this is the shape for rules
 that lay a mark.
-
-If that word **already carries this wing's mark, the rule is skipped.** It cannot fire twice in
-the same place.
-
-### Rules they share
-
-- It only runs while the caret is **collapsed**. Hitting space with a range selected does
-  nothing.
-- It only runs in an ordinary paragraph — never in a wrapper paragraph holding a lump.
-- Rules are measured in the wings' array order, and the **first rule that succeeds** wins.
-- If the command answers `null` (nothing to do) it **rolls back and moves on to the next rule.**
-  A failed input rule leaves no trace in the document.
 
 ---
 
@@ -166,8 +148,7 @@ const attachNote: Attach = (host) => {
 | `host.pathOfKey(id)` | turns a `data-key` on screen into a path into the document |
 
 `mountSurface` attaches every registered wing's `attach` along with itself, and calls the
-teardown functions you returned when it comes down. This is **the one and only house where code
-that knows the DOM lives** — never touch `document` inside a command, `toHtml`, or `repair`.
+teardown functions you returned when it comes down.
 
 ::: tip Finding the document through `data-key`
 The editor build (`getEditorHtml()`) tags every node with a `data-key`. Find the nearest
@@ -192,16 +173,9 @@ initial HTML ──────────────────────�
 **`setHtml()` and initial HTML do not pass the panel.** That is where the host pushes a value in,
 so there is nothing to ask — no filters, no candidates, straight to parsing.
 
-A candidate is only actually built (and so `claim` only called) **after the person picks one in the
-panel**. Building all four candidates to use one would be waste. Building a filter of your own is
-covered in [Plugging in an IO filter](../custom#plugging-in-an-io-filter).
-
 Without a `claim`, **that tag has its shell stripped and only the text inside survives.** This
 rule is why unfamiliar markup copied out of somebody else's editor does not get lodged in the
 document as-is.
-
-The way in through JSON (`setJson()`) carries nodes rather than tags, so the gatekeeper there is
-`repair`, not `claim`.
 
 ---
 

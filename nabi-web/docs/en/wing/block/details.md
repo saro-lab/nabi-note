@@ -6,31 +6,24 @@ title: Details
 
 ## Description
 
-`detailsWing` (name `details`, shortcut `D`) owns the fold-away box (`<details>` +
-`<summary>`). The summary line comes along through `parts`, so it is never
-registered separately — and `parts` is a record, not an array.
+`detailsWing` (id `details`, shortcut `D`) handles the accordion fold-away block (`<details>` +
+`<summary>`). The summary line (`<summary>`) is built in through the `parts` attribute, so there's
+no need to register it separately.
 
 ```ts
 parts: { summary: { holds: 'inline' } }
 ```
 
-Press the button and the blocks the selection covers are wrapped into a new
-fold-away box with an empty summary line at the front. Press Enter in the summary
-line and you move down into the contents (the summary itself never splits).
+Click the toolbar button and the blocks the caret touches are wrapped into a fold-away block, with
+an empty summary line created at the top. Press Enter in the summary line and you move down into
+the body content (a line break inside the summary line never splits it).
 
-**The editor draws it exactly as it will be stored.** A box saved closed is closed
-in the editor too, and the triangle folds and unfolds it right there — that press
-is what changes the stored value (`o`). Fold it while the caret is inside and the
-caret is moved out of the box.
+**The editing screen renders exactly what will actually be stored.** A block saved closed
+(`open` not set) loads closed in the editor too, and clicking the arrow icon on the left opens or
+closes it at any time (that click changes the nabi-tree's `o` attribute immediately). If the caret
+was inside the body when you fold the block, it moves safely outside the block.
 
-::: tip There is no context row
-There used to be two buttons, **save it open** and **save it closed**. Back when
-the editing view always drew the box open, that was the only way to say which way
-it would be stored. Now the view draws the stored value and the triangle changes
-it, so those buttons were saying the same thing twice and were removed.
-:::
-
-## Usage
+## Usage example
 
 ```ts
 import { createNabiWith, mountSurface, mountToolbar, detailsWing } from 'nabi-note'

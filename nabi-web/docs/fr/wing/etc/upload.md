@@ -6,70 +6,24 @@ title: Téléversement de fichiers
 
 ## Description
 
-Le téléversement se répartit en trois morceaux — enregistrer seulement la wing ne fait rien.
+Le téléversement de fichiers repose sur l'intégration de trois modules :
 
-1. **`uploadWing`** — pose le bouton de sélection de fichier sur la barre d'outils. La wing
-   elle-même ne crée ni `img` ni `a` : un fichier téléversé est commis comme ce que dessine la
-   wing image ou la wing lien, donc **vous devez enregistrer `imageWing` ou `linkWing` à ses
-   côtés** pour que le résultat atterrisse dans le document. Sans l'une ou l'autre, **cela lève
-   une exception exactement là où vous l'enregistrez** (jamais plus tard).
-2. **`mountUpload({ … })`** — le côté qui reçoit réellement les fichiers et exécute `uploader`.
-   Les dépôts, les collages et le bouton de sélection affluent tous ici. **Omettez ce mount et le
-   bouton est là, mais rien ne se passe.**
+1. **`uploadWing`** : ajoute à la barre d'outils un bouton pour joindre un fichier. Le résultat téléversé est inséré dans le document comme un nœud image ou lien de fichier, donc **`imageWing` ou `linkWing` doit être enregistré à ses côtés**. Si aucun des deux n'est présent, une exception est levée à l'initialisation.
+2. **`mountUpload({ … })`** : reçoit les fichiers arrivant par glisser-déposer, collage depuis le presse-papiers ou sélection dans la barre d'outils, et les transmet à la fonction `uploader` de l'hôte.
+3. **`mountUploadView({ … })`** : affiche à l'écran l'interface de substitut pour la progression du téléversement.
 
-::: warning Seulement la moitié du collage vient par cette voie
-Si un collage porte **un seul morceau de texte** (`text/html` ou `text/plain`), l'envoi ne se fait
-du tout pas — le texte devient une candidate et va à la [plate-forme de collage](../../intro/usage)
-à la place. Les fichiers ne coulent dans l'envoi que depuis **un collage sans un seul caractère de
-texte dedans**.
-
-Copier des cellules d'un classeur et à la fois un tableau et du texte y arrivent, si bien que le
-résultat est **un tableau, pas une image.** Pour la téléverser comme une image, copiez l'image
-toute seule. Un dépôt (traîner un fichier dessus) vient toujours à l'envoi, peu importe cette
-règle.
+::: warning Règle de traitement d'un collage vers le téléversement de fichier
+Si les données du presse-papiers **contiennent du texte ou du HTML** (`text/html` ou `text/plain`), le collage suit le pipeline normal de texte/Markdown au lieu du téléversement. Le pipeline de téléversement n'est appelé que lorsque le collage du presse-papiers ne contient que des données de fichier. (Un fichier déposé par glisser-déposer passe toujours par le pipeline de téléversement.)
 :::
 
-3. **`mountUploadView({ … })`** — le côté qui dresse les substituts de progression à l'écran. Le
-   téléversement fonctionne quand même sans lui, mais l'écran ne dit rien pendant qu'il tourne.
+La fonction `uploader` a la signature `(task) => Promise<{ uri: string } | null>`. Elle renvoie un objet `{ uri }` en cas de réussite du téléversement vers le serveur, et `null` en cas d'échec. Le callback `task.onProgress(0–100)` permet de signaler la progression, et `task.signal` permet de gérer l'annulation.
 
-`uploader` a la forme `(task) => Promise<{ uri } | null>` — **une URI signifie le succès, `null`
-signifie l'échec** et le substitut est retiré. Signalez la progression avec
-`task.onProgress(0–100)`, et arrêtez-vous quand `task.signal` s'interrompt.
+Options de limite d'extension et de taille de fichier : `extensions`, `maxFileSize`, `maxTotalSize` (aucune limite si omises). Les fichiers invalides sont transmis au callback `onReject`.
 
-Les limites sont `extensions`, `maxFileSize` et `maxTotalSize`, toutes optionnelles (0 ou omis
-signifie aucune limite). Les fichiers filtrés arrivent à `onReject`.
+## Ce que le document affiche après le téléversement
 
-## Ce qui reste après le téléversement
-
-Les images sont commises comme des blocs `imageWing`, tout le reste comme des liens de pièce
-jointe `linkWing`.
-
-- **Une pièce jointe est nommée par une étiquette localisée, pas par le nom du fichier** — «
-  Pièce jointe » en français. Les noms de fichier sont généralement trop longs pour rester dans
-  un document, et surtout le nom doit pouvoir être modifié. Posez le caret dans le lien et
-  changez-le dans [le champ de nom de la ligne contextuelle](../inline/link).
-- **L'extension reste comme une marque** — `data-nabi-file="pdf"`. Cette valeur est tirée du vrai
-  nom du fichier et la feuille la dessine comme un badge, donc renommer le lien ne la perd pas.
-- Une URI que la wing lien refuserait (une adresse `blob:` arrivant sans `allowLocalUrls` activé,
-  par exemple) est rétrogradée au simple nom de fichier — la liste blanche n'est jamais
-  contournée.
-
-## Ce que vous voyez pendant le téléversement
-
-Une boîte provisoire se tient à la place pendant qu'un fichier se téléverse. Elle ne vit que dans
-le DOM de l'éditeur, jamais dans l'arbre nabi, donc pas un seul caractère n'en atteint la valeur
-enregistrée.
-
-- **Les images** montrent un aperçu bâti à partir du fichier choisi, avec une grille posée
-  dessus. Les cases se dégagent une par une à mesure que la progression grimpe, jusqu'à ce que
-  l'image soit nette. L'ordre dans lequel les cases se dégagent est mélangé par fichier, donc
-  téléverser plusieurs images à la fois ne répète jamais le même motif.
-- **Les fichiers qui ne sont pas des images** reçoivent une boîte sans grille — un trombone 📎 et
-  une étiquette « Pièce jointe » — avec l'extension à côté comme un badge en majuscules (`PDF`,
-  etc.). Une image dont l'aperçu ne peut pas être dessiné tombe ici aussi.
-- La progression voyage sur la boîte via `data-nabi-per` et la feuille la dessine. Chaque boîte
-  porte un bouton d'annulation (×) pendant le téléversement, et l'édition est verrouillée tant
-  que le lot tourne.
+- **Les fichiers image** sont insérés comme un objet bloc `<img>` de `imageWing`.
+- **Les autres pièces jointes** sont insérées comme un lien de téléchargement de `linkWing` (`<a data-nabi-file="pdf" href="...">`). Le texte affiché de la pièce jointe est généré selon la locale comme « Pièce jointe », et peut être librement modifié en plaçant le curseur dans le lien et en utilisant la barre contextuelle.
 
 ## Exemple d'utilisation
 
@@ -88,23 +42,23 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// Le téléversement a besoin des wings image et lien pour laisser un résultat derrière lui — sans elles, ça lève une exception ici même
+// La wing de téléversement a besoin de la wing image ou lien enregistrée à ses côtés
 const { nabi, registry } = createNabiWith([imageWing, linkWing, uploadWing])
 
 mountSurface({ nabi, registry, root: surface })
 
-// Le côté qui dresse les substituts de progression — bâtissez-le d'abord et branchez-le ci-dessous
+// Monter la vue d'interface de progression du téléversement
 const view = mountUploadView({ nabi, surface, locale: 'fr' })
 
 const upload = mountUpload({
   nabi,
   root: surface,
   locale: 'fr',
-  extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'],
-  maxFileSize: 10 * 1024 * 1024,
+  extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'zip'],
+  maxFileSize: 10 * 1024 * 1024,   // 10 Mo
   uploader: async (task) => {
-    // Mettez ici le code qui téléverse réellement vers votre serveur. Une URI signifie le succès, null signifie l'échec
-    // const uri = await user_callback(task.file, task.onProgress, task.signal)
+    // Implémentez ici la logique réelle de téléversement vers votre serveur backend
+    // const uri = await myUploadApi(task.file, task.onProgress, task.signal)
     // return { uri }
     return null
   },
@@ -115,18 +69,15 @@ const upload = mountUpload({
 })
 
 mountToolbar({
-  nabi, registry, surface,
+  nabi,
+  registry,
+  surface,
   root: document.querySelector<HTMLElement>('#toolbar')!,
-  // Là où affluent les fichiers choisis par le bouton de fichier de la barre d'outils
   onFiles: (files) => upload.take(files),
 })
 ```
 
 ## Démo
-
-Ce site n'a aucun serveur où téléverser, donc il fait seulement semblant — en rendant l'URL
-`blob:` que `URL.createObjectURL()` a fabriquée. Le résultat ne vit que dans cette page et nulle
-part ailleurs.
 
 <WingDemo path="/wing/etc/upload" />
 

@@ -166,8 +166,6 @@ There are four rules.
 - A part's name may not collide with a wing name or another part's name.
 - If a part needs tidying, write it under the part's name in `partRepair`.
 
-`StructureDecl` takes three things — `holds`, `singleParagraph` and `boolAttrs`.
-
 ### `singleParagraph`
 
 The inside is **fixed at one paragraph**. This is what a table cell is — press <kbd>Enter</kbd>
@@ -195,9 +193,6 @@ repair: (node) => {
 A stored value edited by hand, a document from another build, JSON somebody else made — all of
 it goes through this door. Only what gets past becomes a document, which makes this **the one
 place a wing can vouch for the shape of its own node.**
-
-Write `allows` and `repair` together and the `allows` tidying runs **first**, with its result
-handed on to `repair`.
 
 ---
 
@@ -231,13 +226,6 @@ For the same reason those three are already taken by `headingWing`, `alignWing` 
 to lay a value on each paragraph, wrapping in a container is the way to go for now.
 :::
 
-There are two fields for handling the value.
-
-| | |
-|---|---|
-| `attrValues` | The list of values it accepts (for a heading, `[1,2,3,4,5,6]`) |
-| `currentValue` | The value this paragraph now carries. The toolbar and the context toolbar paint the pressed slot from this answer |
-
 ---
 
 ## The public document helpers
@@ -257,13 +245,6 @@ with.
 ```ts
 return { doc: r.doc, selection: { anchor: r.caret, focus: r.caret } }
 ```
-
-::: tip If you need finer editing than this
-The inner helpers that cut and join character by character (laying on a mark, writing a
-paragraph attribute and so on) are not public API yet. Until then you may build the `doc` array
-anew yourself and answer with it — the document you answer with is tidied once more by
-`cocoon`, so a document that breaks the rules never survives as it is.
-:::
 
 ---
 

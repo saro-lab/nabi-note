@@ -6,48 +6,32 @@ title: Liste à puces
 
 ## Description
 
-`bulletListWing` (nom `ul`, raccourci `L`) est propriétaire de `<ul>`. L'élément vient avec elle
-par `parts`, donc `li` n'est jamais enregistré à part — et `parts` est une record, pas un tableau.
+`bulletListWing` (identifiant `ul`, raccourci `L`) gère les listes non ordonnées (`<ul>`). L'élément de liste (`<li>`) est intégré via l'attribut `parts`, il n'est donc pas nécessaire d'enregistrer `li` séparément.
 
 ```ts
 parts: { li: { holds: 'blocks' } }
 ```
 
-Appuyez sur le bouton et le bloc où se trouve le caret (ou tous les blocs couverts par la
-sélection) s'enveloppe en liste ; appuyez de nouveau et l'enveloppe tombe, le tout revenant au
-paragraphe. Appuyez sur un autre bouton de liste et elle change de sorte.
+Cliquer sur le bouton de la barre d'outils transforme le bloc où se trouve le curseur (ou tous les blocs sélectionnés) en liste à puces ; cliquer à nouveau restaure des paragraphes normaux. Cliquer sur un autre bouton de liste (numérotée, liste de tâches, etc.) fait passer immédiatement à ce type de liste.
 
-Taper un tiret au début d'une ligne puis une espace (`- `) donne le même résultat. **La ligne n'a
-pas besoin d'être vide** — tout ce qui est mesuré, c'est le préfixe de la ligne devant le caret,
-donc `- du texte` se déclenche à l'espace et le texte reste à l'intérieur du nouvel élément. Cela
-ne se déclenche que sur la **première ligne** d'un paragraphe.
+Taper `- ` (un tiret suivi d'une espace) au début d'un paragraphe le convertit également en liste automatiquement. Comme seul le motif de caractères juste avant le curseur est vérifié, taper l'espace après `- texte` déclenche quand même la conversion, et le texte déjà écrit reste comme contenu de l'élément de liste (cela ne fonctionne toutefois que sur la première ligne d'un paragraphe).
 
-- `Tab` indente d'un cran, en sous-élément du frère juste au-dessus. Le premier élément n'a rien
-  sous quoi aller, donc rien ne se passe — à l'intérieur d'une liste, `Tab` n'insère jamais
-  d'espaces.
-- `Shift+Tab` désindente vers le frère suivant du parent — désindenter au niveau le plus haut fait
-  sortir de la liste et donne un paragraphe. Si la sélection couvre plusieurs éléments, tous ceux
-  qu'elle couvre bougent ensemble.
-- **Entrée sur un élément vide désindente.** Au niveau le plus haut, la liste se termine là et le
-  caret se pose dans un nouveau paragraphe en dessous. C'est ainsi qu'on termine une liste.
-- **Retour arrière tout au début d'un élément le fusionne avec l'élément du dessus.** S'il n'y a
-  pas d'élément au-dessus à fusionner, cela retombe sur la désindentation. Suppr tout à la fin fait
-  l'inverse, en tirant l'élément suivant vers le haut.
-- L'intérieur d'un élément est un bloc, donc il porte un paragraphe. Les marques (le gras, par
-  exemple) et les autres wings en ligne s'emploient tels quels à l'intérieur de ce paragraphe.
-- Les attributs que portait la balise, comme `type`, ne survivent pas. Ce qui entre dans la liste
-  sans être un élément n'est pas jeté — cela s'enveloppe dans un élément.
-- La Liste de tâches partage sa balise (`<ul>`) mais c'est une wing différente — elles se
-  distinguent par un attribut de marque (`data-nabi-list="task"` signifie Liste de tâches).
+### Raccourcis et comportement d'édition
 
-## L'imbrication est du vrai balisage
+- <kbd>Tab</kbd> : indente l'élément actuel d'un niveau, l'imbriquant sous l'élément juste au-dessus. Sur le premier élément, il n'y a pas de parent sous lequel s'imbriquer, donc rien ne se passe — et à l'intérieur d'une liste, <kbd>Tab</kbd> n'insère jamais d'espace.
+- <kbd>Shift</kbd>+<kbd>Tab</kbd> : désindente l'élément actuel d'un niveau. Désindenter un élément de premier niveau le fait sortir de la liste et le transforme en paragraphe normal. Si plusieurs éléments sont sélectionnés, toute la sélection se déplace ensemble.
+- **<kbd>Entrée</kbd> sur un élément vide** : le désindente. S'il s'agissait d'un élément vide de premier niveau, la liste se termine là et un nouveau paragraphe apparaît en dessous.
+- **<kbd>Retour arrière</kbd> tout au début d'un élément** : fusionne son contenu à la fin de l'élément précédent. S'il n'y a pas d'élément précédent avec lequel fusionner, l'élément est désindenté à la place. À l'inverse, <kbd>Suppr</kbd> tout à la fin d'un élément ramène l'élément suivant sur la ligne actuelle.
+- Comme un élément (`li`) est un conteneur de blocs, il contient un paragraphe (`p`), et toute mise en forme en ligne — gras, italique, etc. — peut y être utilisée librement.
+- Les attributs non standard de la balise sont supprimés lors de la normalisation, et tout ce qui n'est pas un `li` trouvé à l'intérieur d'une liste est automatiquement enveloppé dans un élément `li` pour corriger la structure.
+- La liste de tâches partage la même balise `<ul>`, mais les deux wings se distinguent par la présence ou non de l'attribut `data-nabi-list="task"`.
 
-La structure survit telle quelle dans la valeur enregistrée. Mais **comme un élément porte des
-blocs et non du texte**, le texte porte un paragraphe et une liste imbriquée se tient à
-l'intérieur d'un paragraphe enveloppe.
+## Balisage et structure d'imbrication
+
+La structure imbriquée de l'arbre Nabi est reportée directement dans le HTML. Comme un élément de liste (`li`) contient des blocs plutôt que du texte, le texte à l'intérieur d'un élément est enveloppé dans un paragraphe `<p>`, et une sous-liste imbriquée est placée en sécurité à l'intérieur d'un paragraphe enveloppe (`<div data-nabi-p>`).
 
 ```html
-<li><p>un</p><div data-nabi-p><ul><li><p>deux</p></li></ul></div></li>
+<li><p>Élément parent</p><div data-nabi-p><ul><li><p>Élément enfant</p></li></ul></div></li>
 ```
 
 ## Exemple d'utilisation
@@ -58,7 +42,7 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// La liste des wings bâtit ensemble la connaissance des sortes, les commandes et les assembleurs — c'est le `registry`
+// Construit le registry et l'instance nabi à partir de la liste des wings enregistrées.
 const { nabi, registry } = createNabiWith([bulletListWing])
 
 mountSurface({ nabi, registry, root: surface })
@@ -67,7 +51,7 @@ mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement
 // nabi.onChange(() => user_callback(nabi.getHtml()))
 ```
 
-`li` suit automatiquement par `parts` : ne le mettez pas vous-même dans le tableau.
+`li` est enregistré automatiquement via `parts`, il n'est donc jamais transmis directement dans le tableau.
 
 ## Démo
 

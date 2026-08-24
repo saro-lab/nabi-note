@@ -1,21 +1,21 @@
 ---
 title: 制作自定义翅膀
-description: 没有的格式就做成翅膀 —— 填好一份契约，剩下的交给核心。
+description: 编写 NABI NOTE 的 Wing 接口规范，学习如何制作全新的自定义格式与功能。
 ---
 
 # 制作自定义翅膀
 
-翅膀（wing）是**一个对象**。不用继承类，也没有单独的注册流程——放进递给
-`createNabiWith` 的数组里，这个动作本身就是注册。
+翅膀（Wing）是**一个纯 JavaScript 对象**。不需要继承复杂的类，也不需要走什么框架注册流程——
+只要把对象放进传给 `createNabiWith` 的数组里，就立刻完成注册。
 
-加粗、表格、上传也都是靠填这里列的这些字段做出来的。自己写的翅膀和内置翅膀
-运行在**完全相同的条件**下——没有专门留给核心的近路。
+加粗、表格、文件上传等所有官方内置翅膀，都是按照同一份 `Wing` 接口规范写成的。自己写的自定义
+翅膀，也会在与内置翅膀**完全相同的环境和条件**下运行。
 
 ---
 
-## 最短的翅膀
+## 最简单的翅膀示例
 
-一个认得 `<kbd>` 的行内标记。
+一个支持 `<kbd>` 键盘标签的行内标记翅膀示例。
 
 ```ts
 import { createNabiWith, mountSurface, simpleMark, type Wing } from 'nabi-note'
@@ -23,10 +23,10 @@ import 'nabi-note/nabi.css'
 
 const kbdWing: Wing = {
   ...simpleMark({
-    w: 'kbd',                                                   // 这只翅膀的名字 —— 存值里的 `w` 就是它
-    toHtml: (_node, children, ctx) => ctx.element('kbd', children()),   // 出去的画法
+    w: 'kbd',                                                   // 这只翅膀的专属标识符（存入 nabi 树的键）
+    toHtml: (_node, children, ctx) => ctx.element('kbd', children()),   // HTML 输出函数
   }),
-  // 举手认领进来的 HTML 里的 `<kbd>`
+  // 检测传入 HTML 中的 <kbd> 标签，将其转换为 nabi 树节点
   claim: (el, inner) => (el.tag === 'kbd' ? [{ w: 'kbd', ch: inner(false) }] : null),
 }
 
@@ -35,33 +35,34 @@ const { nabi, registry } = createNabiWith([kbdWing])
 mountSurface({ nabi, registry, root: surface })
 ```
 
-现在 `<kbd>` 会留在文档里。粘贴、`setHtml()`、保存、再读回来都不会丢。
+现在，编辑器会保留 `<kbd>` 标签——无论是剪贴板粘贴、`setHtml()`，还是保存后再打开，标记都会
+保持不变。
 
 ```
-注册了      <p>按：<kbd>Ctrl</kbd>+<kbd>S</kbd></p>   →   原样保留
-没注册      <p>按：<kbd>Ctrl</kbd></p>              →   <p>按：Ctrl</p>
+已注册：  <p>快捷键：<kbd>Ctrl</kbd>+<kbd>S</kbd></p>   →   保留 <kbd> 标签
+未注册：  <p>快捷键：<kbd>Ctrl</kbd></p>              →   <p>快捷键：Ctrl</p>（转换为纯文本）
 ```
 
-**这两个字段看的是相反的方向。** `toHtml` 是出去的路，`claim` 是进来的路。不写
-`claim` 照样画得出来，但**读不回去**——存了再读回来的那一刻外壳就被剥掉。
+`toHtml` 是把 nabi 树节点导出为 HTML 的序列化函数，`claim` 则是把外部 HTML 读回 nabi 树节点
+的反序列化规则。不写 `claim` 也能正常输出 HTML，只是保存后再打开时，标签会被转换成纯文本。
 
-`simpleMark` 是给不带属性的标记用的快捷方式。带值的标记有 `valueMark`，
-块状物件有 `boxObject`，列表家族有 `listFamily`，除此之外就手写 `Wing` 对象。
+用 `simpleMark()` 做不带属性的标记，`valueMark()` 做带值的标记，`boxObject()` 做独立的块状
+物件，`listFamily()` 做列表结构——这些辅助函数都能省掉不少样板代码。
 
 ---
 
-## 翅膀是常量
+## 翅膀模块与工厂函数
 
-**大多数翅膀已经是做好的常量**——`boldWing`、`headingWing` 这样直接放进数组
-就行。只有需要选项的两个才另有工厂函数。
+**大多数内置翅膀都是预先定义好的不可变常量对象**（`boldWing`、`headingWing` 等）。只有需要
+额外配置项的少数翅膀，才会以工厂函数的形式提供。
 
 ```ts
 makeImageWing({ allowLocalUrls: true })
 makeUploadWing({ allowLocalUrls: true })
 ```
 
-只想换掉"贴上去的那部分"，把常量展开来写——这是改一个字段，而不是重新造一只
-翅膀，所以更简单。
+如果只想改动某个内置翅膀的部分行为（比如语法高亮器），可以用展开运算符扩展现有翅膀对象，
+只重新定义需要的那部分属性。
 
 ```ts
 const wing = { ...codeWing, attach: makeCodeAttach({ highlight: myHighlighter }) }
@@ -69,41 +70,43 @@ const wing = { ...codeWing, attach: makeCodeAttach({ highlight: myHighlighter })
 
 ---
 
-## 注册与顺序
+## 注册顺序与有效性验证
 
 ```ts
 const { nabi, registry } = createNabiWith([boldWing, italicWing, kbdWing])
 ```
 
-**数组顺序就是扫描顺序。** 判定一段标记归谁（`claim`）时，核心按这个顺序去问，
-第一个答应的翅膀就拿走它。谁都不领走的话，外壳就被剥掉。
+**数组中翅膀的顺序，就是 HTML 扫描的优先级顺序。** 解析外部 HTML 时（`claim`），会按注册
+顺序依次检查，最先声明所有权的翅膀会处理该标签。没有任何翅膀认领的标签会被剥去标签，只保留
+内部文本。
 
-工具栏上是**分组（`button.group`）优先**。分组的顺序是钉死的，这个数组顺序只
-决定同一分组**内部**的先后。
+工具栏按钮的排列**优先看按钮分组（`button.group`）的顺序**，只有在同一分组内才按翅膀的
+注册顺序排列。
 
-### 就死在注册的那一刻
+### 有效性检查与异常处理（严格校验）
 
-`createNabiWith` 对违反契约的翅膀**立刻抛出异常。** 不会晚点才炸。
+`createNabiWith` 不会把违反规范的翅膀留到运行时才报错——它会在**初始化阶段立即抛出
+异常（Error）**。
 
-| 会被抓住的 | 例子 |
+| 校验项 | 违规示例 |
 |---|---|
-| 用保留字当名字 | `w: 'p'` · `w: 'br'` |
-| 同一个名字注册了两次 | 两次 `boldWing` |
-| 立节点的翅膀没有 `toHtml` | `place: 'mark'` 却没有画法 |
-| 命令名违反规则 | 必须是动词+宾语的驼峰式（`insertTable`） |
-| 缺少必需的搭档 | 上传需要 `img` 或 `a` 一起在场（`requiresAnyOf`） |
+| 使用保留字作标识符 | `w: 'p'`、`w: 'br'` |
+| 重复注册同一标识符（w） | 重复传入同一个 `boldWing` |
+| 缺少渲染函数 | `place: 'mark'` 却没有定义 `toHtml` |
+| 违反命令命名规则 | 不是动词+名词的驼峰式（例：`insertTable`） |
+| 缺少必需的依赖翅膀 | 上传翅膀缺少 `requiresAnyOf` 指定的图片/链接翅膀 |
 
 ---
 
-## 命令——是纯函数
+## 命令（Command）——纯函数
 
-改动文档的每一条路都要经过一个命令。命令**不认识 DOM，也不认识画面。**
+所有改动文档的操作，都要通过命令函数执行。命令是**不依赖 DOM API 或屏幕渲染的纯函数**。
 
 ```ts
 import { boxObject, insertLump, type Command, type Wing } from 'nabi-note'
 
 const insertStamp: Command = (doc, sel, args, env) => {
-  // 这是从外面来的值，所以要检查 —— 不合适就什么都不做
+  // 校验外部传入参数的类型
   if (typeof args['text'] !== 'string') return null
   const stamp = { w: 'stamp', a: { t: args['text'] }, ch: [] }
   const r = insertLump(doc, sel.focus, stamp, env)
@@ -126,129 +129,119 @@ export const stampWing: Wing = {
 }
 ```
 
-| 参数 | 是什么 |
+| 参数 | 说明 |
 |---|---|
-| `doc` | 此刻的文档（块的数组）。**不要改它——用新的一份来回答** |
-| `sel` | 此刻的选区 |
-| `args` | 按钮或上下文工具栏传进来的值。**是从外面来的，必须检查** |
-| `env` | 种类知识——什么能装什么，什么是块状物件 |
+| `doc` | 当前的 nabi 树文档数组（视为不可变对象，不直接修改，而是返回一份新文档） |
+| `sel` | 当前光标及选区状态（`{ anchor, focus }`） |
+| `args` | 工具栏按钮或 UI 传入的参数对象 |
+| `env` | 模式（schema）知识与环境上下文 |
 
-答案是 `{ doc, selection }` 或者 **`null`**。**什么都没变就答 `null`**——这样
-`applyCommand` 会答 `false`，也不会堆出撤销点。答出来的文档还会被 `cocoon`
-再收拾一遍，所以没有哪个命令能留下破坏规则的文档。
+命令要返回变更后的 `{ doc, selection }` 对象，或者 **`null`**。**文档没有变化时必须返回
+`null`。** 返回 `null` 时，`applyCommand` 会返回 `false`，也不会产生多余的撤销历史记录。
+返回的文档会经过 `cocoon`（归一化）引擎处理，因此模式完整性有保证。
 
-调用的一方永远按名字走。
+主机侧按命令名称调用。
 
 ```ts
-nabi.applyCommand('insertStamp', { text: '确认' })   // boolean
+nabi.applyCommand('insertStamp', { text: '确认' })   // 返回 boolean
 ```
 
 ---
 
-## 能填的全部字段
+## Wing 接口详细规范
 
-`Wing` 有三十一个字段，**必需的只有两个**（`w`·`place`）。
+`Wing` 接口总共由 31 个属性组成，其中**必需属性有 2 个**（`w`、`place`）。
 
-### 是什么
+### 1. 基本标识与结构
 
-| 字段 | 意思 |
+| 属性 | 说明 |
 |---|---|
-| `w` | 这只翅膀的名字。会成为存值里的 `w`。不能用保留字（`p`·`br`） |
-| `place` | `'mark'` 罩在文字上 · `'void'` 没有内容的块状物件 · `'container'` 里面有文字的块状物件 · `'attr'` 段落属性 · `'tool'` 不在文档里留痕迹的工具 |
-| `basic` | **不用布线，原样能跑吗？** 不写就是 `false`——`wings().allBasic()` 只收带这个标记的翅膀，**自定义翅膀也用同一把尺子量**。不过 `allBasic()` 走的是官方目录，直接用 `.use(对象)` 塞进来的翅膀不看这个值，照样会被载入 |
-| `holds` | 怎么装里面的东西——`'blocks'` 或 `'inline'` |
-| `singleParagraph` | 里面固定只能是**一个**段落（表格的格子） |
-| `boolAttrs` | 值只有 `1` 的布尔属性名 |
-| `allows` | 允许进到里面的翅膀名字。不写就是全部 |
-| `noAlign` | **只给物件用。** 带上它，**穿着这个物件的包装段落就不接受对齐**——工具栏里对齐按钮会藏起来、命令会当作没有改动而拒绝、已经写进旧存档里的值经过 cocoon 时会被剥掉。代码框是第一个用到它的——`pre` 会继承 `text-align`，与其让整个框挪位置，不如**让代码的行挪位置**。放到标记、工具或段落属性上，**注册就会失败** |
-| `requiresAnyOf` | 这里面至少要有一个一起注册 |
-| `parts` | 一起带过来的没有按钮的结构——表格的行和格，折叠块的摘要行 |
+| `w` | 翅膀的专属标识符（必需，不能使用保留字 `p`、`br`） |
+| `place` | 翅膀的类型（必需：`'mark'` 行内格式、`'void'` 无内容的块状物件、`'container'` 容器块、`'attr'` 段落属性、`'tool'` 不存入文档的工具） |
+| `basic` | 是否无需额外后端/主机联动即可直接工作（`boolean`，默认 `false`）。调用 `wings().allBasic()` 时以此为筛选依据 |
+| `holds` | 容器内部允许的子内容类型（`'blocks'` 或 `'inline'`） |
+| `singleParagraph` | 内部是否固定为单一段落（例如表格单元格） |
+| `boolAttrs` | 只用 `1` 表示的布尔属性名称列表 |
+| `allows` | 容器内部允许的子翅膀名称列表（未指定时全部允许） |
+| `noAlign` | 是否阻止包装段落应用文本对齐（`boolean`，仅限块状物件）。用于防止像代码块这类 `pre` 标签的对齐错位 |
+| `requiresAnyOf` | 必须一起注册的依赖翅膀列表（其中至少一个必须注册） |
+| `parts` | 翅膀内部从属子组件的定义（表格的行/列，折叠块的摘要行等） |
 
-### 值
+### 2. 属性与状态管理
 
-| 字段 | 意思 |
+| 属性 | 说明 |
 |---|---|
-| `attrKey` · `attrValues` | 段落属性写到哪个字段名，以及能接受的值清单 |
-| `currentValue` | 现在是不是按下状态——工具栏、上下文工具栏靠这个答案给格子上色 |
+| `attrKey` · `attrValues` | 段落属性翅膀使用的属性键，以及允许的取值列表 |
+| `currentValue` | 返回当前光标位置属性值的函数（用于显示工具栏按钮的激活状态） |
 
-### 进出的路
+### 3. 序列化与输入输出
 
-| 字段 | 意思 |
+| 属性 | 说明 |
 |---|---|
-| `toHtml` · `partHtml` | 出去的画法 |
-| `toMd` | 出去到 markdown 的画法。**可选——不写就落到 `toHtml`**（下划线、YouTube、折叠块这类在 markdown 里没有位置的东西就是这样，「掺了 HTML 的 md」说的正是这个） |
-| `partMd` | 这只翅膀的 `parts` 里 markdown 那一份 |
-| `ioFilter` | 这只翅膀**把自己那种格式的粘贴、保存、打开一并带过来**（`.nabi` 文件就是这样一个位置）。过滤器不是翅膀，是挂在翅膀身上的知识，所以主机通过 `ioFilters` 插进来的过滤器排在它前面——见下文的[插入 IO 过滤器](#插入io过滤器) |
-| `claim` | 判定进来的 HTML 里这个标签归谁 |
-| `repair` · `partRepair` | 在 JSON 入口处收拾这个节点。答 `null` 就连壳一起被撤掉 |
+| `toHtml` · `partHtml` | 把 nabi 树节点转换为 HTML 的序列化函数 |
+| `toMd` | 把 nabi 树节点转换为 Markdown 的序列化函数（可选，未定义时回退使用 `toHtml`） |
+| `partMd` | 子组件（`parts`）的 Markdown 序列化函数 |
+| `ioFilter` | 翅膀自身支持的文件输入输出与剪贴板过滤器 |
+| `claim` | 判定传入 HTML 标记的归属，并将其转换为 nabi 树节点的函数 |
+| `repair` · `partRepair` | 在 JSON 加载时校验并修正节点有效性的函数（返回 `null` 时移除该节点） |
 
-### 手和键
+### 4. 输入与事件控制
 
-| 字段 | 意思 |
+| 属性 | 说明 |
 |---|---|
-| `commands` | 这只翅膀挂上的命令们 |
-| `onKey` | 光标在这只翅膀的节点里面时优先拦截按键 |
-| `escapeKeys` | 按下后下一个敲的字会离开这个标记的键 |
-| `doubleKeys` | `{ 键名: 命令名 }`——**350ms 内**把那个键敲两下，命令就会跑。名字看着像 `escapeKeys`，意思却不一样：那个是「离开标记、接着打字」，这个是「一个手势对一条命令」。优先级**最低**，那个键上的其他事都轮过一遍之后才轮到它。注册时会**检查键有没有撞车、命令是不是真存在**，撞了或者指向不存在的命令，注册就会失败 |
-| `inputRules` | 单靠敲字就发生的自动转换 |
-| `attach` | 需要碰画面的时候用——表格的格子拖拽、代码上色都是这个 |
+| `commands` | 翅膀提供的命令函数映射 |
+| `onKey` | 光标位于该翅膀节点内部时，优先拦截键盘输入的处理函数 |
+| `escapeKeys` | 触发下一次输入的字符离开该标记格式的键列表 |
+| `doubleKeys` | 350ms 内连续按两次某键时执行的命令映射（`{ 键名: 命令名 }`，例如 Esc Esc → 清除格式） |
+| `inputRules` | 根据输入模式自动执行的格式转换规则 |
+| `attach` | 直接在 DOM 元素上绑定或控制事件监听器的钩子（表格拖拽、代码高亮等） |
 
-### 长相
+### 5. UI 与样式
 
-| 字段 | 意思 |
+| 属性 | 说明 |
 |---|---|
-| `button` · `buttons` | 一个或多个工具栏按钮 |
-| `context` | 上下文工具栏的声明 |
-| `styles` | 这只翅膀带的 CSS |
+| `button` · `buttons` | 渲染在顶部工具栏上的按钮定义 |
+| `context` | 根据光标位置出现的上下文工具栏定义 |
+| `styles` | 该翅膀内置的 CSS 样式表字符串 |
 
 ---
 
-## 插入 IO 过滤器
+## 扩展 IO 过滤器
 
-**IO 过滤器不是翅膀。** 它只站在文档进出的门口——粘贴、保存、打开——管一种格式，
-不在文档里立自己的节点。契约是一个 `IoFilter`。
+**IoFilter 是一个不直接创建文档节点，而是处理剪贴板粘贴与文件保存/打开格式的扩展点。**
 
-| 字段 | 意思 |
+| 字段 | 说明 |
 |---|---|
-| `id` · `label` | 过滤器的名字，以及面板里显示的名字。`id` 撞车**就死在注册的那一刻** |
-| `paste` | 看一眼剪贴板（`PasteData`），给出一个候选。不是自己的就答 `null`，人选中那个位置后才会调 `build()` 深挖 |
-| `save` | `{ extension, write, lossy?, mime? }`——`write` 拿到一个 `DocSource`，需要什么就取 `json()`、`html()`、`md()` 里的哪个。`lossy` 决定保存面板上要不要打「（有损）」 |
-| `read` | 拿到一个名字和一段字符串，读成 nabi 树。**不是自己的就答 `null`**，交给下一个过滤器 |
+| `id` · `label` | 过滤器的专属标识符，以及在 UI 中显示的标签（标识符重复会抛出异常） |
+| `paste` | 分析剪贴板数据（`PasteData`）并返回粘贴候选项的函数 |
+| `save` | 保存配置对象（`{ extension, write, lossy?, mime? }`） |
+| `read` | 接收文件名与文本，将其解析为 nabi 树的函数（不匹配时返回 `null`） |
 
-**三道门都是选填的**——只认粘贴的、只会读的过滤器都行。能插入的地方是
-`mountSurface`、`mountFile` 上的 `ioFilters`，`createNabiWith(wings, { ioFilters })`，
-还有上面表里的 `ioFilter` 字段，**站得靠前的赢**：mount → 主机 → 翅膀 → 内置
-（`nabi`·`html`·`html-open`·`markdown`）。打开的候选列表来自 `readExtensions(filters)`，
-它**数不到没有保存位置的过滤器**（内置的 `.html` 就是这样的位置，所以默认存储会
-手动把它加进去，凑成四个）。
-
-markdown 光靠过滤器自己造不出来——一个节点写成什么字符是**带着 `toMd`、`partMd`
-的那只翅膀**（见上文）知道的事。不写就落到 `toHtml`，混进 md 里成了 HTML；md 解析器
-反过来也**只认注册过的翅膀能接的语法**。
+IO 过滤器的三个方法均为可选。可以通过挂载选项（`mountSurface`、`mountFile`）、
+`createNabiWith({ ioFilters })`，或翅膀自身的 `ioFilter` 属性来注册，**先注册的过滤器
+拥有优先权。**
 
 ---
 
-## `w` ——取名字
+## 标识符（`w`）命名规则
 
-`w` 是**存值里每个节点上都会重复出现的字符串**。越短越好——内置翅膀之所以短
-到 `b`、`hl`、`tf` 这种程度就是这个原因。不过撞了别人的名字注册就会失败，所以
-自己写的翅膀就算长一点，也要取一个不会撞名的名字。
+`w` 是**在 nabi 树中每个节点上重复存储的标识符字符串**。为了尽量减小序列化体积，建议使用
+简短的字符串（例如官方翅膀的 `b`、`hl`、`tf` 等）。
+为避免与官方翅膀冲突，建议自定义翅膀使用 `ex` 前缀（例如 `exNote`、`exStamp`）。
 
-不需要和 HTML 标签名一样——出去的标签由 `toHtml` 决定。
-
-::: warning 之后再改名字
-存值里的 `w` 就是那个名字，改名意味着**已经存下来的文档读不回来了。** 一定要
-改的话，留一段过渡期，用 `claim` 把旧名字也一起接住。
+::: warning 更改标识符时的注意事项
+由于保存数据中的 `w` 字段直接对应标识符，更改标识符可能导致已保存的文档数据在加载时无法
+被识别。如果确实需要迁移，请在 `claim` 函数中同时处理旧版本的标识符。
 :::
 
 ---
 
 ## 接下来的文档
 
-- [行内标记](./custom/inline) —— `claim` · `toHtml` · `escapeKeys`
-- [块与段落属性](./custom/block) —— `place` · `holds` · `allows` · `parts` · `attrKey`
-- [键、自动转换、粘贴](./custom/input) —— `onKey` · `inputRules` · `attach`
-- [UI 与行为](./custom/ui) —— `button` · `context` · `styles`，以及向人发问
+- [制作行内标记](./custom/inline) — `claim` · `toHtml` · `escapeKeys`
+- [制作块与段落属性](./custom/block) — `place` · `holds` · `allows` · `parts` · `attrKey`
+- [键、自动转换、粘贴](./custom/input) — `onKey` · `inputRules` · `attach`
+- [UI 与交互](./custom/ui) — `button` · `context` · `styles`，以及用户对话框的接入
 
 <script setup lang="ts">
 import { useTranslate } from '../../.vitepress/src/langs.ts'

@@ -1,171 +1,137 @@
 ---
-title: 用 CDN 接入
-description: CDN 示例
+title: 通过 CDN 使用
+description: 介绍如何不使用任何构建工具、仅通过 HTML 标签使用 NABI NOTE。
 ---
 
-# 用 CDN 接入
+# 通过 CDN 使用
 
 <CdnDemo />
 
 ---
 
-## 刚才做了什么
+## 基本结构与运行原理
 
-不看这一节，上面那个文件也照样能跑。只有想改的时候才需要看。
+上面的演示示例无需任何打包器或构建工具，仅用一个 HTML 文件即可运行。
 
-### 两个标签就是安装
+### 两行 HTML 标签完成接入
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@latest/dist/nabi.css">
 <script src="https://cdn.jsdelivr.net/npm/nabi-note@latest"></script>
 ```
 
-这个包导出的**所有东西**都挂在一个全局的 `NabiNote` 上。**样式表要手动挂上**——
-mount 不会注入 CSS，漏掉 `<link>` 编辑器就是光秃秃的样子。
+这个包导出的所有模块都挂在全局对象 `NabiNote`（简写 `N`）上。**样式表必须自己手动引入。** mount 函数不会自动注入 CSS，如果漏掉 `<link>` 标签，页面就会显示成没有样式的原始效果。
 
-### 骨架
+### HTML 结构
 
 ```html
-<div id="app" class="nabi">                    <!-- 颜色、圆角、字体都住在这个根上 -->
-  <div id="chrome" class="nabi-toolbar">        <!-- 工具栏和上下文工具栏粘成一块 -->
+<div id="app" class="nabi">                    <!-- 颜色主题、圆角、字体的根节点 -->
+  <div id="chrome" class="nabi-toolbar">        <!-- 包裹工具栏和上下文栏的固定头部 -->
     <div class="nabi-toolbar-row">
-      <span id="tools"></span>                 <!-- 预览、全屏（最右边） -->
+      <span id="tools"></span>                 <!-- 预览、全屏按钮（右对齐） -->
       <div id="toolbar"></div>
     </div>
-    <div id="context"></div>                   <!-- 跟着光标碰到的东西自己填 -->
+    <div id="context"></div>                   <!-- 根据光标位置动态出现的上下文栏 -->
   </div>
   <div id="editor" class="nabi-content" contenteditable="true"></div>
 </div>
 ```
 
-`id` 随便取什么名字都行——递给 mount 的是**元素**，不是名字。四个类名
-（`nabi`·`nabi-toolbar`·`nabi-toolbar-row`·`nabi-content`）是样式表抓手用的，
-原样留着。不用预览、全屏的话，把 `<span id="tools">` 和 `mountViewTools` 那行
-一起删掉就行。容器随便传哪个都行——`mountViewTools` 会自己立起浮在最右边的
-那个盒子，所以就算把工具栏原样传给它，按钮行也不会被挤乱。
+每个元素的 `id` 可以自由指定。传给 mount 函数的是实际的 DOM 元素对象，而不是 id 字符串。四个类名（`nabi`、`nabi-toolbar`、`nabi-toolbar-row`、`nabi-content`）是样式表依赖的必要类，请保持不变。如果不需要预览和全屏功能，可以把 `<span id="tools">` 元素和 `mountViewTools` 调用一起省略。`mountViewTools` 会在传入的容器内部自动构建专属的按钮区域。
 
-### 挑翅膀
+### 挑选翅膀（Wing）
 
-挑翅膀是一行构建器。上面这份文件从不用布线就能跑的二十六只起步，加上保存、
-打开，又把字体收窄成两种。
+翅膀的组合可以用构建器链式调用轻松完成。上面的示例从无需宿主集成即可运行的 26 个基础翅膀开始，添加了保存、打开功能，并将字体选项设置为 2 种。
 
 ```js
 var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
-- `all()` 从全部官方翅膀起步。**不调用就是空手**——只有 `use()` 拿进来的才会
-  装上。
-- `allBasic()` 只拿这里面**不用布线、原样能跑**的那些（二十六只）。剩下的三只
-  ——上传、保存、打开——要等宿主给了上传的服务器或者文件存储才能活，默认就
-  装上的话，读者按下去的按钮什么都不会发生。上面例子里用 `use()` 把保存、打开
-  加回来，就是这个原因。
-- `use('名字', 选项?)` 是加一个。对已经在里面的翅膀调用，就只是加选项——上面
-  的 `use('tf', { values: [...] })` 就是这样。要是需要依赖的翅膀（比如上传得
-  靠图片或链接其中一个撑着才能活），会悄悄一并带上。
-- `drop('名字')` 是从里面去掉一个。要去掉的翅膀被别的翅膀踩在脚下的话，会
-  当场抛出来，并说清楚要一起去掉的是哪些。
-- 名字是存进值里的那个短键——像 `b`（加粗）·`tf`（字体）·`upload` 这样。完整
-  清单用 `console.log(N.wingNames())` 看。
-- **叫错了就在那一行抛出来。** 名字打错、选项键不认识、值不在列表里，全都会
-  抛，抛出来的话里带着改法——`use('bod')` 会答"是不是想说 'b'（加粗）？"。
-  没有会被悄悄忽略的地方。
+- `all()` 会启用全部官方翅膀。不调用的话默认翅膀不会被包含，只会注册通过 `use()` 明确声明的翅膀。
+- `allBasic()` 会从官方翅膀中选出**无需宿主应用额外集成即可运行的 26 个翅膀**。上传、保存、打开这三个因为需要宿主提供服务器接口或文件存储之类的配置，所以被排除在基础集合之外——这也是上面示例中要用 `use()` 额外声明保存、打开的原因。
+- `use('名称', 选项?)` 用来添加某个翅膀。如果对已注册的翅膀调用，则只会更新选项（例如 `use('tf', { values: [...] })`）。如果某个翅膀依赖其他翅膀（例如上传翅膀需要图片或链接翅膀），会自动一并注册。
+- `drop('名称')` 用来从已注册列表中移除某个翅膀。如果尝试移除的翅膀被其他翅膀依赖，会抛出异常并提示需要一起移除的相关翅膀。
+- 翅膀名称是保存在 nabi-tree 中的简短唯一键（`w`）（例如 `b`（加粗）、`tf`（字体）、`upload` 等）。完整列表可以通过 `console.log(N.wingNames())` 查看。
+- **传入错误的名称或选项会立即报错。** 如果传入拼写错误、不支持的选项键、超出有效范围的值等，错误信息会指出正确的修正方式。
 
-`createNabiWith` 直接收构建器，不用调 `build()`——只有需要数组的地方，
-`build()` 才会给出数组。只挑几个的时候，数组仍然是答案。
+`createNabiWith` 可以直接接收构建器实例作为参数，因此不需要另外调用 `build()`。也可以直接以数组形式传入翅膀。
 
 ```js
 var wings = [N.boldWing, N.italicWing, N.headingWing, N.bulletListWing]
 ```
 
-自己做的翅膀用对象放进去——像 `N.wings().all().use(customWing)` 这样。这只
-翅膀的 `w` 要以 `ex` 开头（`exNote`）——以后官方名字要是和存好的值撞了，已经
-存下的文档会被读成别的意思。做法在 [{{ t('menu_wing_custom') }}](../wing/custom)
-里。
+自己开发的自定义翅膀以对象形式传入（`N.wings().all().use(customWing)`）。为避免与官方翅膀标识符冲突，建议自定义翅膀的 `w` 标识符以 `ex` 前缀开头（如 `exNote`）。详细编写方法请参考 [{{ t('menu_wing_custom') }}](../wing/custom) 文档。
 
-每只翅膀单独看，去 [{{ t('menu_wing') }}](../wing/inline/bold)。
+每个翅膀的详细规格可以在 [{{ t('menu_wing') }}](../wing/inline/bold) 菜单中查看。
 
-### 发问和通知的路
+### 对话框与通知集成
 
-上面这份文件用 `ask` 接上了浏览器的 `alert`·`confirm`——"还有没保存的内容，
-真的要打开吗？"这类问题会走这个弹窗。不接的话问题的答案就是"不"；不需要回答
-的一句话，内核自带的 toast 容器会显示在工具栏下方——上传出错这类提醒不用
-另外接线。详情在 [{{ t('menu_intro_usage') }}](./usage) 里。
+上面的示例通过 `ask` 选项接入了浏览器自带的 `alert` 和 `confirm`。例如可以用浏览器弹窗显示"有正在编辑的内容，是否继续？"这类确认消息。
 
-`ask` 里还有**从好几个里选一个用的 `choose`。** 不过粘贴面板**不用插这一格就
-立得住**——工具栏一立起来，它就自己把面板挂到核心上（和 toast 容器一个道理），
-所以像上面这份文件那样立了工具栏的页面，白得这个面板。只有想换成自己的面板时
-才需要插 `ask.choose`。
+如果不传入 `ask`，确认框的默认回应会被当作取消（`false`），普通提示信息则会通过内核自带的 toast 组件自动显示在工具栏下方。详情请参考 [{{ t('menu_intro_usage') }}](./usage) 文档。
 
-### 取值
+`ask` 中还包含用于从多个选项中选择的 `choose` 处理函数。不过，**粘贴时的格式选择弹窗无需任何额外设置即可正常工作**——`mountToolbar` 挂载时会自动为其接入内核自带的专属弹窗界面，因此使用工具栏的页面无需额外实现即可显示该选择弹窗。只有想用自定义模态框替换它时才需要传入 `ask.choose`。
 
-| | |
+### 输入输出方法
+
+| 方法 | 说明 |
 |---|---|
-| `nabi.getHtml()` | 拿去保存、发布的 HTML |
-| `nabi.getJson()` | nabi-tree（JSON） |
-| `nabi.setHtml(html)` · `nabi.setJson(json)` | 再放回去 |
-| `nabi.onChange(fn)` | 每次值变化时 |
-| `N.renderStoredHtml(json, registry)` | 不搭编辑器，把存好的值直接画成 HTML（见下 [只给看的一侧](#只给看的一侧)） |
+| `nabi.getHtml()` | 返回用于保存和发布的 HTML |
+| `nabi.getJson()` | 返回 nabi-tree（JSON）数据 |
+| `nabi.setHtml(html)` · `nabi.setJson(json)` | 替换为新的文档数据 |
+| `nabi.onChange(fn)` | 注册文档变化事件监听器 |
+| `N.renderStoredHtml(json, registry)` | 不使用编辑器，直接将 nabi-tree 转换为 HTML（参见下方[只读查看器](#只读查看器-viewer)） |
 
 ---
 
-## 地址
+## CDN 发布地址
 
-要锁定版本就在地址里写上版本号。unpkg 给的是同一份文件。
+如果需要锁定特定版本，请在 CDN URL 中指定版本号。jsDelivr 和 unpkg 均支持。
 
-**不要用没写版本号的地址（`/npm/nabi-note`）**——jsDelivr 会把那个位置缓存很久，
-可能让打包文件和样式表混进不同版本。
+未指定版本的 URL（`/npm/nabi-note`）可能因为 CDN 缓存问题导致脚本和 CSS 版本不一致，因此建议指定具体版本号或使用 `@latest` 标签。
 
-| | 地址 |
+| 类型 | 地址 |
 |---|---|
-| **打包文件（最新）** | `https://cdn.jsdelivr.net/npm/nabi-note@latest` |
-| **打包文件（锁定版本）** | <code>{{ CDN_BUNDLE }}</code> |
+| **打包脚本（最新）** | `https://cdn.jsdelivr.net/npm/nabi-note@latest` |
+| **打包脚本（锁定版本）** | <code>{{ CDN_BUNDLE }}</code> |
 | **样式表（最新）** | `https://cdn.jsdelivr.net/npm/nabi-note@latest/dist/nabi.css` |
 | **样式表（锁定版本）** | <code>{{ CDN_SHEET }}</code> |
-| **打包文件**（unpkg） | `https://unpkg.com/nabi-note` |
+| **打包脚本（unpkg）** | `https://unpkg.com/nabi-note` |
 
-打包文件是跟着 npm 发布物一起带出去的，**CDN 并不是单独发布的。**
+CDN 打包文件与 npm 发布包中的 `dist/` 构建产物完全一致。
 
 ---
 
-## 只给看的一侧
+## 只读查看器（Viewer）
 
-只**展示**保存下来的 HTML 的页面，不需要立起编辑器。挂上同一份样式表，把值放进
-`.nabi-content` 里面，看到的就和编辑器里一模一样。
+对于**仅需展示**已保存 HTML 文档的页面，无需创建编辑器实例。引入同一份样式表，并将 HTML 渲染到 `.nabi-content` 容器内部，即可完全还原编辑器中的显示效果。
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@latest/dist/nabi.css">
 
 <div class="nabi-content">
-  <!-- 用 getHtml() 存下来的值 -->
+  <!-- 通过 nabi.getHtml() 保存的 HTML 字符串 -->
 </div>
 ```
 
-要是存的不是 HTML，而是 **nabi-tree（JSON）**，不用立起编辑器，当场就能画
-出来。要的是存好的值和注册过的翅膀清单两样东西。
+如果文档是**以 nabi-tree（JSON）形式保存的**，可以调用渲染函数，使用纯 JavaScript 将其渲染为 HTML。需要传入保存的 JSON 数据和已注册的翅膀列表（`registry`）作为参数。
 
 ```html
 <script>
   var registry = N.makeRegistry(N.wings().all().build())
 
-  var saved = [{ w: 'p', ch: ['一条评论'] }]   // 从服务器拿到的 nabi-tree
+  var saved = [{ w: 'p', ch: ['一条评论'] }]   // 从服务器读取的 nabi-tree
   document.querySelector('.nabi-content').innerHTML = N.renderStoredHtml(saved, registry)
 </script>
 ```
 
-不是 nabi-tree 就答 `null`，过关的值和编辑器给出的 `getHtml()` 一字不差——
-过滤 XSS 的地方也一样。这道门不用 DOM，所以在服务器（Node.js）上也能原样跑，
-**在服务器上预先做好 HTML 再送下去**这条路走的是同一道门（参见
-[{{ t('menu_intro_ssr') }}](./ssr#只画存好的值)）。
+如果不是 nabi-tree 格式，会返回 `null`；渲染结果与编辑器实例的 `getHtml()` 结果完全一致，采用相同的 XSS 过滤规则，且不依赖 DOM，因此在服务器（Node.js 等）环境中也能同样运行（参见 [{{ t('menu_intro_ssr') }}](./ssr)）。
 
-用 npm 装进服务器的话，不用全局打包文件，而是用 **`nabi-note/ssr`**——只装了
-画图所需东西的入口，不会带上编辑表面和界面工具。
+在使用 npm 包的服务器环境中，建议使用轻量模块 **`nabi-note/ssr`** 而非全局打包文件。该模块只包含渲染所需的逻辑，因此编辑区域和 UI 相关代码不会被打包进服务器构建产物中。
 
-一份样式表文件里**装着所有翅膀的 CSS**——文件没法知道你注册了哪些翅膀，所以
-全都装进去了。
+CSS 样式表中**包含了所有翅膀的样式。**
 
-看到的样子全靠样式表撑起来，但**表格排序和代码上色是阅读侧要靠 JavaScript
-才能做的事**——点表头重排行、把代码拆开上色，CSS 做不到。想要的话，用一道门
-把阅读侧运行时接上。
+基础格式仅通过 CSS 即可呈现，但**表格排序和代码语法高亮需要依赖客户端 JavaScript。** 如果需要点击列标题排序、代码分词与着色功能，可以接入轻量级查看器运行时。
 
 ```html
 <script type="module">
@@ -175,29 +141,22 @@ var wings = [N.boldWing, N.italicWing, N.headingWing, N.bulletListWing]
 </script>
 ```
 
-- 不接这道门文档也照样看得清楚——只是开了排序的表格转不动、代码只有一种
-  颜色。
-- 表格排序只对编辑器里打开过排序的表格起作用（留有 `data-nabi-sortable`
-  标记）。
-- 代码上色默认由内置分词器来答，不需要依赖。要用 Shiki 这类高亮器，就用
-  `{ locale: 'zh', highlight }` 这样的钩子接进来——这份重量算在接它的那个
-  页面头上。
-- 全局的 `NabiNote` 打包文件里没有这道门——为了不让阅读页面背上整个编辑器，
-  `nabi-note/viewer` 单独存在。用 npm 装进来的宿主，也像
-  [{{ t('menu_intro_usage') }}](./usage#给预览接上阅读侧运行时) 那样给预览
-  接上同一道门。
+- 即使不接入查看器，文档也能正常显示（只是表格排序功能和代码高亮不可用，不影响正文阅读）。
+- 表格排序功能仅对在编辑器中启用了排序功能的表格（带有 `data-nabi-sortable` 属性）生效。
+- 代码语法高亮默认内置分词器，无需任何外部依赖。如需使用 Shiki 等外部高亮库，可以通过 `{ locale: 'zh', highlight }` 选项传入。
+- 全局 `NabiNote` 打包文件中不包含查看器入口，为了优化只读页面的打包体积，该功能作为独立模块 `nabi-note/viewer` 提供。
 
 ---
 
-## 接下来的文档
+## 下一篇文档
 
-- [{{ t('menu_intro_usage') }}](./usage) —— 用 npm 接入的路子，组装、输入、输出的全部
-- [{{ t('menu_wing_custom') }}](../wing/custom) —— 亲手做出没有的格式
+- [{{ t('menu_intro_usage') }}](./usage) — npm 包安装及编辑器详细使用方法
+- [{{ t('menu_wing_custom') }}](../wing/custom) — 亲手制作全新的自定义格式翅膀
 
 <script setup lang="ts">
 import CdnDemo from '../../.vitepress/ui/CdnDemo.vue'
 import { useTranslate } from '../../.vitepress/src/langs.ts'
-// 版本号不是手写的 —— 直接读 nabi-npm 的 package.json
+// 版本号动态引用包版本
 import { CDN_BUNDLE, CDN_SHEET } from '../../.vitepress/src/version.ts'
 
 const { t } = useTranslate()

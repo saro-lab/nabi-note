@@ -6,19 +6,13 @@ title: Code
 
 ## Beschreibung
 
-`codeWing` (id `code`) besitzt den Codeblock (`<pre>`). Er ist eine **Konstante** — es gibt nichts
-aufzurufen und keine Optionen zu übergeben. Er ist ein Container mit `holds: 'inline'`, und sein
-`repair` glättet alles, was darin landet, zurück zu reinem Text, sodass kein Mark und kein anderer
-Flügel darin überlebt.
+`codeWing` (ID `code`) ist ein konstantes Wing-Objekt, das den Codeblock (`<pre><code>`) verwaltet.
 
-Tippen Sie ` ``` ` auf einer leeren Zeile und drücken Sie Leertaste oder Enter, wird es ein
-Codeblock — schreiben Sie eine Sprache dahinter, wie in ` ```ts `, wird auch die Sprache erfasst.
-`Tab` / `Shift+Tab` rücken Zeilen ein und aus (alle auf einmal, wenn mehrere ausgewählt sind). Enter
-übernimmt die Einrückung der Zeile darüber.
+Es ist ein Container mit `holds: 'inline'`, und sein Text wird in der `repair`-Phase auf reinen Text normalisiert, sodass kein anderes Inline-Mark und kein anderer Block darin verschachtelt werden kann.
 
-Die Kontextzeile erscheint nur, während der Caret im Code steht — eine Eingabe, um die Sprache selbst
-zu tippen, eine „Keine Sprache"-Schaltfläche, die nur erscheint, wenn eine Sprache gesetzt ist, und
-je eine Schaltfläche pro häufig genutzter Sprache.
+Tippen Sie ` ``` ` auf einer leeren Zeile und drücken Sie Leertaste oder Enter, wird daraus ein Codeblock (schreiben Sie eine Sprache dahinter, wie in ` ```ts `, wird die Sprache automatisch übernommen). `Tab` und `Shift+Tab` rücken Codezeilen ein und aus, auch gesammelt bei mehreren ausgewählten Zeilen. Beim Drücken von Enter wird die Einrückungstiefe der vorigen Zeile automatisch übernommen.
+
+Solange der Caret innerhalb eines Codeblocks steht, ist die dynamische Kontext-Toolbar aktiv und bietet ein Eingabefeld zum direkten Eintippen der Sprache, eine Schaltfläche „Keine Sprache" sowie Schnellzugriff-Schaltflächen für häufig genutzte Sprachen:
 
 ```
 javascript typescript jsx tsx · python java kotlin swift
@@ -27,61 +21,42 @@ html xml css scss · json yaml toml markdown
 bash powershell dockerfile diff
 ```
 
-Diese Liste ist nur eine **Abkürzung** — sie ist nicht die Liste der Sprachen, die der Kern kennt.
-Eine Sprache, die dort nicht steht, tippen Sie von Hand in die Eingabe, und der Wert geht direkt an
-den Highlighter weiter.
+Auch eine Sprache, die nicht in dieser Liste steht, lässt sich direkt in das Eingabefeld eintippen — der eingegebene Wert wird unverändert an den Syntax-Highlighter weitergegeben.
 
-## Einfärben steckt am Flügel
+## Syntax-Highlighting wird am Flügel angeschlossen
 
-`highlight` ist ein Hook, der **Arten zurückgibt, keine Farben** — seine Gestalt ist `(source,
-language) => {text, type?}[]`, und `type` ist auf eine von `keyword`, `string`, `number`, `comment`,
-`function`, `class`, `variable`, `operator`, `punctuation`, `tag`, `attribute`, `literal`, `regexp`,
-`meta` festgelegt — die vierzehn von `CODE_TOKEN_TYPES`.
+`highlight` ist eine Hook-Funktion, die Quellcode und Sprache entgegennimmt und ein Array von Tokens zurückgibt: `(source, lang) => { text: string, type?: string }[]`.
 
-Die Farben legt das Kern-Stylesheet direkt über `[data-nabi-token="…"]`-Selektoren fest, und **nur
-fünf davon bekommen eine Farbe** (`comment`, `string`, `keyword`, `number`, `literal`). Der Rest
-bekommt das Attribut, aber keine Farbregel, kommt also in der Textfarbe des Fließtexts heraus. Die
-Werte sind feste Farben statt CSS-Variablen, überschreiben Sie den Selektor also selbst für eine
-andere Palette oder eine dunkle Variante.
+Der `type` eines Tokens gibt einen der 14 Standard-Tokentypen aus `CODE_TOKEN_TYPES` zurück (`keyword`, `string`, `number`, `comment`, `function`, `class`, `variable`, `operator`, `punctuation`, `tag`, `attribute`, `literal`, `regexp`, `meta`).
+
+Das Kern-Stylesheet vergibt über den Selektor `[data-nabi-token="…"]` Theme-Farben an fünf Standard-Tokentypen (`comment`, `string`, `keyword`, `number`, `literal`). Für Dark Mode oder eigene Farben überschreiben Sie einfach diesen CSS-Selektor.
 
 ```css
 .dark .nabi-content [data-nabi-token="keyword"] { color: #c9a0ff; }
 ```
 
-Die Grammatiken selbst sind nicht im Paket enthalten — Sie bringen Ihre eigenen mit, etwa Prism,
-highlight.js oder Shiki.
-
-Die färbende Seite steckt **am Flügel**, nicht in einem separaten Mount. Bauen Sie ein `attach` mit
-`makeCodeAttach` und tauschen Sie es am Code-Flügel ein, und `mountSurface` verdrahtet es zusammen
-mit dem `attach` jedes anderen registrierten Flügels. Die Demo dieser Website ist ein Beispiel, wie
-Shiki so angeschlossen ist (`.vitepress/src/highlight.ts`).
+Um einen externen Highlighter wie Shiki oder Prism anzubinden, bauen Sie mit `makeCodeAttach` den `attach`-Hook.
 
 ```ts
 import { codeWing, makeCodeAttach } from 'nabi-note'
 
-// Der Flügel ist eine Konstante — nur die anhängende Arbeit wird ausgetauscht
-const wing = { ...codeWing, attach: makeCodeAttach({ highlight }) }
+const wing = { ...codeWing, attach: makeCodeAttach({ highlight: myHighlighter }) }
 ```
 
-Übergeben Sie zusätzlich `version`, malt es neu, **wenn das Dokument unverändert ist, aber sich die
-färbende Seite geändert hat**. Das ist der Fall bei einem Highlighter, der Grammatiken asynchron
-abruft (Shiki tut das beim ersten Treffen einer Sprache): Die Grammatik kommt an, aber das Dokument
-hat sich nicht geändert, also feuert `onChange` nie, und ohne dies müssten Sie ein weiteres Zeichen
-tippen, um die Farben hereinkommen zu sehen.
+Lädt Ihr Highlighter — wie Shiki — Grammatik-Bundles asynchron, übergeben Sie die Option `version`, um den Editorbildschirm neu einzufärben, sobald das Laden der Grammatik abgeschlossen ist:
 
 ```ts
 let grammarAge = 0
 const wing = {
   ...codeWing,
-  attach: makeCodeAttach({ highlight, version: () => grammarAge }),
+  attach: makeCodeAttach({ highlight: myHighlighter, version: () => grammarAge }),
 }
-// wenn die Grammatik spät ankommt — die Zahl hochsetzen, und es malt neu
+
+// wenn das asynchrone Laden der Sprachgrammatik abgeschlossen ist
 grammarAge += 1
 ```
 
-Der gespeicherte Wert folgt der Konvention von außen — `<pre data-nabi-lang="ts"><code
-class="language-ts">`, wobei die Farben als `data-nabi-token`-Attribute hinausgehen (nicht als
-Inline-`style`).
+Die gespeicherte HTML-Struktur folgt dem Standardformat: `<pre data-nabi-lang="ts"><code class="language-ts">`. Jedes Token wird sicher mit dem Attribut `data-nabi-token` ausgezeichnet.
 
 ## Anwendungsbeispiel
 
@@ -91,7 +66,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// Die Flügelliste baut Sortenwissen, Commands und Baukästen zusammen — das ist die `registry`
 const { nabi, registry } = createNabiWith([codeWing])
 
 mountSurface({ nabi, registry, root: surface })

@@ -6,17 +6,11 @@ title: Kursiv
 
 ## Beschreibung
 
-`italicWing` ist der Eigentümer (claim) von `<i>`. Es dient Textstellen, die eine
-andere Faser haben — fremde Wörter oder Zitate.
+`italicWing` ist das Inline-Mark-Wing, das die Kursivformatierung (`<i>`) verarbeitet. Damit lässt sich der Ton von Text abheben — Betonung, ein Fremdwort und Ähnliches.
 
-- Beim Einlesen werden `<i>` und `<em>` gleichermaßen anerkannt, beim Hinausgehen
-  fließt alles in ein einziges `<i>` zusammen. Kein einziges Attribut überlebt.
-- Die Tastenkombination im Hinweismodus (zweimal Shift hintereinander) ist `I` —
-  sie wird über die physische Taste (`KeyI`) gefasst und greift damit auch auf
-  einer koreanischen Tastaturbelegung.
-Der Beschleuniger ist `Strg`/`⌘`+`I` (`mod+i`).
-- Wird die Taste bei ausgewähltem Text gedrückt, ist es ein Umschalter.
-- Ohne Registrierung wird `<i>` entkleidet und fällt zu reinem Text herab.
+- Beim Einlesen werden sowohl `<i>` als auch `<em>` erkannt; bei der Ausgabe wird immer das Standard-Tag `<i>` erzeugt.
+- Unterstützt den Hinweismodus (Shift zweimal, dann `I`) und die Tastenkombination `Strg`/`⌘`+`I`.
+- Bei ausgewähltem Text wirkt es als Umschalter.
 
 ## Anwendungsbeispiel
 
@@ -26,7 +20,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// Die Flügelliste baut Sortenwissen, Commands und Baukästen zusammen — das ist die `registry`
 const { nabi, registry } = createNabiWith([italicWing])
 
 mountSurface({ nabi, registry, root: surface })

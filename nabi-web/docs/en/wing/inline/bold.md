@@ -6,21 +6,12 @@ title: Bold
 
 ## Description
 
-`boldWing` is the owner (claim) of `<b>`. Select some text and press **B** on the
-toolbar, or reach for it in hint mode (tap Shift twice, then `B`), and the range
-turns bold.
+`boldWing` is the inline mark wing that handles bold formatting (`<b>`). Select text and press **B** on the toolbar, reach for it in hint mode (tap Shift twice, then `B`), or use the shortcut (`Ctrl`/`⌘`+`B`) to apply it.
 
-- On the way in it accepts both `<b>` and `<strong>`; on the way out it is always
-  a single `<b>`. Not one attribute survives — `class`, `style` and `data-*` fall
-  off and only the tag remains.
-- The hint-mode shortcut is `B` and the accelerator is `Ctrl`/`⌘`+`B` (`mod+b`).
-- Pressing it with text selected is a toggle (`toggleMark`) — already bold all the
-  way through and it comes off, otherwise it goes on. The wing declares no command
-  of its own: its button is `action: { kind: 'mark' }`, which goes straight to the
-  core's `toggleMark`.
-- Leave the wing unregistered and `<b>` is stripped of its shell and drops to
-  plain text (every unregistered tag ends this way — it is a rule of the whole of
-  nabi).
+- On the way in it recognizes both `<b>` and `<strong>`; on the way out it always comes out as the standard `<b>` tag.
+- Run it with text selected and it toggles — if the selection is already bold it comes off, otherwise it goes on.
+- Run the shortcut with just a caret and no selection, and bold is queued for the next text you type.
+- Leave the wing unregistered and the `<b>` tag is stripped away automatically, leaving only the plain text inside.
 
 ## Usage example
 
@@ -30,7 +21,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// The wing list builds the kind knowledge, the commands and the builders together — that is the `registry`
 const { nabi, registry } = createNabiWith([boldWing])
 
 mountSurface({ nabi, registry, root: surface })

@@ -6,34 +6,31 @@ title: Lista numerada
 
 ## Descripción
 
-`orderedListWing` (id `ol`, atajo `N`) es el propietario de `<ol>`. Los elementos se
-traen junto con él mediante `parts`, así que `oli` no se registra aparte — no es un
-arreglo, es un registro.
+`orderedListWing` (id `ol`, atajo `N`) es el propietario de `<ol>`. El elemento
+llega junto con él mediante `parts`, así que `oli` no se registra por separado.
 
 ```ts
 parts: { oli: { holds: 'blocks' } }
 ```
 
 Al pulsar el botón, el bloque donde está el cursor (o los bloques que abarque la
-selección) queda envuelto en una lista numerada; al pulsarlo de nuevo, se deshace. Si
-pulsa el botón de otra lista, cambia a ese tipo.
+selección) se convierte en lista numerada; al pulsarlo de nuevo, vuelve a ser un
+párrafo normal. Si pulsa el botón de otra lista, cambia a ese tipo de inmediato.
 
-Escribir al principio de una línea uno o más dígitos, un punto y un espacio (`1. `,
-etc.) da el mismo resultado. **Vale cualquier número como inicio, pero como máximo
-nueve cifras** (`1234567890. ` no se activa), y si tras el punto viene algo más, como
-en `1.2 `, tampoco se activa. No hace falta que la línea esté vacía — solo se mide el
-principio de línea antes del cursor, y solo se activa en la primera línea del párrafo.
+Escribir `1. ` (un dígito, un punto, un espacio) al principio de un párrafo también
+lo convierte automáticamente en lista numerada. El número de inicio puede ser
+cualquiera y se reconoce hasta nueve cifras.
 
-- Sangrar y quitar sangría con `Tab` y `Shift+Tab`, terminar la lista con Enter en un
-  elemento vacío, y fusionar con Retroceso al principio de un elemento: todo funciona
-  igual que en la [lista con viñetas](./bullet-list).
-- El número no entra en el valor guardado — lo dibuja `<ol>`, así que al insertar o
-  borrar elementos el navegador vuelve a numerar por su cuenta.
-- El anidamiento también es marcado real y queda tal cual en el valor guardado. Como
-  el elemento contiene bloques, el texto lleva un párrafo puesto encima y una lista
-  anidada va dentro de un párrafo envoltorio.
-- Atributos como `start` o `type` no sobreviven, así que una lista que entre con
-  `start="5"` vuelve a contar desde uno.
+### Atajos y comportamiento de edición
+
+- Sangrar y quitar sangría con `Tab`/`Shift+Tab`, terminar la lista con Enter en un
+  elemento vacío, y fusionar con Retroceso al principio de un elemento: todo
+  funciona igual que en la [lista con viñetas](./bullet-list).
+- El número de cada elemento lo dibuja dinámicamente en el navegador la propia
+  etiqueta HTML `<ol>`, así que al insertar o borrar un elemento en medio la
+  numeración se recalcula sola.
+- Las listas anidadas se renderizan de forma segura dentro de un párrafo
+  envoltorio (`<div data-nabi-p>`).
 
 ## Ejemplo de uso
 

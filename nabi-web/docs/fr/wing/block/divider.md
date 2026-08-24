@@ -6,26 +6,24 @@ title: Séparateur
 
 ## Description
 
-`dividerWing` (nom `hr`) est propriétaire d'un unique `<hr>`. C'est **`place: 'void'`** — un bloc
-sans intérieur, donc il n'y a nulle part où le caret puisse entrer. Appuyez sur Retour arrière ou
-Suppr juste avant ou juste après un séparateur et ce bloc disparaît d'un bloc ; le sélectionner
-par une plage donne le même résultat.
+`dividerWing` (nom `hr`) gère le séparateur horizontal (`<hr>`). C'est un objet **`place: 'void'`**,
+sans place pour du texte à l'intérieur ; appuyez sur Retour arrière ou Suppr juste avant ou juste
+après le séparateur et tout le bloc disparaît d'un coup.
 
-Appuyez sur le bouton et le séparateur se dresse **en portant son propre paragraphe enveloppe.**
-Aucun paragraphe vide supplémentaire ne l'accompagne — le caret se pose sur ce paragraphe
-enveloppe, juste après le séparateur.
+Cliquez sur le bouton et le séparateur s'insère **enveloppé dans son propre paragraphe wrapper
+(`<div data-nabi-p>`)**. Le caret se retrouve juste après le séparateur.
 
-L'endroit où il atterrit dépend de si le paragraphe où était le caret contenait du texte.
+L'endroit où il est inséré dépend de l'état du paragraphe où se trouve le caret :
 
-| Où était le caret | Résultat |
+| Position du caret | Comportement d'insertion |
 |---|---|
-| un paragraphe avec du texte | il se tient **après** ce paragraphe |
-| un paragraphe vide | il **prend la place de ce paragraphe** — aucune ligne vide ne reste derrière |
+| Paragraphe avec du texte | Le nouveau séparateur s'insère **après** ce paragraphe |
+| Paragraphe vide | Ce paragraphe vide est **remplacé par le séparateur** (évite une ligne vide inutile) |
 
-Quand il prend la place d'un paragraphe vide, l'alignement que portait ce paragraphe survit.
+Quand un paragraphe vide est remplacé, son alignement de texte est conservé.
 
-Écrire trois tirets ou plus (`---`) au début d'une ligne et appuyer sur Entrée donne le même
-résultat — cette transformation automatique **se déclenche à Entrée**.
+Tapez trois tirets ou plus sur une ligne vide puis appuyez sur Entrée (`---` + Entrée) : la
+conversion en séparateur se fait automatiquement.
 
 ## Exemple d'utilisation
 

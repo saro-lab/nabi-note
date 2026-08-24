@@ -8,17 +8,12 @@ title: Unterstrichen
 
 `underlineWing` ist der Eigentümer (claim) von `<u>`.
 
-- Das einzige anerkannte Tag ist `<u>`. Auch beim Hinausgehen ist es immer `<u>`,
-  und kein einziges Attribut überlebt. **`<ins>` wird nicht angenommen** — es wird
-  entkleidet und nur der Text bleibt. Anders als Fett (`<b>`·`<strong>`) oder
-  Durchgestrichen (`<s>`·`<strike>`·`<del>`) ist dies kein Mark, das ein Paar von
-  Tags gemeinsam annimmt.
-- Das Hinweismodus-Kürzel ist `U`, der Beschleuniger ist `Strg`/`⌘`+`U` (`mod+u`).
-- Wird die Taste bei ausgewähltem Text gedrückt, ist es ein Umschalter.
-- Ohne Registrierung wird `<u>` entkleidet und fällt zu reinem Text herab.
-- Unterstreichung und Link können auf dem Bildschirm dieselbe Gestalt annehmen,
-  sind aber getrennte Marks, die verschiedenen Flügeln gehören (`a`) — auf
-  demselben Text können beide zugleich liegen.
+- Erkennt `<u>` bei der Eingabe und gibt bei der Ausgabe stets Standard-`<u>` zurück.
+- Unterstützt den Hinweismodus (Shift zweimal drücken, dann `U`) sowie den Beschleuniger
+  (`Strg`/`⌘`+`U`).
+- Bei ausgewähltem Text wirkt der Aufruf als Umschalter.
+- Unterstreichung und Link (`<a>`) können auf dem Bildschirm ähnlich aussehen, sind aber
+  unabhängige Flügel — derselbe Text kann Unterstreichung und Link gleichzeitig tragen.
 
 ## Anwendungsbeispiel
 

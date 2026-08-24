@@ -1,19 +1,18 @@
 ---
 title: SSR support
-description: Pre-render stored content on the server, and hydrate the editor and toolbar to pick it up.
+description: Pre-render stored documents on the server and hydrate the editor and toolbar to pick them up instantly in the browser.
 ---
 
-# SSR support
+# SSR (server-side rendering) support
 
-## Rendering just the stored value — without standing an editor up
+## Rendering stored documents (read-only views)
 
-A spot that only **shows** something, such as a comment list, needs no editor. Drawing a document
-takes only the list of registered wings (`registry`), so there is a door that takes just that.
+A screen that only **displays** a document — a comment list or a post view — doesn't need an editor instance. Rendering a document to HTML only requires the registered wing list (`registry`), so there's a server-only render function for exactly that.
 
 ```ts
 import { makeRegistry, defaultWings, renderStoredHtml, renderStoredEditorHtml } from 'nabi-note/ssr'
 
-// Once, when the server stands up — however many stored values there are, they share this one
+// Create once at server startup and reuse across requests.
 const registry = makeRegistry(defaultWings)
 
 const saved = [{ w: 'p', ch: ['one comment line'] }]   // a nabi-tree read from the DB
@@ -22,51 +21,35 @@ renderStoredHtml(saved, registry)        // '<p>one comment line</p>'
 renderStoredEditorHtml(saved, registry)  // '<p data-key="n0">one comment line</p>'
 ```
 
-**`nabi-note/ssr` is the entry point carrying only what rendering needs.** It touches not one file
-of the editing surface (`surface`) or the screen tools (`ui`) — a net enforces this — so no DOM code
-slips into a server bundle. The same gate lives in `nabi-note` too, so a page that already loads the
-editor can just use that one instead.
+**`nabi-note/ssr` is a lightweight entry point containing only the core rendering logic.** It never references the editing surface (`surface`) or the on-screen UI tools (`ui`), and architecture-level unit tests guarantee that no DOM code leaks into the server bundle. If your environment already loads the full editor bundle, the same functions are also available from the `nabi-note` package.
 
-| | |
+| Function | Description |
 |---|---|
-| `renderStoredHtml(json, registry, options?)` | the HTML you save and publish — the same value as `getHtml()` |
-| `renderStoredEditorHtml(json, registry, options?)` | editor HTML — the same value as `getEditorHtml()` (it carries `data-key`) |
+| `renderStoredHtml(json, registry, options?)` | HTML for storage/publishing — the same value as the editor's `getHtml()` |
+| `renderStoredEditorHtml(json, registry, options?)` | HTML for initializing the editor — the same value as `getEditorHtml()` (carries `data-key`) |
 
-- **Neither touches the DOM** — both run as they are on a server.
-- **Anything that is not a nabi-tree answers `null`.** The rejection rule is the same as
-  `setJson()` (the whole document has to be an array). Neither throws — even a value that throws
-  mid-read turns into `null`, reported through `console.error`.
-- **Not one character differs from what the editor itself puts out.** Both pass through the same
-  steps (normalize → assemble), so wherever XSS gets filtered out is the same place too — nothing
-  gets a lighter wash just because it is only being shown.
-- `options` is one thing, `{ allowLocalUrls }` — the same meaning as that option on
-  `createNabiWith`.
+- **Uses no DOM API at all.** Runs directly in server environments such as Node.js.
+- **Returns `null` for anything that isn't a valid nabi-tree.** The validation rules are the same as `setJson()`. Invalid input never throws — it returns `null` and logs the cause via `console.error`.
+- **Matches the editor instance's output exactly.** Both go through the same normalize-and-assemble pipeline, so XSS filtering is applied identically.
+- The `options` parameter supports `{ allowLocalUrls?: boolean }`, playing the same role as the identical option on `createNabiWith`.
 
-**The same stored value always gets the same `data-key`.** Which is why, when the server sends an
-editor down pre-rendered with `renderStoredEditorHtml` and the browser picks it up with `hydrate`,
-the screen is not redrawn.
+**The same nabi-tree data always produces the same `data-key`.** Because of this, you can pre-render the editor's initial HTML on the server with `renderStoredEditorHtml`, send it down to the client, and mount it with the `hydrate: true` option — the editor activates instantly with no re-render or flicker.
 
 ```ts
 mountSurface({ nabi, registry, root: surface, hydrate: true })
 ```
 
-A mismatch just redraws on the spot, so all that has to match is the wing list on the server and on
-the client.
+Even if the server and client render results happen to differ, the client automatically falls back to a normal render, so all you need to keep in sync between server and client is the wing list (`registry`).
 
-::: tip This site's own home page is that very sample
-The home demo's document is **pre-rendered at build time with `renderStoredEditorHtml`** and
-planted right in the page, and the editor wakes up on top of it through `hydrate`. So the text is
-already readable before the editor's code even arrives — there is no stretch where a blank spot
-suddenly fills in.
+::: tip This site's own home demo runs on SSR hydration
+The home demo's document is **pre-rendered at build time with `renderStoredEditorHtml`** and embedded in the HTML; once the client script loads, `hydrate` wakes the editor up on top of it. That's why the body text is visible immediately, even before the JS loads — there's no layout shift (CLS).
 :::
 
 ---
 
-## The toolbar can be pre-rendered too
+## Pre-rendering the toolbar
 
-The button row **never looks at the document.** It only looks at the registered wing list, the
-language and the group order, so what comes out is a **constant** — call it once when the server
-stands up and keep using that text. No need to call it again on every request.
+The toolbar's button layout **never depends on the document's content.** It's generated purely from the registered wing list, the display language (locale), and the group order, so the output is deterministic. Render it once at server startup, cache it, and reuse it across requests.
 
 ```ts
 import { makeRegistry, defaultWings, renderToolbarHtml } from 'nabi-note/ssr'
@@ -77,38 +60,21 @@ const toolbarHtml = renderToolbarHtml({ registry, locale: 'en' })
 // '<div class="nabi-group" data-group="font">…</div>'
 ```
 
-Send this text straight into the toolbar's box, and in the browser `mountToolbar` draws it with
-**that same function** — if the same row is already standing, it **does not redraw it, only wires
-it up.**
+Embed this HTML string inside the toolbar container and send it to the client — the browser's `mountToolbar` recognizes the existing markup and **only binds event listeners, without redrawing it.**
 
 ```ts
 mountToolbar({ nabi, registry, surface, root: toolbar })
 ```
 
-::: warning Write `class="nabi-toolbar-row"` on the box yourself
-When you send a pre-rendered row down, this class has to be there **from the very first paint**.
-The core attaches it itself at mount time if it is missing, and then the left-right padding lands
-at that moment and **the button row shifts sideways once.** Write it in ahead of time and the core
-leaves it alone (it only ever removes what it itself attached).
-
-```html
-<div class="nabi-toolbar-row">a pre-rendered row</div>
-```
+::: warning Set `class="nabi-toolbar-row"` on the container element yourself
+When you ship a pre-rendered toolbar row, it must carry `class="nabi-toolbar-row"` from the very first paint. If it's missing, the class gets added at mount time — and the padding that comes with it lands at that moment, causing **the button row to visibly shift.**
 :::
 
-- **A mismatch never breaks anything** — if the row standing there differs from the current wing
-  list, it is redrawn on the spot. All that is lost is the pre-rendered value; the screen is always
-  correct.
-- **A pre-rendered row is in the state "nothing pressed, nothing hidden."** Pressed state
-  (`aria-pressed`) and hiding are decided by the caret, which the server does not know. In a setup
-  where buttons hide depending on the caret, a few may vanish right after mount and the row folds
-  again.
-- **Only put this where you are standing an editor up.** A read-only page has no toolbar, so there
-  is no reason for it to receive this text.
+- **Safe even if the structure doesn't match.** If the delivered HTML differs from the current wing list, the client redraws it immediately — nothing stays broken.
+- **A pre-rendered toolbar starts in its default state** (nothing pressed, nothing hidden). Pressed state (`aria-pressed`) and context-specific visibility depend on the caret position, so they sync automatically once the client mounts.
+- **Use this only on screens that contain an editor.** A plain read-only page has no need for a toolbar.
 
-**The preview and full-screen buttons take the same road.** The two of them are not wings but parts
-of the overlay, so they are not in the toolbar text above — render them separately and put them in
-the box `mountViewTools` will stand up.
+**The preview and fullscreen buttons can be pre-rendered the same way.** Since they're view-tool components rather than wings, render them separately with `renderViewToolsHtml`.
 
 ```ts
 import { renderViewToolsHtml } from 'nabi-note/ssr'
@@ -117,18 +83,16 @@ renderViewToolsHtml({ locale: 'en' })
 // '<span class="nabi-tools">…</span>'
 ```
 
-::: tip This site's own home page is that very sample
-The home demo's toolbar is **pre-rendered at build time with `renderToolbarHtml` and
-`renderViewToolsHtml`** and planted in the page, and `mountToolbar`/`mountViewTools` recognize that
-row and only wire it up. So there is no stretch where thirty-five icons pop in late.
+::: tip This site's home demo pre-renders its toolbar too
+The home demo's toolbar is **pre-rendered at build time with `renderToolbarHtml` and `renderViewToolsHtml`**, and `mountToolbar`/`mountViewTools` recognize that row and only wire up events. That's why you never see dozens of toolbar icons pop in late.
 :::
 
 ---
 
 ## Next
 
-- [{{ t('menu_intro_usage') }}](./usage) — the npm way, the full assembly, input and output
-- [{{ t('menu_intro_cdn') }}](./cdn) — one `<script>`, no build step
+- [{{ t('menu_intro_usage') }}](./usage) — installing via npm and the full editor usage guide
+- [{{ t('menu_intro_cdn') }}](./cdn) — using a single `<script>` tag, no build step
 
 <script setup lang="ts">
 import { useTranslate } from '../../.vitepress/src/langs.ts'

@@ -134,16 +134,8 @@ Duas coisas que `valueMark` acrescenta para você:
 
 - **`currentValue`** — o valor no lugar onde o cursor está agora. A barra de ferramentas e a
   linha de contexto pintam, com base nessa resposta, qual campo está ativo.
-- **`repair`** — verifica o valor de novo na porta do JSON. Fora da lista ou ausente, responde
-  `null` e **remove o nó, casca e tudo.** Um valor salvo editado à mão é pego bem aqui.
-
-::: tip Um comando que muda o valor
-Para o comando "mude para este valor" de um mark de valor, ainda não existe um auxiliar
-público. O `action: { kind: 'mark' }`, que só alterna via um botão da barra de ferramentas,
-funciona como mostrado, e se precisar de escolha de valor, use por ora os quatro marks de valor
-padrão (marca-texto, cor de texto, tamanho de letra, tipo de letra) ou espalhe suas
-declarações.
-:::
+- **`repair`** — verifica de novo na porta do JSON se o valor ainda está na lista. Se não estiver
+  mais, **normaliza o nó automaticamente.** Um valor salvo editado à mão é pego bem aqui.
 
 ---
 

@@ -161,8 +161,6 @@ const detailsWing: Wing = {
 - 部件名字不能和翅膀名字、其他部件名字撞。
 - 需要收拾部件时，用部件名字写进 `partRepair`。
 
-`StructureDecl` 接受三个——`holds`·`singleParagraph`·`boolAttrs`。
-
 ### `singleParagraph`
 
 里面**固定只能是一个段落**。表格的格子就是这样——在格子里按 <kbd>Enter</kbd>
@@ -189,9 +187,6 @@ repair: (node) => {
 
 手改过的存值、别的版本传来的文档、别人做的 JSON 全都要经过这道门。只有通过
 这里的才会成为文档，所以**这是翅膀唯一能自己保证自家节点形状的地方。**
-
-`allows` 和 `repair` 一起写的话，`allows` 的整理会**先**跑，结果再交给
-`repair`。
 
 ---
 
@@ -224,13 +219,6 @@ requiresAnyOf: ['img', 'a']
 选用容器包起来的办法。
 :::
 
-处理值的字段有两个。
-
-| | |
-|---|---|
-| `attrValues` | 能接受的值清单（标题就是 `[1,2,3,4,5,6]`） |
-| `currentValue` | 这个段落现在带的值。工具栏、上下文工具栏靠这个答案给按下的格子上色 |
-
 ---
 
 ## 公开的文档辅助函数
@@ -249,12 +237,6 @@ requiresAnyOf: ['img', 'a']
 ```ts
 return { doc: r.doc, selection: { anchor: r.caret, focus: r.caret } }
 ```
-
-::: tip 需要比这更细的编辑
-按字符切开、拼接的内部辅助函数（挂标记、写段落属性这类）现在还不是公开 API。
-在那之前，也可以直接自己拼出新的 `doc` 数组来回答——答出来的文档还会被
-`cocoon` 再收拾一遍，破坏规则的文档不会就这么留下来。
-:::
 
 ---
 

@@ -262,12 +262,38 @@ Pratinjau · layar penuh juga **dibangun oleh inti.**
 | Selektor | Apa | Siapa |
 |---|---|---|
 | `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | overlay pratinjau dokumen | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | kotak untuk melihat satu gambar saja secara besar | `openImageLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | kotak untuk melihat satu gambar saja secara besar | `openLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | panel pemilih kandidat tempel | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | panel simpan — kolom nama, label ekstensi, sel format | `openSavePanel()` |
 | `.nabi.is-fullscreen` | layar penuh — mengunci kotak `.nabi` ke layar | `setFullscreen()` (nama kelasnya `FULLSCREEN_CLASS`) |
 
+::: tip Kedua panel memakai **satu set aturan yang sama**
+Panel tempel dan panel simpan dibangun dari bagian kisi yang sama, sehingga selektornya berpasangan
+— `.nabi-choose-list`/`.nabi-save-list` · `.nabi-choose-row`/`.nabi-save-row` ·
+`.nabi-choose-icon`/`.nabi-save-icon` · `.nabi-choose-label`/`.nabi-save-label`. **Keduanya** menandai
+sel yang dibidik lewat `[aria-selected="true"]`, dan tanda itu hanya satu garis bingkai
+`--nabi-accent` — tidak ada isian warna di sel opsi manapun.
+
+Hanya panel simpan yang punya tiga hal sendiri: `.nabi-save-name` (kolom nama), `.nabi-save-ext`
+(label ekstensi), `.nabi-save-note` (`(hilang sebagian)` — lebih kecil dari nama dan tidak berwarna
+peringatan).
+
+`--nabi-grid-cols` adalah jumlah kolom kisi, tetapi **yang menuliskannya adalah tangan yang
+mendirikan panel itu sendiri** — panel menghitung sel-selnya dan menuliskan nilainya (maksimal tiga)
+langsung inline pada daftar itu, jadi ini bukan nilai yang diatur host dari luar. `--nabi-save-ext-len`
+(lebar label ekstensi dalam karakter) sejenis.
+:::
+
+::: warning `.nabi-save-format` sudah tidak ada
+Itu nama sel saat panel simpan masih berupa daftar vertikal. Host yang menimpa warna hover lewat
+nama itu **berhenti bekerja secara diam-diam** — sekarang sel kisinya bernama `.nabi-save-row` (nama
+slot yang sama seperti panel tempel), dan tidak ada isian warna sama sekali di dalamnya saat hover
+atau terpilih.
+:::
+
 Pasang `mountViewTools()` dan kedua tombol itu akan membuka · menutup semuanya sendiri. Untuk
-membukanya sendiri, panggil `openPreview({ nabi, editor })` ·
-`openImageLightbox({ editor, src, alt?, locale })` · `setFullscreen(root, on)` ·
+membukanya sendiri, panggil `openPreview({ nabi, surface })` ·
+`openLightbox({ surface, src, alt?, locale? })` · `setFullscreen(root, on)` ·
 `isFullscreen(root)`.
 
 ::: tip Tempat alat berdiri sendiri

@@ -1,135 +1,126 @@
 ---
 title: Vibe coding con IA
-description: llms.txt
+description: Una guía para adoptar y desarrollar con NABI NOTE junto a un asistente de codificación con IA, usando llms.txt.
 ---
 
 # Vibe coding con IA
 
-**`llms.txt`** es un estándar que usan los sitios web para entregarle su contenido a los
-agentes de IA (LLM). En vez de HTML, deja la estructura y el modo de uso de un proyecto en
-markdown, que un agente puede leer directamente. El estándar completo está en
-[llmstxt.org](https://llmstxt.org/).
+**`llms.txt`** es un estándar diseñado para que los sitios web entreguen de forma eficiente
+la estructura y el uso de un proyecto a los agentes de IA (LLM). En vez de marcado HTML,
+ofrece la especificación y la API del proyecto en markdown limpio, fácil de leer para una IA.
+El estándar completo está en [llmstxt.org](https://llmstxt.org/).
 
-Este sitio también tiene esa puerta abierta. No hay que memorizar la dirección — como en el
-ejemplo de abajo, **le pasa la dirección al agente** y el resto lo sigue solo.
+El sitio oficial de NABI NOTE también soporta `llms.txt` por completo. No hace falta copiar
+la documentación a mano — **basta con pasarle al agente la URL de abajo** y explora la
+documentación por su cuenta para ponerse a trabajar.
 
 ```
 https://nabi.saro.me/llms.txt
 ```
 
-Cursor, Claude Code, OpenAI Codex, Windsurf y otros soportan el estándar llms.txt.
+Cursor, Claude Code, OpenAI Codex, Windsurf y otras herramientas modernas de codificación con
+IA soportan el estándar llms.txt.
 
-## Al traerlo por primera vez
+## Al adoptarlo por primera vez
 
-Al traer nabi-note a un sitio que todavía no lo usa, le dice al agente de una vez qué quiere
-encender, si hay modo claro/oscuro y de qué manera lo va a distribuir — el resto lo ensambla
-solo. **Solo cambia la última frase entre los tres casos de abajo** — el resto se puede dejar
-igual.
+Al traer NABI NOTE a un proyecto por primera vez, basta con indicar las funciones que
+querés, si hay soporte de modo claro/oscuro y el entorno de despliegue (SSR/CSR/CDN), y el
+agente de IA escribe el código óptimo.
 
-### npm + renderizado en servidor (SSR) — se dibuja en el servidor (Node) en cada petición
-
-Esto cubre tanto un backend en Node hecho a mano como un framework de SSR como Next.js, Nuxt o
-SvelteKit — en los dos casos el documento se dibuja sobre Node y se envía en cada petición.
+### npm + renderizado en servidor (SSR) — Next.js, Nuxt, SvelteKit y similares
 
 ```
-Queremos traer nabi-note como nuestro nuevo editor. Usa https://nabi.saro.me/llms.txt
-como manual. Nuestro sitio tiene modo claro/oscuro, así que el editor tiene que
-seguirlo. Enciende todos los wings que vienen por defecto.
+Queremos traer nabi-note a nuestro sitio como el nuevo editor. Usa
+https://nabi.saro.me/llms.txt como manual. Nuestro sitio tiene modo
+claro/oscuro, así que el tema del editor tiene que seguirlo. Activa todos los
+wings que vienen por defecto.
 
-Renderizamos en el servidor con Nuxt, y queremos que el texto ya esté visible en
-el momento en que alguien entra a la página. Instálalo con npm y conéctalo con
-SSR más hydrate.
+Nuestro servicio hace renderizado en el servidor con Nuxt. Queremos que la
+página no parpadee en la primera visita, renderizada de antemano en el
+servidor. Instálalo como paquete npm y conéctalo con SSR + hydrate.
 ```
 
-### npm + ensamblado solo en el navegador (CSR) — hay bundler, pero no hace falta renderizar en servidor
+### npm + solo cliente (CSR) — entornos Vite, CRA, SPA
 
 ```
-Queremos traer nabi-note como nuestro nuevo editor. Usa https://nabi.saro.me/llms.txt
-como manual. Nuestro sitio tiene modo claro/oscuro, así que el editor tiene que
-seguirlo. Enciende todos los wings que vienen por defecto.
+Queremos traer nabi-note a nuestro sitio como el nuevo editor. Usa
+https://nabi.saro.me/llms.txt como manual. Nuestro sitio tiene modo
+claro/oscuro, así que el tema del editor tiene que seguirlo. Activa todos los
+wings que vienen por defecto.
 
-Es un frontend armado con Vite y no necesitamos renderizado en servidor.
-Instálalo con npm y ensámblalo solo en el navegador.
+Es un frontend SPA basado en Vite y no necesitamos renderizado en el
+servidor. Instálalo como paquete npm y ensámblalo solo en el cliente del
+navegador.
 ```
 
-### CDN — una página estática sin herramientas de compilación
+### CDN — entornos HTML estático
 
 ```
-Queremos traer nabi-note como nuestro nuevo editor. Usa https://nabi.saro.me/llms.txt
-como manual. Nuestro sitio tiene modo claro/oscuro, así que el editor tiene que
-seguirlo. Enciende todos los wings que vienen por defecto.
+Queremos traer nabi-note a nuestro sitio como el nuevo editor. Usa
+https://nabi.saro.me/llms.txt como manual. Nuestro sitio tiene modo
+claro/oscuro, así que el tema del editor tiene que seguirlo. Activa todos los
+wings que vienen por defecto.
 
-Esta página es HTML estático, sin herramientas de compilación. Conéctalo con una
-etiqueta <script>.
+Esta página es HTML estático sin herramientas de compilación. Conéctalo con
+etiquetas `<script>` y `<link>`.
 ```
 
-::: tip El modo claro y oscuro no necesita ninguna instrucción aparte
-`nabi.css` ya trae los valores claros por defecto, la anulación `.dark` y una anulación
-explícita `.light`. Deja la clase `dark`/`light` de la página como está y el editor la sigue
-solo. Para cambiar el color de marca, haga que el agente lea también `llms/styling.md`.
+::: tip El tema (claro/oscuro) se adapta automáticamente
+`nabi.css` ya trae integrados los valores claros por defecto, la clase `.dark` y una clase
+`.light` explícita. El tema del editor cambia automáticamente junto con el toggle
+`class="dark"` del elemento raíz de la página. Para personalizar los colores de marca, hacé
+que el agente lea también `llms/styling.md`.
 :::
 
-Los tres mensajes solo se diferencian en esa última frase — el agente busca y lee
-`llms/ssr.md` (más `llms/quickstart-npm.md`), `llms/quickstart-npm.md` y
-`llms/quickstart-cdn.md` respectivamente, y lo conecta de esa manera.
+## Al agregar o personalizar una función
 
-## Cambiar, añadir o quitar una función
+Al agregar o modificar una función en un editor que ya está integrado, es más seguro **pedir
+primero investigación y un plan de implementación** antes de pasar directo al código —
+sobre todo para cualquier cosa que involucre una API de backend (como la subida de
+archivos), donde los requisitos hay que dejarlos claros de antemano.
 
-Una vez que nabi-note ya está puesto, es más seguro pedir un cambio o algo nuevo como
-**investigación y un plan primero, antes que ir directo a la implementación** — sobre todo
-cuando la función llega hasta el backend, donde hay que saber qué preparar antes de escribir
-código.
-
-### Ejemplo — investigación y plan primero
+### Ejemplo de prompt — investigación y plan primero
 
 ```
-Quiero añadir subida de archivos. Lee https://nabi.saro.me/llms/wings.md y
-https://nabi.saro.me/llms/api-reference.md, y averigua qué necesita nuestro
-backend para soportar el wing de subida (una dirección que reciba archivos,
-extensiones y límites de tamaño permitidos, cómo debería verse una respuesta de
-error). No lo implementes todavía — solo muéstrame un plan de qué hay que
-preparar.
+Quiero integrar la subida de archivos. Leé https://nabi.saro.me/llms/wings.md
+y https://nabi.saro.me/llms/api-reference.md, e investigá primero cómo
+deberían quedar la especificación de la API de backend (endpoint,
+extensiones/límites de tamaño permitidos, formato de la respuesta JSON, etc.)
+y el código de integración del frontend para habilitar el wing de subida. No
+escribas código todavía — solo mostrame los requisitos a preparar y un plan
+de implementación.
 ```
 
-El agente va a encontrar en `llms/wings.md` que `upload` es un wing de herramienta que recibe
-un `Uploader`, va a confirmar las firmas reales de `mountUpload`, `Uploader` y
-`allowLocalUrls` en `llms/api-reference.md`, y va a armar un plan que separa lo que tiene que
-exponer el backend de lo que decide el frontend por su cuenta. Una vez que revise y apruebe el
-plan, le pide que lo implemente.
-
-### Un ejemplo más simple — se puede pedir directamente
-
-Un cambio acotado que no necesita plan se puede pedir de una vez.
+### Ejemplo de prompt — un cambio de estilo simple
 
 ```
-Lee https://nabi.saro.me/llms/styling.md y cambia solo el color de acento y el
-fondo del tema oscuro a los colores de nuestra marca.
+Leé https://nabi.saro.me/llms/styling.md y redefiní el color de acento del
+editor y el color de fondo del tema oscuro como variables CSS, según nuestros
+colores de marca.
 ```
 
-::: tip Un wing que rompe el contrato se rechaza en el momento de registrarlo
-Cuando haga que un agente construya un wing nuevo, que lea también
-[`llms/custom-wing.md`](https://nabi.saro.me/llms/custom-wing.md). Errores comunes — usar una
-palabra reservada como nombre, o un wing que produce un nodo sin `toHtml` — no fallan más
-adelante, **se rechazan en el instante en que se registra el wing.** La sección "Un contrato
-roto se rechaza al registrar, no después" de ese documento junta lo que hace caer el registro.
+::: tip Un wing que rompe el contrato lanza una excepción justo al registrarse
+Cuando hagas que un agente escriba un wing personalizado nuevo, hacé que lea también
+[`llms/custom-wing.md`](https://nabi.saro.me/llms/custom-wing.md). Errores comunes — un
+choque con una palabra reservada, un método obligatorio faltante — no se descubren tarde en
+tiempo de ejecución; **se detectan de inmediato como excepción en el momento del registro.**
 :::
 
-::: tip Una vez que está puesto, deje una sola línea
-Después de la primera integración, no hace falta repetir la dirección cada vez. Agregue una
-línea así al archivo de reglas de su proyecto (`CLAUDE.md`, `.cursorrules`, etc.) y con un
-pedido tan corto como "hace X con nabi-note" el agente encuentra la dirección solo.
+::: tip Dejá una línea en el archivo de reglas del proyecto
+Agregá la siguiente frase al documento de guía del proyecto (`CLAUDE.md`, `.cursorrules`,
+`AGENT.md`, etc.), y de ahí en adelante con solo pedir "agregale ~ función al editor" la IA
+va a consultar `llms.txt` por su cuenta.
 
 ```md
-Este proyecto usa `nabi-note` como su editor. Revisa
-https://nabi.saro.me/llms.txt antes de trabajar en algo relacionado.
+Este proyecto usa `nabi-note` como editor WYSIWYG. Antes de trabajar en algo
+relacionado, revisá primero el documento https://nabi.saro.me/llms.txt.
 ```
 :::
 
 ## Próximos documentos
 
-- [{{ t('menu_intro_index') }}](../intro) — el vocabulario que usa este documento
-- [{{ t('menu_wing_custom') }}](../wing/custom) — construir a mano un formato que no existe, como
-  documento legible por personas
+- [{{ t('menu_intro_index') }}](../intro) — introducción y arquitectura de NABI NOTE
+- [{{ t('menu_wing_custom') }}](../wing/custom) — guía para construir wings personalizados
 
 <script setup lang="ts">
 import { useTranslate } from '../../.vitepress/src/langs.ts'

@@ -6,21 +6,16 @@ title: Capitular
 
 ## Descrição
 
-`dropCapWing` é um atributo de parágrafo de valor único, que pendura no
-parágrafo `data-nabi-dropcap="1"`. Ele não cria bloco novo: apenas põe uma
-marcação sobre o parágrafo que já existe.
+O `dropCapWing` é um wing de atributo de parágrafo que exibe a primeira letra de um parágrafo
+como uma grande letra decorativa (`data-nabi-dropcap="1"`).
 
-- O valor é um só, ligado ou desligado — pressionar o botão de novo faz o
-  atributo cair.
-- **Não há opção nem variável para decidir quantas linhas ele abraça.** Uma única
-  regra da folha de estilo do núcleo fixa o tamanho — `font-size: 5.9em;
-  line-height: .83`. Quantas linhas a letra vai realmente cobrir depende da
-  altura de linha daquele parágrafo.
-- Como ele só toca a primeira letra, o Enter trata esse atributo como se fosse
-  uma marca — ao partir o parágrafo em dois, ele não se duplica para os dois
-  lados: acompanha aquela letra.
+- Funciona como um único alternador ligado/desligado.
+- O tamanho da primeira letra é fixado por uma regra `::first-letter` na folha de estilo do
+  núcleo (`font-size: 5.9em; line-height: .83`).
+- Se você dividir o parágrafo com Enter durante a digitação, o atributo de capitular não é
+  duplicado para os dois lados — ele permanece só com a letra original.
 
-Para mudar o tamanho, sobrescreva essa regra.
+Para personalizar o tamanho, sobrescreva a regra abaixo:
 
 ```css
 .nabi-content [data-nabi-dropcap="1"]::first-letter { font-size: 4.6em; line-height: .86; }

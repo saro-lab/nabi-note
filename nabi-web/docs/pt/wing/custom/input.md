@@ -88,8 +88,6 @@ para a lista. Uma parte (`parts`) também pode ser dona, e quando é, `owner.nod
 mas o `onKey` chamado é o do wing que a declarou. Por isso é convenção verificar primeiro
 `owner.node.w` para saber qual foi escolhido.
 
-Um mark nunca pode ser dono — [o motivo está na página de inline](./inline#marks-nao-podem-ter-teclas).
-
 ---
 
 ## `inputRules` — construindo só a partir da digitação
@@ -114,10 +112,6 @@ inputRules: [
 Olha para o **começo da linha** antes do cursor. Ao dar match, apaga esse prefixo (e o
 caractere gatilho) e roda o comando.
 
-```
-digitar "> "   →   o "&gt;" é apagado e toggleQuote roda
-```
-
 Só dispara na **primeira linha** de um parágrafo. Numa linha alcançada com
 <kbd>Shift</kbd>+<kbd>Enter</kbd>, não dispara — isso impede que formatação irrompa no meio de
 um texto que já se está escrevendo.
@@ -127,18 +121,6 @@ um texto que já se está escrevendo.
 Olha para a **única palavra** antes do cursor. Ao dar match, seleciona essa palavra, roda o
 comando e devolve o cursor ao lugar. Nenhum texto é apagado — é essa a forma para regras que
 aplicam um mark.
-
-Se essa palavra **já carrega o mark deste wing, a regra é pulada.** Não dispara duas vezes no
-mesmo lugar.
-
-### Regras comuns
-
-- Só roda enquanto o cursor está **recolhido.** Apertar espaço com um intervalo selecionado não
-  faz nada.
-- Só roda num parágrafo comum — nunca num parágrafo wrapper que carrega um bloco.
-- As regras são testadas na ordem do array de wings, e **a primeira regra bem-sucedida** vence.
-- Se o comando responder `null` (nada a fazer), **é desfeito e passa para a próxima regra.** Uma
-  regra de entrada que falha não deixa rastro no documento.
 
 ---
 
@@ -166,8 +148,7 @@ const attachNote: Attach = (host) => {
 | `host.pathOfKey(id)` | transforma um `data-key` da tela num caminho dentro do documento |
 
 `mountSurface` prende junto o `attach` de cada wing registrado, e chama as funções de desligar
-que você devolveu quando é desmontado. Esta é **a única casa onde vive código que conhece o
-DOM** — nunca toque `document` dentro de um comando, `toHtml` ou `repair`.
+que você devolveu quando é desmontado.
 
 ::: tip Encontrando o documento via `data-key`
 A montagem do editor (`getEditorHtml()`) marca cada nó com um `data-key`. Encontre o
@@ -177,32 +158,30 @@ obter o lugar dentro do documento.
 
 ---
 
-## Colagem e HTML inicial
+## Colagem e o pipeline de parsing de HTML
 
-Todos os três passam pela **mesma porta** no fim. A única tarefa do wing ali é `claim` — está escrito em [`claim` na página de inline](./inline#claim). **Colar sozinho tem um passo na frente**, porém: antes de chegar a `claim` passa pelos filtros de E/S e o painel de candidatos.
+Colar, `setHtml()` e o carregamento do HTML inicial passam todos pelo mesmo pipeline de parsing
+e normalização.
 
 ```
-Colar          ─→ Filtros de E/S ─→ painel de candidatos (só quando há dois ou mais) ─┐
-setHtml        ───────────────────────────────────────────────────────────────────────┼→ parse → o claim dos wings → o tratamento de tag padrão do núcleo → repair → cocoon → documento
-HTML inicial   ───────────────────────────────────────────────────────────────────────┘
+Colar          ─→ Filtros de E/S ─→ pop-up de escolha de formato (com dois candidatos ou mais) ─┐
+setHtml        ──────────────────────────────────────────────────────────────────────────────────┼→ parsing HTML → o claim dos wings → mapeamento de tags padrão do núcleo → repair → cocoon → árvore nabi
+HTML inicial   ──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**`setHtml()` e HTML inicial não passam pelo painel.** Esse é um lugar onde o host empurra um valor para dentro, então não há nada a perguntar — sem filtros, sem candidatos, direto para análise.
-
-Um candidato só é de verdade montado (e `claim` só é chamado) **depois que a pessoa escolhe um no painel**. Montar todos os quatro candidatos para usar um seria desperdício. Construir um filtro do seu próprio é coberto em [Plugando um filtro de E/S](../custom#plugging-in-an-io-filter).
-
-Sem um `claim`, **essa tag tem a casca retirada, e só o texto de dentro sobrevive.** Essa regra
-é o motivo pelo qual marcação desconhecida, copiada do editor de outra pessoa, não vai parar
-tal e qual no documento.
-
-O caminho via JSON (`setJson()`) carrega nós, não tags, então o porteiro ali é `repair`, não
-`claim`.
+- **`setHtml()` e o carregamento do HTML inicial não passam pelo pop-up de escolha** — vão direto
+  para o pipeline de parsing.
+- Ao colar da área de transferência, o pop-up de escolha de formato só aparece quando há dois ou
+  mais candidatos; o parsing real (`claim`) só ocorre depois que a pessoa escolhe um formato.
+- Uma tag estranha para a qual nenhum wing define `claim` é removida com segurança — só o texto
+  de dentro é preservado.
 
 ---
 
 ## Próximas páginas
 
 - [UI e comportamento](../custom/ui) — botões da barra de ferramentas e a linha de contexto
+- [Plugando um filtro de E/S](../custom#plugando-um-filtro-de-e-s) — o ponto de extensão para colar, salvar e abrir
 - [Marks inline](../custom/inline) · [Blocos e atributos de parágrafo](../custom/block)
 
 <script setup lang="ts">

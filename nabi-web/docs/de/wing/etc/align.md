@@ -6,28 +6,13 @@ title: Ausrichtung
 
 ## Beschreibung
 
-**Ein einziger** `alignWing` (id `align`) trägt alle drei — links, mittig und rechts. Er ist eine
-Konstante, keine `align()`-Fabrik, und setzt eine Schaltfläche pro Wert auf die Werkzeugleiste. Was
-er schreibt, ist das Absatzattribut `a`, das als `data-nabi-align` hinausgeht.
+`alignWing` (id `align`) ist ein Absatzattribut-Flügel, der die Textausrichtung — links, mittig, rechts — für Absätze und Blockelemente verwaltet.
 
-- Es ist ein **Absatzattribut**: Das Tag bleibt unangetastet, und nur das Attribut wird hinzugefügt,
-  wie in `<p data-nabi-align="c">` — die Werte sind `l`, `c` und `r`.
-- **Es greift auf Absätze und Überschriften.** `<h2 data-nabi-align="c">` funktioniert ebenfalls,
-  weil eine Überschrift eine Textzeile wie jede andere ist — eine Überschrift selbst ist nur ein
-  weiteres Attribut (`h`) auf demselben Absatz, sodass die beiden nebeneinanderstehen.
-- Nur ein Wert steht zur Zeit. Drücken Sie „mittig" auf einem linksbündigen Absatz, fällt der Wert
-  „links" ab, während „mittig" landet. Drücken Sie den bereits gesetzten Wert erneut, geht das
-  Attribut vollständig ab, zurück zur Standardausrichtung.
-- **Enter reicht die Ausrichtung an beide Hälften weiter.** Spalten Sie einen Absatz, kommen beide
-  mit derselben Ausrichtung heraus — anders als die Überschrift (`h`), die aus der leer gebliebenen
-  Hälfte fällt, und die Initiale (`dc`), die nur einer Seite folgt. Ausrichtung hat keine solche
-  Ausnahme.
-- Die drei sind **drei Schaltflächen an einem Flügel** (`buttons`) — sie können nicht getrennt an-
-  und ausgeschaltet werden. Legen Sie den einzelnen `alignWing` in das Flügel-Array.
-- **Es ist das eine Absatzattribut, das auf einem Wrapper-Absatz bestehen bleibt.** Jedes andere
-  Absatzattribut versteckt seine Schaltfläche, wenn der Caret auf einem Absatz steht, der einen
-  Klotz hält; Ausrichtung nicht, weil die Ausrichtung eines Klotzes vom Wrapper-Absatz getragen wird
-  statt vom Klotz selbst. Ein zentriertes Bild *ist* ein Bild innerhalb eines zentrierten Absatzes.
+- Er setzt das Attribut `data-nabi-align` auf den Block (`<p data-nabi-align="center">`).
+- **Er greift nicht nur auf Absätze, sondern auch auf Überschriften (`h1`–`h6`)** (`<h2 data-nabi-align="c">`).
+- Nur ein Ausrichtungswert steht zur Zeit. Klicken Sie erneut auf eine bereits aktive Schaltfläche, fällt das Attribut ab, und die Standardausrichtung kehrt zurück.
+- Teilen Sie einen Absatz mit Enter, behalten beide Hälften dieselbe Ausrichtung.
+- **Dieser Flügel übernimmt auch die Ausrichtung von Blockobjekten** wie Bildern, Tabellen und YouTube-Einbettungen. Ein Blockobjekt sitzt in dem Wrapper-Absatz (`<div data-nabi-p>`), der es umgibt — die Ausrichtungsschaltflächen der Werkzeugleiste steuern also über diesen Wrapper, ob das Objekt links, rechts oder mittig sitzt.
 
 ## Anwendungsbeispiel
 

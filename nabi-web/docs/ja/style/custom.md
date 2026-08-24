@@ -1,15 +1,13 @@
 ---
 title: スタイルを変える
-description: 色・形は CSS 変数を上書きして変えます。
+description: CSS 変数を使って NABI NOTE の色・フォント・余白などのスタイルをカスタマイズする方法を説明します。
 ---
 
 # スタイルを変える
 
-シートは **ホストが掛けます** — バンドラを使うなら `import 'nabi-note/nabi.css'` の一行、
-CDN なら `<link>` の一行です。そのあとは変数を上書きするだけで済みます。
+シートは **ホストアプリケーションが自分で掛けます。** バンドラ環境なら `import 'nabi-note/nabi.css'` の一行、CDN 環境なら `<link>` タグです。そのあとは必要な CSS 変数だけを上書きすれば、エディタ全体のテーマが一貫して変わります。
 
-コンポーネントの規則には **色リテラルが一文字もありません。** すべて `--nabi-*` 変数で
-描かれているので、変数さえ上書きすれば残りが付いてきます。
+NABI NOTE のすべての UI コンポーネントは **色のリテラルを一つも書かず、`--nabi-*` CSS 変数だけでスタイリング**されているので、変数を上書きするだけで簡単にブランディングを合わせられます。
 
 ```css
 .nabi.nabi.nabi {
@@ -17,82 +15,63 @@ CDN なら `<link>` の一行です。そのあとは変数を上書きするだ
 }
 ```
 
-クラスを三度重ねた理由は下の
-[特異度に引っかからないように](#特異度に引っかからないように) にあります。
+クラスセレクタを三度重ねた理由は下の
+[CSS 特異度ガイド](#css-特異度specificity-ガイド) を参照してください。
 
-::: tip このドキュメントの大前提 — 保存値はひとりで立ちません
-出ていく HTML(`getHtml()`)には **インラインの `style` が一文字もありません。** 保存値は
-何であるかだけを属性で語り(`data-nabi-align="center"`)、どう見えるかはこのシートが
-語ります。ですから保存した HTML を読む側で描くときも、**このシートが効いている
-`.nabi-content` の中**でなければエディタと同じ姿にはなりません — 下の
-[保存した HTML を外で描くとき](#保存した-html-を外で描くとき) を見てください。
+::: tip 保存された HTML にインラインスタイルは含まれません
+エディタが出力する HTML(`getHtml()`)には **インラインの `style` 属性が含まれません。** HTML マークアップは意味構造と属性(`data-nabi-align="center"` など)だけを表し、見た目はこのシートが担います。だから保存した HTML を外部ページで描くときも、**`nabi.css` が効いている `.nabi-content` コンテナの中**に置かないと、エディタと同じ見た目にはなりません。
+
+詳しくは下の[保存した HTML を外で描くとき](#保存した-html-を外で描くとき)を参照してください。
 :::
 
-::: tip ダーク・ライトはすでに入っています
-テーマのためにホストが上書きすべきトークンは **ありません。** コアのシートがライトの
-既定値・`.dark` の再定義・明示的な `.light` の再定義の三つをすべて抱えてきます。この
-サイトもエディタの中では、フォントのトークン四つ以外は何も上書きしていません。
+::: tip ライト・ダークのテーマは最初から入っています
+既定のテーマのためにホストが追加の変数を定義する必要はありません。コアのシートにライトの既定値・`.dark` テーマ・明示的な `.light` テーマの三つがすべて入っています。
 :::
 
-## 色・形のトークン
+## 色・テーマのトークン
 
 | トークン | 意味 | 既定値(ライト) |
 |---|---|---|
 | `--nabi-bg` · `--nabi-soft` | 背景・少し沈んだ面 | `#fff` · `rgb(0 0 0 / 4.5%)` |
 | `--nabi-fg` · `--nabi-muted` · `--nabi-on-accent` | 文字・薄い文字・強調の上の文字 | `#1b1b1f` · `#6b6b76` · `#fff` |
-| `--nabi-line` · `--nabi-accent` | 線・強調色 | `#e2e2e8` · `#3b6fe0` |
+| `--nabi-line` · `--nabi-accent` | 線・メインの強調色(フォーカス/アクティブ) | `#e2e2e8` · `#3b6fe0` |
 | `--nabi-danger` · `--nabi-on-danger` | 危険・その上の文字 | `#d93b3b` · `#fff` |
-| `--nabi-shadow` · `--nabi-scrim` | 箱の影・プレビューの背景 | — |
-| `--nabi-radius` · `--nabi-radius-sm` · `--nabi-radius-xs` | 角 | `6px` · `4px` · `3px` |
+| `--nabi-shadow` · `--nabi-scrim` | ドロップダウンの影・モーダル/プレビューの暗い背景 | — |
+| `--nabi-radius` · `--nabi-radius-sm` · `--nabi-radius-xs` | 角(既定・小・最小) | `6px` · `4px` · `3px` |
 | `--nabi-layer-radius` | 層(パネル・プレビュー・ライトボックス)の角 | `.25rem` |
 | `--nabi-z-sticky` | 貼り付く行の層番号 | `20` |
 | `--nabi-grid-cell` | 表のサイズ格子のセルの大きさ | `1.125rem` |
 | `--nabi-hl-yellow`·`green`·`cyan`·`pink`·`purple`·`orange` | 蛍光ペンの六色 | 半透明の色 |
 | `--nabi-tc-green`·`coral`·`violet`·`amber`·`blue` | 文字色の五色 | 濃い色 |
 
-この表はコアのシート(`nabi.css`)が **直接宣言している** ものだけを収めました。宣言の
-場所は `.nabi` ひとつではなく三つです —
-`:is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *)))`。プレビューのオーバーレイは
-`body` の子なので `.nabi` からの継承が届かず、エディタの外にひとりで立った
-`.nabi-content` もトークンを直接受け取らなければならないからです。
+上の表の変数はコアのシート(`nabi.css`)が **直接宣言している** トークンです。宣言先は `.nabi` だけでなく、単独レンダリングのために `:is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *)))` の三つのセレクタに紐づいています。
 
-同じ一覧が三揃い(ライトの既定値・`.dark`・明示的な `.light`)書かれています。**上書きする
-側は三揃いすべてを見る必要はありません** — 特異度さえ勝てば、一度上書きした値が三つの
-場合すべてに効きます。ただしダークで別の値を使いたければ、`.dark` の条件を自分で付ける
-必要があります。
+## 値を持たず参照だけするトークン(:root に書けます)
 
-## 値を持たず参照だけするトークン
+以下はコアのシートが **直接宣言せず、`var(--変数, フォールバック)` の形で参照だけする** トークンです。ホストが値を渡さなければ指定のフォールバックが立ちます。コアのレベルで宣言されていないので、**`:root` に書けばそのままグローバルに効きます。**
 
-以下はコアが **宣言せず参照だけする** 変数です。ホストが値を渡さなければ括弧の中の
-フォールバックが立ちます。宣言された場所がないので **`:root` に書いてもそのまま効きます**
-— 上の色・形のトークンと分かれる地点がここです(あちらは `.nabi` に宣言されているので
-継承では勝てません)。
-
-| トークン | 意味 | フォールバック |
+| トークン | 意味 | 既定のフォールバック |
 |---|---|---|
-| `--nabi-font` · `--nabi-font-serif` · `--nabi-font-mono` · `--nabi-font-cursive` | 書体の翼の四つの枝に実際に噛ませるフォント | システムフォント |
-| `--nabi-cursive-adjust` | 筆記体の `font-size-adjust`。手書きの顔立ちは x ハイトが低く、同じ px でも小さく見えるので、この値が x ハイト基準で測り直します | `0.4` |
-| `--nabi-sticky-top` | 貼り付く行がどれだけ下がって座るか。サイトに固定のヘッダがあればその高さ | `0px` |
-| `--nabi-preview-width` | プレビューカードの幅。**`openPreview` が開くときに編集領域の幅を測ってカードへ直接書き込むため**、ホストが外から上書きしてもそのインライン値が勝ちます | `720px` |
-| `--nabi-placeholder` | 空のエディタが見せる案内文で、引用符に包まれた文字列です。**`mountSurface` が自分の `placeholder` オプション(またはコア辞書)の言葉を編集ルートに書き込むため**、ホストが外から上書きしてもそのインライン値が勝ちます — 見た目を変えたければ `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` を上書きします | なし(案内文なし) |
-| `--nabi-placeholder-color` | その案内文の色。この名前を **コアは宣言していません** — その裏には `--nabi-placeholder-color-fallback` が立っていて、ライト・ダークを知っています(ライト `#6b6b76aa` · ダーク `#9a9aa6aa`)。このトークンを `:root` に書けば両方のテーマで勝ちます | `--nabi-placeholder-color-fallback` |
-| `--nabi-content-min-height` | 空のエディタが立つ最小の高さです。掛かるのは **編集表面だけ**(`.nabi-content.nabi-editing`)— 発行・プレビューの `.nabi-content` では文字の長さがそのまま高さになるので、短い文章の下に空白は残りません | `12.5rem` |
-| `--nabi-touch-font-size` | コアが描く入力欄(`.nabi-input` — リンクの住所・保存名・プロンプト)の文字サイズで、指で操作する機器(`pointer: coarse` **または**幅 `40rem` 以下)にだけ掛かります。**iOS Safari は 16px 未満のフォーム欄に狙いが入るとページ全体を拡大します**、この値はそれを止める下限です。マウスの画面は一ピクセルも変わりません | `16px` |
+| `--nabi-font` · `--nabi-font-serif` · `--nabi-font-mono` · `--nabi-font-cursive` | エディタと書体の翼の各枝に実際に噛ませるフォント | システムフォント |
+| `--nabi-cursive-adjust` | 手書き体の `font-size-adjust` の比率 | `0.4` |
+| `--nabi-sticky-top` | 貼り付くツールバーの上のオフセット(固定ヘッダの高さに設定) | `0px` |
+| `--nabi-preview-width` | プレビューカードの既定の幅 | `720px` |
+| `--nabi-placeholder` | 空のエディタに出す案内文 | なし |
+| `--nabi-placeholder-color` | 案内文の色(指定しなければテーマ別のフォールバック色) | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | 空のエディタの編集領域の最小高さ(編集面 `.nabi-editing` にのみ適用) | `12.5rem` |
+| `--nabi-touch-font-size` | タッチデバイス(`pointer: coarse` または幅 40rem 以下)でのフォーム入力(`.nabi-input`)の文字サイズ(iOS Safari の自動拡大を防止) | `16px` |
 
-`--nabi-typeface-base` はこの分類ではありません — **コアが宣言します**(既定は
-`--nabi-font` に従います)。書体の翼にはこの値を決めるオプションがないので、変えたければ
-このトークンを上書きしてください。
+`--nabi-typeface-base` は参照専用ではなく **コアが直接宣言する** トークンです(既定では `--nabi-font` を参照します)。既定フォントを変えるときは `--nabi-font` を上書きしてください。
 
-`--nabi-keyboard-top` · `--nabi-keyboard-bottom` も同じ場所に立ちますが、これは **コアが
-使います** — `mountSticky()` がモバイルのキーボードが画面を押し上げた分を測ってここに
-書き込み、貼り付く行と全画面がその値を読みます。手で書く値ではありません。
+`--nabi-keyboard-top` と `--nabi-keyboard-bottom` は **`mountSticky()` がモバイルキーボードの高さを測って動的に書き込む** 内部変数です。
+
+`--nabi-bar-height` も同じく **`mountSticky()` が実際のツールバーの高さを測って書き込む** 内部変数です。`.nabi-content > *` 要素がスクロール時にツールバーの下へ隠れないよう、`scroll-margin-block-start` にこの値を使います。
 
 ## トークンのない場所 — 規則を上書きします
 
-以下の三つは **変数がありません。** コアが規則に値を打ち込んでいるので、変えるにはその
-セレクタを上書きします。
+以下の三つの項目は CSS 変数ではなく固定の CSS 規則で定義されているので、変えるには該当のクラスセレクタを直接上書きします。
 
-**文字サイズ四段階** — `em` なので親のサイズに従います。
+**文字サイズ四段階**(`em` なので親のサイズに従います)：
 
 ```css
 .nabi-content [data-nabi-size="xs"] { font-size: .75em; }
@@ -101,15 +80,13 @@ CDN なら `<link>` の一行です。そのあとは変数を上書きするだ
 .nabi-content [data-nabi-size="xl"] { font-size: 1.5em; }
 ```
 
-**ドロップキャップの大きさ** — 何行を包むかを決める値ではなく文字サイズひとつです。
-実際に何行を覆うかはその段落の行間が決めます。
+**ドロップキャップの一文字目の大きさ**：
 
 ```css
 .nabi-content [data-nabi-dropcap="1"]::first-letter { font-size: 5.9em; line-height: .83; }
 ```
 
-**コードトークンの色** — code の翼のシートが `[data-nabi-token]` に色を直接書きます。
-いま色が付く種類は **五つ**です。
+**コードブロックのトークンの色**：
 
 ```css
 .nabi-content [data-nabi-token="comment"] { color: #7a8a7a; font-style: italic; }
@@ -119,77 +96,49 @@ CDN なら `<link>` の一行です。そのあとは変数を上書きするだ
 .nabi-content [data-nabi-token="literal"] { color: #2f8f4e; }
 ```
 
-ハイライタが返す `type` は自由な文字列です — 上の五つ以外の名前を返すと色なしで描かれる
-ので、使いたい種類はホストが同じ形で規則を足せば済みます。ダークで別の色を使うには
-`.dark` の条件を自分で付けてください — コアはこの五つにダークの変種を付けていません。
+---
 
-アップロードの翼の進捗アニメーション(`--nabi-per`·`--nabi-t`·`--nabi-span`·
-`--nabi-clear`·`--nabi-blur-max`)は **翼の内部実装用**です — 名前が `--nabi-` で始まり
-ますが、ホストが上書きするために開けた場所ではありません。
+## 単位の規格
+
+ボタンの大きさ・余白・ツールバーの高さなど、ほとんどの UI の寸法は `rem` で定義されているので、**ルート(`html`)のフォントサイズ設定に比例して大きさが変わります。** ユーザーがブラウザや OS の既定の文字サイズを拡大すれば、エディタの UI も自然に一緒に大きくなります。
 
 ---
 
-## 外側の寸法は `rem` です
+## CSS 特異度(Specificity)ガイド
 
-ボタン・余白・ツールバーのチップをはじめとする外側の寸法はほとんどが `rem` なので、
-**ルート(`html`)の文字サイズに従って伸びます。** ユーザーがブラウザや OS で文字を
-大きくすれば、エディタの枠も一緒に大きくなります。大きさを変えたければルートの
-`font-size` を変えてください。線(`border`)は大きさではなく **線**なので、`px` のまま
-残っている場所もあります。
-
----
-
-## 特異度に引っかからないように
-
-色・形のトークンを上書きするには **クラスを三つ**重ねてください。
+コアが宣言しているテーマの色変数を上書きするときは、スタイルの優先度を確実に上げるために **クラスを三つ重ねる** 方法を勧めます。
 
 ```css
 .nabi.nabi.nabi,
 .nabi-scrim.nabi-scrim.nabi-scrim {
-  --nabi-accent: var(--my-accent);
+  --nabi-accent: #7c3aed;
 }
 ```
 
-数えてみるとこうです。ライトの既定値の規則 `:is(.nabi, …)` は `:is()` が引数の中で
-最も高いものに従うので **(0,1,0)**、ダークの規則 `:where(html, body).dark :is(.nabi, …)`
-は `:where()` が 0 で、`.dark` と `:is()` がそれぞれクラスひとつずつなので **(0,2,0)**
-です。ですから `.nabi.nabi` ではダークと **引き分けます** — 引き分ければ後に載った側が
-勝ち、コアのシートがホストのシートより後に載ることもあります。三つ重ねて (0,3,0) まで
-上げれば順序に頼らずに済みます。
+- ライトの既定規則 `:is(.nabi, …)` の特異度は **(0, 1, 0)** です。
+- ダークモードの規則 `:where(html, body).dark :is(.nabi, …)` の特異度は **(0, 2, 0)** です。
+- なので `.nabi.nabi.nabi` のようにクラスを三つ重ねれば **(0, 3, 0)** の特異度を確保でき、CSS の読み込み順序に関係なく常に安定して上書きできます。
 
-プレビューのオーバーレイは `.nabi` の外(`body` の子)に立つので、そちらのセレクタも
-一緒に書かなければ同じ色になりません。
-
-**フォントのようにコアが宣言しないトークンは、この取っ組み合いが要りません** — 宣言
-された場所がなく継承だけで届くので、`:root` の一行で済みます。
-
-```css
-:root {
-  --nabi-font: 'Noto Sans', system-ui, sans-serif;
-}
-```
+プレビューのモーダルは `body` の直接の子としてマウントされるので、`.nabi-scrim.nabi-scrim.nabi-scrim` セレクタも一緒に指定しないと同じテーマの色が効きません。
+フォントのトークンのようにコアが宣言しない参照専用のトークンは、`:root` に一度だけ宣言すればそのまま効きます。
 
 ---
 
-## ライト・ダーク
+## ライト / ダークテーマ
 
-`html` か `body` の **どちらか一方**に `dark` クラスがあればダーク、`light` ならライト
-です。クラスがなければライトが既定で、両方あれば明示的な `light` が勝ちます(`.light` の
-規則が `.dark` の規則の後に載っています)。
+`html` または `body` 要素に `dark` クラスがあればダークテーマ、`light` クラスがあればライトテーマが効きます。クラスがなければ既定のライトテーマで動き、両方のクラスがあるときは明示的な `light` クラスが優先されます。
 
 ```html
 <html class="dark"><!-- または <body class="dark"> --></html>
 ```
 
-クラスをトグルすれば CSS が反応します。呼ぶ API はありません。テーマが差し替えるのは
-色の変数だけで、コンポーネントの規則はそのままです — 自分で作ったスタイルも
-`--nabi-*` 変数だけを使えばダークに付いてきます。
+テーマの切り替えはクラスのトグルだけで即座に反応し、別に呼ぶべき JavaScript API はありません。カスタムスタイルを書くときも `--nabi-*` 変数を使えば、テーマ切り替え時に色が自動で連動します。
 
 ---
 
-## シートを掛ける二つの道
+## シートを掛ける方法
 
-**① ファイル一つ** — もっとも一般的な道です。すべての翼の CSS が入っています。
+**1. CSS ファイルを丸ごとインポート**(もっとも一般的で推奨される方法)
 
 ```ts
 import 'nabi-note/nabi.css'
@@ -199,131 +148,64 @@ import 'nabi-note/nabi.css'
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note/dist/nabi.css">
 ```
 
-**② 登録したものだけ注入** — 実際に有効にした翼のシートだけを載せたいときです。
+**2. 登録した翼のスタイルだけを動的に注入**
 
 ```ts
 import { collectSheets, injectSheets } from 'nabi-note'
 
 const drop = injectSheets(document, collectSheets(registry))
-// drop() を呼ぶと、この呼び出しが入れたものだけが取り除かれます
+// drop() を呼ぶと注入したスタイルが DOM から取り除かれます
 ```
 
-同じ文書のシートは **一度だけ**入ります — たたむ鍵がシートの **内容**なので、ひとつの
-文書にエディタを複数立てても積み上がらず、異なる翼の構成が混ざっても合併集合ひとつに
-まとまります。
-
-:::: tip 二つの違い — 何が載るか、いつ効くか
-**何が載るか。** ファイルはどの翼を登録したのか知りようがないので **すべて**を載せます。
-注入は `registry` を見て **登録したものだけ**を載せます。保存された HTML を表示するだけの
-ページはエディタがなく `registry` もないので、ファイルの方を使います。
-
-**いつ効くか。** ファイルは `<link>` として head に入り、読み込みが終わるまで **描画を
-止めます。** 注入は **エディタの JavaScript が届いたあとにしか** 効きません。だから
-ドキュメントをサーバーであらかじめ描いて送るページはファイルの方を使うべきです —
-注入で掛けると、サーバーが送ったドキュメントがまず素の姿で一度描かれ、そのあとシートが
-乗って見た目と配置が組み直されます。
-::::
-
-登録した wing のシートはコアのシートの **後に**入るので、同じ優先順位では wing が
-勝ちます。
+同じ内容のシートは重複して注入されず、単一のタグで管理されます。
+サーバーサイドレンダリング(SSR)の環境では、クライアントの JS が動く前のスタイルのちらつき(FOUC)を防ぐために、静的な CSS ファイルを読み込む方式を使うのがよいでしょう。
 
 ---
 
-## 掛けられる場所
+## カスタマイズできる CSS クラスと UI 要素
 
-変数でどうにもならないものは、実際に存在するクラスを直接狙います。
-
-| セレクタ | 何 | 誰が付けますか |
+| セレクタ | 説明 | 作る主体 |
 |---|---|---|
-| `.nabi` | エディタ全体(クローム + 編集領域)を包む殻。色・形のトークンがここに掛かります | ホスト |
-| `.nabi-content[contenteditable]` | 編集領域そのもの | ホスト |
-| `.nabi-toolbar` | ツールバー行 + 状況行を包む場所。このクラスがすなわち「上に貼り付く」です | ホスト |
-| `.nabi-toolbar-row` | ツールバーが収まる器 | `mountToolbar()` |
-| `.nabi-context` | 状況行が収まる器 | `mountContextToolbar()` |
-| `.nabi-tools` | プレビュー・全画面の二つのボタンの場所 — コアが右上に浮かせます | `mountViewTools()` |
-| `.nabi-tool` | その二つのボタンそのもの | `mountViewTools()` |
-| `.tb-group` | ツールバーのボタンのまとまり | `mountToolbar()` |
-| `.ctb-group` · `.ctb-button` · `.ctb-swatch` · `.ctb-input` | 状況行のまとまり・ボタン・色見本・文字の欄 | `mountContextToolbar()` |
-| `.tb-picker` · `.tb-picker-grid` · `.tb-picker-cell` | 表のサイズ格子などボタンの下に現れる箱 | `mountToolbar()` |
-| `.tb-prompt` · `.tb-prompt-input` | 新しく入れるときに現れるリンク先入力のレイヤー | `mountToolbar()` |
-| `.nabi-hints [data-hint]` | Shift の二度押しで現れるショートカットのバッジ — バッジは `::before`、名札は `::after` なので二つが一緒に見えます | `mountHints()` |
-| `[data-nabi-tip]` | 名札(tooltip) — CSS の `::after` だけで描きます | コア全般 |
-| `.nabi-content.nabi-dropping` | ファイルを引きずってきている間の編集領域。案内の文字は `data-nabi-drop` 属性に載ります | `mountUpload()` |
+| `.nabi` | エディタ全体(ツールバー+編集領域)を包む最上位コンテナ | ホスト |
+| `.nabi-content[contenteditable]` | 実際の本文の編集領域 | ホスト |
+| `.nabi-toolbar` | ツールバーとコンテキストバーを包む固定ヘッダコンテナ | ホスト |
+| `.nabi-toolbar-row` | メインツールバーのボタン行 | `mountToolbar()` |
+| `.nabi-context` | 動的なコンテキストツールバーのコンテナ | `mountContextToolbar()` |
+| `.nabi-tools` | プレビューと全画面ボタンのラッパー | `mountViewTools()` |
+| `.nabi-hints [data-hint]` | Shift を連打したときに出る短縮キーの案内バッジ | `mountHints()` |
+| `[data-nabi-tip]` | ボタンのツールチップ(CSS `::after` で描画) | コアのコンポーネント |
+| `.nabi-content.nabi-dropping` | ファイルをドラッグしている間の編集領域 | `mountUpload()` |
 
-プレビュー・全画面も **コアが作ります。**
+### モーダルとポップアップ要素
 
-| セレクタ | 何 | 誰が |
+| セレクタ | 説明 | 作る関数 |
 |---|---|---|
-| `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | ドキュメントのプレビューのオーバーレイ | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | 絵をひとつだけ大きく見る箱 | `openLightbox()` |
-| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | 貼り付け候補を選ぶパネル | `openChoosePanel()` |
-| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | 保存パネル — 名前欄・拡張子の印・形式のセル | `openSavePanel()` |
-| `.nabi.is-fullscreen` | 全画面 — `.nabi` の箱を画面に固定します | `setFullscreen()` (クラス名は `FULLSCREEN_CLASS`) |
-
-::: tip 二つのパネルは **一組の規則**を共有します
-貼り付け候補パネルと保存パネルは同じ格子の部品から組み立てられているので、セレクタは
-対になっています — `.nabi-choose-list`/`.nabi-save-list` ·
-`.nabi-choose-row`/`.nabi-save-row` · `.nabi-choose-icon`/`.nabi-save-icon` ·
-`.nabi-choose-label`/`.nabi-save-label`。**どちらも**狙われたセルには
-`[aria-selected="true"]` が付き、その印は `--nabi-accent` の枠線ひとつです — どちらの
-パネルもセルの中を塗りつぶしません。
-
-保存パネルだけのものは三つです — `.nabi-save-name`(名前の行)・`.nabi-save-ext`
-(拡張子の印)・`.nabi-save-note`(損失の注記。名前より小さく、警告色でもありません)。
-
-`--nabi-grid-cols` は格子の列数ですが、**パネルを立てる手がこれを書きます** — パネルが
-自分のセルを数えて最大3までをリスト自身にインラインで書き込むので、ホストが外から
-セットする値ではありません。`--nabi-save-ext-len`(拡張子の印の文字幅)も同じ種類の
-値です。
-:::
-
-::: warning `.nabi-save-format` はなくなりました
-これは保存パネルが縦一列だった頃の名前です。ホバー時の塗りをこの名前で上書きしていた
-ホストは **黙って失敗します** — 格子のセルひとつはいまや `.nabi-save-row`(貼り付け候補
-パネルと同じ場所の名前)で、ホバー時にも狙われたときにも中を塗る仕組みはありません。
-:::
-
-`mountViewTools()` を付ければ、二つのボタンが自分でこれらを開いたり閉じたりします。
-自分で開きたければ `openPreview({ nabi, surface })` ·
-`openLightbox({ surface, src, alt?, locale })` · `setFullscreen(root, on)` ·
-`isFullscreen(root)` を呼んでください。
-
-::: tip 道具の場所は自分で立ちます
-`mountViewTools` が `.nabi-tools` の箱を自分で作り、受け取った器の先頭に入れます。ホストが
-`<span>` をツールバーより前に置いておく必要はありません — 場所をあらかじめ作っておくと
-むしろ箱が二つになります。
-:::
-
-編集画面専用の印も狙えます — `[data-nabi-token]`(コードブロックのトークンの色)、
-`[data-nabi-lang]`(コードブロックの言語)、`[data-color]`(蛍光ペン・文字色 —
-`<mark>`・`<span>` タグで区別)、
-`data-nabi-align`·`data-nabi-typeface`·`data-nabi-size`·`data-nabi-dropcap`(段落の属性)。
-これらの印の実際の名前は、各 wing ファイルの `*_ATTR` 定数が正本です。
+| `.nabi-scrim` > `.nabi-card` > `.nabi-content.nabi-preview-body` | ドキュメントのプレビューモーダル | `openPreview()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | 画像のライトボックスポップアップ | `openLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` | 貼り付け形式の選択ポップアップ | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` | ファイル保存ポップアップ(ファイル名入力と形式選択) | `openSavePanel()` |
+| `.nabi.is-fullscreen` | エディタの全画面モードが有効なときのクラス | `setFullscreen()` |
 
 ---
 
 ## 保存した HTML を外で描くとき
 
-出ていく値(`getHtml()`)は `data-nabi-*` 属性が残った HTML で、**インラインの `style`
-は一文字もありません。** 姿はすべてシートの担当だという意味であり、だからシートなしで
-描くと揃えも文字サイズも表の線もない裸の HTML になります。
-
-エディタと同じ姿に描くには `.nabi-content` で包んでください — このクラスは `.nabi` で
-包まなくても色・形のトークンを直接受け取ります(`nabi.css` の
-`.nabi-content:where(:not(.nabi *))` の規則)。
+`getHtml()` で取り出した HTML 文字列は、インラインの `style` を持たず、意味を表すマークアップと `data-nabi-*` 属性だけでできています。
+外部ページでエディタと同じ見た目で描くには、本文を `.nabi-content` クラスで包み、`nabi.css` を読み込みます。
 
 ```html
-<div class="nabi-content">保存した HTML</div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note/dist/nabi.css">
+
+<div class="nabi-content">
+  <!-- nabi.getHtml() で保存した HTML の本文 -->
+</div>
 ```
 
-シートは上の「シートを掛ける二つの道」で見たとおりに掛ければ済みます — バンドラなら
-`import 'nabi-note/nabi.css'`、それ以外なら `<link>` ひとつです。エディタを立てない
-ページでも `.nabi-content` さえあれば、コアのシートがトークンを宣言してくれます。
+`.nabi` で包まなくても `.nabi-content` 自体にテーマとフォントのトークンが効くので、エディタで見ていたスタイルをそのまま再現できます。
 
-### 読む側で回る動作 — 表の並べ替え
+### 読む側専用の表の並べ替えを有効にする
 
-いまは **表の並べ替えひとつ**だけが読む側専用の関数として出ています。任意の wing が
-それぞれ読む側の動作を付ける汎用の仕組みはまだありません。
+発行した HTML ページで表の列の並べ替え機能を有効にするには、`attachTableSort` 関数をつなぎます。
 
 ```ts
 import { attachTableSort } from 'nabi-note/viewer'
@@ -331,20 +213,18 @@ import { attachTableSort } from 'nabi-note/viewer'
 const detach = attachTableSort(document.querySelector('#article')!, { locale: 'ja' })
 ```
 
-`data-nabi-sortable` が付いた表を探し、見出しのセルに並べ替えボタンを付けます。解除の
-関数(`detach`)が挿したボタンと入れ替えた行の順序を戻します。
+`data-nabi-sortable` 属性を持つ表を見つけて、見出しのセルに並べ替えボタンを付けます。返ってくる `detach()` 関数を呼ぶと、付けたボタンが取り除かれ、元の行の順序に戻ります。
 
-::: danger 編集対象の要素には付けないでください
-`attachTableSort()` は DOM にボタンを挿し、行の順序を変えます。付いている間の DOM を
-保存すると、それが値に固まります — 読む側は読み取り専用の複製にだけ付けてください。
+::: warning 編集中の DOM に attachTableSort を使わないでください
+`attachTableSort()` は DOM の構造を直接操作するので、編集中のエディタ領域に使うと、並べ替えボタンの UI が文書の本文に永久に保存されてしまうことがあります。必ず読み取り専用のビューア画面だけで使ってください。
 :::
 
 ---
 
 ## 次のドキュメント
 
-- [{{ t('menu_wing_custom') }}](../wing/custom) — ない書式を自分で作る
-- [{{ t('menu_intro_index') }}](../intro) — このドキュメントが使う言葉
+- [{{ t('menu_wing_custom') }}](../wing/custom) — 新しいカスタム書式の翼を自分で作る
+- [{{ t('menu_intro_index') }}](../intro) — NABI NOTE の紹介とアーキテクチャ
 
 <script setup lang="ts">
 import { useTranslate } from '../../.vitepress/src/langs.ts'

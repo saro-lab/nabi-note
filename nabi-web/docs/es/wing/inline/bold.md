@@ -6,20 +6,12 @@ title: Negrita
 
 ## Descripción
 
-`boldWing` es el propietario (claim) de `<b>`. Seleccione un texto y pulse la **B**
-de la barra de herramientas, o aplíquelo desde el modo pista (dos pulsaciones
-seguidas de Shift y luego `B`): ese tramo se vuelve negrita.
+`boldWing` es el wing de marca en línea que gestiona el formato en negrita (`<b>`). Seleccione un texto y pulse la **B** de la barra de herramientas, aplíquelo desde el modo pista (dos pulsaciones de Shift seguidas de `B`), o use el atajo (`Ctrl`/`⌘`+`B`).
 
-- Al entrar reconoce tanto `<b>` como `<strong>`; al salir sale siempre como un
-  único `<b>`. No conserva ningún atributo — `class`, `style` y `data-*` se caen y
-  solo queda la etiqueta.
-- El atajo del modo pista es `B`, y el atajo de teclado es `Ctrl`/`⌘`+`B` (`mod+b`).
-- Si lo pulsa con texto seleccionado, funciona como interruptor (`toggleMark`): si
-  todo está ya en negrita lo quita, si no lo aplica. Este wing no tiene comando
-  propio — el botón lleva `action: { kind: 'mark' }`, así que va directo al
-  `toggleMark` del núcleo.
-- Si no lo registra, a `<b>` se le arranca la cáscara y cae como texto plano (a toda
-  etiqueta no registrada le pasa lo mismo — es la regla de nabi en su conjunto).
+- Al entrar reconoce tanto `<b>` como `<strong>`; al salir siempre sale como la etiqueta estándar `<b>`.
+- Si lo ejecuta con texto seleccionado, funciona como interruptor: si ya está en negrita lo quita, si no lo aplica.
+- Si pulsa el atajo solo con el cursor, sin selección, la negrita queda reservada para el siguiente texto que escriba.
+- Si no registra este wing, la etiqueta `<b>` se elimina automáticamente y solo queda el texto plano de dentro.
 
 ## Ejemplo de uso
 
@@ -29,7 +21,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// la lista de wings construye juntos el conocimiento de tipo, los comandos y el ensamblador — eso es `registry`
 const { nabi, registry } = createNabiWith([boldWing])
 
 mountSurface({ nabi, registry, root: surface })

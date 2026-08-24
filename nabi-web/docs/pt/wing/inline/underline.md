@@ -8,15 +8,11 @@ title: Sublinhado
 
 `underlineWing` é o dono (claim) de `<u>`.
 
-- A única tag aceita é `<u>`. Na saída também é sempre `<u>` e nenhum atributo
-  sobrevive. **`<ins>` não é aceito** — perde a casca e sobra só o texto. Não é
-  uma marca que aceita um par de tags juntas, como negrito (`<b>`·`<strong>`) ou
-  tachado (`<s>`·`<strike>`·`<del>`).
-- O atalho no modo de dicas é `U`, e o acelerador é `Ctrl`/`⌘`+`U` (`mod+u`).
-- Pressionar com o texto selecionado é uma alternância.
-- Se você não registrar o wing, `<u>` perde a casca e cai como texto puro.
-- Sublinhado e link podem se confundir na tela, mas são marcas distintas, cada
-  uma de um wing diferente (`a`) — as duas podem incidir sobre o mesmo texto.
+- Reconhece `<u>` na entrada e sempre volta como `<u>` padrão na saída.
+- Suporta o modo de dicas (Shift duas vezes, depois `U`) e o acelerador (`Ctrl`/`⌘`+`U`).
+- Executar com o texto selecionado funciona como alternância.
+- Sublinhado e link (`<a>`) podem parecer iguais na tela, mas são wings independentes — o
+  mesmo texto pode carregar sublinhado e link ao mesmo tempo.
 
 ## Exemplo de uso
 

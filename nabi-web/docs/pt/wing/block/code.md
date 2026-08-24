@@ -6,20 +6,13 @@ title: Código
 
 ## Descrição
 
-`codeWing` (nome `code`) é uma **constante** dona do bloco de código (`<pre>`) — não se chama
-com parênteses.
+`codeWing` (id `code`) é um objeto wing constante que trata o bloco de código (`<pre><code>`).
 
-É um container `holds: 'inline'`, e o `repair` mantém o interior como texto puro — marks ou
-outros wings não podem se intrometer ali. Não é um campo separado do contrato; é o wing que
-apara o próprio interior sozinho.
+É um container `holds: 'inline'`, e o texto interno é normalizado para texto puro na etapa `repair`, de modo que nenhuma outra marca inline ou bloco pode ficar aninhado ali dentro.
 
-Digitar ` ``` ` numa linha vazia e pressionar espaço ou Enter cria um bloco de código — e, se
-você emendar a linguagem, como em ` ```ts `, ela também é capturada. `Tab`/`Shift+Tab` recuam e
-desrecuam a linha (de uma vez, se você selecionar várias). O Enter herda o recuo da linha
-anterior.
+Digite ` ``` ` numa linha vazia e pressione espaço ou Enter para transformá-la num bloco de código (emende um identificador de linguagem, como em ` ```ts `, e essa linguagem é definida automaticamente). `Tab` e `Shift+Tab` recuam e desrecuam linhas de código, inclusive em bloco quando várias linhas estão selecionadas. Pressionar Enter mantém automaticamente a profundidade de recuo da linha anterior.
 
-A linha de contexto só aparece quando o cursor está dentro do código — nela há um campo para
-digitar a linguagem à mão, um "Sem linguagem" e os campos das linguagens mais usadas.
+Enquanto o cursor está dentro de um bloco de código, a barra de contexto dinâmica fica ativa, oferecendo um campo para digitar a linguagem diretamente, um botão "Sem linguagem" e botões de atalho para as linguagens mais usadas:
 
 ```
 javascript typescript jsx tsx · python java kotlin swift
@@ -28,59 +21,42 @@ html xml css scss · json yaml toml markdown
 bash powershell dockerfile diff
 ```
 
-Essa lista é apenas um **atalho** — não é a lista de linguagens que o núcleo conhece. Uma
-linguagem que não esteja aqui basta ser digitada no primeiro campo, e esse valor é repassado ao
-realçador tal e qual.
+Mesmo uma linguagem que não esteja nessa lista pode ser digitada diretamente no campo de entrada — o valor digitado é passado tal e qual para o realçador de sintaxe.
 
 ## Colorir se encaixa no wing
 
-`highlight` é **um hook que devolve o tipo, não a cor** — a forma é
-`(fonte, linguagem) => {text, type?}[]`, e `type` é fixo em um destes catorze valores:
-`keyword`, `string`, `number`, `comment`, `function`, `class`, `variable`, `operator`,
-`punctuation`, `tag`, `attribute`, `literal`, `regexp`, `meta` (`CODE_TOKEN_TYPES`).
+`highlight` é uma função de hook que recebe o código-fonte e a linguagem e devolve um array de tokens: `(source, lang) => { text: string, type?: string }[]`.
 
-A cor quem define diretamente é a folha de estilo do núcleo, com o seletor
-`[data-nabi-token="…"]` — **só cinco têm cor** (`comment`, `string`, `keyword`, `number`,
-`literal`). Os demais tipos só recebem a marca, sem regra de cor, então saem na cor do texto
-normal. Como o valor é uma cor fixa, não uma variável CSS, para usar outra cor ou uma variante
-escura, sobrescreva esse seletor diretamente.
+O `type` de um token retorna um dos 14 tipos padrão definidos em `CODE_TOKEN_TYPES` (`keyword`, `string`, `number`, `comment`, `function`, `class`, `variable`, `operator`, `punctuation`, `tag`, `attribute`, `literal`, `regexp`, `meta`).
+
+A folha de estilo do núcleo aplica cores de tema a cinco tipos de token padrão (`comment`, `string`, `keyword`, `number`, `literal`) através do seletor `[data-nabi-token="…"]`. Para aplicar modo escuro ou cores personalizadas, basta sobrescrever esse seletor CSS.
 
 ```css
 .dark .nabi-content [data-nabi-token="keyword"] { color: #c9a0ff; }
 ```
 
-O dicionário de sintaxe em si não vem no pacote — você precisa acoplar algo como Prism,
-highlight.js ou Shiki.
-
-Quem pinta **se encaixa no wing** — não se monta à parte. Construa um `attach` com
-`makeCodeAttach` e o encaixe no wing de código; `mountSurface` o prende. A demo deste site é um
-exemplo de Shiki acoplado assim (`.vitepress/src/highlight.ts`).
+Para conectar um realçador externo como Shiki ou Prism, use `makeCodeAttach` para montar o hook `attach`.
 
 ```ts
 import { codeWing, makeCodeAttach } from 'nabi-note'
 
-// o wing é uma constante — só se troca o que se anexa (`attach`)
-const wing = { ...codeWing, attach: makeCodeAttach({ highlight }) }
+const wing = { ...codeWing, attach: makeCodeAttach({ highlight: myHighlighter }) }
 ```
 
-Passar `version` junto faz repintar **quando o documento continua igual mas o lado que pinta
-mudou.** É o caso de um realçador que busca a gramática de forma assíncrona (o Shiki faz isso ao
-encontrar uma linguagem pela primeira vez) — quando a gramática chega, o documento não mudou,
-então `onChange` não dispara, e sem isso seria preciso digitar mais um caractere qualquer para a
-cor entrar.
+Se, como o Shiki, seu realçador carrega pacotes de gramática de forma assíncrona, passe a opção `version` para repintar a tela do editor quando o carregamento da gramática terminar:
 
 ```ts
 let grammarAge = 0
 const wing = {
   ...codeWing,
-  attach: makeCodeAttach({ highlight, version: () => grammarAge }),
+  attach: makeCodeAttach({ highlight: myHighlighter, version: () => grammarAge }),
 }
-// quando a gramática chega atrasada — subir o número repinta
+
+// quando o carregamento assíncrono da gramática da linguagem terminar
 grammarAge += 1
 ```
 
-O valor salvo segue a convenção de fora — `<pre data-nabi-lang="ts"><code class="language-ts">`
-— e as cores saem pelo atributo `data-nabi-token` (não por `style` inline).
+A estrutura HTML salva segue o formato padrão: `<pre data-nabi-lang="ts"><code class="language-ts">`. Cada token é marcado de forma segura com o atributo `data-nabi-token`.
 
 ## Exemplo de uso
 
@@ -90,7 +66,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// a lista de wings monta junto o conhecimento de tipos, os comandos e os montadores — isso é o `registry`
 const { nabi, registry } = createNabiWith([codeWing])
 
 mountSurface({ nabi, registry, root: surface })

@@ -1,15 +1,13 @@
 ---
 title: Eigene Stile
-description: Farben und Formen ändern Sie, indem Sie CSS-Variablen überschreiben.
+description: So passen Sie Farben, Schriften, Abstände und andere Stile von NABI NOTE mit CSS-Variablen an.
 ---
 
 # Eigene Stile
 
-**Der Host hängt das Stylesheet ein** — mit einem Bundler eine Zeile `import 'nabi-note/nabi.css'`,
-über ein CDN ein `<link>`. Danach genügt es, Variablen zu überschreiben.
+**Der Host hängt das Stylesheet selbst ein** — in einem Bundler mit `import 'nabi-note/nabi.css'`, über ein CDN mit einem `<link>`-Tag. Danach genügt es, nur die benötigten CSS-Variablen zu überschreiben, um das gesamte Editor-Theme einheitlich zu ändern.
 
-Die Komponentenregeln enthalten **kein einziges Farbliteral.** Alles wird über `--nabi-*`-Variablen
-gezeichnet, überschreiben Sie also die Variablen, folgt der Rest von selbst.
+Jede UI-Komponente von NABI NOTE ist **ausschließlich über `--nabi-*`-CSS-Variablen gestylt, ohne ein einziges fest codiertes Farbliteral** — daher reicht das Überschreiben der Variablen, um das Branding anzupassen.
 
 ```css
 .nabi.nabi.nabi {
@@ -17,83 +15,62 @@ gezeichnet, überschreiben Sie also die Variablen, folgt der Rest von selbst.
 }
 ```
 
-Warum die Klasse dreimal gestapelt ist, steht unten in [Der Spezifität aus dem
-Weg](#der-spezifitat-aus-dem-weg).
+Warum der Klassenselektor dreifach gestapelt ist, steht im Abschnitt [CSS-Spezifitätsleitfaden](#css-spezifitatsleitfaden) unten.
 
-::: tip Die große Voraussetzung dieser Seite — ein gespeicherter Wert steht nicht für sich allein
-Das ausgehende HTML (`getHtml()`) enthält **kein einziges Zeichen von Inline-`style`.** Der
-gespeicherte Wert sagt über Attribute nur, *was* etwas ist (`data-nabi-align="center"`), und dieses
-Stylesheet sagt, wie es aussieht. Wenn also die lesende Seite gespeichertes HTML zeichnet, muss es
-in einem `.nabi-content` mit diesem Stylesheet stecken, um wie im Editor auszusehen — siehe
-[Gespeichertes HTML anderswo zeichnen](#gespeichertes-html-anderswo-zeichnen) unten.
+::: tip Gespeichertes HTML enthält keine Inline-Stile
+Das vom Editor ausgegebene HTML (`getHtml()`) **enthält keine einzigen `style`-Attribute.** Das Markup trägt nur semantische Struktur und Attribute (etwa `data-nabi-align="center"`), während das Stylesheet die visuelle Darstellung übernimmt. Wenn Sie gespeichertes HTML also auf einer externen Seite rendern, muss es weiterhin **innerhalb eines `.nabi-content`-Containers mit angewendetem `nabi.css`** stehen, um wie im Editor auszusehen.
+
+Näheres dazu im Abschnitt [Gespeichertes HTML anderswo rendern](#gespeichertes-html-anderswo-rendern) unten.
 :::
 
-::: tip Dunkel und Hell sind schon eingebaut
-Es gibt **kein** Token, das der Host für ein Theme überschreiben muss. Das Kern-Stylesheet bringt
-alle drei mit — die hellen Standardwerte, die `.dark`-Neudefinition und eine explizite
-`.light`-Neudefinition. Innerhalb des Editors überschreibt auch diese Website nichts außer vier
-Schrift-Token.
+::: tip Hell und Dunkel sind standardmäßig eingebaut
+Der Host muss für das Standard-Theme keine zusätzlichen Variablen definieren. Das Kern-Stylesheet bringt bereits die hellen Standardwerte, ein `.dark`-Theme und ein explizites `.light`-Theme mit.
 :::
 
-## Farb- und Form-Token
+## Farb- und Theme-Token
 
 | Token | Bedeutung | Standard (hell) |
 |---|---|---|
-| `--nabi-bg` · `--nabi-soft` | Hintergrund · leicht gedrückte Fläche | `#fff` · `rgb(0 0 0 / 4.5%)` |
-| `--nabi-fg` · `--nabi-muted` · `--nabi-on-accent` | Text · gedämpfter Text · Text auf der Akzentfarbe | `#1b1b1f` · `#6b6b76` · `#fff` |
-| `--nabi-line` · `--nabi-accent` | Linien · Akzentfarbe | `#e2e2e8` · `#3b6fe0` |
-| `--nabi-danger` · `--nabi-on-danger` | Gefahr · Text darauf | `#d93b3b` · `#fff` |
-| `--nabi-shadow` · `--nabi-scrim` | Kastenschatten · Vorschau-Hintergrund | — |
-| `--nabi-radius` · `--nabi-radius-sm` · `--nabi-radius-xs` | Ecken | `6px` · `4px` · `3px` |
-| `--nabi-layer-radius` | Ecken einer Schicht (Panel, Vorschau, Lightbox) | `.25rem` |
-| `--nabi-z-sticky` | Schichtnummer der sticky Zeile | `20` |
-| `--nabi-grid-cell` | Zellgröße des Tabellengrößen-Rasters | `1.125rem` |
-| `--nabi-hl-yellow`·`green`·`cyan`·`pink`·`purple`·`orange` | die sechs Hervorhebungsfarben | halbtransparente Farben |
-| `--nabi-tc-green`·`coral`·`violet`·`amber`·`blue` | die fünf Textfarben | kräftige Farben |
+| `--nabi-bg` · `--nabi-soft` | Grundhintergrund · Hover-/leichter Hintergrund | `#fff` · `rgb(0 0 0 / 4.5%)` |
+| `--nabi-fg` · `--nabi-muted` · `--nabi-on-accent` | Grundtext · gedämpfter Nebentext · Text auf der Akzentfarbe | `#1b1b1f` · `#6b6b76` · `#fff` |
+| `--nabi-line` · `--nabi-accent` | Rahmen/Trennlinie · Haupt-Akzentfarbe (Fokus/aktiv) | `#e2e2e8` · `#3b6fe0` |
+| `--nabi-danger` · `--nabi-on-danger` | Gefahren-/Warnfarbe · Text auf der Gefahrenfarbe | `#d93b3b` · `#fff` |
+| `--nabi-shadow` · `--nabi-scrim` | Schatten von Dropdowns · abgedunkelter Hintergrund von Modal/Vorschau | — |
+| `--nabi-radius` · `--nabi-radius-sm` · `--nabi-radius-xs` | Eckenradius (Standard · klein · minimal) | `6px` · `4px` · `3px` |
+| `--nabi-layer-radius` | Eckenradius von Layer-Popups/-Modals | `.25rem` |
+| `--nabi-z-sticky` | z-index der sticky Kopfzeile | `20` |
+| `--nabi-grid-cell` | Zellgröße von Rastern, etwa dem Tabellen-Einfüge-Raster | `1.125rem` |
+| `--nabi-hl-yellow`·`green`·`cyan`·`pink`·`purple`·`orange` | Die sechs Textmarker-Farben | halbtransparente Farben |
+| `--nabi-tc-green`·`coral`·`violet`·`amber`·`blue` | Die fünf Textfarben | kräftige Farben |
 
-Diese Tabelle enthält nur, was das Kern-Stylesheet (`nabi.css`) **selbst deklariert**. Die
-Deklaration sitzt an drei Stellen, nicht nur bei `.nabi` —
-`:is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *)))`. Das Vorschau-Overlay ist ein Kind von
-`body`, sodass Vererbung von `.nabi` es nie erreicht, und ein allein außerhalb eines Editors
-stehendes `.nabi-content` muss die Token ebenfalls direkt bekommen.
+Die Variablen der obigen Tabelle sind Token, die das Kern-Stylesheet (`nabi.css`) **direkt deklariert.** Sie sind nicht nur an `.nabi`, sondern an drei Selektoren gebunden — `:is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *)))` —, um eigenständiges Rendern zu unterstützen.
 
-Dieselbe Liste ist dreimal ausgeschrieben (helle Standardwerte, `.dark`, explizites `.light`). **Die
-überschreibende Seite muss nicht alle drei ansehen** — schlagen Sie die Spezifität einmal, und der
-geschriebene Wert gilt in allen drei Fällen. Wollen Sie in Dunkel aber einen anderen Wert, müssen Sie
-die Bedingung `.dark` selbst anhängen.
+## Nur referenzierte Token (können auf :root gesetzt werden)
 
-## Token, die nur referenziert, nie deklariert werden
+Die Variablen unten sind Token, die der Kern **nicht selbst deklariert, sondern nur referenziert** — als `var(--token, Fallback)`. Setzt der Host keinen Wert, gilt der angegebene Fallback. Da sie nicht auf Kern-Ebene deklariert sind, **können Sie sie auf `:root` deklarieren, um sie global anzuwenden.**
 
-Die Variablen unten sind solche, die der Kern **referenziert, ohne sie zu deklarieren**. Geben Sie
-ihnen keinen Wert, gilt der Fallback in Klammern. Da es keine Stelle gibt, an der sie deklariert
-sind, **funktioniert das Schreiben auf `:root` wie es ist** — dort trennen sie sich von den Farb- und
-Form-Token oben (die sind auf `.nabi` deklariert, wo Vererbung nicht gewinnen kann).
-
-| Token | Bedeutung | Fallback |
+| Token | Bedeutung | Standard-Fallback |
 |---|---|---|
-| `--nabi-font` · `--nabi-font-serif` · `--nabi-font-mono` · `--nabi-font-cursive` | die Schriften, die tatsächlich an die vier Sorten des Schriftart-Flügels gebunden sind | Systemschriften |
-| `--nabi-cursive-adjust` | das `font-size-adjust` der Schreibschrift. Eine Handschrift-Schriftart hat eine niedrige x-Höhe und wirkt bei gleichem px kleiner, und dieser Wert misst sie anhand der x-Höhe neu | `0.4` |
-| `--nabi-sticky-top` | wie weit unten die sticky Zeile sitzt. Hat die Website eine feste Kopfzeile, deren Höhe | `0px` |
-| `--nabi-preview-width` | die Breite der Vorschau-Karte. **`openPreview` misst beim Öffnen die Editier-Oberfläche und schreibt diese Breite direkt auf die Karte**, sodass ein von außen gesetzter Wert von diesem Inline-Wert geschlagen wird | `720px` |
-| `--nabi-content-min-height` | die Mindesthöhe des Schreibbereichs **nur auf der Editieroberfläche** — bei veröffentlichten oder vorgezeigten Dokumenten bestimmt der Text selbst die Höhe | `12.5rem` |
-| `--nabi-placeholder-color` · `--nabi-placeholder-color-fallback` | die Farbe des Hinweistexts. Der Kern definiert diese nicht, sondern ruft sie nur als Fallback auf, so dass die Übersteuerung auf `:root` gewinnt. Geben Sie beide Versionen an (hell und dunkel) an, sonst wissen Hosts nicht, warum die Farbe sich ändert | Licht `#6b6b76aa` · Dunkel `#9a9aa6aa` |
-| `--nabi-touch-font-size` | die Schriftgröße der Eingabefelder (`.nabi-input`: Link-Adresse, Speichername, Eingabeaufforderung) auf Touch-Geräten (`pointer: coarse` oder Breite ≤ 40rem). **iOS Safari vergrößert die gesamte Seite, wenn der Fokus auf einem Formularfeld mit Text kleiner als 16px liegt.** Der Kern setzt diese Mindestgröße, um das zu verhindern. Der Kern ruft sie nur als Fallback auf, so dass der Host gewinnt. Maus-Bildschirme ändern sich überhaupt nicht | `16px` |
+| `--nabi-font` · `--nabi-font-serif` · `--nabi-font-mono` · `--nabi-font-cursive` | Schriftfamilie für den Editor und jeden Zweig des Schriftart-Flügels | Systemschriften |
+| `--nabi-cursive-adjust` | Das `font-size-adjust`-Verhältnis der Schreibschrift | `0.4` |
+| `--nabi-sticky-top` | Oberer Abstand der sticky Toolbar (auf die Höhe eines fixen Seiten-Headers setzen, falls vorhanden) | `0px` |
+| `--nabi-preview-width` | Standardbreite der Vorschaukarte | `720px` |
+| `--nabi-placeholder` | Platzhaltertext im leeren Editor | keiner |
+| `--nabi-placeholder-color` | Farbe dieses Platzhaltertexts (ohne Angabe gilt eine themenspezifische Ersatzfarbe) | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | Mindesthöhe einer leeren Editierfläche (gilt nur für die Editierfläche `.nabi-editing`) | `12.5rem` |
+| `--nabi-touch-font-size` | Schriftgröße von Formularfeldern (`.nabi-input`) auf Touch-Geräten (`pointer: coarse` oder Breite ≤ 40rem) — verhindert den Auto-Zoom von iOS Safari | `16px` |
 
-`--nabi-typeface-base` gehört nicht zu dieser Sorte — **der Kern deklariert es** (unangetastet folgt
-es `--nabi-font`). Der Schriftart-Flügel hat keine Option dafür, überschreiben Sie also dieses Token,
-um es zu ändern.
+`--nabi-typeface-base` ist nicht nur referenziert — **der Kern deklariert es direkt** (standardmäßig referenziert es `--nabi-font`). Um die Standardschrift zu ändern, überschreiben Sie `--nabi-font`.
 
-`--nabi-keyboard-top` und `--nabi-keyboard-bottom` stehen an derselben Stelle, aber **der Kern
-schreibt sie** — `mountSticky()` misst, wie weit eine mobile Tastatur den Bildschirm hochgeschoben
-hat, und schreibt es hierher, und die sticky Zeile sowie Vollbild lesen diesen Wert. Das sind keine
-von Hand zu schreibenden Werte.
+`--nabi-keyboard-top` und `--nabi-keyboard-bottom` sind interne Variablen, die **`mountSticky()` anhand der Höhe der mobilen Tastatur dynamisch misst und schreibt.**
 
-## Wo es kein Token gibt — die Regel überschreiben
+`--nabi-bar-height` ist ebenso eine interne Variable, die **`mountSticky()` anhand der tatsächlichen Toolbar-Höhe misst und schreibt.** Sie wird als `scroll-margin-block-start` auf `.nabi-content > *`-Elemente angewendet, damit diese beim Scrollen nicht unter der Toolbar verschwinden.
 
-Die drei unten haben **keine Variable**. Der Kern hat den Wert fest in eine Regel gegossen, ändern
-Sie ihn also, indem Sie den Selektor überschreiben.
+## Feste Stile ohne Variable überschreiben
 
-**Die vier Textgrößen** — in `em`, sie folgen also der Größe des Elternelements.
+Die drei folgenden Eigenschaften sind als feste CSS-Regeln statt als Variablen definiert — zum Ändern überschreiben Sie direkt den Klassenselektor.
+
+**Die vier Textgrößen** (in `em`, relativ zur Größe des Elternelements):
 
 ```css
 .nabi-content [data-nabi-size="xs"] { font-size: .75em; }
@@ -102,15 +79,13 @@ Sie ihn also, indem Sie den Selektor überschreiben.
 .nabi-content [data-nabi-size="xl"] { font-size: 1.5em; }
 ```
 
-**Die Größe der Initiale** — keine Zeilenanzahl, die umschlossen wird, nur eine Buchstabengröße. Wie
-viele Zeilen sie tatsächlich abdeckt, entscheidet die Zeilenhöhe dieses Absatzes.
+**Die Größe der Initiale**:
 
 ```css
 .nabi-content [data-nabi-dropcap="1"]::first-letter { font-size: 5.9em; line-height: .83; }
 ```
 
-**Code-Token-Farben** — das Stylesheet des Code-Flügels schreibt Farben direkt auf
-`[data-nabi-token]`. **Fünf** Sorten bekommen derzeit eine Farbe.
+**Farben der Code-Token**:
 
 ```css
 .nabi-content [data-nabi-token="comment"] { color: #7a8a7a; font-style: italic; }
@@ -120,79 +95,49 @@ viele Zeilen sie tatsächlich abdeckt, entscheidet die Zeilenhöhe dieses Absatz
 .nabi-content [data-nabi-token="literal"] { color: #2f8f4e; }
 ```
 
-Der `type`, den ein Highlighter beantwortet, ist eine freie Zeichenkette — jeder Name außerhalb
-dieser fünf wird ohne Farbe gezeichnet, fügen Sie also für die Sorten, die Sie wollen, eine Regel
-derselben Gestalt hinzu. Für andere Farben in Dunkel hängen Sie die Bedingung `.dark` selbst an — der
-Kern liefert für diese fünf keine dunkle Variante.
+---
 
-Die Fortschrittsanimation des Upload-Flügels (`--nabi-per`, `--nabi-t`, `--nabi-span`,
-`--nabi-clear`, `--nabi-blur-max`) ist **intern für diesen Flügel** — die Namen beginnen zwar mit
-`--nabi-`, sind aber keine Stelle, die für den Host zum Überschreiben geöffnet ist.
+## Maßeinheiten
+
+Die meisten UI-Maße — Buttongröße, Abstände, Toolbar-Höhe und so weiter — sind in `rem` definiert und **skalieren daher proportional zur Schriftgröße der Wurzel (`html`).** Vergrößert eine Nutzerin oder ein Nutzer die Standardschriftgröße im Browser oder Betriebssystem, skaliert die Editor-UI von selbst mit.
 
 ---
 
-## Äußere Maße sind `rem`
+## CSS-Spezifitätsleitfaden
 
-Die äußeren Maße — Schaltflächen, Abstände, Werkzeugleisten-Chips und der Rest — sind größtenteils in
-`rem`, wachsen also **mit der Schriftgröße der Wurzel (`html`).** Vergrößert der Nutzer den Text im
-Browser oder Betriebssystem, wächst der Rahmen des Editors mit. Um die Größe zu ändern, ändern Sie
-die `font-size` der Wurzel. Eine Umrandung (`border`) ist eine *Linie* und keine Größe, deshalb bleibt
-sie an manchen Stellen in `px`.
-
----
-
-## Der Spezifität aus dem Weg
-
-Um ein Farb- oder Form-Token zu überschreiben, stapeln Sie **drei Klassen**.
+Beim Überschreiben einer vom Kern deklarierten Theme-Farbvariable empfehlen wir, **drei Klassen zu stapeln**, um die Priorität des Stils zuverlässig zu erhöhen.
 
 ```css
 .nabi.nabi.nabi,
 .nabi-scrim.nabi-scrim.nabi-scrim {
-  --nabi-accent: var(--mein-akzent);
+  --nabi-accent: #7c3aed;
 }
 ```
 
-Durchgezählt sieht das so aus. Die helle Standardregel `:is(.nabi, …)` ist **(0,1,0)**, da `:is()`
-das höchste seiner Argumente nimmt; die dunkle Regel `:where(html, body).dark :is(.nabi, …)` ist
-**(0,2,0)**, da `:where()` null zählt und `.dark` sowie `:is()` je eine Klasse sind. Also **steht**
-`.nabi.nabi` mit Dunkel nur **unentschieden** — und bei Unentschieden gewinnt die später geladene
-Regel, und das Kern-Stylesheet kann durchaus nach dem des Hosts geladen werden. Stapeln Sie drei, um
-auf (0,3,0) zu kommen, dann hängt nichts von der Ladereihenfolge ab.
+- Die helle Standardregel `:is(.nabi, …)` hat die Spezifität **(0, 1, 0)**.
+- Die Dunkelmodus-Regel `:where(html, body).dark :is(.nabi, …)` hat die Spezifität **(0, 2, 0)**.
+- Das Stapeln von drei Klassen wie in `.nabi.nabi.nabi` ergibt daher eine Spezifität von **(0, 3, 0)**, die unabhängig von der CSS-Ladereihenfolge zuverlässig gewinnt.
 
-Das Vorschau-Overlay steht außerhalb von `.nabi` (als Kind von `body`), sein Selektor muss also
-mitgeschrieben werden, damit es dieselbe Farbe bekommt.
-
-**Ein Token, das der Kern nicht deklariert, etwa eine Schrift, braucht dieses Ringen nicht** — es
-gibt keine Stelle, an der es deklariert ist, sodass Vererbung allein es erreicht und eine Zeile
-`:root` genügt.
-
-```css
-:root {
-  --nabi-font: 'Noto Sans', system-ui, sans-serif;
-}
-```
+Das Vorschau-Modal wird als direktes Kind von `body` eingehängt, daher müssen Sie auch den Selektor `.nabi-scrim.nabi-scrim.nabi-scrim` angeben, damit dieselbe Theme-Farbe dort ebenfalls greift.
+Nur referenzierte Token, die der Kern nicht deklariert — etwa die Schrift-Token —, wirken bereits mit einer einzigen Deklaration auf `:root`.
 
 ---
 
-## Hell und Dunkel
+## Hell-/Dunkel-Theme
 
-Eine Klasse `dark` auf **entweder** `html` oder `body` bedeutet dunkel, `light` bedeutet hell. Ohne
-Klasse ist Hell der Standard, und mit beiden gewinnt das explizite `light` (die `.light`-Regeln sind
-nach den `.dark`-Regeln geladen).
+Das Dunkel-Theme greift, wenn das `html`- oder `body`-Element die Klasse `dark` trägt, das Hell-Theme, wenn es die Klasse `light` trägt. Ohne Klasse gilt das helle Standard-Theme, und tragen beide Klassen, gewinnt das explizite `light`.
 
 ```html
 <html class="dark"><!-- oder <body class="dark"> --></html>
 ```
 
-Schalten Sie die Klasse um, reagiert das CSS. Es gibt keine API dafür. Was ein Theme austauscht, sind
-allein die Farbvariablen; die Komponentenregeln bleiben, wie sie sind — selbst geschriebene Stile
-folgen ebenfalls Dunkel, solange sie nur `--nabi-*`-Variablen verwenden.
+Ein Theme-Wechsel bedeutet nur das Umschalten der Klasse — es gibt keine separate JavaScript-API dafür. Verwenden Sie in eigenen Stilen `--nabi-*`-Variablen, folgen deren Farben Theme-Wechseln automatisch mit.
 
 ---
 
-## Zwei Wege, das Stylesheet einzuhängen
+## Wege, das Stylesheet einzuhängen
 
-**① Eine Datei** — der häufigste Weg. Das CSS jedes Flügels ist darin.
+**1. Die gesamte CSS-Datei importieren** (der übliche, empfohlene Weg)
 
 ```ts
 import 'nabi-note/nabi.css'
@@ -202,108 +147,64 @@ import 'nabi-note/nabi.css'
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note/dist/nabi.css">
 ```
 
-**② Nur das Registrierte injizieren** — für den Fall, dass Sie nur die Stylesheets der tatsächlich
-eingeschalteten Flügel wollen.
+**2. Nur die Stile der registrierten Flügel dynamisch injizieren**
 
 ```ts
 import { collectSheets, injectSheets } from 'nabi-note'
 
 const drop = injectSheets(document, collectSheets(registry))
-// rufen Sie drop() auf, wird nur entfernt, was dieser Aufruf eingefügt hat
+// drop() entfernt die injizierten Stile wieder aus dem DOM
 ```
 
-Ein Stylesheet mit demselben Text geht **einmal** hinein — der Schlüssel, auf den gefaltet wird, ist
-der **Inhalt** des Stylesheets, sodass mehrere Editoren in einem Dokument nie stapeln und
-unterschiedliche Flügelmengen sich zu einer einzigen Vereinigung zusammenfinden.
-
-:::: tip Zwei Unterschiede zwischen den beiden — was geladen wird, und wann es greift
-**Was geladen wird.** Eine Datei kann nicht wissen, welche Flügel Sie registriert haben, trägt also
-**alle**. Injektion liest die `registry` und trägt **nur, was Sie registriert haben**. Eine Seite,
-die gespeichertes HTML nur anzeigt, hat keinen Editor und daher keine `registry`, nimmt also den
-Dateiweg.
-
-**Wann es greift.** Eine Datei kommt als `<link>` im Kopf herein und **blockiert das Rendern**, bis
-sie geladen ist. Injektion greift erst, **nachdem das JavaScript des Editors angekommen ist**. Eine
-Seite, deren Dokument bereits auf dem Server vorab gezeichnet und heruntergeschickt wird, sollte
-deshalb den Dateiweg nehmen — bei Injektion würde das vom Server gesendete Dokument erst nackt
-gezeichnet und danach neu gestylt und umbrochen, sobald das Stylesheet eintrifft.
-::::
-
-Die Stylesheets der registrierten Flügel gehen **nach** dem Kern-Stylesheet hinein, bei gleicher
-Priorität gewinnt also der Flügel.
+Identischer Stylesheet-Inhalt wird nie doppelt injiziert — er wird als ein einziges Tag verwaltet.
+In einer SSR-Umgebung ist es besser, die statische CSS-Datei zu laden statt zu injizieren, um ein Aufblitzen ungestylten Inhalts (FOUC) vor der Ausführung des Client-JS zu vermeiden.
 
 ---
 
-## Was Sie ansteuern können
+## Anpassbare CSS-Klassen und UI-Elemente
 
-Was eine Variable nicht kann, zielt auf die tatsächlich existierenden Klassen.
-
-| Selektor | Was | Wer hängt es an |
+| Selektor | Was es ist | Erzeugt von |
 |---|---|---|
-| `.nabi` | die Hülle, die den gesamten Editor umschließt (Chrome + Schreibbereich). Die Farb- und Form-Token hängen hier | der Host |
-| `.nabi-content[contenteditable]` | der Schreibbereich selbst | der Host |
-| `.nabi-toolbar` | der Platz, der Werkzeugleisten-Zeile und Kontextzeile umschließt. Diese Klasse *ist* „bleibt oben kleben" | der Host |
-| `.nabi-toolbar-row` | der Behälter, in dem die Werkzeugleiste sitzt | `mountToolbar()` |
-| `.nabi-context` | der Behälter, in dem die Kontextzeile sitzt | `mountContextToolbar()` |
-| `.nabi-tools` | der Platz für die Schaltflächen Vorschau und Vollbild — der Kern lässt ihn nach rechts oben schweben | `mountViewTools()` |
-| `.nabi-tool` | diese beiden Schaltflächen selbst | `mountViewTools()` |
-| `.tb-group` | eine Gruppe von Werkzeugleisten-Schaltflächen | `mountToolbar()` |
-| `.ctb-group` · `.ctb-button` · `.ctb-swatch` · `.ctb-input` | die Gruppen, Schaltflächen, Farbmuster und Textfelder der Kontextzeile | `mountContextToolbar()` |
-| `.tb-picker` · `.tb-picker-grid` · `.tb-picker-cell` | der Kasten, der sich unter einer Schaltfläche öffnet, etwa das Tabellengrößen-Raster | `mountToolbar()` |
-| `.tb-prompt` · `.tb-prompt-input` | die Adress-Eingabeschicht, die beim Einfügen von etwas Neuem erscheint | `mountToolbar()` |
-| `.nabi-hints [data-hint]` | die Kürzel-Abzeichen von doppeltem Tippen von Shift — das Abzeichen ist `::before`, das Namensschild `::after`, sodass beide gemeinsam erscheinen | `mountHints()` |
-| `[data-nabi-tip]` | das Tooltip — allein mit CSS `::after` gezeichnet | der Kern durchweg |
-| `.nabi-content.nabi-dropping` | der Schreibbereich, während eine Datei darüber gezogen wird. Der Hinweistext reitet auf dem Attribut `data-nabi-drop` | `mountUpload()` |
+| `.nabi` | Oberster Container, der den gesamten Editor umschließt (Toolbar + Editierfläche) | der Host |
+| `.nabi-content[contenteditable]` | Die eigentliche Editierfläche | der Host |
+| `.nabi-toolbar` | Sticky-Header-Container, der Toolbar und Kontextleiste umschließt | der Host |
+| `.nabi-toolbar-row` | Die Buttonzeile der Haupt-Toolbar | `mountToolbar()` |
+| `.nabi-context` | Der Container der dynamischen Kontext-Toolbar | `mountContextToolbar()` |
+| `.nabi-tools` | Wrapper für die Vorschau- und Vollbild-Buttons | `mountViewTools()` |
+| `.nabi-hints [data-hint]` | Das Kürzel-Abzeichen bei schnellem doppeltem Drücken von Shift | `mountHints()` |
+| `[data-nabi-tip]` | Button-Tooltip (mit CSS `::after` gezeichnet) | Kern-Komponenten |
+| `.nabi-content.nabi-dropping` | Die Editierfläche, während eine Datei darüber gezogen wird | `mountUpload()` |
 
-Vorschau und Vollbild werden ebenfalls **vom Kern gebaut.**
+### Modals und Popups
 
-| Selektor | Was | Wer |
+| Selektor | Was es ist | Erzeugt von |
 |---|---|---|
-| `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | das Dokument-Vorschau-Overlay | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | der Kasten, der ein einzelnes Bild groß zeigt | `openImageLightbox()` |
-| `.nabi.is-fullscreen` | Vollbild — pinnt den `.nabi`-Kasten auf den Bildschirm | `setFullscreen()` (der Klassenname ist `FULLSCREEN_CLASS`) |
-
-Hängen Sie `mountViewTools()` an, öffnen und schließen die beiden Schaltflächen dies von selbst.
-Wollen Sie es selbst öffnen, rufen Sie `openPreview({ nabi, editor })`,
-`openImageLightbox({ editor, src, alt?, locale })`, `setFullscreen(root, on)` oder
-`isFullscreen(root)` auf.
-
-::: tip Der Werkzeug-Platz stellt sich selbst auf
-`mountViewTools` **baut seinen eigenen Kasten** und setzt ihn an den Anfang des Behälters, den Sie
-ihm übergeben. Der Host muss `<span>` nie vor der Werkzeugleiste platzieren — richten Sie den Platz
-im Voraus ein, entstehen stattdessen zwei Kästen.
-:::
-
-Auch die Editor-Bildschirm-eigenen Kennzeichen lassen sich ansteuern — `[data-nabi-token]` (die
-Token-Farben eines Codeblocks), `[data-nabi-lang]` (die Sprache eines Codeblocks), `[data-color]`
-(Hervorhebung und Textfarbe — unterschieden durch die Tags `<mark>` und `<span>`), sowie
-`data-nabi-align`, `data-nabi-typeface`, `data-nabi-size`, `data-nabi-dropcap` (Absatzattribute). Die
-verbindlichen Namen dieser Kennzeichen sind die `*_ATTR`-Konstanten in der jeweiligen Flügel-Datei.
+| `.nabi-scrim` > `.nabi-card` > `.nabi-content.nabi-preview-body` | Das Dokument-Vorschau-Modal | `openPreview()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | Das Bild-Lightbox-Popup | `openLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` | Das Popup zur Auswahl des Einfügeformats | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` | Das Speichern-Popup (Dateinamen-Eingabe und Formatwahl) | `openSavePanel()` |
+| `.nabi.is-fullscreen` | Die Klasse, die den Vollbildmodus des Editors aktiviert | `setFullscreen()` |
 
 ---
 
-## Gespeichertes HTML anderswo zeichnen
+## Gespeichertes HTML anderswo rendern
 
-Der ausgehende Wert (`getHtml()`) ist HTML mit verbliebenen `data-nabi-*`-Attributen, und **kein
-einziges Zeichen von Inline-`style`.** Das heißt, das Aussehen ist ganz Sache des Stylesheets, und
-ohne dieses zu zeichnen ergibt bloßes HTML ohne Ausrichtung, ohne Textgrößen und ohne Tabellenlinien.
-
-Um es so zu zeichnen, wie es der Editor tat, umhüllen Sie es mit `.nabi-content` — diese Klasse
-erhält die Farb- und Form-Token direkt, auch ohne ein umgebendes `.nabi` (die Regel
-`.nabi-content:where(:not(.nabi *))` in `nabi.css`).
+Der mit `getHtml()` extrahierte HTML-String besteht nur aus semantischem Markup und `data-nabi-*`-Attributen, ohne Inline-`style`.
+Um ihn auf einer externen Seite im gleichen Look wie im Editor zu rendern, umschließen Sie den Inhalt mit der Klasse `.nabi-content` und laden Sie `nabi.css`.
 
 ```html
-<div class="nabi-content">Ihr gespeichertes HTML</div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note/dist/nabi.css">
+
+<div class="nabi-content">
+  <!-- der mit nabi.getHtml() gespeicherte HTML-Inhalt -->
+</div>
 ```
 
-Für das Stylesheet selbst nehmen Sie Weg ① aus dem Abschnitt oben — eine Seite ohne Editor hat keine
-`registry`, aus der gesammelt werden könnte.
+Auch ohne Umschließung mit `.nabi` greifen Theme- und Schrift-Token direkt auf `.nabi-content`, sodass Sie genau den im Editor gesehenen Stil reproduzieren können.
 
-### Verhalten auf der lesenden Seite — Tabellensortierung
+### Schreibgeschützte Tabellensortierung aktivieren
 
-Derzeit wird **allein die Tabellensortierung** als leseseitige Funktion ausgeliefert. Ein
-allgemeines System, mit dem ein beliebiger Flügel sein eigenes leseseitiges Verhalten anhängen
-könnte, gibt es noch nicht.
+Um die Spaltensortierung von Tabellen auf einer veröffentlichten HTML-Seite zu aktivieren, hängen Sie die Funktion `attachTableSort` ein.
 
 ```ts
 import { attachTableSort } from 'nabi-note/viewer'
@@ -311,22 +212,18 @@ import { attachTableSort } from 'nabi-note/viewer'
 const detach = attachTableSort(document.querySelector('#article')!, { locale: 'de' })
 ```
 
-Es findet Tabellen, die `data-nabi-sortable` tragen, und setzt Sortierschaltflächen in die
-Kopfzellen. Die Freigabefunktion (`detach`) nimmt die gesetzten Schaltflächen und die geänderte
-Zeilenreihenfolge zurück.
+Sie erkennt Tabellen mit dem Attribut `data-nabi-sortable` und fügt Sortier-Buttons in die Spaltenköpfe ein. Der Aufruf der zurückgegebenen Funktion `detach()` entfernt die hinzugefügten DOM-Buttons und stellt die ursprüngliche Zeilenreihenfolge wieder her.
 
-::: danger Nicht an ein bearbeitetes Element anhängen
-`attachTableSort()` setzt Schaltflächen ins DOM und ändert die Zeilenreihenfolge. Speichern Sie das
-DOM, während es angehängt ist, härtet das in den Wert ein — hängen Sie es auf der lesenden Seite nur
-an eine schreibgeschützte Kopie an.
+::: warning attachTableSort nicht auf ein bearbeitetes DOM anwenden
+`attachTableSort()` manipuliert die DOM-Struktur direkt. Wenden Sie es auf eine noch bearbeitete Editorfläche an, kann die Sortier-Button-UI dauerhaft im Dokumentinhalt landen. Verwenden Sie es ausschließlich auf einem schreibgeschützten Viewer-Bildschirm.
 :::
 
 ---
 
-## Weiterführende Seiten
+## Weiter
 
-- [{{ t('menu_wing_custom') }}](../wing/custom) — eine fehlende Formatierung selbst bauen
-- [{{ t('menu_intro_index') }}](../intro) — die Wörter, die diese Dokumentation verwendet
+- [{{ t('menu_wing_custom') }}](../wing/custom) — einen eigenen Formatierungs-Flügel bauen
+- [{{ t('menu_intro_index') }}](../intro) — Einführung in NABI NOTE und seine Architektur
 
 <script setup lang="ts">
 import { useTranslate } from '../../.vitepress/src/langs.ts'

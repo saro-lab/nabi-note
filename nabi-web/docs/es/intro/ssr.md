@@ -1,20 +1,18 @@
 ---
 title: Soporte de SSR
-description: Dibuje el valor guardado en el servidor de antemano, y reciba el editor y la barra de herramientas con `hydrate`.
+description: Renderice de antemano en el servidor los documentos guardados, y reciba el editor y la barra de herramientas al instante con hydrate en el navegador.
 ---
 
-# Soporte de SSR
+# Soporte de SSR (renderizado en el servidor)
 
-## Solo dibujar el valor guardado — sin levantar el editor
+## Renderizar documentos guardados (pantallas de solo lectura)
 
-Un lugar que solo **muestra** el documento, como una lista de comentarios, no necesita un
-editor. Lo único que hace falta para dibujar el documento es la lista de wings
-registrados (`registry`), así que existe una puerta aparte que solo recibe eso.
+Una pantalla que solo **muestra** un documento —una lista de comentarios o la vista de una publicación— no necesita crear una instancia del editor. Para renderizar un documento a HTML solo se necesita la lista de wings registrados (`registry`), así que existe una función de renderizado exclusiva para el servidor.
 
 ```ts
 import { makeRegistry, defaultWings, renderStoredHtml, renderStoredEditorHtml } from 'nabi-note/ssr'
 
-// una vez, cuando arranca el servidor — todos los valores guardados comparten esta misma lista
+// Se crea una sola vez al arrancar el servidor y se reutiliza en varias solicitudes.
 const registry = makeRegistry(defaultWings)
 
 const saved = [{ w: 'p', ch: ['una línea de comentario'] }]   // árbol de nabi leído de la base de datos
@@ -23,54 +21,35 @@ renderStoredHtml(saved, registry)        // '<p>una línea de comentario</p>'
 renderStoredEditorHtml(saved, registry)  // '<p data-key="n0">una línea de comentario</p>'
 ```
 
-**`nabi-note/ssr` es el punto de entrada que solo trae lo necesario para dibujar.** No
-carga ni un solo archivo de la superficie de edición (`surface`) ni de las herramientas
-de pantalla (`ui`) — una red lo garantiza — así que no se mezcla código con DOM en el
-paquete de servidor. La misma puerta también está en `nabi-note`, así que una página que
-ya carga el editor puede seguir usando esa.
+**`nabi-note/ssr` es un punto de entrada ligero que solo contiene la lógica de renderizado principal.** No hace referencia a la superficie de edición (`surface`) ni a las herramientas de pantalla (`ui`), y pruebas unitarias a nivel de arquitectura garantizan que ningún código de DOM se filtre en el paquete del servidor. Si el entorno ya carga el paquete completo del editor, las mismas funciones también están disponibles desde el paquete `nabi-note`.
 
-| | |
+| Función | Descripción |
 |---|---|
-| `renderStoredHtml(json, registry, options?)` | El HTML que se guarda o se publica — el mismo valor que `getHtml()` |
-| `renderStoredEditorHtml(json, registry, options?)` | HTML del editor — el mismo valor que `getEditorHtml()` (lleva `data-key`) |
+| `renderStoredHtml(json, registry, options?)` | HTML para guardar o publicar — el mismo valor que `getHtml()` del editor |
+| `renderStoredEditorHtml(json, registry, options?)` | HTML para inicializar el editor — el mismo valor que `getEditorHtml()` (incluye `data-key`) |
 
-- **Ninguna de las dos usa DOM** — corren igual en el servidor.
-- **Si no es un árbol de nabi, es `null`** — la regla de rechazo es la misma que en
-  `setJson()` (el documento entero debe ser un arreglo). No lanzan excepción — incluso un
-  valor que provoca una excepción durante la lectura se convierte en `null`, y se avisa
-  con `console.error`.
-- **No difieren ni un carácter del valor que produce el editor.** Como pasan por los
-  mismos pasos (normalización → ensamblaje), el filtrado de XSS ocurre en el mismo
-  lugar — el lado que solo muestra no queda menos protegido.
-- `options` es solo `{ allowLocalUrls }` — el mismo sentido que esa opción en
-  `createNabiWith`.
+- **No usa ninguna API de DOM.** Se ejecuta directamente en entornos de servidor como Node.js.
+- **Devuelve `null` si no es un árbol de nabi válido.** Las reglas de validación son las mismas que las de `setJson()`. Nunca lanza una excepción: ante datos inválidos devuelve `null` y registra la causa con `console.error`.
+- **Coincide exactamente con el resultado de una instancia del editor.** Como ambos pasan por el mismo proceso de normalización y ensamblaje, el filtrado de XSS se aplica de la misma manera.
+- El parámetro `options` admite `{ allowLocalUrls?: boolean }`, con el mismo papel que esa misma opción en `createNabiWith`.
 
-**El mismo valor guardado siempre obtiene la misma `data-key`.** Así, si el servidor
-dibuja de antemano el editor con `renderStoredEditorHtml` y lo recibe en el navegador con
-`hydrate`, la pantalla no se vuelve a dibujar.
+**Los mismos datos de árbol de nabi siempre producen el mismo `data-key`.** Por eso se puede prerrenderizar en el servidor el HTML inicial del editor con `renderStoredEditorHtml`, enviarlo al cliente y montarlo con la opción `hydrate: true`: el editor se activa al instante, sin volver a renderizar ni parpadear.
 
 ```ts
 mountSurface({ nabi, registry, root: surface, hydrate: true })
 ```
 
-Si no coinciden, se dibuja de nuevo en el acto, así que solo hace falta que el servidor y
-el cliente compartan la misma lista de wings.
+Aunque los resultados del renderizado del servidor y del cliente lleguen a diferir, el cliente vuelve a renderizar automáticamente de forma normal, así que solo hace falta mantener la misma lista de wings (`registry`) entre servidor y cliente.
 
-::: tip La demo de inicio de este sitio es ese mismo ejemplo
-El documento de la demo de inicio se dibuja de antemano **en el momento de compilar, con
-`renderStoredEditorHtml`**, y queda incrustado en la página; el editor despierta encima
-con `hydrate`. Por eso el texto ya se puede leer antes de que llegue el código del
-editor — no hay un tramo donde el lugar esté vacío y de pronto se llene.
+::: tip La propia demo de inicio de este sitio funciona con hydratación SSR
+El documento de la demo de inicio se **prerrenderiza en tiempo de compilación con `renderStoredEditorHtml`** y queda incrustado en el HTML; una vez que se carga el script del cliente, `hydrate` activa el editor sobre ese contenido. Por eso el texto del cuerpo ya es visible antes de que cargue el JS, sin que se produzca un desplazamiento de diseño (CLS).
 :::
 
 ---
 
-## También se puede dibujar de antemano la barra de herramientas
+## Prerrenderizar la barra de herramientas
 
-La fila de botones **no mira el documento.** Solo depende de la lista de wings
-registrados, los textos y el orden de los grupos, así que lo que produce es una
-**constante** — se llama una vez cuando arranca el servidor y ese texto se reutiliza. No
-hace falta volver a llamarla en cada petición.
+La estructura de botones de la barra de herramientas **no depende del contenido del documento.** Se genera únicamente a partir de la lista de wings registrados, el idioma de visualización (locale) y el orden de los grupos, por lo que el resultado es determinista. Puede renderizarse una sola vez al arrancar el servidor, guardarse en caché y reutilizarse en varias solicitudes.
 
 ```ts
 import { makeRegistry, defaultWings, renderToolbarHtml } from 'nabi-note/ssr'
@@ -81,38 +60,21 @@ const toolbarHtml = renderToolbarHtml({ registry, locale: 'es' })
 // '<div class="nabi-group" data-group="font">…</div>'
 ```
 
-Si este texto se envía tal cual dentro del recipiente de la barra, en el navegador
-`mountToolbar` lo dibuja con **la misma función.** Si ya hay una fila igual en pie, **no
-la vuelve a dibujar, solo conecta el cableado.**
+Al incluir esta cadena de HTML dentro del contenedor de la barra de herramientas y enviarla al cliente, `mountToolbar` en el navegador reconoce el marcado existente y **solo conecta los listeners de eventos, sin volver a dibujarlo.**
 
 ```ts
 mountToolbar({ nabi, registry, surface, root: toolbar })
 ```
 
-::: warning Ponga `class="nabi-toolbar-row"` en el recipiente también
-Al enviar la fila dibujada de antemano, esta clase debe estar **desde el primer dibujo.**
-Si no está, el núcleo la agrega por su cuenta al montar, y entonces los márgenes
-laterales se agregan en ese momento y **la fila de botones se corre de golpe.** Si el
-host ya la escribió de antemano, el núcleo no la toca (solo retira la que él mismo puso).
-
-```html
-<div class="nabi-toolbar-row">fila dibujada de antemano</div>
-```
+::: warning Escriba usted mismo `class="nabi-toolbar-row"` en el elemento contenedor
+Al enviar una fila de la barra de herramientas prerrenderizada, el elemento de la fila debe llevar `class="nabi-toolbar-row"` **desde el primer dibujo.** Si falta, el núcleo la agrega automáticamente al montar, y el relleno que la acompaña se aplica justo en ese momento, provocando que **la fila de botones se desplace de golpe.**
 :::
 
-- **No se rompe si no coincide** — si la fila que está en pie es distinta de la lista de
-  wings actual, se dibuja de nuevo en el acto. Lo único que se pierde es el valor
-  prerrenderizado, y la pantalla siempre queda correcta.
-- **La fila prerrenderizada empieza en un estado "nada presionado, nada oculto".** Lo
-  presionado (`aria-pressed`) y lo oculto los decide el cursor, y el servidor no lo sabe.
-  Si la configuración esconde botones según el cursor, algunos pueden desaparecer justo
-  después del montaje y la fila se puede volver a acomodar.
-- **Úselo solo donde se levanta el editor.** Una página de solo lectura no tiene barra de
-  herramientas, así que no hay razón para recibir este texto.
+- **Es seguro incluso si la estructura no coincide.** Si el HTML entregado difiere de la lista de wings actual, el cliente lo vuelve a renderizar de inmediato en el mismo lugar, y la pantalla nunca queda rota.
+- **Una fila prerrenderizada se renderiza en su estado por defecto** (nada presionado, nada oculto). El estado de presionado (`aria-pressed`) y la visibilidad según el contexto dependen de la posición del cursor, así que se sincronizan automáticamente en cuanto el cliente monta el componente.
+- **Úsela solo en pantallas que incluyan un editor.** Una página de solo lectura no necesita barra de herramientas.
 
-**Los dos botones de vista previa y pantalla completa siguen la misma vía.** Como no son
-wings sino piezas de la superposición, no entran en el texto de la barra de arriba — se
-dibujan aparte y se colocan en el recipiente donde se para `mountViewTools`.
+**Los botones de vista previa y pantalla completa se pueden prerrenderizar del mismo modo.** Como son componentes de herramientas de vista y no wings, se renderizan por separado con `renderViewToolsHtml`.
 
 ```ts
 import { renderViewToolsHtml } from 'nabi-note/ssr'
@@ -121,19 +83,16 @@ renderViewToolsHtml({ locale: 'es' })
 // '<span class="nabi-tools">…</span>'
 ```
 
-::: tip La demo de inicio de este sitio es ese mismo ejemplo
-La barra de herramientas de la demo de inicio se dibuja de antemano **en el momento de
-compilar, con `renderToolbarHtml` y `renderViewToolsHtml`**, y queda incrustada;
-`mountToolbar` y `mountViewTools` reconocen esa fila y solo conectan el cableado. Por eso
-no hay un tramo donde los treinta y cinco iconos aparezcan tarde.
+::: tip La barra de herramientas de la demo de inicio también está prerrenderizada
+La barra de herramientas de la demo de inicio se **prerrenderiza en tiempo de compilación con `renderToolbarHtml` y `renderViewToolsHtml`** y queda incrustada en la página; `mountToolbar` y `mountViewTools` reconocen esa fila y solo conectan los eventos. Por eso nunca se ven decenas de iconos de la barra apareciendo tarde.
 :::
 
 ---
 
 ## Próximos documentos
 
-- [{{ t('menu_intro_usage') }}](./usage) — la vía de npm, ensamblaje y entradas/salidas
-- [{{ t('menu_intro_cdn') }}](./cdn) — con un solo `<script>`, sin herramientas de compilación
+- [{{ t('menu_intro_usage') }}](./usage) — instalación por npm y guía completa de uso del editor
+- [{{ t('menu_intro_cdn') }}](./cdn) — usando una sola etiqueta `<script>`, sin herramientas de compilación
 
 <script setup lang="ts">
 import { useTranslate } from '../../.vitepress/src/langs.ts'

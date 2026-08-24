@@ -1,16 +1,13 @@
 ---
 title: Personalizar o estilo
-description: Cor e formato se trocam por variáveis CSS.
+description: Como personalizar cores, fontes, espaçamento e outros estilos do NABI NOTE usando variáveis CSS.
 ---
 
 # Personalizar o estilo
 
-A folha de estilo é **o host quem prende** — com um bundler, uma linha
-`import 'nabi-note/nabi.css'`; via CDN, uma linha `<link>`. Depois disso, basta sobrescrever
-variáveis.
+**A própria aplicação host prende a folha de estilo** — num bundler, com `import 'nabi-note/nabi.css'`; via CDN, com uma tag `<link>`. Depois disso, basta sobrescrever as variáveis CSS necessárias para mudar todo o tema do editor de forma consistente.
 
-As regras dos componentes **não têm um único literal de cor.** Tudo é desenhado com variáveis
-`--nabi-*`, então sobrescrever a variável basta para o resto seguir junto.
+Todo componente de interface do NABI NOTE é **estilizado só com variáveis CSS `--nabi-*`, sem nenhuma cor escrita direto no código** — então sobrescrever as variáveis já basta para ajustar sua marca.
 
 ```css
 .nabi.nabi.nabi {
@@ -18,82 +15,62 @@ As regras dos componentes **não têm um único literal de cor.** Tudo é desenh
 }
 ```
 
-A classe aparece três vezes de propósito — o motivo está em
-[Para não esbarrar na especificidade](#para-nao-esbarrar-na-especificidade), mais abaixo.
+Por que o seletor de classe se repete três vezes, veja a seção [Guia de especificidade CSS](#guia-de-especificidade-css) abaixo.
 
-::: tip A premissa maior deste documento — o valor salvo não fica de pé sozinho
-O HTML de saída (`getHtml()`) **não tem um único `style` inline.** O valor salvo só diz *o quê*
-como atributo (`data-nabi-align="center"`), e *como aparece* é assunto desta folha de estilo.
-Por isso, ao desenhar o HTML salvo em outro lugar, também precisa estar **dentro de um
-`.nabi-content` com esta folha de estilo presa** para ficar igual ao editor — veja
-[Ao desenhar o HTML salvo fora daqui](#ao-desenhar-o-html-salvo-fora-daqui), mais abaixo.
+::: tip O HTML salvo não tem estilos em linha
+O HTML que o editor produz (`getHtml()`) **não tem nenhum atributo `style` em linha.** O marcado só traz a estrutura semântica e os atributos (como `data-nabi-align="center"`), enquanto a folha de estilo cuida da aparência visual. Por isso, ao renderizar HTML salvo numa página externa, ainda é preciso colocá-lo **dentro de um contêiner `.nabi-content` com `nabi.css` aplicado** para ficar igual ao editor.
+
+Veja [Desenhando HTML salvo em outro lugar](#desenhando-html-salvo-em-outro-lugar) abaixo para mais detalhes.
 :::
 
-::: tip Claro e escuro já vêm prontos
-**Não há** nenhum token que o host precise sobrescrever por causa do tema. A folha de estilo do
-núcleo já traz os três: o padrão claro, a redefinição `.dark` e a redefinição explícita
-`.light`. Nem este site sobrescreve algo além dos quatro tokens de fonte, dentro do editor.
+::: tip Os temas claro e escuro já vêm prontos
+O host não precisa definir nenhuma variável extra para o tema padrão. A folha de estilo do núcleo já traz os valores padrão do claro, um tema `.dark` e um tema `.light` explícito.
 :::
 
-## Tokens de cor e formato
+## Tokens de cor e tema
 
 | Token | Significado | Padrão (claro) |
 |---|---|---|
-| `--nabi-bg` · `--nabi-soft` | fundo · superfície levemente pressionada | `#fff` · `rgb(0 0 0 / 4.5%)` |
-| `--nabi-fg` · `--nabi-muted` · `--nabi-on-accent` | texto · texto apagado · texto sobre o destaque | `#1b1b1f` · `#6b6b76` · `#fff` |
-| `--nabi-line` · `--nabi-accent` | linha · cor de destaque | `#e2e2e8` · `#3b6fe0` |
-| `--nabi-danger` · `--nabi-on-danger` | perigo · texto sobre ele | `#d93b3b` · `#fff` |
-| `--nabi-shadow` · `--nabi-scrim` | sombra de caixa · fundo da prévia | — |
-| `--nabi-radius` · `--nabi-radius-sm` · `--nabi-radius-xs` | cantos | `6px` · `4px` · `3px` |
-| `--nabi-layer-radius` | canto das camadas (painel, prévia, lightbox) | `.25rem` |
-| `--nabi-z-sticky` | número de camada da linha fixa | `20` |
-| `--nabi-grid-cell` | tamanho da célula da grade de tamanho de tabela | `1.125rem` |
-| `--nabi-hl-yellow` · `green` · `cyan` · `pink` · `purple` · `orange` | as seis cores do marca-texto | cores semitransparentes |
-| `--nabi-tc-green` · `coral` · `violet` · `amber` · `blue` | as cinco cores de texto | cores fortes |
+| `--nabi-bg` · `--nabi-soft` | Fundo base · fundo de hover/leve | `#fff` · `rgb(0 0 0 / 4.5%)` |
+| `--nabi-fg` · `--nabi-muted` · `--nabi-on-accent` | Texto base · texto secundário apagado · texto sobre a cor de destaque | `#1b1b1f` · `#6b6b76` · `#fff` |
+| `--nabi-line` · `--nabi-accent` | Borda/divisor · cor de destaque principal (foco/ativo) | `#e2e2e8` · `#3b6fe0` |
+| `--nabi-danger` · `--nabi-on-danger` | Cor de perigo/alerta · texto sobre essa cor | `#d93b3b` · `#fff` |
+| `--nabi-shadow` · `--nabi-scrim` | Sombra de menus suspensos · fundo escurecido de modal/prévia | — |
+| `--nabi-radius` · `--nabi-radius-sm` · `--nabi-radius-xs` | Arredondamento de cantos (padrão · pequeno · mínimo) | `6px` · `4px` · `3px` |
+| `--nabi-layer-radius` | Arredondamento de cantos de painéis/modais em camada | `.25rem` |
+| `--nabi-z-sticky` | z-index do cabeçalho fixo | `20` |
+| `--nabi-grid-cell` | Tamanho de célula de grades, como a de inserir tabela | `1.125rem` |
+| `--nabi-hl-yellow`·`green`·`cyan`·`pink`·`purple`·`orange` | As seis cores de marca-texto | cores semitransparentes |
+| `--nabi-tc-green`·`coral`·`violet`·`amber`·`blue` | As cinco cores de texto | cores fortes |
 
-Esta tabela traz só o que a folha de estilo do núcleo (`nabi.css`) **declara diretamente.** O
-lugar da declaração não é só `.nabi`, são três:
-`:is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *)))`. Isso porque a sobreposição da
-prévia é filha direta de `body` e a herança de `.nabi` não a alcança, e um `.nabi-content` que
-existe sozinho, fora do editor, também precisa receber os tokens diretamente.
+As variáveis da tabela acima são tokens que a folha de estilo do núcleo (`nabi.css`) **declara diretamente.** Elas estão vinculadas não só a `.nabi`, mas a três seletores — `:is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *)))` — para permitir renderização independente.
 
-A mesma lista aparece três vezes (padrão claro · `.dark` · `.light` explícito). **Quem
-sobrescreve não precisa olhar para as três** — ganhando na especificidade, um valor
-sobrescrito uma vez vale para os três casos. Só se quiser um valor diferente no escuro é preciso
-acrescentar a própria condição `.dark`.
+## Tokens só referenciados (podem ser declarados em :root)
 
-## Tokens que só são referenciados, sem valor
+As variáveis abaixo são tokens que o núcleo **não declara, só referencia** — como `var(--token, valor de reserva)`. Se o host não der um valor, vale o valor de reserva indicado. Como não são declaradas no nível do núcleo, **você pode declará-las em `:root` para aplicá-las globalmente.**
 
-Abaixo estão as variáveis que o núcleo **só referencia, sem declarar.** Se o host não der um
-valor, vale o fallback entre parênteses. Como não há lugar de declaração, **escrever em
-`:root` já basta** — é aqui que este grupo se separa dos tokens de cor e formato acima (aqueles
-estão declarados em `.nabi`, e a herança não consegue vencer isso).
-
-| Token | Significado | Fallback |
+| Token | Significado | Valor de reserva padrão |
 |---|---|---|
-| `--nabi-font` · `--nabi-font-serif` · `--nabi-font-mono` · `--nabi-font-cursive` | a fonte de verdade que se prende a cada uma das quatro variantes do wing de tipo de letra | fonte do sistema |
-| `--nabi-cursive-adjust` | o `font-size-adjust` da cursiva. Fontes manuscritas têm x-height baixo e por isso parecem menores no mesmo px; este valor reajusta com base no x-height | `0.4` |
-| `--nabi-sticky-top` | o quanto a linha fixa desce ao se assentar. Se o site tem um cabeçalho fixo, use a altura dele | `0px` |
-| `--nabi-preview-width` | a largura do cartão de prévia. **Como `openPreview` mede a largura da área de edição ao abrir e a escreve direto no cartão**, mesmo que o host sobrescreva por fora, esse valor inline vence | `720px` |
-| `--nabi-placeholder` | o texto de exemplo que o editor vazio mostra, como string entre aspas. **`mountSurface` escreve a palavra de sua própria opção `placeholder` (ou do dicionário do núcleo) na raiz de edição**, então um valor inline vence qualquer coisa que você defina de fora — para mudar o traço, sobrescreva `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` | nenhum (sem texto de exemplo) |
-| `--nabi-placeholder-color` | a cor daquele texto de exemplo. O núcleo **não declara** este nome; atrás dele está `--nabi-placeholder-color-fallback`, que conhece claro e escuro (claro `#6b6b76aa` · escuro `#9a9aa6aa`) — escreva este token em `:root` e ele vence nos dois temas | `--nabi-placeholder-color-fallback` |
-| `--nabi-content-min-height` | a altura mínima que um editor vazio ocupa. Aplica-se **só à superfície de edição** (`.nabi-content.nabi-editing`) — num `.nabi-content` publicado ou em prévia o próprio texto é a altura, então texto curto deixa nenhum espaço vazio embaixo | `12.5rem` |
-| `--nabi-touch-font-size` | o tamanho do texto dos campos de entrada que o núcleo desenha (`.nabi-input` — endereço de link, nome de salvar, prompt) num dispositivo de toque (`pointer: coarse` **ou** largura de `40rem` ou menos). **Safari do iOS amplia a página inteira quando o cursor pousa num campo de formulário menor que 16px**, e este é o piso que o impede. Uma tela de mouse não muda em nenhum pixel | `16px` |
+| `--nabi-font` · `--nabi-font-serif` · `--nabi-font-mono` · `--nabi-font-cursive` | A fonte do editor e de cada ramo do wing de tipo de letra | fontes do sistema |
+| `--nabi-cursive-adjust` | A proporção de `font-size-adjust` da fonte cursiva | `0.4` |
+| `--nabi-sticky-top` | O deslocamento superior da barra de ferramentas fixa (ajuste para a altura de um cabeçalho fixo do site, se houver) | `0px` |
+| `--nabi-preview-width` | A largura padrão do cartão de prévia | `720px` |
+| `--nabi-placeholder` | O texto de exemplo exibido num editor vazio | nenhum |
+| `--nabi-placeholder-color` | A cor desse texto de exemplo (sem valor, usa uma cor de reserva específica do tema) | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | A altura mínima de uma superfície de edição vazia (aplica-se só à superfície de edição `.nabi-editing`) | `12.5rem` |
+| `--nabi-touch-font-size` | O tamanho de letra dos campos de formulário (`.nabi-input`) em dispositivos de toque (`pointer: coarse` ou largura ≤ 40rem) — evita o zoom automático do Safari no iOS | `16px` |
 
-`--nabi-typeface-base` não é deste grupo — **o núcleo o declara** (o padrão segue
-`--nabi-font`). O wing de tipo de letra não tem uma opção para definir esse valor, então, para
-mudá-lo, sobrescreva este token.
+`--nabi-typeface-base` não é só referenciado — **o núcleo o declara diretamente** (por padrão referencia `--nabi-font`). Para mudar a fonte padrão, sobrescreva `--nabi-font`.
 
-`--nabi-keyboard-top` · `--nabi-keyboard-bottom` também vivem no mesmo lugar, mas **o núcleo
-quem escreve** — `mountSticky()` mede o quanto o teclado do celular empurrou a tela e escreve
-aqui, e a linha fixa e a tela cheia leem esse valor. Não é um valor para escrever à mão.
+`--nabi-keyboard-top` e `--nabi-keyboard-bottom` são variáveis internas que **`mountSticky()` mede e escreve dinamicamente** a partir da altura do teclado móvel.
 
-## Onde não há token — sobrescreva a regra
+`--nabi-bar-height` é, do mesmo modo, uma variável interna que **`mountSticky()` mede e escreve** a partir da altura real da barra de ferramentas. É usada como `scroll-margin-block-start` em elementos `.nabi-content > *` para que não fiquem escondidos sob a barra de ferramentas ao rolar até eles.
 
-Os três abaixo **não têm variável.** O núcleo já cravou o valor na regra, então, para mudar,
-sobrescreva o próprio seletor.
+## Sobrescrevendo estilos fixos sem variável
 
-**Os quatro níveis de tamanho de letra** — em `em`, então acompanham o tamanho do elemento pai.
+As três propriedades abaixo são definidas como regras CSS fixas em vez de variáveis — para mudá-las, sobrescreva diretamente o seletor de classe.
+
+**Os quatro tamanhos de texto** (em `em`, relativos ao tamanho do elemento pai):
 
 ```css
 .nabi-content [data-nabi-size="xs"] { font-size: .75em; }
@@ -102,15 +79,13 @@ sobrescreva o próprio seletor.
 .nabi-content [data-nabi-size="xl"] { font-size: 1.5em; }
 ```
 
-**O tamanho da capitular** — não é um valor que define quantas linhas envolver, é só um tamanho
-de letra. Quantas linhas de fato cobre é decidido pela altura de linha daquele parágrafo.
+**O tamanho da letra capitular**:
 
 ```css
 .nabi-content [data-nabi-dropcap="1"]::first-letter { font-size: 5.9em; line-height: .83; }
 ```
 
-**As cores dos tokens de código** — a folha de estilo do wing de código escreve a cor
-diretamente em `[data-nabi-token]`. Hoje há **cinco** categorias com cor.
+**As cores dos tokens de código**:
 
 ```css
 .nabi-content [data-nabi-token="comment"] { color: #7a8a7a; font-style: italic; }
@@ -120,78 +95,49 @@ diretamente em `[data-nabi-token]`. Hoje há **cinco** categorias com cor.
 .nabi-content [data-nabi-token="literal"] { color: #2f8f4e; }
 ```
 
-O `type` que o realçador responde é um texto livre — um nome fora dessas cinco é desenhado sem
-cor, então, para usar uma categoria própria, o host acrescenta uma regra no mesmo formato. Para
-usar uma cor diferente no escuro, acrescente você mesmo a condição `.dark` — o núcleo não
-carrega uma variante escura para essas cinco.
+---
 
-A animação de progresso do wing de envio (`--nabi-per` · `--nabi-t` · `--nabi-span` ·
-`--nabi-clear` · `--nabi-blur-max`) é **de uso interno do wing** — o nome começa com `--nabi-`,
-mas não é um lugar aberto para o host sobrescrever.
+## Convenções de unidade
+
+A maioria das medidas de interface — tamanho de botão, espaçamento, altura da barra de ferramentas e assim por diante — está definida em `rem`, então **escala proporcionalmente ao tamanho de letra da raiz (`html`).** Se a pessoa aumentar o tamanho de letra padrão no navegador ou no sistema, a interface do editor cresce naturalmente junto.
 
 ---
 
-## As medidas externas são em `rem`
+## Guia de especificidade CSS
 
-A maioria das medidas externas — botão, espaçamento, chip da barra de ferramentas — está em
-`rem`, então **cresce junto com o tamanho de letra da raiz (`html`).** Se a pessoa aumentar a
-letra no navegador ou no sistema, a moldura do editor cresce junto. Para mudar o tamanho, mude
-o `font-size` da raiz. A borda (`border`) não é uma medida, é uma **linha**, então em alguns
-lugares continua em `px`.
-
----
-
-## Para não esbarrar na especificidade
-
-Para sobrescrever os tokens de cor e formato, **repita a classe três vezes.**
+Ao sobrescrever uma variável de cor de tema declarada pelo núcleo, recomendamos **empilhar três classes** para elevar a prioridade do estilo de forma confiável.
 
 ```css
 .nabi.nabi.nabi,
 .nabi-scrim.nabi-scrim.nabi-scrim {
-  --nabi-accent: var(--minha-cor-de-destaque);
+  --nabi-accent: #7c3aed;
 }
 ```
 
-Contando, fica assim. A regra do padrão claro `:is(.nabi, …)` é **(0,1,0)**, pois `:is()` segue
-o argumento de maior peso; a regra do escuro `:where(html, body).dark :is(.nabi, …)` é
-**(0,2,0)**, pois `:where()` vale 0 e `.dark` e `:is()` valem uma classe cada. Então
-`.nabi.nabi` empataria com o escuro — e em empate, ganha quem carregou por último, e a folha de
-estilo do núcleo pode carregar depois da folha do host. Repetir três vezes sobe para (0,3,0) e
-tira a dependência da ordem.
+- A regra do padrão claro `:is(.nabi, …)` tem especificidade **(0, 1, 0)**.
+- A regra do modo escuro `:where(html, body).dark :is(.nabi, …)` tem especificidade **(0, 2, 0)**.
+- Por isso, empilhar três classes como em `.nabi.nabi.nabi` dá especificidade **(0, 3, 0)**, que sempre vence, independentemente da ordem de carregamento do CSS.
 
-A sobreposição da prévia fica fora de `.nabi` (é filha de `body`), então esse seletor também
-precisa ser escrito junto para dar a mesma cor.
-
-**Tokens que o núcleo não declara, como os de fonte, não precisam desse esforço** — como não há
-lugar de declaração, a herança já alcança sozinha, e uma linha em `:root` basta.
-
-```css
-:root {
-  --nabi-font: 'Noto Sans', system-ui, sans-serif;
-}
-```
+O modal de prévia é montado como filho direto de `body`, então também é preciso especificar o seletor `.nabi-scrim.nabi-scrim.nabi-scrim` para que a mesma cor de tema se aplique ali.
+Tokens só referenciados que o núcleo não declara — como os de fonte — já funcionam corretamente com uma única declaração em `:root`.
 
 ---
 
-## Claro · Escuro
+## Tema claro / escuro
 
-Se `html` ou `body` — **qualquer um dos dois** — tiver a classe `dark`, é escuro; se tiver
-`light`, é claro. Sem nenhuma classe, o padrão é claro; com as duas, o `light` explícito vence
-(a regra `.light` carrega depois da regra `.dark`).
+O tema escuro se aplica quando o elemento `html` ou `body` tem a classe `dark`, e o claro quando tem a classe `light`. Sem classe, vale o tema claro padrão, e se as duas classes estiverem presentes, a `light` explícita vence.
 
 ```html
 <html class="dark"><!-- ou <body class="dark"> --></html>
 ```
 
-Alternar a classe já faz o CSS reagir. Não há uma API para chamar. O tema só troca as variáveis
-de cor, as regras dos componentes continuam as mesmas — até um estilo próprio, se usar só
-variáveis `--nabi-*`, acompanha o escuro.
+Trocar de tema só exige alternar a classe — não há uma API JavaScript separada para chamar. Ao escrever estilos próprios, usar variáveis `--nabi-*` faz com que suas cores acompanhem automaticamente as trocas de tema.
 
 ---
 
-## Dois caminhos para prender a folha de estilo
+## Formas de prender a folha de estilo
 
-**① Um único arquivo** — o caminho mais comum. Traz o CSS de todos os wings.
+**1. Importar o arquivo CSS completo** (a forma mais comum e recomendada)
 
 ```ts
 import 'nabi-note/nabi.css'
@@ -201,118 +147,64 @@ import 'nabi-note/nabi.css'
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note/dist/nabi.css">
 ```
 
-**② Injetar só o registrado** — para quando você quer só a folha de estilo dos wings que de
-fato ligou.
+**2. Injetar dinamicamente só o estilo dos wings registrados**
 
 ```ts
 import { collectSheets, injectSheets } from 'nabi-note'
 
 const drop = injectSheets(document, collectSheets(registry))
-// chamar drop() remove só o que esta chamada colocou
+// chamar drop() remove do DOM os estilos injetados
 ```
 
-A folha do mesmo texto entra **uma única vez** — a chave de dedução é o **conteúdo** da folha,
-então, mesmo com vários editores na mesma página, não se acumula, e composições diferentes de
-wings se juntam numa única união.
-
-:::: tip Duas diferenças entre os dois — o que carrega, e quando prende
-**O que carrega.** O arquivo não tem como saber quais wings você registrou, então carrega
-**todos**. A injeção olha o `registry` e traz **só o que foi registrado**. Uma página que só
-exibe HTML salvo, sem editor, não tem `registry`, então usa o caminho do arquivo.
-
-**Quando prende.** O arquivo chega como `<link>` na `<head>` e **bloqueia a renderização** até
-carregar. A injeção só prende **depois que o JavaScript do editor chega**. Por isso, uma página
-cujo documento é renderizado antes no servidor e enviado pronto deve usar o caminho do arquivo —
-pela injeção, o documento enviado pelo servidor pintaria primeiro sem estilo e só depois seria
-reformatado e reorganizado quando a folha chegasse.
-::::
-
-A folha de estilo de um wing registrado entra **depois** da folha do núcleo, então, na mesma
-prioridade, o wing vence.
+Um mesmo conteúdo de folha de estilo nunca é injetado duas vezes — é gerenciado como uma única tag.
+Num ambiente de renderização no servidor (SSR), é melhor carregar o arquivo CSS estático em vez de injetá-lo, para evitar um lampejo de conteúdo sem estilo (FOUC) antes do JS do cliente executar.
 
 ---
 
-## Onde dá para prender algo
+## Classes CSS e elementos de interface personalizáveis
 
-O que não se resolve por variável, mira direto numa classe que de fato existe.
-
-| Seletor | O que é | Quem prende |
+| Seletor | O que é | Criado por |
 |---|---|---|
-| `.nabi` | a casca que envolve o editor inteiro (chrome + área de edição). Os tokens de cor e formato ficam aqui | o host |
-| `.nabi-content[contenteditable]` | a própria área de edição | o host |
-| `.nabi-toolbar` | o lugar que envolve a linha da barra de ferramentas + a linha de contexto. Essa classe é o que faz "ficar fixo ao rolar" | o host |
-| `.nabi-toolbar-row` | o recipiente onde a barra de ferramentas se assenta | `mountToolbar()` |
-| `.nabi-context` | o recipiente onde a linha de contexto se assenta | `mountContextToolbar()` |
-| `.nabi-tools` | o lugar dos dois botões de prévia e tela cheia — o núcleo os flutua no canto superior direito | `mountViewTools()` |
-| `.nabi-tool` | os dois botões em si | `mountViewTools()` |
-| `.tb-group` | o agrupamento de botões da barra de ferramentas | `mountToolbar()` |
-| `.ctb-group` · `.ctb-button` · `.ctb-swatch` · `.ctb-input` | agrupamento, botão, amostra de cor e campo de texto da linha de contexto | `mountContextToolbar()` |
-| `.tb-picker` · `.tb-picker-grid` · `.tb-picker-cell` | a caixa que aparece sob o botão, como a grade de tamanho de tabela | `mountToolbar()` |
-| `.tb-prompt` · `.tb-prompt-input` | a camada de entrada de endereço que aparece ao inserir algo novo | `mountToolbar()` |
-| `.nabi-hints [data-hint]` | o selo de atalhos que aparece ao apertar Shift duas vezes seguidas — o selo é `::before`, o rótulo é `::after`, e os dois aparecem juntos | `mountHints()` |
-| `[data-nabi-tip]` | o rótulo (tooltip) — desenhado só com `::after` em CSS | o núcleo, de forma geral |
-| `.nabi-content.nabi-dropping` | a área de edição enquanto um arquivo é arrastado sobre ela. O texto de aviso vai no atributo `data-nabi-drop` | `mountUpload()` |
-| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | o painel para escolher um candidato de cola | `openChoosePanel()` |
-| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | o painel de salvar — campo de nome, marcador de extensão, células de formato | `openSavePanel()` |
+| `.nabi` | O contêiner de nível mais alto que envolve todo o editor (barra de ferramentas + área de edição) | o host |
+| `.nabi-content[contenteditable]` | A própria área de edição | o host |
+| `.nabi-toolbar` | O contêiner de cabeçalho fixo que envolve a barra de ferramentas e a barra de contexto | o host |
+| `.nabi-toolbar-row` | A linha de botões da barra de ferramentas principal | `mountToolbar()` |
+| `.nabi-context` | O contêiner da barra de ferramentas de contexto dinâmica | `mountContextToolbar()` |
+| `.nabi-tools` | O envoltório dos botões de prévia e tela cheia | `mountViewTools()` |
+| `.nabi-hints [data-hint]` | O selo de atalho exibido ao apertar Shift duas vezes rápido | `mountHints()` |
+| `[data-nabi-tip]` | O tooltip de um botão (desenhado com `::after` em CSS) | componentes do núcleo |
+| `.nabi-content.nabi-dropping` | A área de edição enquanto um arquivo é arrastado sobre ela | `mountUpload()` |
 
-O painel de cola e o de salvar são construídos da mesma parte de grade, então os seletores deles vêm em pares — `.nabi-choose-list`/`.nabi-save-list` · `.nabi-choose-row`/`.nabi-save-row` · `.nabi-choose-icon`/`.nabi-save-icon` · `.nabi-choose-label`/`.nabi-save-label`. **Os dois** marcam a visibilidade com `--nabi-accent` na borda (sem preenchimento dentro).
+### Modais e popups
 
-Três coisas pertencem só ao painel de salvar: `.nabi-save-name` (a linha de nome), `.nabi-save-ext` (o marcador de extensão) e `.nabi-save-note` (a nota de perda — menor que o nome, e em dois pontos). As duas linhas de nome ficam numa única coluna de `1fr`, a extensão fica `auto`, e o resto é grade livre. Não é um espaçamento que exista antes — é desenhado por CSS só durante a abertura. **Um tamanho mínimo é `--nabi-grid-cell`** — é o mesmo que `mountContextToolbar()` usa para seletor e amostra, e crescem junto — mas `--nabi-save-ext-len` mede em caracteres de `1ex` do campo de entrada, porque a fonte dele é a da edição.
-
-::: warning `.nabi-save-format` desapareceu
-Esse era o nome de quando o painel de salvar era uma lista vertical. Um host que usava para sobrescrever o preenchimento de passar do mouse **falha silenciosamente** — uma célula da grade agora é `.nabi-save-row` (o mesmo nome de espaço que o painel de cola), e o preenchimento de passar do mouse é `--nabi-accent`.
-:::
-
-Prévia e tela cheia também são **construídas pelo núcleo.**
-
-| Seletor | O que é | Quem |
+| Seletor | O que é | Criado por |
 |---|---|---|
-| `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | a sobreposição de prévia do documento | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | a caixa que amplia uma única imagem | `openImageLightbox()` |
-| `.nabi.is-fullscreen` | tela cheia — fixa a caixa `.nabi` na tela | `setFullscreen()` (o nome da classe é `FULLSCREEN_CLASS`) |
-
-Ao prender `mountViewTools()`, os dois botões abrem e fecham essas camadas sozinhos. Para abrir
-diretamente, chame `openPreview({ nabi, editor })` · `openImageLightbox({ editor, src, alt?,
-locale })` · `setFullscreen(root, on)` · `isFullscreen(root)`.
-
-::: tip O lugar das ferramentas se levanta sozinho
-`mountViewTools` cria a caixa `.nabi-tools` sozinho e a insere no começo do recipiente
-recebido. O host não precisa colocar um `<span>` antes da barra de ferramentas — preparar o
-lugar de antemão só resulta em duas caixas.
-:::
-
-Também dá para mirar em marcas exclusivas da tela de edição —
-`[data-nabi-token]` (cor de token do bloco de código), `[data-nabi-lang]` (linguagem do bloco de
-código), `[data-color]` (marca-texto/cor de texto — distinguidos pela tag `<mark>`/`<span>`),
-`data-nabi-align` · `data-nabi-typeface` · `data-nabi-size` · `data-nabi-dropcap` (atributos de
-parágrafo). O nome real dessas marcas tem como fonte a constante `*_ATTR` de cada arquivo de
-wing.
+| `.nabi-scrim` > `.nabi-card` > `.nabi-content.nabi-preview-body` | O modal de prévia do documento | `openPreview()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | O popup de lightbox de imagem | `openLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` | O popup de escolha do formato de colar | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` | O popup de salvar arquivo (campo de nome e escolha de formato) | `openSavePanel()` |
+| `.nabi.is-fullscreen` | A classe que ativa o modo de tela cheia do editor | `setFullscreen()` |
 
 ---
 
-## Ao desenhar o HTML salvo fora daqui
+## Desenhando HTML salvo em outro lugar
 
-O valor de saída (`getHtml()`) é um HTML com atributos `data-nabi-*`, e **não tem um único
-`style` inline.** Isso significa que a aparência é toda responsabilidade da folha de estilo, e
-por isso, desenhado sem a folha de estilo, vira um HTML nu, sem alinhamento, sem tamanho de
-letra, sem linhas de tabela.
-
-Para desenhar com a mesma aparência do editor, envolva com `.nabi-content` — essa classe recebe
-os tokens de cor e formato diretamente, mesmo sem estar envolta por `.nabi` (a regra
-`.nabi-content:where(:not(.nabi *))` do `nabi.css`).
+A string HTML extraída com `getHtml()` é composta só de marcado semântico e atributos `data-nabi-*`, sem nenhum `style` em linha.
+Para desenhá-la numa página externa com a mesma aparência do editor, envolva o conteúdo numa classe `.nabi-content` e carregue `nabi.css`.
 
 ```html
-<div class="nabi-content">HTML salvo</div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note/dist/nabi.css">
+
+<div class="nabi-content">
+  <!-- conteúdo HTML salvo via nabi.getHtml() -->
+</div>
 ```
 
-Prenda a folha de estilo como visto em "Dois caminhos para prender a folha de estilo", acima —
-com bundler, `import 'nabi-note/nabi.css'`; fora disso, um `<link>`. Mesmo numa página que não
-monta editor, basta ter `.nabi-content` para a folha de estilo do núcleo declarar os tokens.
+Mesmo sem envolver com `.nabi`, os tokens de tema e fonte se aplicam diretamente a `.nabi-content`, então é possível reproduzir exatamente o estilo visto no editor.
 
-### Comportamento que roda do lado da leitura — ordenação de tabela
+### Ativando a ordenação de tabelas somente leitura
 
-Por ora, **só a ordenação de tabela** sai como função exclusiva do lado de leitura. Ainda não
-existe um sistema genérico para qualquer wing pendurar seu próprio comportamento de leitura.
+Para ativar a ordenação de colunas de tabela numa página HTML publicada, prenda a função `attachTableSort`.
 
 ```ts
 import { attachTableSort } from 'nabi-note/viewer'
@@ -320,21 +212,18 @@ import { attachTableSort } from 'nabi-note/viewer'
 const detach = attachTableSort(document.querySelector('#article')!, { locale: 'pt' })
 ```
 
-Procura tabelas com `data-nabi-sortable` e acrescenta um botão de ordenar na célula de
-cabeçalho. A função de desligar (`detach`) desfaz o botão encaixado e a ordem de linhas trocada.
+Ela detecta tabelas com o atributo `data-nabi-sortable` e adiciona botões de ordenação nas células de cabeçalho. Chamar a função `detach()` retornada remove os botões adicionados ao DOM e restaura a ordem original das linhas.
 
-::: danger Não prenda num elemento alvo de edição
-`attachTableSort()` encaixa botões no DOM e troca a ordem das linhas. Se o DOM enquanto está
-preso for salvo, isso se torna parte do valor — prenda só numa cópia somente leitura, do lado
-da exibição.
+::: warning Não aplique attachTableSort a um DOM em edição
+`attachTableSort()` manipula a estrutura do DOM diretamente. Aplicá-la a uma área de editor ainda em edição pode gravar permanentemente a interface dos botões de ordenação no corpo do documento. Use-a somente numa tela de visualização somente leitura.
 :::
 
 ---
 
-## Próximas páginas
+## A seguir
 
-- [{{ t('menu_wing_custom') }}](../wing/custom) — construir você mesmo uma formatação que falta
-- [{{ t('menu_intro_index') }}](../intro) — o vocabulário que este documento usa
+- [{{ t('menu_wing_custom') }}](../wing/custom) — construir você mesmo um wing de formatação personalizado
+- [{{ t('menu_intro_index') }}](../intro) — introdução ao NABI NOTE e sua arquitetura
 
 <script setup lang="ts">
 import { useTranslate } from '../../.vitepress/src/langs.ts'

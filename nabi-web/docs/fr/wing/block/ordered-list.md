@@ -6,33 +6,21 @@ title: Liste numérotée
 
 ## Description
 
-`orderedListWing` (nom `ol`, raccourci `N`) est propriétaire de `<ol>`. L'élément vient avec elle
-par `parts`, donc `oli` n'est jamais enregistré à part — et `parts` est une record, pas un tableau.
+`orderedListWing` (nom `ol`, raccourci `N`) gère la liste numérotée (`<ol>`). L'élément de liste (`<li>`) est intégré via l'attribut `parts` et n'a pas besoin d'être enregistré séparément.
 
 ```ts
 parts: { oli: { holds: 'blocks' } }
 ```
 
-Appuyez sur le bouton et le bloc où se trouve le caret (ou tous les blocs couverts par la
-sélection) s'enveloppe en liste numérotée ; appuyez de nouveau et l'enveloppe tombe. Appuyez sur un
-autre bouton de liste et elle change de sorte.
+Un clic sur le bouton transforme en liste numérotée le bloc où se trouve le caret (ou tous les blocs couverts par la sélection) ; un nouveau clic restaure le paragraphe ordinaire. Cliquer sur un autre bouton de liste change immédiatement de type de liste.
 
-Taper des chiffres et un point au début d'une ligne puis une espace (`1. `) donne le même
-résultat. **N'importe quel nombre est accepté comme début, jusqu'à neuf chiffres**
-(`1234567890. ` ne se déclenche pas), et tout ce qui suit le point après l'arrête — `1.2 ` n'est
-pas une liste. La ligne n'a pas besoin d'être vide : tout ce qui est mesuré, c'est le préfixe de la
-ligne devant le caret, et cela ne se déclenche que sur la première ligne d'un paragraphe.
+Taper `1. ` (un chiffre, un point, une espace) au début d'un paragraphe convertit également celui-ci automatiquement en liste numérotée. Le nombre de départ est libre et reconnu jusqu'à neuf chiffres.
 
-- Indenter et désindenter avec `Tab` / `Shift+Tab`, terminer la liste par Entrée sur un élément
-  vide, et Retour arrière au début d'un élément qui le fusionne avec celui du dessus fonctionnent
-  exactement comme dans [Liste à puces](./bullet-list).
-- Les numéros ne sont pas dans la valeur enregistrée — c'est `<ol>` qui les dessine, donc le
-  navigateur les recompte tout seul quand vous insérez ou supprimez un élément.
-- L'imbrication aussi est du vrai balisage et survit telle quelle dans la valeur enregistrée.
-  Comme l'élément porte des blocs, le texte porte un paragraphe et une liste imbriquée se tient à
-  l'intérieur d'un paragraphe enveloppe.
-- Les attributs comme `start` et `type` ne survivent pas, donc une liste arrivée avec `start="5"`
-  recompte à partir de 1.
+### Raccourcis et comportement d'édition
+
+- Indenter/désindenter avec `Tab`/`Shift+Tab`, terminer la liste avec `Entrée` sur un élément vide, et fusionner avec l'élément précédent via `Retour arrière` au début d'un élément fonctionnent exactement comme pour la [liste à puces](./bullet-list).
+- Le numéro de chaque élément est rendu dynamiquement par le navigateur via la balise HTML `<ol>` — insérer ou supprimer un élément au milieu recalcule donc automatiquement la numérotation.
+- Les structures de listes imbriquées sont rendues de façon sûre grâce à un paragraphe enveloppe (`<div data-nabi-p>`).
 
 ## Exemple d'utilisation
 
@@ -42,7 +30,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// La liste des wings bâtit ensemble la connaissance des sortes, les commandes et les assembleurs — c'est le `registry`
 const { nabi, registry } = createNabiWith([orderedListWing])
 
 mountSurface({ nabi, registry, root: surface })

@@ -6,33 +6,13 @@ title: Alineación
 
 ## Descripción
 
-Un **único** `alignWing` (id `align`) lleva a la vez la izquierda, el centro y la
-derecha. En la barra de herramientas es una constante — no hay una fábrica `align()`
-que las agrupe: cada valor tiene su propio botón. Le pega al bloque el atributo
-`data-nabi-align`.
+`alignWing` (id `align`) es un wing de **atributo de párrafo** que gestiona la alineación del texto (izquierda, centro, derecha) en párrafos y elementos de bloque.
 
-- Es un **atributo de bloque** que deja la etiqueta como está y solo añade el
-  atributo. Como en `<p data-nabi-align="center">`, el párrafo en sí no cambia.
-- **Se aplica a párrafos y a encabezados.** También vale
-  `<h2 data-nabi-align="c">` — porque un encabezado es una línea de texto como
-  cualquier otra. De los cuatro atributos de párrafo, solo la alineación se comporta
-  así; el tamaño del texto, la tipografía y la letra capital siguen siendo exclusivos
-  del párrafo.
-- Solo hay un valor a la vez — si tiene puesta la alineación a la izquierda y pulsa
-  centrar, la izquierda se cae y entra el centro. Si vuelve a pulsar el valor que ya
-  está puesto, el atributo se cae entero (se vuelve a la alineación por omisión).
-- **Enter transmite la alineación tal cual a ambos lados.** Si parte un párrafo, los
-  dos salen con la misma alineación — a diferencia del encabezado (`h`), que se cae en
-  el lado vacío, o de la letra capital (`dc`), que solo sigue a un lado, la alineación
-  no tiene esa excepción.
-- Los tres son **tres botones** de un mismo wing (`buttons`) — no se pueden activar o
-  desactivar por separado; solo se mete `alignWing` en el arreglo de wings.
-- **También fija dónde se colocan la tabla, la imagen y YouTube.** El objeto vive
-  dentro del párrafo envoltorio que lo contiene, y es ese párrafo el que lleva la
-  alineación, así que "una imagen centrada" es en realidad "una imagen dentro de un
-  párrafo centrado". Por eso la barra contextual de la imagen y de la tabla no tiene
-  ninguna casilla de alineación, y solo la alineación no desaparece de la barra de
-  herramientas aunque el cursor esté sobre el objeto.
+- Le da al nodo de bloque el atributo `data-nabi-align` (`<p data-nabi-align="center">`).
+- **Se aplica no solo a párrafos, sino también a los encabezados (`h1`–`h6`)** (`<h2 data-nabi-align="c">`).
+- Solo hay un valor de alineación a la vez. Si pulsa de nuevo el botón de alineación ya activo, el atributo se quita y se vuelve a la alineación por omisión.
+- Si divide un párrafo a la mitad con Enter, ambos párrafos resultantes conservan el mismo atributo de alineación.
+- **Este wing también gestiona la alineación de objetos de bloque** como imágenes, tablas y vídeos de YouTube. Como el objeto de bloque vive dentro del párrafo envoltorio (`<div data-nabi-p>`) que lo contiene, los botones de alineación de la barra de herramientas controlan la posición izquierda/derecha/centro del objeto a través de ese envoltorio.
 
 ## Ejemplo de uso
 
@@ -42,7 +22,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// la lista de wings construye juntos el conocimiento de tipo, los comandos y el ensamblador — eso es `registry`
 const { nabi, registry } = createNabiWith([alignWing])
 
 mountSurface({ nabi, registry, root: surface })

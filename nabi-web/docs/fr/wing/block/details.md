@@ -7,8 +7,8 @@ title: Bloc dépliant
 ## Description
 
 `detailsWing` (nom `details`, raccourci `D`) est propriétaire de la boîte dépliante (`<details>` +
-`<summary>`). La ligne de résumé vient avec elle par `parts`, donc elle n'est jamais enregistrée à
-part — et `parts` est une record, pas un tableau.
+`<summary>`). La ligne de résumé vient avec elle via l'attribut `parts`, donc elle n'a pas besoin
+d'être enregistrée à part.
 
 ```ts
 parts: { summary: { holds: 'inline' } }
@@ -16,19 +16,13 @@ parts: { summary: { holds: 'inline' } }
 
 Appuyez sur le bouton et les blocs couverts par la sélection s'enveloppent dans une nouvelle boîte
 dépliante, avec une ligne de résumé vide en tête. Appuyez sur Entrée dans la ligne de résumé et
-vous descendez dans le contenu (le résumé lui-même ne se fend jamais).
+vous descendez dans le contenu (un saut de ligne à l'intérieur de la ligne de résumé ne la fend jamais).
 
-**L'éditeur la dessine exactement comme elle sera enregistrée.** Une boîte enregistrée fermée est
-fermée dans l'éditeur aussi, et le triangle la déplie et la replie sur place — cet appui est ce qui
-change la valeur enregistrée (`o`). Si vous la repliez pendant que le caret est à l'intérieur, le
-caret est déplacé hors de la boîte.
-
-::: tip Il n'y a pas de ligne contextuelle
-Il y avait autrefois deux boutons, **enregistrer ouvert** et **enregistrer fermé**. À l'époque où
-l'écran d'édition dessinait toujours la boîte ouverte, c'était le seul moyen de dire dans quel état
-elle serait enregistrée. Maintenant l'écran dessine la valeur enregistrée et le triangle la change,
-donc ces boutons répétaient la même chose deux fois, et ont été retirés.
-:::
+**L'écran dessine exactement ce qui est réellement enregistré.** Une boîte enregistrée fermée
+(`open` non défini) se charge fermée dans l'éditeur aussi, et un clic sur l'icône flèche à gauche
+l'ouvre ou la referme à tout moment (ce clic change immédiatement l'attribut `o` de l'arbre nabi).
+Si le caret était à l'intérieur du contenu au moment de fermer le bloc, il se déplace en sécurité
+hors du bloc.
 
 ## Exemple d'utilisation
 

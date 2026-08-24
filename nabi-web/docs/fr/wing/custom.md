@@ -1,23 +1,23 @@
 ---
 title: Fabriquer sa propre wing
-description: Si une mise en forme manque, fabriquez une wing — remplissez un seul contrat et le cœur fait le reste.
+description: Un guide pour écrire le contrat d'interface Wing de NABI NOTE, afin de créer de nouvelles mises en forme et fonctionnalités personnalisées.
 ---
 
 # Fabriquer sa propre wing
 
-Une wing est **un seul objet**. Il n'y a aucune classe à étendre ni aucune cérémonie
-d'enregistrement — la mettre dans le tableau donné à `createNabiWith`, c'est déjà
-l'enregistrement.
+Une wing est **un seul objet JavaScript pur.** Il n'y a aucune classe à étendre ni aucune cérémonie
+d'enregistrement de framework — la mettre dans le tableau donné à `createNabiWith`
+l'enregistre immédiatement.
 
-Le gras, les tableaux et l'upload sont bâtis en remplissant exactement les mêmes champs que ceux
-listés ici. Une wing que vous écrivez vous-même tourne dans **exactement les mêmes conditions**
-qu'une wing d'origine — il n'existe aucun raccourci réservé au cœur.
+Toute wing officielle fournie avec NABI NOTE — gras, tableaux, envoi de fichier, toutes — est
+écrite selon exactement la même interface `Wing`. Une wing que vous écrivez vous-même tourne
+**exactement dans les mêmes conditions** qu'une wing d'origine.
 
 ---
 
-## La plus petite wing
+## L'exemple de wing le plus simple
 
-Une marque en ligne qui connaît `<kbd>`.
+Une wing de marque en ligne qui prend en charge la balise clavier `<kbd>`.
 
 ```ts
 import { createNabiWith, mountSurface, simpleMark, type Wing } from 'nabi-note'
@@ -25,10 +25,10 @@ import 'nabi-note/nabi.css'
 
 const kbdWing: Wing = {
   ...simpleMark({
-    w: 'kbd',                                                   // le nom de cette wing — c'est le `w` de la valeur enregistrée
-    toHtml: (_node, children, ctx) => ctx.element('kbd', children()),   // le chemin de sortie
+    w: 'kbd',                                                   // l'identifiant unique de cette wing (la clé stockée dans le nabi-tree)
+    toHtml: (_node, children, ctx) => ctx.element('kbd', children()),   // fonction de sortie HTML
   }),
-  // se déclare propriétaire de `<kbd>` dans le HTML entrant
+  // détecte les balises <kbd> dans le HTML entrant et les convertit en nœud nabi-tree
   claim: (el, inner) => (el.tag === 'kbd' ? [{ w: 'kbd', ch: inner(false) }] : null),
 }
 
@@ -37,37 +37,39 @@ const { nabi, registry } = createNabiWith([kbdWing])
 mountSurface({ nabi, registry, root: surface })
 ```
 
-Maintenant `<kbd>` reste dans le document. Il survit au collage, à `setHtml()`, à
-l'enregistrement et au rechargement.
+Désormais la balise `<kbd>` est conservée dans l'éditeur — elle survit au collage depuis le
+presse-papiers, à `setHtml()`, ainsi qu'à l'enregistrement et au rechargement.
 
 ```
-enregistrée      <p>Appuyez : <kbd>Ctrl</kbd>+<kbd>S</kbd></p>   →   inchangé
-non enregistrée  <p>Appuyez : <kbd>Ctrl</kbd></p>                →   <p>Appuyez : Ctrl</p>
+enregistrée      <p>Raccourci : <kbd>Ctrl</kbd>+<kbd>S</kbd></p>   →   balise <kbd> conservée
+non enregistrée  <p>Raccourci : <kbd>Ctrl</kbd></p>                →   <p>Raccourci : Ctrl</p> (converti en texte brut)
 ```
 
-**Les deux champs regardent dans des directions opposées.** `toHtml` est le chemin de sortie et
-`claim` le chemin d'entrée. Oubliez `claim` et cela se dessine très bien mais **ne peut pas être
-relu** — l'enveloppe se retire au moment même où vous enregistrez puis rechargez.
+`toHtml` est la fonction de sérialisation qui exporte un nœud du nabi-tree en HTML, et `claim`
+est la règle de désérialisation qui relit du HTML externe pour en faire un nœud du nabi-tree.
+Sans `claim`, la sortie HTML fonctionne toujours, mais après enregistrement puis rechargement,
+la balise est convertie en texte brut.
 
-`simpleMark` est un raccourci pour les marques sans attribut. Pour une marque qui porte une
-valeur, il y a `valueMark` ; pour un bloc, `boxObject` ; pour une famille de liste, `listFamily` —
-et au-delà de cela, vous écrivez l'objet `Wing` à la main.
+Utilisez `simpleMark()` pour une marque sans attribut, `valueMark()` pour une marque qui porte
+une valeur, `boxObject()` pour un bloc autonome, et `listFamily()` pour une structure de liste —
+ces aides réduisent toutes le code répétitif.
 
 ---
 
-## Les wings sont des constantes
+## Modules de wings et fonctions fabriques
 
-**La plupart des wings sont déjà des constantes toutes faites** — `boldWing` et `headingWing`
-vont directement dans le tableau. Seules les deux qui ont besoin d'options ont une fonction
-fabrique.
+**La plupart des wings fournies sont des constantes prédéfinies et immuables** (`boldWing`,
+`headingWing`, etc.). Seules les wings qui ont besoin d'options de configuration
+supplémentaires sont proposées sous forme de fonctions fabriques.
 
 ```ts
 makeImageWing({ allowLocalUrls: true })
 makeUploadWing({ allowLocalUrls: true })
 ```
 
-Pour ne changer que « la partie qui s'attache », étalez la constante — vous changez un champ
-plutôt que de bâtir une nouvelle wing, ce qui est le plus simple des deux.
+Pour changer uniquement le comportement d'une wing fournie précise (un surligneur syntaxique,
+par exemple), étalez l'objet wing existant avec l'opérateur de décomposition et ne redéfinissez
+que les champs voulus.
 
 ```ts
 const wing = { ...codeWing, attach: makeCodeAttach({ highlight: myHighlighter }) }
@@ -75,45 +77,46 @@ const wing = { ...codeWing, attach: makeCodeAttach({ highlight: myHighlighter })
 
 ---
 
-## Enregistrement et ordre
+## Ordre d'enregistrement et validation
 
 ```ts
 const { nabi, registry } = createNabiWith([boldWing, italicWing, kbdWing])
 ```
 
-**L'ordre du tableau est l'ordre de balayage.** Pour décider qui possède un morceau de balisage
-(`claim`), le cœur interroge dans cet ordre et la première wing qui répond l'obtient. Si
-personne ne la réclame, l'enveloppe est retirée.
+**L'ordre des wings dans le tableau est la priorité de balayage du HTML.** Lors de l'analyse de
+HTML externe (`claim`), les wings sont vérifiées dans leur ordre d'enregistrement, et la
+première wing qui revendique la propriété traite cette balise. Une balise qu'aucune wing ne
+revendique se voit dépouillée de sa balise — seul le texte intérieur est conservé.
 
-Dans la barre d'outils, c'est le **groupe (`button.group`) qui vient en premier**. L'ordre des
-groupes est fixé, et cet ordre du tableau ne décide que l'ordre d'affichage *à l'intérieur* d'un
-groupe.
+Le placement des boutons de la barre d'outils obéit **d'abord à l'ordre du groupe
+(`button.group`)** ; ce n'est qu'au sein d'un même groupe que l'ordre d'enregistrement des
+wings décide du placement.
 
-### Ça meurt exactement là où on l'enregistre
+### Validation et gestion des exceptions (validation stricte)
 
-`createNabiWith` **lève immédiatement une exception** sur une wing qui rompt le contrat. Ça
-n'explose jamais plus tard.
+`createNabiWith` ne diffère pas une erreur d'exécution lorsqu'une wing enregistrée enfreint le
+contrat — il **lève immédiatement une exception, au moment de l'initialisation.**
 
-| Ce qui est attrapé | Exemple |
+| Ce qui est vérifié | Exemple de violation |
 |---|---|
-| Un mot réservé utilisé comme nom | `w: 'p'` · `w: 'br'` |
-| Le même nom enregistré deux fois | `boldWing` deux fois |
-| Une wing qui érige un nœud sans `toHtml` | `place: 'mark'` sans moyen de le dessiner |
-| Un nom de commande qui rompt la règle | il doit être en camelCase verbe+objet (`insertTable`) |
-| Un partenaire requis manquant | upload a besoin de `img` ou `a` à ses côtés (`requiresAnyOf`) |
+| Utilisation d'un identifiant réservé | `w: 'p'`, `w: 'br'` |
+| Enregistrement en double d'un identifiant (`w`) | Passer deux fois la même `boldWing` |
+| Fonction de rendu manquante | `place: 'mark'` sans `toHtml` défini |
+| Non-respect de la convention de nommage des commandes | Ne pas suivre verbe+nom en camelCase (ex. `insertTable`) |
+| Wing dépendante requise manquante | Wing image/lien absente alors que la wing d'envoi la requiert via `requiresAnyOf` |
 
 ---
 
-## Les commandes sont des fonctions pures
+## Commandes — des fonctions pures
 
-Tout chemin qui modifie le document passe par une seule commande. Une commande **ne connaît ni
-le DOM ni l'écran.**
+Toute opération qui modifie le document passe par une fonction commande. Une commande se
+comporte comme une **fonction pure, qui ne dépend ni de l'API DOM ni du rendu écran.**
 
 ```ts
 import { boxObject, insertLump, type Command, type Wing } from 'nabi-note'
 
 const insertStamp: Command = (doc, sel, args, env) => {
-  // ça vient de l'extérieur, donc on vérifie — si ça ne colle pas, on ne fait rien
+  // valider le type de l'argument externe
   if (typeof args['text'] !== 'string') return null
   const stamp = { w: 'stamp', a: { t: args['text'] }, ch: [] }
   const r = insertLump(doc, sel.focus, stamp, env)
@@ -136,150 +139,127 @@ export const stampWing: Wing = {
 }
 ```
 
-| Argument | Ce que c'est |
+| Paramètre | Description |
 |---|---|
-| `doc` | Le document tel qu'il est (un tableau de blocs). **Ne le modifiez pas — répondez-en un nouveau** |
-| `sel` | La sélection telle qu'elle est |
-| `args` | Ce que le bouton ou la ligne contextuelle ont transmis. **Ça vient de l'extérieur, donc il faut le vérifier** |
-| `env` | La connaissance des sortes — ce qui contient quoi, et ce qui est un bloc |
+| `doc` | Le tableau du document nabi-tree actuel (traité comme immuable — renvoie un nouveau document plutôt que de le modifier directement) |
+| `sel` | L'état actuel du curseur et de la sélection (`{ anchor, focus }`) |
+| `args` | L'objet d'arguments transmis par un bouton de la barre d'outils ou l'interface |
+| `env` | La connaissance du schéma et le contexte d'environnement |
 
-La réponse est `{ doc, selection }` ou **`null`**. **Répondez `null` quand rien ne change** —
-alors `applyCommand` répond `false` et aucun point d'annulation ne s'empile. Le document que
-vous répondez est retoilé une fois de plus par `cocoon`, donc aucune commande ne peut laisser
-derrière elle un document qui brise les règles.
+Une commande renvoie soit l'objet modifié `{ doc, selection }`, soit **`null`**. **Si le
+document ne change pas, elle doit impérativement renvoyer `null`.** Quand `null` est renvoyé,
+`applyCommand` renvoie `false` et aucune entrée d'historique d'annulation superflue n'est créée.
+Le document renvoyé passe par le moteur `cocoon` (normalisation), ce qui garantit l'intégrité
+du schéma.
 
-Celui qui appelle passe toujours par le nom.
+L'hôte appelle la commande par son nom.
 
 ```ts
-nabi.applyCommand('insertStamp', { text: 'OK' })   // boolean
+nabi.applyCommand('insertStamp', { text: 'OK' })   // renvoie un booléen
 ```
 
 ---
 
-## Tous les champs que vous pouvez remplir
+## L'interface `Wing` en détail
 
-`Wing` a trente-et-un champs et **seuls deux sont requis** (`w` et `place`).
+L'interface `Wing` comporte 31 propriétés au total, dont **2 sont requises** (`w`, `place`).
 
-### Ce que c'est
+### 1. Identité et structure de base
 
-| Champ | Sens |
+| Propriété | Description |
 |---|---|
-| `w` | Le nom de cette wing. Il devient le `w` de la valeur enregistrée. Les mots réservés (`p`, `br`) ne sont pas permis |
-| `place` | `'mark'` sur des caractères · `'void'` un bloc sans intérieur · `'container'` un bloc avec du texte à l'intérieur · `'attr'` un attribut de paragraphe · `'tool'` un outil qui ne laisse aucune trace dans le document |
-| `basic` | **Tourne-t-elle comme elle est, sans câblage ?** Non précisé, c'est `false` — ce qu'elle ne connaît pas, elle ne le prend pas. `wings().allBasic()` rassemble seulement celles portant ce signe, et **une wing personnalisée se mesure au même aune**. `allBasic()` marche dans le catalogue officiel, cependant, si bien qu'une wing apportée en direct par `.use(objet)` se charge peu importe cette valeur |
-| `holds` | Comment il contient son intérieur — `'blocks'` ou `'inline'` |
-| `singleParagraph` | L'intérieur est fixé à **un seul** paragraphe (une cellule de tableau) |
+| `w` | Identifiant unique de la wing (requis ; mots réservés `p`, `br` exclus) |
+| `place` | Type de la wing (requis : `'mark'` mise en forme en ligne, `'void'` bloc vide, `'container'` bloc conteneur, `'attr'` attribut de paragraphe, `'tool'` outil non stocké dans le document) |
+| `basic` | Si la wing fonctionne prête à l'emploi, sans câblage backend/hôte supplémentaire (`boolean`, `false` par défaut). Utilisé comme critère de filtrage lors de l'appel à `wings().allBasic()` |
+| `holds` | Le type d'enfant qu'un conteneur autorise en son sein (`'blocks'` ou `'inline'`) |
+| `singleParagraph` | Si l'intérieur est fixé à un seul paragraphe (par ex. une cellule de tableau) |
 | `boolAttrs` | Noms des attributs booléens dont la seule valeur est `1` |
-| `allows` | Les noms de wings permis à l'intérieur. Non précisé, tout est permis |
-| `noAlign` | **Objets seuls.** La porter et le **paragraphe enveloppe portant cet objet ne reçoit plus d'alignement** — les boutons d'alignement se cachent à la barre d'outils, la commande refuse comme une non-variation, et une valeur déjà cuite dans un document enregistré ancien se lave en passant par le cocoon. La boîte de code est la première à l'utiliser : un `pre` hérite de `text-align`, si bien qu'au lieu que la boîte se déplace, **les lignes de code se décalent**. La poser sur une marque, un outil ou un attribut de paragraphe et **l'enregistrement meurt** |
-| `requiresAnyOf` | L'une de celles-ci doit être enregistrée à ses côtés |
-| `parts` | Structure sans bouton amenée avec elle — les lignes et cellules d'un tableau, le résumé d'un bloc dépliant |
+| `allows` | Liste des noms de wings enfants autorisés à l'intérieur du conteneur (toutes sont autorisées si non précisé) |
+| `noAlign` | Si l'alignement du texte du paragraphe enveloppe est bloqué (`boolean`, blocs uniquement). Sert par exemple à empêcher l'alignement de casser la balise `pre` dans les blocs de code |
+| `requiresAnyOf` | Liste des wings dépendantes devant être enregistrées en même temps (au moins l'une d'elles est requise) |
+| `parts` | Définition des sous-composants qui appartiennent à la wing (lignes/cellules d'un tableau, résumé d'un bloc dépliant, etc.) |
 
-### Valeurs
+### 2. Attributs et gestion d'état
 
-| Champ | Sens |
+| Propriété | Description |
 |---|---|
-| `attrKey` · `attrValues` | Le nom du champ où écrit un attribut de paragraphe, et les valeurs qu'il accepte |
-| `currentValue` | Est-ce actif en ce moment — la barre d'outils et la ligne contextuelle peignent leur emplacement d'après cette réponse |
+| `attrKey` · `attrValues` | La clé d'attribut qu'utilise une wing d'attribut de paragraphe, et la liste de ses valeurs autorisées |
+| `currentValue` | Fonction qui renvoie la valeur de l'attribut à la position actuelle du curseur (pour afficher l'état actif d'un bouton de la barre d'outils) |
 
-### Les chemins d'entrée et de sortie
+### 3. Sérialisation et entrées/sorties
 
-| Champ | Sens |
+| Propriété | Description |
 |---|---|
-| `toHtml` · `partHtml` | Le chemin de sortie |
-| `toMd` | Le chemin de sortie vers la markdown. **Facultatif — ne le poser pas et le nœud retombe à `toHtml`** (le souligné, YouTube et Détails sont la sorte sans place en markdown, et c'est ce que « md avec HTML mélangé » veut vraiment dire) |
-| `partMd` | La part markdown des `parts` de cette wing |
-| `ioFilter` | Cette wing **apporte le collage, l'enregistrement et l'ouverture de son propre format avec elle** (le fichier `.nabi` est cette place). Un filtre n'est pas une wing mais savoir attaché à l'une, si bien que tout ce que l'hôte branche par `ioFilters` se dresse en tête de lui — voir [Brancher un filtre IO](#brancher-un-filtre-io) ci-dessous |
-| `claim` | Décide qui possède cette balise dans le HTML entrant |
-| `repair` · `partRepair` | Remet ce nœud en ordre à la porte du JSON. Répondre `null` le retire, enveloppe comprise |
+| `toHtml` · `partHtml` | Fonction de sérialisation qui convertit un nœud du nabi-tree en HTML |
+| `toMd` | Fonction de sérialisation qui convertit un nœud du nabi-tree en Markdown (facultatif — retombe sur `toHtml` si non défini) |
+| `partMd` | Fonction de sérialisation Markdown pour les sous-composants (`parts`) |
+| `ioFilter` | Filtre d'entrée/sortie de fichier et de presse-papiers que la wing apporte elle-même |
+| `claim` | Fonction qui décide de la propriété d'un balisage HTML entrant et le convertit en nœud du nabi-tree |
+| `repair` · `partRepair` | Fonction qui valide et corrige l'intégrité d'un nœud au chargement JSON (renvoyer `null` retire le nœud) |
 
-### Mains et touches
+### 4. Entrée et contrôle des événements
 
-| Champ | Sens |
+| Propriété | Description |
 |---|---|
-| `commands` | Les commandes que pose cette wing |
-| `onKey` | Intercepte les touches en premier tant que le caret est à l'intérieur du nœud de cette wing |
-| `escapeKeys` | Touches qui font sortir de cette marque le prochain caractère tapé |
-| `doubleKeys` | `{ nom de touche : nom de commande }` — tape cette touche **deux fois dans les 350ms** et la commande tourne. Le mot ressemble à `escapeKeys` mais veut dire autre chose : celui-ci c'est « sortir la marque et continuer à écrire », celui-ci c'est « une commande d'un geste ». Sa priorité est **la plus basse**, si bien qu'elle prend son tour une fois tous les autres travaux sur cette touche passés. À l'enregistrement il **vérifie les collisions de touche et l'existence de la commande**, si bien que deux wings réclamant la même touche, ou un nom qui ne pointe à aucune commande, tue l'enregistrement |
-| `inputRules` | Conversion automatique déclenchée par la seule frappe |
-| `attach` | Pour quand il faut toucher à l'écran — le glisser d'une cellule de tableau, la coloration du code |
+| `commands` | La table des fonctions commandes fournies par la wing |
+| `onKey` | Gestionnaire qui intercepte la saisie clavier tant que le curseur se trouve dans le nœud de cette wing |
+| `escapeKeys` | Liste des touches qui déclenchent la sortie de cette mise en forme au prochain caractère saisi |
+| `doubleKeys` | Association de commandes à exécuter lorsqu'une touche est appuyée deux fois en moins de 350ms (`{ nom de touche : nom de commande }`, ex. Échap Échap → effacer la mise en forme) |
+| `inputRules` | Règles de conversion de mise en forme déclenchées automatiquement selon le motif de frappe |
+| `attach` | Point d'ancrage pour lier ou contrôler directement des écouteurs d'événements sur un élément DOM (glisser une cellule de tableau, coloration syntaxique du code, etc.) |
 
-### L'allure
+### 5. Interface et style
 
-| Champ | Sens |
+| Propriété | Description |
 |---|---|
-| `button` · `buttons` | Un bouton de barre d'outils, ou plusieurs |
-| `context` | La déclaration de la ligne contextuelle |
-| `styles` | Le CSS que porte cette wing |
+| `button` · `buttons` | Définition du ou des boutons rendus dans la barre d'outils supérieure |
+| `context` | Définition de la barre d'outils contextuelle qui apparaît selon la position du curseur |
+| `styles` | Chaîne de feuille de style CSS que la wing apporte avec elle |
 
 ---
 
-## `w` — lui donner un nom
+## Extension par filtres IO
 
-`w` est **une chaîne qui se répète sur chaque nœud de la valeur enregistrée**. Plus court vaut
-mieux — c'est pourquoi les wings d'origine ont des noms aussi courts que `b`, `hl` et `tf`. Mais
-une collision avec le nom de quelqu'un d'autre tue l'enregistrement, donc donnez à celle que vous
-écrivez un nom assez long pour ne pas entrer en collision, même s'il est un peu plus long.
+**Un filtre IO (IoFilter) est un point d'extension qui traite le collage depuis le
+presse-papiers ainsi que les formats d'enregistrement et d'ouverture de fichier, sans créer
+directement de nœud de document.**
 
-Il n'a pas besoin de correspondre au nom de la balise HTML — la balise de sortie est décidée par
-`toHtml`.
+| Champ | Description |
+|---|---|
+| `id` · `label` | Identifiant unique du filtre et libellé affiché dans l'interface (un identifiant en double lève une exception) |
+| `paste` | Fonction qui analyse les données du presse-papiers (`PasteData`) et renvoie des candidats de collage |
+| `save` | Objet de configuration d'enregistrement (`{ extension, write, lossy?, mime? }`) |
+| `read` | Fonction qui reçoit un nom de fichier et un texte et les analyse en nabi-tree (renvoie `null` si aucune correspondance) |
 
-::: warning Le renommer plus tard
-Le `w` de la valeur enregistrée *est* ce nom, donc le renommer signifie que **les documents déjà
-enregistrés ne peuvent plus être lus.** Si vous devez le faire, continuez à accepter l'ancien nom
-via `claim` en parallèle pendant une période de transition.
+Les trois méthodes d'un filtre IO sont toutes facultatives. L'enregistrement se fait via les
+options de montage (`mountSurface`, `mountFile`), via `createNabiWith({ ioFilters })`, ou via
+la propriété `ioFilter` de la wing elle-même — le premier filtre enregistré est prioritaire.
+
+---
+
+## Règle de nommage de l'identifiant (`w`)
+
+`w` est **la chaîne d'identifiant qui se répète, stockée sur chaque nœud du nabi-tree.** Pour
+minimiser la taille de sérialisation, il est préférable d'utiliser une chaîne courte (comme
+`b`, `hl`, `tf` pour les wings officielles).
+Pour éviter toute collision avec une wing officielle, il est recommandé qu'une wing
+personnalisée utilise le préfixe `ex` (par ex. `exNote`, `exStamp`).
+
+::: warning Attention en cas de changement d'identifiant
+Comme le champ `w` d'une valeur enregistrée correspond directement à l'identifiant, le
+renommer peut rendre les documents déjà enregistrés illisibles au chargement. Si une migration
+est nécessaire, écrivez la fonction `claim` pour qu'elle prenne aussi en charge l'ancien
+identifiant.
 :::
-
----
-
-## Brancher un filtre IO
-
-Un **filtre IO n'est pas une wing** — c'est une prise de savoir attachée à une wing, l'emplacement
-où elle cogne sur le collage, l'enregistrement et l'ouverture. Un filtre ne dresse aucun nœud,
-n'ajoute rien à la barre d'outils, ne branche aucune commande. L'`ioFilter` qu'une wing pose dit
-seulement comment entrer et sortir **au format de ce wing**.
-
-```ts
-type IoFilter = {
-  id: string
-  label: string
-  paste: (clipboard: ClipboardData) => Promise<DocumentFragment | string | null>
-  save: { extension: string, write: (nabi: Wing[], html: string) => string | Blob, lossy?: boolean, mime?: string }
-  read: (file: Blob | string) => Promise<DocumentFragment | string | null>
-}
-```
-
-| Câble | Ce que c'est |
-|---|---|
-| `id` · `label` | Le nom court et le nom lisible du filtre |
-| `paste` | Lit une candidate au collage ; répond avec ce qu'il en sort |
-| `save` | Les trois choses : le suffixe du fichier, l'écriture (HTML → fichier), et une note sur la perte |
-| `read` | Lit un fichier ; répond avec ce qui en sort — du HTML ou un fragment |
-
-**Tous les quatre se déclarent.** Un filtre sans porte de lecture, par exemple, ne se dresse pas.
-
-La marche vaut ainsi : `mount` → l'hôte → les wings enregistrées → les filtres internes pour `.nabi` ·
-`.html` · `html-ouvert` · `.md`. L'hôte branche avant les wings, donc tout filtre apporté par
-`mountFile({ ioFilters })` prend son tour avant le filtre `.nabi` interne.
-
-`readExtensions` énumère les suffixes qu'accepte le formulaire qui ouvre un fichier. C'est les
-`save` qui en déclarent les extensions, donc **un filtre sans porte `save` ne s'ajoute pas à cette
-liste**, même s'il lit dix formats. Le formulaire de base (browserFileStore) offre donc les trois
-que fournit la wing de base, plus `.html` ordinaire.
-
-La markdown se construit de deux mains — une wing apporte une porte `toMd` qui passe l'un de ses
-nœuds, et l'hôte qui l'enregistre dresse la grille qui croise ses `toMd` avec les `partMd` des
-autres wings. Un filtre tout seul ne peut donc pas fabriquer la markdown — il doit y avoir une
-wing qui le supporte.
 
 ---
 
 ## Documents suivants
 
-- [Marques en ligne](./custom/inline) — `claim` · `toHtml` · `escapeKeys`
-- [Blocs et attributs de paragraphe](./custom/block) — `place` · `holds` · `allows` · `parts` · `attrKey`
-- [Touches, transformations automatiques, collage](./custom/input) — `onKey` · `inputRules` · `attach`
-- [Interface et actions](./custom/ui) — `button` · `context` · `styles`, et s'adresser à la personne
+- [Fabriquer une marque en ligne](./custom/inline) — `claim` · `toHtml` · `escapeKeys`
+- [Fabriquer un bloc et un attribut de paragraphe](./custom/block) — `place` · `holds` · `allows` · `parts` · `attrKey`
+- [Touches, conversion automatique, collage](./custom/input) — `onKey` · `inputRules` · `attach`
+- [Interface et interaction](./custom/ui) — `button` · `context` · `styles`, et connexion des boîtes de dialogue utilisateur
 
 <script setup lang="ts">
 import { useTranslate } from '../../.vitepress/src/langs.ts'

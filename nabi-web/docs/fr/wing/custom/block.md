@@ -171,8 +171,6 @@ Quatre règles.
 - Si une part a besoin d'être remise en ordre, écrivez-le sous le nom de la part dans
   `partRepair`.
 
-`StructureDecl` prend trois choses — `holds`, `singleParagraph` et `boolAttrs`.
-
 ### `singleParagraph`
 
 L'intérieur est **fixé à un seul paragraphe**. C'est ce qu'est une cellule de tableau — appuyer
@@ -203,9 +201,6 @@ Une valeur enregistrée modifiée à la main, un document venu d'une autre versi
 par quelqu'un d'autre — tout cela passe par cette porte. Seul ce qui la franchit devient un
 document, ce qui fait de ceci **le seul endroit où une wing peut se porter garante de la forme de
 son propre nœud.**
-
-Écrivez `allows` et `repair` ensemble, et le nettoyage d'`allows` tourne **en premier**, son
-résultat étant transmis à `repair`.
 
 ---
 
@@ -241,13 +236,6 @@ Pour la même raison, ces trois-là sont déjà pris par `headingWing`, `alignWi
 container est pour l'instant la voie à suivre.
 :::
 
-Il y a deux champs pour gérer la valeur.
-
-| | |
-|---|---|
-| `attrValues` | La liste des valeurs qu'il accepte (pour un titre, `[1,2,3,4,5,6]`) |
-| `currentValue` | La valeur que porte ce paragraphe en ce moment. La barre d'outils et la ligne contextuelle peignent l'emplacement enfoncé d'après cette réponse |
-
 ---
 
 ## Les auxiliaires de document publics
@@ -267,14 +255,6 @@ commande doit répondre.
 ```ts
 return { doc: r.doc, selection: { anchor: r.caret, focus: r.caret } }
 ```
-
-::: tip Si vous avez besoin d'une édition plus fine que ceci
-Les auxiliaires internes qui coupent et joignent caractère par caractère (poser une marque,
-écrire un attribut de paragraphe, etc.) ne sont pas encore une API publique. En attendant, vous
-pouvez reconstruire vous-même le tableau `doc` et répondre avec — le document que vous répondez
-est retoilé une fois de plus par `cocoon`, donc un document qui brise les règles ne survit jamais
-tel quel.
-:::
 
 ---
 

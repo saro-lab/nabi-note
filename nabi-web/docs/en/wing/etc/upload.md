@@ -1,72 +1,29 @@
 ---
-title: Upload
+title: File Upload
 ---
 
-# Upload
+# File Upload
 
 ## Description
 
-Upload comes in three pieces — registering the wing alone does nothing.
+File upload works through the integration of three modules:
 
-1. **`uploadWing`** — puts the file-picker button on the toolbar. The wing itself
-   creates neither `img` nor `a`: an uploaded file is committed as something the
-   image or link wing draws, so **you must register `imageWing` or `linkWing`
-   alongside it** for the result to land in the document. With neither, **it throws
-   right where you register it** (never later).
-2. **`mountUpload({ … })`** — the side that actually receives the files and runs
-   `uploader`. Drops, pastes and the picker button all flow here. **Skip this mount
-   and the button is there but nothing happens.**
+1. **`uploadWing`** — adds a file-attach button to the toolbar. Because the uploaded result is inserted into the document as an image or file-link node, **`imageWing` or `linkWing` must be registered alongside it**. If neither is registered, it throws at initialization time.
+2. **`mountUpload({ … })`** — receives files coming in through drag-and-drop, clipboard paste, or the toolbar's file picker, and hands them to the host's `uploader` function.
+3. **`mountUploadView({ … })`** — renders the upload-progress placeholder UI on screen.
 
-::: warning Only half of pasting comes this way
-If a paste carries **even a single piece of text** (`text/html` or `text/plain`), the upload is not
-called at all — the text becomes a candidate and goes to the [paste panel](../../intro/usage)
-instead. Files flow into the upload only from **a paste with no text in it whatsoever.**
-
-Copy cells out of a spreadsheet and both a table and text ride along, so the result is **a table,
-not a picture.** To upload it as a picture, copy the picture on its own. A drop (dragging a file in)
-comes to the upload always, regardless of this rule.
+::: warning How a clipboard paste is routed to upload
+If the clipboard data **contains any text or HTML** (`text/html` or `text/plain`), it goes through the normal text/Markdown paste pipeline instead of upload. The upload pipeline only fires when the clipboard paste carries file data alone. (A drag-and-drop file attachment always goes through the upload pipeline.)
 :::
-3. **`mountUploadView({ … })`** — the side that stands progress placeholders on
-   screen. Uploads still work without it, but the screen says nothing while they run.
 
-`uploader` has the shape `(task) => Promise<{ uri } | null>` — **a URI means
-success, `null` means failure** and the placeholder is taken away. Report progress
-with `task.onProgress(0–100)`, and stop when `task.signal` aborts.
+The `uploader` function has the signature `(task) => Promise<{ uri: string } | null>`. It returns a `{ uri }` object on a successful server upload, and `null` on failure. Report progress through the `task.onProgress(0–100)` callback, and handle cancellation through `task.signal`.
 
-The limits are `extensions`, `maxFileSize` and `maxTotalSize`, all optional (0 or
-omitted means no limit). Files that get filtered out arrive at `onReject`.
+File extension and size limit options: `extensions`, `maxFileSize`, `maxTotalSize` (no limit if omitted). Files that don't pass are handed to the `onReject` callback.
 
-## What is left behind
+## What the document renders after upload
 
-Images are committed as `imageWing` blocks, everything else as `linkWing`
-attachment links.
-
-- **An attachment is named by a localized label, not the file name** —
-  "Attachment" in English. File names are usually too long to leave in a document,
-  and above all the name has to be editable. Put the caret in the link and change
-  it in [the name field of the context toolbar](../inline/link).
-- **The extension stays as a marker** — `data-nabi-file="pdf"`. That value is taken
-  from the real file name and the sheet draws it as a badge, so renaming the link
-  does not lose it.
-- A URI the link wing would refuse (a `blob:` address arriving without
-  `allowLocalUrls` turned on, for instance) is demoted to the plain file name — the
-  whitelist is never bypassed.
-
-## What you see while it uploads
-
-A temporary box stands in place while a file uploads. It lives only in the editor
-DOM, never in the nabi tree, so not a character of it reaches the stored value.
-
-- **Images** show a preview built from the file you picked, with a grid laid over
-  it. Cells clear one by one as the progress climbs until the picture is sharp. The
-  order the cells clear in is shuffled per file, so uploading several at once never
-  repeats the same pattern.
-- **Files that are not images** get a box with no grid — a 📎 clip and an
-  "Attachment" label — with the extension alongside as an uppercase badge (`PDF`
-  and so on). An image whose preview cannot be drawn falls here too.
-- Progress rides on the box as `data-nabi-per` and the sheet draws it. Each box
-  carries a cancel (×) button while it uploads, and editing is locked while the
-  batch runs.
+- **Image files** are inserted as an `imageWing` `<img>` block object.
+- **Other attachments** are inserted as a `linkWing` file-download link (`<a data-nabi-file="pdf" href="...">`). The attachment's display text is generated per locale as "Attachment," and can be freely renamed by placing the caret on the link and using the context toolbar.
 
 ## Usage example
 
@@ -85,23 +42,23 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// Upload needs the image and link wings to leave a result behind — without them this throws right here
+// The upload wing needs the image or link wing registered alongside it.
 const { nabi, registry } = createNabiWith([imageWing, linkWing, uploadWing])
 
 mountSurface({ nabi, registry, root: surface })
 
-// The side that stands the progress placeholders — build it first and wire it up below
+// Mount the upload-progress UI view
 const view = mountUploadView({ nabi, surface, locale: 'en' })
 
 const upload = mountUpload({
   nabi,
   root: surface,
   locale: 'en',
-  extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'],
-  maxFileSize: 10 * 1024 * 1024,
+  extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'zip'],
+  maxFileSize: 10 * 1024 * 1024,   // 10MB
   uploader: async (task) => {
-    // Put the code that really uploads to your server here. A URI means success, null means failure
-    // const uri = await user_callback(task.file, task.onProgress, task.signal)
+    // Implement the logic that actually uploads the file to your backend server
+    // const uri = await myUploadApi(task.file, task.onProgress, task.signal)
     // return { uri }
     return null
   },
@@ -112,18 +69,15 @@ const upload = mountUpload({
 })
 
 mountToolbar({
-  nabi, registry, surface,
+  nabi,
+  registry,
+  surface,
   root: document.querySelector<HTMLElement>('#toolbar')!,
-  // Where the files picked by the toolbar's file button flow to
   onFiles: (files) => upload.take(files),
 })
 ```
 
 ## Demo
-
-This site has no server to upload to, so it only pretends — handing back the
-`blob:` URL that `URL.createObjectURL()` made. The result lives inside this page
-and nowhere else.
 
 <WingDemo path="/wing/etc/upload" />
 

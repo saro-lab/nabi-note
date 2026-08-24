@@ -166,8 +166,6 @@ São quatro regras.
 - O nome de uma parte não pode colidir com o nome de um wing nem com o de outra parte.
 - Se uma parte precisa de reparo, declare-o em `partRepair` sob o nome dessa parte.
 
-`StructureDecl` aceita três coisas — `holds`, `singleParagraph` e `boolAttrs`.
-
 ### `singleParagraph`
 
 O interior é **fixado a um único parágrafo.** É isso que faz uma célula de tabela — apertar
@@ -196,9 +194,6 @@ repair: (node) => {
 Um valor salvo editado à mão, um documento vindo de outro build, um JSON construído por outra
 pessoa — tudo isso passa por esta porta. Só o que atravessa aqui vira documento, o que faz deste
 **o único lugar onde um wing pode garantir sozinho a forma do seu próprio nó.**
-
-Declarando `allows` e `repair` juntos, a limpeza de `allows` roda **primeiro**, e o resultado é
-repassado para `repair`.
 
 ---
 
@@ -233,13 +228,6 @@ que na prática não deixa espaço para escrever um novo wing `place: 'attr'`. S
 valor em cada parágrafo, por ora o caminho é envolver com um container.
 :::
 
-Há dois campos para lidar com o valor.
-
-| | |
-|---|---|
-| `attrValues` | A lista de valores que aceita (para título, `[1,2,3,4,5,6]`) |
-| `currentValue` | O valor que este parágrafo carrega agora. A barra de ferramentas e a linha de contexto pintam o campo pressionado com base nessa resposta |
-
 ---
 
 ## Os auxiliares de documento expostos publicamente
@@ -259,13 +247,6 @@ comando responde.
 ```ts
 return { doc: r.doc, selection: { anchor: r.caret, focus: r.caret } }
 ```
-
-::: tip Precisa de uma edição mais fina que essa
-Os auxiliares internos que cortam e unem caractere por caractere (aplicar um mark, escrever um
-atributo de parágrafo, etc.) ainda não são API pública. Até lá, você pode construir o array
-`doc` você mesmo e responder com ele — o documento com o qual você responde ainda é aparado mais
-uma vez pelo `cocoon`, então um documento que quebre as regras nunca sobrevive assim.
-:::
 
 ---
 

@@ -89,8 +89,6 @@ Also **gewinnt der innerste Container** — in einer Liste innerhalb einer Tabel
 deklariert hat. Deshalb ist es Konvention, zuerst nach `owner.node.w` zu verzweigen, um zu sehen,
 welcher ausgewählt wurde.
 
-Ein Mark kann nie Besitzer sein — der Grund steht auf der [Inline-Seite](./inline).
-
 ---
 
 ## `inputRules` — Formatierung allein aus Tippen bauen
@@ -115,10 +113,6 @@ inputRules: [
 Es schaut auf den **Anfang der Zeile** vor dem Caret. Bei einem Treffer löscht es dieses Präfix (und
 das Auslöser-Zeichen) und führt das Command aus.
 
-```
-"> " tippen   →   das "&gt;" wird gelöscht und toggleQuote läuft
-```
-
 Es feuert nur auf der **ersten Zeile** eines Absatzes. Auf einer Zeile, die Sie mit
 <kbd>Shift</kbd>+<kbd>Enter</kbd> erreicht haben, feuert es nicht — das hält Formatierung davon ab,
 mitten in Prosa auszubrechen, die Sie schon schreiben.
@@ -128,19 +122,6 @@ mitten in Prosa auszubrechen, die Sie schon schreiben.
 Es schaut auf das **einzelne Wort** vor dem Caret. Bei einem Treffer wählt es dieses Wort aus, führt
 das Command aus und setzt den Caret zurück, wo er war. Kein Text wird gelöscht — das ist die Gestalt
 für Regeln, die einen Mark auflegen.
-
-Trägt dieses Wort **bereits den Mark dieses Flügels, wird die Regel übersprungen.** Sie kann nicht
-zweimal an derselben Stelle feuern.
-
-### Gemeinsame Regeln
-
-- Es läuft nur, während der Caret **kollabiert** ist. Leertaste bei einer Bereichsauswahl bewirkt
-  nichts.
-- Es läuft nur in einem gewöhnlichen Absatz — nie in einem Wrapper-Absatz, der einen Klotz hält.
-- Regeln werden in der Array-Reihenfolge der Flügel gemessen, und die **erste erfolgreiche Regel**
-  gewinnt.
-- Antwortet das Command mit `null` (nichts zu tun), wird **zurückgerollt und zur nächsten Regel
-  übergegangen.** Eine gescheiterte Eingaberegel hinterlässt keine Spur im Dokument.
 
 ---
 
@@ -168,9 +149,7 @@ const attachNote: Attach = (host) => {
 | `host.pathOfKey(id)` | wandelt ein `data-key` auf dem Bildschirm in einen Pfad ins Dokument um |
 
 `mountSurface` heftet das `attach` jedes registrierten Flügels zusammen mit sich selbst an und ruft
-die von Ihnen zurückgegebenen Abbaufunktionen auf, wenn es abgebaut wird. Dies ist **das eine und
-einzige Haus, in dem Code lebt, der das DOM kennt** — fassen Sie `document` nie innerhalb eines
-Commands, `toHtml` oder `repair` an.
+die von Ihnen zurückgegebenen Abbaufunktionen auf, wenn es abgebaut wird.
 
 ::: tip Das Dokument über `data-key` finden
 Der Editor-Build (`getEditorHtml()`) markiert jeden Knoten mit einem `data-key`. Finden Sie das
@@ -180,40 +159,31 @@ um den Platz innerhalb des Dokuments zu bekommen.
 
 ---
 
-## Einfügen und anfängliches HTML
+## Einfügen und die HTML-Parsing-Pipeline
 
-Alle drei gehen durch **dasselbe Tor** am Ende durch. Die einzige Aufgabe des Flügels ist dort
-`claim` — sie ist unter [`claim` auf der Inline-Seite](./inline#claim) aufgeschrieben. **Einfügen
-allein hat einen Schritt davor**, allerdings: bevor es zu `claim` kommt, passiert es die IO-Filter
-und das Kandidaten-Panel.
+Einfügen, `setHtml()` und das Laden von anfänglichem HTML durchlaufen alle dieselbe Parsing- und
+Normalisierungs-Pipeline.
 
 ```
-Einfügen        ─→ IO-Filter ─→ Kandidaten-Panel (nur wenn es zwei oder mehr gibt) ─┐
-setHtml         ──────────────────────────────────────────────────────────────────┼→ parsen → das claim der Flügel → die Standard-Tag-Behandlung des Kerns → repair → cocoon → Dokument
-anfängliches HTML ───────────────────────────────────────────────────────────────────┘
+Einfügen        ─→ IO-Filter ─→ Format-Auswahl-Popup (bei zwei oder mehr Kandidaten) ─┐
+setHtml         ──────────────────────────────────────────────────────────────────────┼→ HTML-Parsing → das claim der Flügel → Standard-Tag-Zuordnung des Kerns → repair → cocoon → Nabi-Baum
+anfängliches HTML ───────────────────────────────────────────────────────────────────────┘
 ```
 
-**`setHtml()` und anfängliches HTML passieren das Panel nicht.** Das ist die Stelle, an der der
-Host einen Wert hineindrückt, also gibt es nichts zu fragen — keine Filter, keine Kandidaten,
-direkt zum Parsen.
-
-Ein Kandidat wird tatsächlich gebaut (und so wird `claim` nur aufgerufen) **nachdem die Person
-einen im Panel wählt**. Den Aufbau aller vier Kandidaten für die Verwendung eines wäre Verschwendung.
-Einen eigenen Filter zu bauen ist in [IO-Filter einstecken](../custom#io-filter-einstecken)
-abgedeckt.
-
-Ohne ein `claim` wird **diesem Tag die Hülle abgestreift, und nur der Text darin überlebt.** Diese
-Regel ist der Grund, warum unbekanntes Markup, das aus dem Editor eines anderen kopiert wurde, nicht
-unverändert im Dokument landet.
-
-Der Weg über JSON (`setJson()`) trägt Knoten statt Tags, der Torwächter dort ist also `repair`, nicht
-`claim`.
+- **`setHtml()` und das Laden von anfänglichem HTML durchlaufen kein Auswahl-Popup** — sie gehen
+  direkt in die Parsing-Pipeline.
+- Beim Einfügen aus der Zwischenablage erscheint das Format-Auswahl-Popup nur, wenn es zwei oder
+  mehr Kandidaten gibt; das eigentliche Parsen (`claim`) läuft erst, nachdem die Person ein Format
+  gewählt hat.
+- Ein fremdes Tag, für das kein Flügel ein `claim` definiert, wird sicher entfernt — nur der Text
+  darin bleibt erhalten.
 
 ---
 
 ## Weiterführende Seiten
 
 - [UI und Verhalten](../custom/ui) — Werkzeugleisten-Schaltflächen und die Kontextzeile
+- [IO-Filter einstecken](../custom#io-filter-einstecken) — der Erweiterungspunkt für Einfügen, Speichern und Öffnen
 - [Einen Inline-Mark schreiben](../custom/inline) · [Blöcke und Absatzattribute](../custom/block)
 
 <script setup lang="ts">

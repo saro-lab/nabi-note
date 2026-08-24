@@ -7,8 +7,8 @@ title: Bloco recolhível
 ## Descrição
 
 `detailsWing` (id `details`, atalho `D`) é dono da caixa recolhível
-(`<details>` + `<summary>`). A linha de resumo vem junto por `parts`, então não
-é registrada à parte — não é um array, é um registro.
+(`<details>` + `<summary>`). A linha de resumo já vem embutida pelo atributo
+`parts`, então não precisa ser registrada separadamente.
 
 ```ts
 parts: { summary: { holds: 'inline' } }
@@ -16,20 +16,14 @@ parts: { summary: { holds: 'inline' } }
 
 Pressionar o botão envolve os blocos abrangidos pelo cursor numa nova caixa
 recolhível, com uma linha de resumo vazia à frente. Pressionar Enter na linha de
-resumo desce para o conteúdo (a própria linha de resumo não se parte).
+resumo desce para o conteúdo (uma quebra de linha dentro da linha de resumo
+nunca a divide).
 
-**O editor desenha exatamente o que será salvo.** Uma caixa salva recolhida
-aparece recolhida também no editor, e clicar no triângulo abre e fecha ali
-mesmo — esse clique já é o que muda o valor salvo (`o`). Se o cursor estava
-dentro ao recolher, ele sai para fora da caixa.
-
-::: tip Não há linha de contexto
-Antes existiam dois botões — **Salvar aberto** e **Salvar recolhido**. Na época
-em que a tela sempre desenhava tudo aberto, essa era a única forma de dizer com
-qual estado salvar. Agora que a tela desenha exatamente o valor salvo e o
-triângulo já o muda, seria dizer a mesma coisa duas vezes — por isso foram
-retirados.
-:::
+**A tela desenha exatamente o que está realmente salvo.** Um bloco salvo
+recolhido (`open` não definido) carrega recolhido também no editor, e clicar no
+ícone de seta à esquerda abre ou fecha a qualquer momento (esse clique muda
+imediatamente o atributo `o` da árvore nabi). Se o cursor estava dentro do
+conteúdo ao recolher o bloco, ele se move com segurança para fora do bloco.
 
 ## Exemplo de uso
 

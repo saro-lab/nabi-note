@@ -1,96 +1,85 @@
 ---
 title: UI und Verhalten
-description: Werkzeugleisten-Schaltfläche (button), Kontextzeile (context), Stylesheets (styles) — die drei Stellen, an denen ein Flügel vor einer Person steht.
+description: Anleitung zur Anbindung von Werkzeugleisten-Schaltflächen (button), Kontextzeile (context), Stylesheets (styles) und Dialogen mit der Person (ask).
 ---
 
 # UI und Verhalten
 
-Es gibt drei Stellen, an denen ein Flügel vor einer Person steht.
-
-| Feld | Wo |
-|---|---|
-| `button` · `buttons` | die **Werkzeugleiste** oben — die immer sichtbare Stelle |
-| `context` | die **Kontextzeile** — die Stelle, die nur für das erscheint, was der Caret gerade berührt |
-| `styles` | das **CSS**, das dieser Flügel trägt |
+Ein Flügel stellt seine Benutzeroberfläche an drei festen Stellen bereit: der **Haupt-Werkzeugleiste** (`button`/`buttons`), der **Kontextzeile** (`context`) und dem **flügeleigenen CSS** (`styles`).
 
 ---
 
-## Werkzeugleisten-Schaltflächen
+## Werkzeugleisten-Schaltflächen (`button` / `buttons`)
 
 ```ts
 button: {
   group: 'emphasis',                   // in welcher Gruppe sie steht — Pflicht
-  svg: '<path d="…"/>',                // das Innere auf einem 16×16-Raster. Ohne eines steht sie als Text
+  svg: '<path d="…"/>',                // SVG-Path-Zeichenkette innerhalb eines 16×16-viewBox
   label: { de: 'Fett' },
-  shortcut: 'B',                       // dieser Buchstabe im Hinweismodus
+  shortcut: 'B',                       // dieser Buchstabe im Hinweismodus (Shift zweimal getippt)
   accelerator: 'mod+b',                // die Strg/⌘-Kombination
-  action: { kind: 'mark' },
+  action: { kind: 'mark' },            // Umschalten einer Inline-Mark
 }
 ```
 
-Für mehrere Schaltflächen schreiben Sie ein Array in `buttons` — so stellt sich ein einzelner
-Ausrichtungs-Flügel als links, mittig und rechts auf. Dann unterscheidet `name` sie voneinander, und
-`value` sagt, für welchen Wert jede steht.
+Bietet ein Flügel mehrere Schaltflächen an, definieren Sie sie als Array in `buttons` (zum Beispiel ein Textausrichtungs-Flügel mit drei Schaltflächen links/mittig/rechts). Jede Schaltfläche wird über `name` unterschieden, und `value` gibt an, welchen Wert diese Schaltfläche repräsentiert.
 
-### `group` — die Gruppe entscheidet die Reihenfolge
+### Reihenfolge der Schaltflächengruppen (`group`)
+
+Die Anzeigereihenfolge der Werkzeugleisten-Gruppen ist wie folgt festgelegt:
 
 ```
 font · heading · emphasis · script · color · link ·
 align · list · structure · media · container · clear · file
 ```
 
-**Diese Reihenfolge ist festgenagelt.** Wo auch immer Sie einen Flügel im Array platzieren, seine
-Schaltfläche steht am Platz ihrer Gruppe. Die Registrierungsreihenfolge ordnet die Dinge nur
-**innerhalb** einer Gruppe. Verwenden Sie einen Namen, der nicht auf der Liste steht, erscheint ganz
-am Ende eine neue Gruppe.
+Unabhängig davon, wo Sie einen Flügel im Array deklarieren, wird seine Schaltfläche automatisch an der Position ihrer zugehörigen Gruppe platziert; innerhalb derselben Gruppe wird nur nach Registrierungsreihenfolge der Flügel sortiert. Geben Sie einen neuen, nicht in der Liste enthaltenen Gruppennamen an, wird am Ende der Werkzeugleiste eine neue Gruppe angefügt.
 
-Leert sich eine Gruppe vollständig (alle ihre Schaltflächen versteckt), verschwindet diese Gruppe
-vom Bildschirm — kein leerer Trenner bleibt zurück.
+Sind im aktuellen Zustand alle Schaltflächen einer bestimmten Gruppe ausgeblendet, werden diese Gruppe und ihr Trennstrich automatisch mitversteckt.
 
-### `action` — was beim Drücken geschieht
+### Arten von Schaltflächen-Aktionen (`action`)
 
-| `kind` | Was es tut | Was dazugehört |
+| `kind` | Wirkung | Zusätzliche Eigenschaften |
 |---|---|---|
-| `'mark'` | geht zum Mark-Umschalter des Kerns. **Sie müssen kein Command schreiben** | — |
-| `'command'` | führt ein Command aus | `command` · `args?` |
-| `'menu'` | öffnet eine Werteliste als Panel | `command` · `argKey` · `values` |
-| `'grid'` | öffnet ein Zeilen×Spalten-Raster (eine Tabelle einfügen) | `command` · `rowsKey` · `colsKey` · `max?` |
-| `'prompt'` | hebt Eingabefelder an und übergibt, was zurückkommt, dem Command | `command` · `fields` |
-| `'file'` | öffnet die Dateiauswahl | `accept?` · `multiple?` |
-| `'host'` | gibt an den Host weiter (`onHost` von `mountToolbar`) | — |
+| `'mark'` | schaltet eine Inline-Mark um (läuft über die Standardlogik des Kerns) | — |
+| `'command'` | führt das angegebene Command aus | `command`, `args?` |
+| `'menu'` | zeigt ein Dropdown zur Werteauswahl | `command`, `argKey`, `values` |
+| `'grid'` | zeigt einen Zeilen×Spalten-Raster-Picker zum Einfügen einer Tabelle | `command`, `rowsKey`, `colsKey`, `max?` |
+| `'prompt'` | hebt ein Eingabe-Popup an und übergibt den eingegebenen Wert dem Command | `command`, `fields` |
+| `'file'` | öffnet den Dateiauswahl-Dialog | `accept?`, `multiple?` |
+| `'host'` | wird an den Host-Callback weitergegeben (`onHost` von `mountToolbar`) | — |
 
-Lassen Sie `action` weg, bewirkt ein Druck auf die Schaltfläche gar nichts.
+Eine Schaltfläche ohne definiertes `action` tut bei einem Klick nichts.
 
-### `shortcut` und `accelerator`
+### Tastenkürzel (`shortcut` und `accelerator`)
 
-| | Gestalt | Regel |
+| Feld | Form | Regel |
 |---|---|---|
-| `shortcut` | `'B'` | **ein lateinischer Großbuchstabe oder eine Ziffer** |
-| `accelerator` | `'mod+b'` | `mod+` gefolgt von **einem Kleinbuchstaben** |
+| `shortcut` | `'B'` | **ein lateinischer Großbuchstabe oder eine einzelne Ziffer** |
+| `accelerator` | `'mod+b'` | `mod+`-Präfix gefolgt von **einem Kleinbuchstaben** |
 
-Beide **sterben bei der Registrierung, wenn zwei Flügel kollidieren.** Keiner von beiden hört später
-still auf zu funktionieren.
+Deklarieren zwei verschiedene Flügel dasselbe Tastenkürzel, wird beim Initialisieren sofort eine Ausnahme ausgelöst.
 
-Schreiben Sie ein separates `accelerated`, bewirkt der Beschleuniger etwas anderes — die
-Schaltfläche öffnet ein Panel, während <kbd>Strg</kbd>+Taste sofort den Standardwert anwendet, zum
-Beispiel.
+Mit der Option `accelerated` können Sie festlegen, dass beim Ausführen über das Tastenkürzel eine andere Aktion abläuft (zum Beispiel: Klick auf die Schaltfläche öffnet ein Optionsmodal, während das Tastenkürzel den Standardwert sofort anwendet).
+
+::: warning Tastenkürzel funktionieren nur innerhalb des zugewiesenen Editorbereichs
+Tastenkürzel-Ereignisse erkennen nur Tasteneingaben, die innerhalb des an `mountToolbar({ surface })` übergebenen Editorbereichs auftreten. Existieren auf einer Seite mehrere Editoren, muss die Option `surface` unbedingt angegeben werden, um Interferenzen zwischen den Tastenereignissen zu vermeiden.
+:::
 
 ---
 
-## Wie eine Schaltfläche gedrückt aussieht
+## Regel für die Anzeige des aktiven (Pressed) Zustands
 
-Es gibt nur eine Grundlage, um eine Schaltfläche als „gerade an" zu bemalen.
+Ob eine Schaltfläche als „gerade aktiv (Pressed)" angezeigt wird, hängt vom Flügeltyp (`place`) ab:
 
-| `place` | Was es liest |
+| `place` | Kriterium für Aktivierung |
 |---|---|
-| `'mark'` | ist dieser Mark am Caret |
-| `'attr'` | der `currentValue` des Absatzes, in dem der Caret steht |
-| `'container'`·`'void'` | ist der Caret innerhalb oder auf diesem Klotz |
-| `'tool'` | **immer aus** |
+| `'mark'` | ob diese Inline-Mark an der aktuellen Cursorposition angewendet ist |
+| `'attr'` | ob der `currentValue`-Rückgabewert des aktuellen Absatzknotens mit dem `value` der Schaltfläche übereinstimmt |
+| `'container'` · `'void'` | ob der Cursor sich innerhalb oder auf diesem Blockobjekt befindet |
+| `'tool'` | bleibt immer inaktiv |
 
-Ein Flügel mit mehreren Werten (Ausrichtung, Überschriften) schreibt auf jede Schaltfläche ein
-`value`, und nur die Schaltfläche, die zu dem passt, was `currentValue` des Flügels beantwortet,
-wird bemalt.
+Bei Flügeln mit mehreren Werten (Überschrift, Ausrichtung usw.) wird nur die Schaltfläche als aktiv eingefärbt, deren `value` mit der von `currentValue` zurückgegebenen Zeichenkette übereinstimmt.
 
 ```ts
 currentValue: (node) => {
@@ -99,34 +88,21 @@ currentValue: (node) => {
 }
 ```
 
-**`currentValue` antwortet mit einer Zeichenkette** — selbst ein numerischer Wert geht durch
-`String()` zurück. `undefined` bedeutet „dieser Knoten trägt keinen meiner Werte".
+---
+
+## Regel für das automatische Verstecken von Schaltflächen
+
+Der Editor-Kern blendet zugehörige Werkzeugleisten-Schaltflächen automatisch aus, wenn eine Formatierung nicht angewendet werden kann:
+
+- In **Bereichen mit eingeschränkter Formatierung**, etwa innerhalb eines Code-Blocks, werden Inline-Mark- und andere Block-erzeugende Schaltflächen automatisch versteckt.
+- Im Wrapper-Absatz eines Blockobjekts (Bild, Tabelle usw.) werden Absatzattribute wie Überschrift versteckt (die Textausrichtung (`a`) bleibt jedoch als Ausnahme erhalten, um die Ausrichtung des Objekts zu ermöglichen).
+- Schaltflächen von Flügeln, die nicht in der `allows`-Erlaubnisliste des übergeordneten Containers enthalten sind, werden automatisch versteckt.
 
 ---
 
-## Schaltflächen verstecken sich selbst, wo sie nicht stehen können
+## Dynamische Kontextzeile (`context`)
 
-| `place` | Wann sie sich versteckt |
-|---|---|
-| `'mark'` | an einer Stelle, an der nur Text lebt (etwa innerhalb eines Code-Kastens), wenn sie diese Stelle besitzt |
-| `'attr'` | wenn der Caret auf einem Wrapper-Absatz steht, der einen Klotz hält. **Ausrichtung (`a`) ist die einzige Ausnahme** |
-| `'void'`·`'container'` | an einer Stelle, an der nur Text lebt, oder wenn das `allows` des aktuellen Containers sie nicht annimmt |
-| `'tool'` | versteckt sich nie |
-
-Ausrichtung ist die Ausnahme aus dem Grund, den Sie zuvor gesehen haben — die Ausrichtung eines
-Klotzes wird nicht vom Klotz getragen, sondern vom Wrapper-Absatz darum. Sie müssen „zentrieren"
-drücken können, während Sie auf einem Bild stehen.
-
-Schreiben Sie `allows`, und **die Werkzeugleiste folgt von selbst.** Dass die Tabellen-Schaltfläche
-innerhalb eines Code-Kastens verschwindet, ist keine separat geschriebene Regel; es fällt aus genau
-diesem einen Feld heraus.
-
----
-
-## Die Kontextzeile
-
-Die Zeile, die nur für das erscheint, was der Caret gerade berührt. Klicken Sie ein Bild an, steht
-die Größensteuerung da; setzen Sie den Caret in einen Link, steht das Adressfeld da.
+Eine Hilfswerkzeugleiste, die auf das Element am aktuellen Cursor spezialisierte Einstellungswerkzeuge bereitstellt (zum Beispiel: Größenregler bei Bildklick, URL-Eingabeformular bei Linkklick, Zeile/Spalte-hinzufügen-Schaltflächen bei Cursor innerhalb einer Tabelle).
 
 ```ts
 context: {
@@ -138,7 +114,7 @@ context: {
       label: { de: 'Ton' },
       command: 'setNoteTone',
       argKey: 'value',
-      attr: 't',                                    // der Attributplatz, aus dem der aktuelle Wert gelesen wird
+      attr: 't',                                    // Attributschlüssel des Knotens, aus dem der aktuelle Wert gelesen wird
       values: [
         { value: 'info', label: { de: 'Hinweis' } },
         { value: 'warn', label: { de: 'Warnung' } },
@@ -148,113 +124,68 @@ context: {
 }
 ```
 
-### Wann sie erscheint
+### Arten von Kontextzeilen-Steuerelementen (`ContextControl`)
 
-**Alles, was der Caret berührt**, öffnet seine eigene Zeile.
-
-- die Container auf dem Pfad des Caret (innerster zuerst, äußerster zuletzt)
-- der anvisierte Klotz (etwa ein Bild, ausgewählt während man auf seinem Wrapper-Absatz steht)
-- die **Marks** am Caret — anders als Werkzeugleisten-Schaltflächen bekommen Marks durchaus eine
-  Kontextzeile
-- ein Flügel für ein **Absatzattribut**, dessen Wert der Absatz des Caret gerade trägt
-
-Setzen Sie den Caret in einen Link innerhalb einer Tabelle, erscheinen Link-Zeile und Tabellen-Zeile
-gemeinsam.
-
-### Die sieben Sorten von `ContextControl`
-
-| `kind` | Was | Was dazugehört |
+| `kind` | Form des Steuerelements | Wichtige Eigenschaften |
 |---|---|---|
-| `'button'` | ein Druck, ein Command | `command` · `args?` |
-| `'toggle'` | zwei Zustände, an und aus | `command` · `token` |
-| `'select'` | eines aus einer Liste | `command` · `argKey` · `values` · `attr?` |
-| `'range'` | eine Skala verschieben (Größenänderung) | `command` · `argKey` · `values` · `rest?` · `readout?` |
-| `'text'` | ein einzelnes Textfeld (eine Link-Adresse) | `command` · `argKey` · `initial?` · `placeholder?` · `validate?` |
-| `'prompt'` | mehrere Felder als Panel | `command` · `fields` |
-| `'lightbox'` | groß ansehen | `src` · `alt?` |
+| `'button'` | einfacher Schaltflächenklick | `command`, `args?` |
+| `'toggle'` | Umschalter (AN/AUS) | `command`, `token` |
+| `'select'` | Dropdown-Auswahlmenü | `command`, `argKey`, `values`, `attr?` |
+| `'range'` | Schieberegler (z. B. Breitenanpassung) | `command`, `argKey`, `values`, `rest?`, `readout?` |
+| `'text'` | Textfeld (z. B. Link-URL) | `command`, `argKey`, `initial?`, `placeholder?`, `validate?` |
+| `'prompt'` | zusammengesetztes Formular-Popup | `command`, `fields` |
+| `'lightbox'` | Bild-Vergrößerungs-Popup | `src`, `alt?` |
 
-Alle sieben teilen `name` (Pflicht) · `label?` · `svg?` · `tip?` · `visible?`.
-
-`visible: (node) => boolean` ist die Tür, um **ein Steuerelement innerhalb desselben Flügels zu
-verstecken** — etwa „Verbindung lösen" nur auf bereits verbundenen Zellen zu zeigen.
-
-Schreiben Sie `attr`, wird der aktuelle Wert direkt aus diesem Attributplatz zum Bemalen gelesen.
-`'toggle'` vergleicht mit `token` gegen die Zeichenkette, die `currentValue` beantwortet hat.
+Alle Steuerelemente unterstützen gemeinsam `name` (Pflicht), `label?`, `svg?`, `tip?`, `visible?`. Über die Funktion `visible(node)` lässt sich die Anzeige eines Steuerelements dynamisch an eine bestimmte Bedingung knüpfen (zum Beispiel: die Schaltfläche „Verbindung lösen" nur anzeigen, wenn Zellen verbunden sind).
 
 ---
 
-## `styles` — das CSS, das ein Flügel trägt
+## Flügeleigene Stile (`styles`)
+
+Ein Flügel kann sein benötigtes CSS selbst mitbringen.
 
 ```ts
 styles: `
-.nabi-content aside[data-nabi-note] {
-  border-inline-start: 3px solid var(--nabi-accent);
-  padding: .6rem .9rem;
-  background: color-mix(in srgb, var(--nabi-accent) 8%, transparent);
-}
+  .nabi-content aside[data-nabi-note] {
+    border-left: 3px solid var(--nabi-accent);
+    padding: 0.5rem 1rem;
+    margin: 1rem 0;
+  }
 `
 ```
 
-Vier Regeln.
-
-- **Alles unter `.nabi-content` eingrenzen.** Es darf nicht in den Rest der Host-Seite ausbluten.
-- **Schriftgrößen in `rem` oder `em`** schreiben.
-- **Dunkel nur an der Klasse `.dark` erkennen.** Tun Sie es mit einer Media Query, wird allein der
-  Editor dunkel auf einem Host, der Hell gewählt hat.
-- **Breit und schmal mit einer Container Query messen.** Der Maßstab ist die Breite der Stelle, an
-  der der Editor sitzt, nicht die Breite des Bildschirms.
-
-Wollen Sie nur das, was Sie registriert haben, sammeln und injizieren Sie die Stylesheets selbst.
-
-```ts
-import { collectSheets, injectSheets } from 'nabi-note'
-
-const detach = injectSheets(document, collectSheets(registry))
-```
-
-Ein Stylesheet mit demselben Text wird **einmal** geladen — mehrere Flügel können sich dasselbe CSS
-teilen, und nur eine Kopie landet im Dokument. Die Antwort ist eine Abbaufunktion, und sie entfernt
-**nur, was dieser Aufruf neu hinzugefügt hat**.
+Über `collectSheets(registry)` und `injectSheets(document, sheets)` lassen sich ausschließlich die Stile der registrierten Flügel dynamisch in das Dokument einschleusen; derselbe Stil-String wird nicht doppelt eingeschleust.
 
 ---
 
-## Die Person fragen
+## Anbindung von Dialogen mit der Person (`ask`)
 
 ```ts
 const { nabi, registry } = createNabiWith(wings, {
   ask: {
     message: (text) => window.alert(text),
     confirm: (text) => window.confirm(text),
-    choose: (question, options) => number | Promise<number>,
   },
 })
 ```
 
-`confirm` nimmt ein `boolean` oder ein `Promise<boolean>` — stecken Sie das `confirm` des Browsers
-selbst ein, oder heben Sie ein eigenes Panel an und antworten Sie später. `choose` wählt eine aus
-mehreren Optionen (`ChooseOption{label, icon?}`) und antwortet mit dem Index — eine Option ohne
-Bild zeigt nur den Namen.
+- `message`: zeigt einen einfachen Hinweis (`(text: string) => void`)
+- `confirm`: Bestätigen/Abbrechen-Auswahlfenster (`(text: string) => boolean | Promise<boolean>`)
+- `choose`: Mehrfachoptionen-Auswahlfenster (`(question: string, options: ChooseOption[]) => number | Promise<number>`)
 
-::: warning Lassen Sie es weg, ist die Antwort immer „nein"
-Liefern Sie kein `ask`, geht ein stiller Standard ein. `message` geht nirgendwohin, und `confirm`
-antwortet mit `false`. Die Überlegung ist, dass es besser ist, wenn **ein Fragen-dann-Löschen still
-nicht funktioniert**, als dass es still geschieht. Das „wirklich löschen?" der lokalen Historie geht
-durch diese Tür.
-:::
+Die `ChooseOption`-Struktur ist `{ label: string, icon?: string }`, der Rückgabewert ist der 0-basierte Index der gewählten Option (`-1` beim Abbrechen).
 
-::: tip Commands können nicht fragen
-Ein Command ist eine reine Funktion; es kennt weder den Bildschirm noch die Zeit. Fragen Sie außerhalb
-des Commands und rufen Sie das Command auf, **sobald die Antwort da ist**. Innerhalb eines Flügels
-ist `attach` die Stelle dafür, wo Sie es über `host.nabi.$ask` erreichen.
+::: warning Standardverhalten ohne angegebenen ask-Handler
+Wird kein `ask`-Handler übergeben, ist der Standard-Rückgabewert von `confirm` sicherheitshalber `false` (Abbruch).
+Bei `choose` wird ohne Handler standardmäßig die erste Kandidatin (Index `0`) gewählt. Die UI zur Formatwahl beim Einfügen und Ähnliches wird beim Mounten von `mountToolbar` automatisch an die im Kern eingebaute, dedizierte UI gebunden — in einer gewöhnlichen Umgebung müssen Sie `choose` also normalerweise nicht selbst implementieren.
 :::
 
 ---
 
-## Weiterführende Seiten
+## Weiterführende Dokumente
 
-- [Einen Inline-Mark schreiben](../custom/inline) · [Blöcke und Absatzattribute](../custom/block) ·
-  [Tasten, automatische Umwandlung, Einfügen](../custom/input)
-- [Theming und CSS-Variablen](../../style/custom) — die Variablennamen, auf die die Stylesheets bauen
+- [Einen Inline-Mark schreiben](../custom/inline) · [Blöcke und Absatzattribute erstellen](../custom/block) · [Tasten, automatische Umwandlung, Einfügen](../custom/input)
+- [Theming anpassen](../../style/custom) — Leitfaden zu CSS-Variablen und Themes
 
 <script setup lang="ts">
 import { useTranslate } from '../../../.vitepress/src/langs.ts'

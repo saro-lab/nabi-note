@@ -6,40 +6,27 @@ title: Resaltador
 
 ## Descripción
 
-`highlightWing` es el propietario (claim) de `<mark data-color="...">`. Como es una
-marca en línea que lleva un valor, no es un interruptor que se enciende y se apaga,
-sino una ramificación en la que se elige un color — la misma textura que el color del
-texto.
+`highlightWing` (nombre `hl`) es el propietario (claim) de `<mark data-color="...">`. Es una marca en línea que lleva un valor, así que no es un interruptor de encendido/apagado, sino una elección entre colores — la misma lógica que el color de texto.
 
-- El botón de la barra de herramientas (atajo `H`, sin argumentos) funciona como
-  interruptor: si todo el tramo seleccionado ya está resaltado lo quita, y si no lo
-  aplica con el color por omisión (amarillo).
-- Si el cursor está dentro de una marca de resaltador, en la barra contextual
-  aparecen 6 muestras de color (swatch) — al pulsar una, solo cambia el color allí
-  mismo. Este wing no trae por su cuenta un botón de "borrar": borrar el formato es
-  cosa de `clearFormatWing` (hay que registrarlo aparte).
-- El comando también funciona si elige un color sin haber seleccionado texto, con el
-  cursor puesto sin más: si el cursor ya está dentro de una marca de resaltador, el
-  objetivo pasa a ser todo ese nodo de marca (no hace falta volver a seleccionar el
-  tramo).
-- En el valor guardado solo queda el nombre del color — algo como
-  `data-color="yellow"`. No sale ningún `style` en línea: el color de fondo real no es
-  cosa de este wing, sino de la hoja de estilos (CSS) del anfitrión.
-- Al entrar (`claim`) solo mira la etiqueta `<mark>`: si el valor de `data-color`
-  no está en la lista o falta, se aplica con el color por omisión (amarillo) — el
-  sentido de "esto está resaltado" ya lo lleva la etiqueta, así que no se descarta.
+- **El botón de la barra de herramientas (atajo `H`) aplica amarillo** — envía `setHighlight` con `{ c: 'yellow' }`. No es un botón sin argumentos.
+- Por eso el botón actúa como **interruptor respecto al amarillo**. Solo se quita cuando el tramo está en amarillo **de punta a punta** — si se pulsa sobre un tramo que es todo verde, el verde se sustituye por amarillo en lugar de quitarse, y hace falta una segunda pulsación para quitarlo.
+- Cuando el cursor está dentro de una marca de resaltador, aparecen seis muestras de color en la barra contextual — al pulsar una, solo cambia el color, en el sitio. Este wing no tiene un campo propio de "quitar": pulsar de nuevo el color ya aplicado lo quita, y borrar el formato es cosa de `clearFormatWing` (hay que registrarlo aparte).
+- **Con solo el cursor hay dos casos.** Si el cursor ya está dentro de una marca de resaltador, el texto que cubre esa marca es el objetivo (no hace falta volver a seleccionar el tramo). Fuera de una marca no hay texto sobre el que aplicarlo, así que queda **reservado** — el siguiente carácter que se escriba sale con ese color.
+- En el valor guardado solo sobrevive el nombre del color — algo como `data-color="yellow"`. No sale ningún `style` en línea. El fondo lo dibuja la hoja que este wing lleva en `styles` (una hoja compartida con el color de texto), y los valores de color en sí vienen de los tokens del núcleo `--nabi-hl-*`, que el anfitrión puede sobrescribir.
+- **Un valor fuera de la lista nunca sobrevive en ningún sitio.** El comando se niega a ejecutarse, y al entrar, un `<mark>` que lleve un `data-color` que no esté en la lista se despoja de su envoltura y deja **solo el texto**. Un `<mark>` sin `data-color` sigue el mismo camino — el color *es* el valor, así que un resaltado sin él no tiene dónde sostenerse.
+- Un valor guardado editado a mano se trata igual: `repair` encuentra un valor fuera de la lista y retira el nodo entero, envoltura incluida.
 
-| Nombre del color | Valor guardado |
+| Color | Valor guardado |
 |---|---|
 | Amarillo | `yellow` |
 | Verde | `green` |
-| Celeste | `cyan` |
+| Cian | `cyan` |
 | Rosa | `pink` |
 | Morado | `purple` |
 | Naranja | `orange` |
 
-La lista de colores también se exporta como `HIGHLIGHT_COLORS` (mapa id → valor de
-color CSS).
+Estos seis se exportan como `HIGHLIGHT_COLORS` — un **array de nombres**
+(`readonly string[]`), no de valores de color. Los valores viven en la hoja de estilos.
 
 ## Ejemplo de uso
 
@@ -49,7 +36,7 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// la lista de wings construye juntos el conocimiento de tipo, los comandos y el ensamblador — eso es `registry`
+// La lista de wings construye juntos el conocimiento de tipo, los comandos y el ensamblador — eso es el `registry`
 const { nabi, registry } = createNabiWith([highlightWing])
 
 mountSurface({ nabi, registry, root: surface })

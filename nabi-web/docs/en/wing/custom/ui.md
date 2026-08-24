@@ -1,105 +1,85 @@
 ---
 title: UI and actions
-description: Toolbar buttons (button), the context toolbar (context), sheets (styles) — the three places a wing stands in front of a person.
+description: Toolbar buttons (button/buttons), the context toolbar (context), and a wing's own CSS (styles) — how a wing plugs into the interface.
 ---
 
 # UI and actions
 
-There are three places a wing stands in front of a person.
-
-| Field | Where |
-|---|---|
-| `button` · `buttons` | the **toolbar** up top — the place that is always visible |
-| `context` | the **context toolbar** — the place that only appears for whatever the caret is touching |
-| `styles` | the **CSS** this wing carries |
+A wing can put itself in front of the person using the editor in three places: the **main toolbar** (`button`/`buttons`), the **context toolbar** (`context`), and its **own CSS** (`styles`).
 
 ---
 
-## Toolbar buttons
+## Toolbar buttons (`button` / `buttons`)
 
 ```ts
 button: {
-  group: 'emphasis',                   // which cluster it stands in — required
-  svg: '<path d="…"/>',                // the insides on a 16×16 grid. Without one it stands as text
+  group: 'emphasis',                   // which group it belongs to (required)
+  svg: '<path d="…"/>',                // an SVG path string inside a 16×16 viewBox
   label: { en: 'Bold' },
-  shortcut: 'B',                       // this letter in hint mode
-  accelerator: 'mod+b',                // the Ctrl/⌘ combination
-  action: { kind: 'mark' },
+  shortcut: 'B',                       // the letter shown in hint mode (double-tap Shift)
+  accelerator: 'mod+b',                // the keyboard shortcut (Ctrl/⌘ combo)
+  action: { kind: 'mark' },            // toggles an inline mark
 }
 ```
 
-For several buttons, write an array in `buttons` — this is how a single alignment wing stands up
-left, center and right. Then `name` tells them apart and `value` says which value each one
-stands for.
+When a single wing needs several buttons, define them as a `buttons` array — a text-alignment wing offering left/center/right, for instance. Each button is told apart by its `name`, and `value` carries the value that button stands for.
 
-### `group` — the cluster decides the order
+### The order of button groups (`group`)
+
+The toolbar renders button groups in this fixed order:
 
 ```
 font · heading · emphasis · script · color · link ·
 align · list · structure · media · container · clear · file
 ```
 
-**This order is nailed down.** Wherever you put a wing in the array, its button stands in its
-cluster's place. Registration order only lines things up **within** a cluster. Use a name that is
-not on the list and a new cluster appears at the very end.
+Wherever a wing is declared in the array, its button lands in its group's slot — only within the same group does registration order matter. Naming a group not on this list adds a brand-new group at the very end of the toolbar.
 
-When a cluster empties out entirely (all its buttons hidden) that cluster disappears from the
-screen — no empty divider is left behind.
+When every button in a group is hidden under the current state, that group and its divider disappear automatically.
 
-### `action` — what happens when it is pressed
+### Kinds of button `action`
 
-| `kind` | What it does | What goes with it |
+| `kind` | What it does | Extra fields |
 |---|---|---|
-| `'mark'` | goes to the core's mark toggle. **You do not have to write a command** | — |
-| `'command'` | runs one command | `command` · `args?` |
-| `'menu'` | opens a value list as a panel | `command` · `argKey` · `values` |
-| `'grid'` | opens a rows×columns grid (inserting a table) | `command` · `rowsKey` · `colsKey` · `max?` |
-| `'prompt'` | raises input fields and passes what comes back to the command | `command` · `fields` |
-| `'file'` | opens the file picker | `accept?` · `multiple?` |
-| `'host'` | hands off to the host (`mountToolbar`'s `onHost`) | — |
+| `'mark'` | Toggles an inline mark (handled by the core's default logic) | — |
+| `'command'` | Runs the given command | `command`, `args?` |
+| `'menu'` | Shows a dropdown to pick a value | `command`, `argKey`, `values` |
+| `'grid'` | Shows a row×column grid picker for inserting a table | `command`, `rowsKey`, `colsKey`, `max?` |
+| `'prompt'` | Opens an input popup and passes the value to the command | `command`, `fields` |
+| `'file'` | Opens the file picker | `accept?`, `multiple?` |
+| `'host'` | Hands off to the host callback (`onHost` on `mountToolbar`) | — |
 
-Leave `action` out and pressing the button does nothing at all.
+A button with no `action` defined does nothing when clicked.
 
-### `shortcut` and `accelerator`
+### Shortcuts (`shortcut` and `accelerator`)
 
-| | Shape | Rule |
+| Field | Shape | Rule |
 |---|---|---|
-| `shortcut` | `'B'` | **one uppercase latin letter or digit** |
-| `accelerator` | `'mod+b'` | `mod+` followed by **one lowercase letter** |
+| `shortcut` | `'B'` | **One uppercase Latin letter or digit** |
+| `accelerator` | `'mod+b'` | The `mod+` prefix followed by **one lowercase letter** |
 
-Both **die at registration if two wings collide.** One of them never quietly stops working later
-on.
+If two wings declare the same shortcut, initialization throws immediately.
 
-Write a separate `accelerated` and pressing the accelerator does something different — the button
-opens a panel while <kbd>Ctrl</kbd>+key applies the default straight away, for instance.
+Set `accelerated` to branch into a different action only when triggered by the shortcut — a button click can open an options modal, say, while the shortcut applies the default value straight away.
 
-::: warning An accelerator hears only keys raised on **this editor's ground**
-One place listens for accelerators — the toolbar — and how far its ear reaches is drawn by
-`mountToolbar({ surface })`. Only a key raised inside that surface or the toolbar rows belongs to
-this editor. **With two editors on one page you must pass it**: without it the toolbar falls back to
-listening to the whole document, and the two editors eat each other's keys.
-
-Two more thresholds. **The button has to be standing** (meaning that wing is registered and visible
-right now), and **the press has to reach something** before the key is swallowed. A `'host'` action
-counts as reaching something only when `onHost` or the save panel is wired; reaching nothing, the key
-flows on to the browser as its own.
+::: warning Shortcuts only work inside the editor area you told them about
+A shortcut only fires for key presses raised inside the editing surface passed to `mountToolbar({ surface })`. With more than one editor on the same page, you must pass `surface` or the shortcuts from each editor will interfere with each other.
 :::
 
 ---
 
-## How a button looks pressed
+## Rules for showing a button as pressed
 
-There is only one basis for painting a button "on right now".
+Whether a toolbar button paints itself as "currently pressed" depends on the wing's kind (`place`):
 
-| `place` | What it reads |
+| `place` | What decides it |
 |---|---|
-| `'mark'` | is that mark at the caret |
-| `'attr'` | the `currentValue` of the paragraph the caret stands in |
-| `'container'`·`'void'` | is the caret inside or on that lump |
-| `'tool'` | **always off** |
+| `'mark'` | Whether that inline mark applies at the current cursor position |
+| `'attr'` | Whether the current paragraph node's `currentValue` matches the button's `value` |
+| `'container'` · `'void'` | Whether the cursor is inside or on that block object |
+| `'tool'` | Always stays unpressed |
 
-A wing with several values (alignment, headings) writes a `value` on each button, and only the
-button matching what the wing's `currentValue` answered gets painted.
+For a wing with several values (heading, alignment), only the button whose `value` matches the string `currentValue` returns gets painted as pressed.
 
 ```ts
 currentValue: (node) => {
@@ -108,33 +88,21 @@ currentValue: (node) => {
 }
 ```
 
-**`currentValue` answers a string** — even a numeric value goes back through `String()`.
-`undefined` means "this node holds no value of mine".
+---
+
+## Rules for buttons hiding themselves
+
+The editor core automatically disables or hides toolbar buttons wherever formatting cannot apply:
+
+- **In places where formatting is restricted** (inside a code block, say), inline marks and other block-creating buttons hide automatically.
+- On the wrapper paragraph of a block object (an image, a table), paragraph attributes such as heading hide — except **text alignment (`a`), which stays as the exception** for aligning the object itself.
+- A wing whose button isn't in the parent container's `allows` list hides automatically.
 
 ---
 
-## Buttons hide themselves where they cannot stand
+## The dynamic context toolbar (`context`)
 
-| `place` | When it hides |
-|---|---|
-| `'mark'` | in a place where only text lives (inside a code box, say), when it owns that place |
-| `'attr'` | when the caret is on a wrapper paragraph holding a lump. **Alignment (`a`) is the one exception** |
-| `'void'`·`'container'` | in a place where only text lives, or when the current container's `allows` will not take it |
-| `'tool'` | never hides |
-
-Alignment is the exception for the reason you saw earlier — a lump's alignment is held not by the
-lump but by the wrapper paragraph around it. You have to be able to press "center" while standing
-on a picture.
-
-Write `allows` and **the toolbar follows on its own.** The table button vanishing inside a code
-box is not a separately written rule; it falls out of that one field.
-
----
-
-## The context toolbar
-
-The row that only appears for whatever the caret is touching right now. Click a picture and the
-size control is there; put the caret in a link and the address box is there.
+A secondary toolbar that offers controls specific to whatever the cursor is currently on — a size slider when you click an image, a URL field when you click a link, row/column buttons when the cursor sits inside a table.
 
 ```ts
 context: {
@@ -146,7 +114,7 @@ context: {
       label: { en: 'Tone' },
       command: 'setNoteTone',
       argKey: 'value',
-      attr: 't',                                    // the attribute slot to read the current value from
+      attr: 't',                                    // the node attribute key to read the current value from
       values: [
         { value: 'info', label: { en: 'Info' } },
         { value: 'warn', label: { en: 'Warning' } },
@@ -156,75 +124,41 @@ context: {
 }
 ```
 
-### When it appears
+### Kinds of context toolbar control (`ContextControl`)
 
-**Everything the caret touches** opens its own row.
-
-- the containers on the caret's path (innermost first, outermost last)
-- the aimed lump (a picture selected while on its wrapper paragraph, say)
-- the **marks** at the caret — unlike toolbar buttons, marks do get a context row
-- a **paragraph attribute** wing whose value the caret's paragraph is holding
-
-Put the caret in a link inside a table and the link row and the table row appear together.
-
-### The seven kinds of `ContextControl`
-
-| `kind` | What | What goes with it |
+| `kind` | Shape | Main fields |
 |---|---|---|
-| `'button'` | one press, one command | `command` · `args?` |
-| `'toggle'` | two states, on and off | `command` · `token` |
-| `'select'` | one out of a list | `command` · `argKey` · `values` · `attr?` |
-| `'range'` | sliding a scale (resizing) | `command` · `argKey` · `values` · `rest?` · `readout?` |
-| `'text'` | a single text field (a link address) | `command` · `argKey` · `initial?` · `placeholder?` · `validate?` |
-| `'prompt'` | several fields as a panel | `command` · `fields` |
-| `'lightbox'` | view it large | `src` · `alt?` |
+| `'button'` | A plain button click | `command`, `args?` |
+| `'toggle'` | An on/off switch | `command`, `token` |
+| `'select'` | A dropdown | `command`, `argKey`, `values`, `attr?` |
+| `'range'` | A slider (resizing, say) | `command`, `argKey`, `values`, `rest?`, `readout?` |
+| `'text'` | A text field (a link URL, say) | `command`, `argKey`, `initial?`, `placeholder?`, `validate?` |
+| `'prompt'` | A popup with several fields | `command`, `fields` |
+| `'lightbox'` | An enlarged image popup | `src`, `alt?` |
 
-All seven share `name` (required) · `label?` · `svg?` · `tip?` · `visible?`.
-
-`visible: (node) => boolean` is the door for **hiding a control within the same wing** — showing
-"unmerge" only on cells that are already merged, for instance.
-
-Write `attr` and the current value is read straight out of that attribute slot for painting.
-`'toggle'` uses `token` to compare against the string `currentValue` answered.
+Every control shares `name` (required), `label?`, `svg?`, `tip?`, and `visible?`. A `visible(node)` function lets you show a control only under certain conditions — an "unmerge" button that only appears on an already-merged cell, for instance.
 
 ---
 
-## `styles` — the CSS a wing carries
+## A wing's own CSS (`styles`)
+
+A wing can carry whatever CSS it needs, built in.
 
 ```ts
 styles: `
-.nabi-content aside[data-nabi-note] {
-  border-inline-start: 3px solid var(--nabi-accent);
-  padding: .6rem .9rem;
-  background: color-mix(in srgb, var(--nabi-accent) 8%, transparent);
-}
+  .nabi-content aside[data-nabi-note] {
+    border-left: 3px solid var(--nabi-accent);
+    padding: 0.5rem 1rem;
+    margin: 1rem 0;
+  }
 `
 ```
 
-Four rules.
-
-- **Narrow everything under `.nabi-content`.** It must not bleed into the rest of the host page.
-- **Write type sizes in `rem` or `em`.**
-- **Tell dark apart by the `.dark` class only.** Do it with a media query and the editor alone
-  goes dark on a host that has chosen light.
-- **Measure wide and narrow with a container query.** The yardstick is the width of the place the
-  editor sits in, not the width of the screen.
-
-If you want only what you registered, gather and inject the sheets yourself.
-
-```ts
-import { collectSheets, injectSheets } from 'nabi-note'
-
-const detach = injectSheets(document, collectSheets(registry))
-```
-
-A sheet with the same text is loaded **once** — several wings can share the same CSS and only one
-copy lands in the document. The answer is a teardown function, and it removes **only what this
-call newly added**.
+`collectSheets(registry)` and `injectSheets(document, sheets)` let you inject only the registered wings' styles into the document dynamically, and the same style string is never injected twice.
 
 ---
 
-## Asking the person
+## Wiring up dialogs with the person (`ask`)
 
 ```ts
 const { nabi, registry } = createNabiWith(wings, {
@@ -235,50 +169,22 @@ const { nabi, registry } = createNabiWith(wings, {
 })
 ```
 
-`confirm` takes a `boolean` or a `Promise<boolean>` — plug in the browser's own `confirm`, or
-raise a panel of your own and answer later.
+- `message`: shows a plain notice (`(text: string) => void`)
+- `confirm`: an OK/cancel choice (`(text: string) => boolean | Promise<boolean>`)
+- `choose`: a multi-option choice (`(question: string, options: ChooseOption[]) => number | Promise<number>`)
 
-A third slot, `choose`, is **one out of several** — this door opens when a paste has two or more
-candidates.
+A `ChooseOption` is shaped `{ label: string, icon?: string }`, and the return value is the chosen option's 0-based index (`-1` on cancel).
 
-```ts
-choose: (question, options) => user_callback(question, options),   // the answer is an index
-```
-
-The list it receives is an array of `ChooseOption`, which has two fields.
-
-| | |
-|---|---|
-| `label` | the name that stands in that slot |
-| `icon?` | the **inside** of a 16×16 svg (a few paths). The panel puts the shell on, and **without it the name stands alone** |
-
-The answer is **an index** — `0` is the top one, and `-1` (or anything out of range) is a cancel, in
-which case nothing is pasted. Both `number` and `Promise<number>` are accepted.
-
-::: warning Left out, `confirm` answers "no" and `choose` answers the top one
-Supply no `ask` and a silent default goes in. `message` goes nowhere and `confirm` answers
-`false`. The reasoning is that **an ask-then-delete quietly not working** is better than it
-quietly happening. Local history's "really delete this?" goes through this door.
-
-`choose` alone runs the other way — its default is **0 (the top one)**. Answering cancel here would
-make the paste vanish entirely, and the first candidate in the list is always "the most likely
-reading", so with nobody to ask that is the right answer. And `choose` usually needs no plugging in
-at all — as the toolbar stands, it hangs its own panel onto the core.
-:::
-
-::: tip Commands cannot ask
-A command is a pure function; it knows nothing of the screen or of time. Ask outside the command
-and call the command **once the answer is in**. Inside a wing, the place for that is `attach`,
-where you reach it through `host.nabi.$ask`.
+::: warning What happens with no `ask` handler
+Leave out an `ask` handler and `confirm` defaults to `false` (cancel) for safety. Leave out `choose` and the first candidate (index `0`) is chosen by default — UI such as the paste-format picker binds its own core-built panel automatically once `mountToolbar` is mounted, so most setups never need to implement `choose` themselves.
 :::
 
 ---
 
 ## Next
 
-- [Writing an inline mark](../custom/inline) · [Blocks and paragraph attributes](../custom/block) ·
-  [Keys, input rules, paste](../custom/input)
-- [Theming and CSS variables](../../style/custom) — the variable names the sheets expect
+- [Writing an inline mark](../custom/inline) · [Blocks and paragraph attributes](../custom/block) · [Keys, input rules, and paste](../custom/input)
+- [Custom styling](../../style/custom) — the CSS variables and theming guide
 
 <script setup lang="ts">
 import { useTranslate } from '../../../.vitepress/src/langs.ts'

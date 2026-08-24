@@ -8,16 +8,12 @@ title: Souligné
 
 `underlineWing` est propriétaire (par `claim`) de `<u>`.
 
-- La seule balise acceptée est `<u>`. À la sortie aussi, c'est toujours `<u>`, et aucun attribut
-  ne survit. **`<ins>` n'est pas accepté** — son enveloppe est retirée et seul le texte reste. Ce
-  n'est pas une marque qui accepte un partenaire, contrairement au gras (`<b>`/`<strong>`) ou au
-  barré (`<s>`/`<strike>`/`<del>`).
-- Le raccourci en mode indice est `U`, l'accélérateur est `Ctrl`/`⌘`+`U` (`mod+u`).
-- L'appuyer avec du texte sélectionné est un bascule.
-- Laissez-la non enregistrée et `<u>` perd son enveloppe et retombe en texte brut.
-- Le souligné et le lien peuvent se ressembler à l'écran, mais ce sont des marques distinctes
-  possédées par des wings différentes (`a`) — les deux peuvent se poser sur le même texte à la
-  fois.
+- Reconnaît `<u>` en entrée, et ressort toujours en `<u>` standard.
+- Prend en charge le mode indice (appuyer deux fois sur Shift, puis `U`) et l'accélérateur
+  (`Ctrl`/`⌘`+`U`).
+- L'exécuter avec du texte sélectionné agit comme un bascule.
+- Le souligné et le lien (`<a>`) peuvent se ressembler à l'écran, mais ce sont des wings
+  indépendants — le même texte peut porter à la fois un soulignement et un lien.
 
 ## Exemple d'utilisation
 

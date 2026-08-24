@@ -6,37 +6,20 @@ title: Limpar formatação
 
 ## Descrição
 
-`clearFormatWing` é uma **constante pronta.** Basta colocá-la no array — não há opção para
-passar.
+`clearFormatWing` é um wing de ferramenta (`place: 'tool'`) que remove a formatação aplicada e volta o texto para texto puro.
 
-Como `place: 'tool'`, ele não constrói seu próprio nó no documento. É só um comando
-(`clearFormat`) e um botão na barra de ferramentas.
+- **O que remove**: 11 marks inline (`b`, `i`, `u`, `s`, `sub`, `sup`, `hl`, `tc`, `fs`, `tf`, `a`) e 3 atributos de parágrafo (`h` título, `a` alinhamento, `dc` capitular).
+- **Com um trecho selecionado**, todos os marks inline e atributos de parágrafo daquele trecho são removidos de uma vez.
+- **Com só o cursor**, remove uma camada por vez, começando pelo mark mais interno na posição do cursor — quando não resta mais mark, os atributos de parágrafo são reiniciados.
+- **Links de anexo (`data-nabi-file`) são protegidos** — diferente de um link web comum, um link de anexo de arquivo é excluído da limpeza, então a informação do arquivo sobrevive.
+- **O alinhamento do parágrafo wrapper de um objeto de bloco** (imagem, tabela etc.) **é mantido.**
 
-- **A lista do que se remove está fixada no núcleo.** Onze marks inline (`b`, `i`, `u`, `s`,
-  `sub`, `sup`, `hl`, `tc`, `fs`, `tf`, `a`) e três atributos de parágrafo (`h` título, `a`
-  alinhamento, `dc` capitular). O host não precisa administrar lista nenhuma, e o mark de um
-  wing feito por você **não é removido aqui.**
-- **Selecionar um trecho e pressionar** remove de uma vez os marks daquele intervalo e os
-  atributos dos parágrafos atravessados.
-- **Com só o cursor, remove uma camada por vez** — a partir do lugar onde o cursor está, o
-  **mark mais interno** primeiro, só pelo trecho em que aquele mark continua. Sem mark para
-  remover, aí sim os atributos de parágrafo saem.
-- **Links de anexo nunca são removidos** — um link (`a`) com o atributo `file` é inviolável em
-  qualquer lugar. Tirar a casca deixaria o anexo como texto puro morto.
-- **O alinhamento do parágrafo que carrega um bloco permanece.** Num parágrafo wrapper que
-  carrega imagem ou tabela, só o alinhamento (`a`) não é removido — isso impede que a imagem
-  salte para a esquerda ao tentar limpar a formatação.
-- Sem nada para remover, o comando responde `null`. Nenhum ponto de desfazer se acumula.
+## Duas batidas em <kbd>Esc</kbd>
 
-## <kbd>Esc</kbd> duas vezes
+Além do botão da barra de ferramentas, **apertar <kbd>Esc</kbd> duas vezes em até 350ms** dispara o comando de limpar formatação imediatamente.
 
-Além do botão da barra de ferramentas há **um caminho pelo teclado** — apertar <kbd>Esc</kbd> duas vezes seguidas. Nem uma dica de uma letra nem um acelerador `⌘` conseguiam conter esse gesto, então ele foi para a declaração de toque duplo (`doubleKeys`).
-
-- **Faz exatamente o que pressionar o botão faz.** Com um intervalo selecionado, aquele trecho; **com só um cursor**, uma camada naquele ponto — o comando já sabe o que remover, então o lado da tecla não se ramifica no estado do cursor.
-- **Dispara no segundo toque, exatamente.** Quatro toques ainda são um disparo, e se mais de 350ms passam entre dois toques a contagem recomeça. Repeats do segurar a tecla (`repeat`) e toques durante composição IME não são contados.
-- **Sua prioridade é a mais baixa.** Toma sua vez só depois que todo outro trabalho que <kbd>Esc</kbd> tinha (desfazer uma armação, escapar de um mark) passou — aperte <kbd>Esc</kbd> no meio de um marca-texto e o primeiro toque arma a fuga de mark, e o segundo ainda leva tudo o caminho até limpar formatação.
-- **Há só cinco lugares onde não funciona** — um painel aberto, um scrim, tela cheia, os badges de dica, e um travamento de upload.
-- A dica do botão diz — **"Limpar formatação (Esc Esc)"**, o mesmo padrão que os badges de Shift.
+- Com seleção de texto ou só com o cursor, remove a formatação em etapas, exatamente como pressionar o botão da barra de ferramentas.
+- A prioridade do <kbd>Esc</kbd> é tratada como a mais baixa — mesmo que o primeiro toque tenha armado uma fuga de mark, o segundo toque ainda dispara corretamente a limpeza de formatação.
 
 ## Exemplo de uso
 
@@ -46,7 +29,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// a lista de wings monta junto o conhecimento de tipos, os comandos e os montadores — isso é o `registry`
 const { nabi, registry } = createNabiWith([clearFormatWing])
 
 mountSurface({ nabi, registry, root: surface })

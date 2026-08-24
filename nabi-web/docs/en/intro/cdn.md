@@ -1,6 +1,6 @@
 ---
 title: Using it from a CDN
-description: CDN example
+description: How to use NABI NOTE directly with HTML tags, with no build tooling at all.
 ---
 
 # Using it from a CDN
@@ -9,170 +9,129 @@ description: CDN example
 
 ---
 
-## What did you just do
+## How it's put together
 
-The file above runs without you reading any of this. Look here only when you want to change it.
+The demo above runs from a single HTML file, with no bundler or build step involved.
 
-### Two tags are the whole install
+### Two tags to wire it up
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@latest/dist/nabi.css">
 <script src="https://cdn.jsdelivr.net/npm/nabi-note@latest"></script>
 ```
 
-**Everything** the package exports hangs on the one global `NabiNote`. **You hang the sheet
-yourself** — the mounts inject no CSS, so leave the `<link>` out and the editor stands there bare.
+Everything the package exports hangs off the global `NabiNote` (or its short alias `N`). **You have to link the stylesheet yourself** — the mount functions never inject CSS, so drop the `<link>` tag and the editor shows up with no styling at all.
 
-### The skeleton
+### HTML structure
 
 ```html
-<div id="app" class="nabi">                    <!-- the root where colors, corners and fonts live -->
-  <div id="chrome" class="nabi-toolbar">        <!-- the toolbar and the context row stick as one lump -->
+<div id="app" class="nabi">                    <!-- root: color theme, corner radius, font -->
+  <div id="chrome" class="nabi-toolbar">        <!-- fixed header wrapping the toolbar and context bar -->
     <div class="nabi-toolbar-row">
-      <span id="tools"></span>                 <!-- preview and full screen (far right) -->
+      <span id="tools"></span>                 <!-- preview / fullscreen buttons (right-aligned) -->
       <div id="toolbar"></div>
     </div>
-    <div id="context"></div>                   <!-- fills itself in according to what the caret points at -->
+    <div id="context"></div>                   <!-- context bar, appears dynamically at the caret -->
   </div>
   <div id="editor" class="nabi-content" contenteditable="true"></div>
 </div>
 ```
 
-The `id`s can be any name you like — what you hand a mount is the **element**, not the name. Leave
-the four classes (`nabi`, `nabi-toolbar`, `nabi-toolbar-row`, `nabi-content`) as they are; they are
-the handles the sheet grabs. If you are not going to use preview and full screen, delete the
-`<span id="tools">` and the `mountViewTools` line together. The container can be handed over as is
-either way — `mountViewTools` raises its own box that floats to the far right, so handing it the
-toolbar itself does not throw the button row out of shape.
+The `id` on each element is up to you — a mount function takes the actual DOM element, not an id string. The four class names (`nabi`, `nabi-toolbar`, `nabi-toolbar-row`, `nabi-content`) are required hooks the stylesheet relies on, so leave them as they are. If you don't need preview/fullscreen, drop the `<span id="tools">` element and the `mountViewTools` call together — `mountViewTools` builds its own button area inside whatever container you hand it.
 
 ### Picking wings
 
-Picking wings is one builder line. The file above starts from the twenty-six that run with no
-wiring, adds save and open on top, then narrows the typeface down to two.
+You assemble wings with a builder chain. The example above starts from the 26 basic wings — the ones that work with no host integration — adds save/open on top, and narrows the typeface picker to two choices.
 
 ```js
 var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
-- `all()` starts you off from every official wing. **Skip it and you start with nothing** — only
-  what `use()` adds gets loaded.
-- `allBasic()` takes only the ones among those that **run as they are, with no wiring** (twenty-six).
-  The three left out are upload, save and open — they come alive only once the host supplies a server
-  to upload to or a file store, so standing them by default would hand the reader a button that does
-  nothing when pressed. That is why the example above adds save and open back with `use()`.
-- `use('name', options?)` adds one. Call it on a wing already in and it just stacks the options —
-  the `use('tf', { values: [...] })` above is that shape. If the wing needs another wing to stand
-  on (upload needs either image or link), that one is quietly pulled in too.
-- `drop('name')` removes one already in. Try to drop a wing that another one stands on and it
-  throws right there, naming what to drop along with it.
-- The name is the short key that gets written into the stored value — `b` (bold), `tf` (typeface),
-  `upload`, and so on. See the full list with `console.log(N.wingNames())`.
-- **A wrong call throws on the line that made it.** A misspelled name, an option key it does not
-  know, a value outside the enum — all of them, and the thrown message carries the fix —
-  `use('bod')` answers "did you mean 'b' (bold)?" There is no spot where a mistake is quietly
-  ignored.
+- `all()` turns on every official wing. Skip it and none of the default wings load — only what you name with `use()` gets registered.
+- `allBasic()` picks the **26 official wings that work with no extra host integration.** Upload, save, and open are left out because they need something the host has to supply — a server endpoint or a file store — which is why the example above adds them back explicitly with `use()`.
+- `use('name', options?)` adds a wing. Call it again on a wing that's already registered and it just updates the options (as `use('tf', { values: [...] })` does above). If a wing depends on another (upload needs either the image or the link wing), that dependency is pulled in automatically.
+- `drop('name')` removes a wing from the list. Try to drop one that another wing depends on and it throws, naming the wings you'd have to drop along with it.
+- A wing's name is the short, unique key (`w`) stored in the nabi-tree — `b` (bold), `tf` (typeface), `upload`, and so on. See the full list with `console.log(N.wingNames())`.
+- **A bad name or option throws right away.** A typo, an unsupported option key, a value outside the valid range — any of these raise an error that tells you how to fix it.
 
-`createNabiWith` takes a builder as it is, so there is no need to call `build()` — that only
-matters where an array is required. When you are hand-picking just a few, an array is still the
-answer.
+`createNabiWith` accepts a builder instance directly, so there's no need to call `build()` yourself. You can also hand it wings as a plain array:
 
 ```js
 var wings = [N.boldWing, N.italicWing, N.headingWing, N.bulletListWing]
 ```
 
-A wing you built yourself goes in as an object — like `N.wings().all().use(customWing)`. Its `w`
-has to start with `ex` (`exNote`) — if it later collides with an official name in the stored
-value, an already-saved document would read as something else. How to build one is at
-[{{ t('menu_wing_custom') }}](../wing/custom).
+A custom wing you wrote yourself is passed in as an object (`N.wings().all().use(customWing)`). Give its `w` identifier an `ex` prefix (e.g. `exNote`) to avoid colliding with an official wing's identifier. See [{{ t('menu_wing_custom') }}](../wing/custom) for how to build one.
 
-The wings one by one are in [{{ t('menu_wing') }}](../wing/inline/bold).
+Full specs for every wing live under [{{ t('menu_wing') }}](../wing/inline/bold).
 
-### Asking and notifying
+### Dialogs and notifications
 
-The file above wires `ask` to the browser's `alert`/`confirm` — a question like "There is unsaved
-work. Open anyway?" goes to that box. Skip it and the answer to any question is "no", and a
-one-liner that needs no answer surfaces in the toast tray the core carries under the toolbar — an
-upload error, say, has nowhere else it needs wiring. More detail is at
-[{{ t('menu_intro_usage') }}](./usage).
+The example above wires the `ask` option to the browser's built-in `alert` and `confirm` — so a prompt like "You have unsaved changes. Continue anyway?" shows up as a native browser popup.
 
-`ask` also carries **`choose`, for picking one out of several.** The paste panel, though, **stands
-without being plugged in** — as the toolbar goes up it hangs its own panel onto the core (the same
-grain as the toast box), so a page that stands a toolbar, like the file above, gets the panel for
-free. Plug `ask.choose` in only when you want to swap in a panel of your own.
+Skip `ask` and confirmation dialogs default to cancel (`false`), while plain notices fall back to the core's built-in toast UI, shown under the toolbar. See [{{ t('menu_intro_usage') }}](./usage) for details.
 
-### Getting the value out
+`ask` also takes a `choose` handler for picking among several options. That said, **the format picker shown on clipboard paste works out of the box, with no setup at all** — the core wires its own popup UI to it automatically once `mountToolbar` is mounted, so any page using the toolbar gets the picker for free. Only pass `ask.choose` if you want to swap in a modal of your own.
 
-| | |
+### I/O methods
+
+| Method | Description |
 |---|---|
-| `nabi.getHtml()` | the HTML you save and publish |
-| `nabi.getJson()` | the nabi-tree (JSON) |
-| `nabi.setHtml(html)` · `nabi.setJson(json)` | putting it back in |
-| `nabi.onChange(fn)` | every time the value changes |
-| `N.renderStoredHtml(json, registry)` | a stored value to HTML with no editor stood up (see [The reading side](#the-reading-side) below) |
+| `nabi.getHtml()` | returns HTML for saving/publishing |
+| `nabi.getJson()` | returns the nabi-tree (JSON) data |
+| `nabi.setHtml(html)` · `nabi.setJson(json)` | replaces the document with new data |
+| `nabi.onChange(fn)` | registers a listener for document changes |
+| `N.renderStoredHtml(json, registry)` | turns a nabi-tree into HTML with no editor involved (see [Read-only viewer](#read-only-viewer-viewer) below) |
 
 ---
 
-## Addresses
+## CDN addresses
 
-To pin the version, hang the version number on the address. unpkg gives you the same file.
+To pin a specific version, include the version number in the CDN URL. Both jsDelivr and unpkg are supported.
 
-**Do not use the address with no version on it (`/npm/nabi-note`)** — jsDelivr caches that spot for
-a long time, and the bundle and the sheet can end up mixed from two different versions.
+An unversioned URL (`/npm/nabi-note`) can end up with the script and the CSS out of sync due to CDN caching, so pin a version or use the `@latest` tag explicitly.
 
-| | Address |
+| Type | Address |
 |---|---|
-| **bundle (latest)** | `https://cdn.jsdelivr.net/npm/nabi-note@latest` |
-| **bundle (pinned)** | <code>{{ CDN_BUNDLE }}</code> |
-| **sheet (latest)** | `https://cdn.jsdelivr.net/npm/nabi-note@latest/dist/nabi.css` |
-| **sheet (pinned)** | <code>{{ CDN_SHEET }}</code> |
-| **bundle** (unpkg) | `https://unpkg.com/nabi-note` |
+| **Bundle (latest)** | `https://cdn.jsdelivr.net/npm/nabi-note@latest` |
+| **Bundle (pinned)** | <code>{{ CDN_BUNDLE }}</code> |
+| **Stylesheet (latest)** | `https://cdn.jsdelivr.net/npm/nabi-note@latest/dist/nabi.css` |
+| **Stylesheet (pinned)** | <code>{{ CDN_SHEET }}</code> |
+| **Bundle (unpkg)** | `https://unpkg.com/nabi-note` |
 
-The bundle ships inside the npm release itself, so **the CDN is not a separate release.**
+The CDN bundle is identical to the `dist/` build shipped inside the npm package.
 
 ---
 
-## The reading side
+## Read-only viewer (Viewer)
 
-A page that only **shows** saved HTML stands no editor up. Hang the same sheet, put the value
-inside a `.nabi-content`, and it comes out exactly as it looked in the editor.
+A page that only **displays** a saved HTML document doesn't need an editor instance at all. Link the same stylesheet and render the HTML inside a `.nabi-content` container, and it looks exactly as it did in the editor.
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@latest/dist/nabi.css">
 
 <div class="nabi-content">
-  <!-- the value you stored with getHtml() -->
+  <!-- HTML string saved via nabi.getHtml() -->
 </div>
 ```
 
-If what you stored is **not HTML but a nabi-tree (JSON)**, it renders right there with no editor
-stood up. What it takes is the stored value and the registered wing list, both.
+If you saved the document as a **nabi-tree (JSON)** instead, call the render function to turn it into HTML with plain JavaScript — no editor required. It takes the saved JSON data and the registered wing list (`registry`) as arguments.
 
 ```html
 <script>
   var registry = N.makeRegistry(N.wings().all().build())
 
-  var saved = [{ w: 'p', ch: ['One line of comment'] }]   // a nabi-tree received from the server
+  var saved = [{ w: 'p', ch: ['a line of comment'] }]   // nabi-tree loaded from the server
   document.querySelector('.nabi-content').innerHTML = N.renderStoredHtml(saved, registry)
 </script>
 ```
 
-Anything that is not a nabi-tree gets `null` back, and a value that passes does not differ from
-the editor's own `getHtml()` by a single character — the same spot filters XSS too. This door
-touches no DOM, so it runs the same way on a server (Node.js), which opens the same door onto
-**rendering HTML on the server ahead of time and sending it down** (see
-[{{ t('menu_intro_ssr') }}](./ssr#rendering-just-the-stored-value-without-standing-an-editor-up)).
+Anything that isn't a valid nabi-tree comes back as `null`, and what passes is identical, character for character, to what an editor instance's `getHtml()` produces — the same XSS filtering applies. Since it touches no DOM, it runs the same way on a server (Node.js, etc.) too (see [{{ t('menu_intro_ssr') }}](./ssr)).
 
-A server pulling the package through npm uses **`nabi-note/ssr`**, not the global bundle — it is
-the entry point that carries only what rendering needs, so it loads no editing surface and no
-screen tools.
+In a server environment that pulls in the npm package, use the lightweight **`nabi-note/ssr`** module instead of the global bundle — it carries only the rendering logic, so the editing surface and UI code never end up in the server bundle.
 
-The one sheet file holds **the CSS of every wing** — the file cannot know which wings you
-registered, so it carries all of them.
+The stylesheet **carries the styles for every wing.**
 
-What you see is entirely the sheet's doing, but **sorting a table and coloring code is work the
-reading side has to do in JavaScript** — clicking a header to reorder rows, or slicing code text
-into colored tokens, is something CSS cannot do. Wire the reading-side runtime with one door if
-you want it.
+Basic formatting comes entirely from CSS, but **sorting tables and highlighting code syntax both need client-side JavaScript.** Wire up the lightweight viewer runtime if you want column-header sorting or tokenized, colorized code:
 
 ```html
 <script type="module">
@@ -182,29 +141,22 @@ you want it.
 </script>
 ```
 
-- Skip it and the document still shows up fine — a table with sorting turned on just does not
-  sort, and code stays one color.
-- Table sorting only attaches to a table where sorting was turned on in the editor (it leaves a
-  `data-nabi-sortable` marker behind).
-- Code coloring is answered by a built-in tokenizer, so it needs no dependency. To use a
-  highlighter such as Shiki, wire it in as a hook — `{ locale: 'en', highlight }` — and that
-  weight belongs to whichever page wired it in.
-- The global `NabiNote` bundle has no such door — `nabi-note/viewer` lives on its own so a reading
-  page never loads the whole editor. A host pulling the package through npm wires the same door
-  onto the preview too, as in
-  [{{ t('menu_intro_usage') }}](./usage#hanging-reading-side-runtime-on-the-preview).
+- The document still displays fine without the viewer wired in — you only lose table sorting and code coloring.
+- Table sorting only kicks in for a table where sorting was turned on in the editor (marked with a `data-nabi-sortable` attribute).
+- Code highlighting ships with a built-in tokenizer, so it needs no external dependency. To use an outside highlighter such as Shiki, pass it in through the `{ locale: 'en', highlight }` option.
+- The global `NabiNote` bundle carries no viewer entry point — it ships on its own as `nabi-note/viewer` to keep read-only pages lean.
 
 ---
 
-## Next
+## Next up
 
-- [{{ t('menu_intro_usage') }}](./usage) — the npm way: assembly, inputs and outputs in full
-- [{{ t('menu_wing_custom') }}](../wing/custom) — build a format that does not exist yet
+- [{{ t('menu_intro_usage') }}](./usage) — installing via npm and the full editor API
+- [{{ t('menu_wing_custom') }}](../wing/custom) — building a custom formatting wing of your own
 
 <script setup lang="ts">
 import CdnDemo from '../../.vitepress/ui/CdnDemo.vue'
 import { useTranslate } from '../../.vitepress/src/langs.ts'
-// The version number is never written by hand — it is read straight from nabi-npm's package.json
+// the version number is read dynamically from the package version
 import { CDN_BUNDLE, CDN_SHEET } from '../../.vitepress/src/version.ts'
 
 const { t } = useTranslate()

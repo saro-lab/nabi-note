@@ -6,13 +6,12 @@ title: 下划线
 
 ## 说明
 
-`underlineWing` 是 `<u>` 的归属者（claim）。
+`underlineWing` 是处理下划线格式(`<u>`)的行内标记翅膀。
 
-- 进来时 `<u>` 和 `<ins>` 都认，出去时永远是 `<u>`。属性一个都不留。
-- 提示模式的快捷键是 `U`。
-- 选中文字后按下去是切换。
-- 下划线和链接在画面上样子可能重合，但它们是由不同的 wing（`a`）归属的两个独立
-  标记 —— 同一段文字上可以同时挂着两者。
+- 进来时认得 `<u>` 标签，出去时也总是转换为标准 `<u>` 标签。
+- 支持提示模式(连按两次 Shift 再按 `U`)和加速键(`Ctrl`/`⌘`+`U`)。
+- 选中文字后执行时以切换方式工作。
+- 下划线和链接(`<a>`)在画面上看起来可能相似,但它们是各自独立的翅膀,同一段文字可以同时挂着下划线和链接。
 
 ## 使用示例
 
@@ -22,7 +21,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// 翅膀清单把种类知识、命令、装配器一起搭起来 —— 这就是 `registry`
 const { nabi, registry } = createNabiWith([underlineWing])
 
 mountSurface({ nabi, registry, root: surface })

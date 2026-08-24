@@ -186,19 +186,24 @@ Buscando el `[data-key]` más cercano al elemento pulsado y pasándolo a
 
 ## Pegado y HTML inicial
 
-Pegar, `setHtml()` y cargar un valor guardado llegan por vías distintas. El pegado pasa por un filtro y un panel de candidatos antes de `claim`, mientras que `setHtml()` y el HTML inicial siguen directamente al análisis sin panel. Lo único que el wing tiene que hacer aquí es `claim` — está descrito en [el `claim` del documento de marca en línea](./inline#claim).
+Pegar, `setHtml()` y cargar el HTML inicial pasan por el mismo pipeline de análisis y
+normalización. Lo único que el wing tiene que hacer en esa puerta es `claim` — está
+descrito en [el `claim` del documento de marca en línea](./inline#claim).
 
 ```
-Pegar     → filtro → panel de candidatos → análisis ┐
-                                                      ├→ claim del wing → correspondencia de etiquetas básicas del núcleo → repair → cocoon → documento
-setHtml   ────────────────────────────────────────── análisis ┤
-                                                      │
-HTML inicial ───────────────────────────────────────→ análisis ┘
+pegar        ─→ filtro de E/S ─→ panel de candidatos (solo con dos o más) ─┐
+setHtml      ──────────────────────────────────────────────────────────────┼→ análisis HTML → claim de los wings → correspondencia de etiquetas básicas del núcleo → repair → cocoon → documento
+HTML inicial ──────────────────────────────────────────────────────────────┘
 ```
 
-Sin `claim`, **esa etiqueta se despoja y solo queda el texto de dentro.** Gracias a esta
-regla, un marcado desconocido copiado de otro editor no se clava tal cual en el
-documento.
+- **`setHtml()` y la carga del HTML inicial no pasan por el panel** — van directo al
+  pipeline de análisis.
+- Al pegar desde el portapapeles, el panel de selección de formato solo aparece si hay
+  dos o más candidatos; el análisis real (`claim`) se ejecuta después de que la persona
+  elige un formato.
+- Una etiqueta externa sin `claim` definido en ningún wing se despoja de forma segura y
+  solo se conserva el texto de dentro. Gracias a esta regla, un marcado desconocido
+  copiado de otro editor no se clava tal cual en el documento.
 
 La vía de entrada por JSON (`setJson()`) no trata etiquetas sino nodos, así que el
 guardián no es `claim` sino `repair`.
@@ -208,6 +213,7 @@ guardián no es `claim` sino `repair`.
 ## Próximos documentos
 
 - [UI y comportamiento](../custom/ui) — botones de barra de herramientas y barra contextual
+- [Filtro de E/S](../custom#enchufar-un-filtro-de-e-s) — punto de extensión para pegar, guardar y abrir
 - [Marca en línea](../custom/inline) · [Bloque y atributo de párrafo](../custom/block)
 
 <script setup lang="ts">

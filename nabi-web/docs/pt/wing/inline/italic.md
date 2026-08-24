@@ -6,16 +6,11 @@ title: Itálico
 
 ## Descrição
 
-`italicWing` é o dono (claim) de `<i>`. Use-o em palavras estrangeiras ou em
-citações — texto que precisa de outra textura.
+O `italicWing` é o wing de marca em linha que trata a formatação em itálico (`<i>`). Use-o para destacar o tom do texto — ênfase, uma palavra estrangeira, e assim por diante.
 
-- Na entrada, `<i>` e `<em>` são aceitos juntos; na saída, tudo se recolhe a um
-  `<i>` só. Nenhum atributo sobrevive.
-- O atalho no modo de dicas (dois toques em Shift) é `I` — capturado pela tecla
-  física (`KeyI`), então funciona também em teclados não latinos. O acelerador é
-  `Ctrl`/`⌘`+`I` (`mod+i`).
-- Pressionar com o texto selecionado é uma alternância.
-- Se você não registrar o wing, `<i>` perde a casca e cai como texto puro.
+- Na entrada, reconhece tanto `<i>` quanto `<em>`; na saída, sempre produz a tag padrão `<i>`.
+- Compatível com o modo de dicas (Shift duas vezes, depois `I`) e o atalho `Ctrl`/`⌘`+`I`.
+- Aplicado com o texto selecionado, funciona como alternância.
 
 ## Exemplo de uso
 
@@ -25,7 +20,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// a lista de wings monta junto o conhecimento de tipos, os comandos e o montador — isso é o `registry`
 const { nabi, registry } = createNabiWith([italicWing])
 
 mountSurface({ nabi, registry, root: surface })

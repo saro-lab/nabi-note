@@ -94,8 +94,6 @@ claim: (el, inner) => (el.tag === 'kbd' ? [{ w: 'kbd', ch: inner(false) }] : nul
 | `inner(block)` | Reads the inside. For a mark `false` (a place for characters), for a block `true` |
 | Answer | An array of nodes, or **`null`** (not mine → on to the next wing) |
 
-Wings are asked in array order and **the first to put its hand up** takes it.
-
 There are two places to answer `null` — when it is not my tag, and **when it is my tag but the
 value is off the list.** Answering `inner(false)` in the second case strips the shell alone and
 keeps the text alive.
@@ -133,16 +131,9 @@ Two things `valueMark` lays on for you:
 
 - **`currentValue`** — the value where the caret now sits. The toolbar and the context toolbar
   paint which slot is on from this answer.
-- **`repair`** — re-checks the value at the JSON door. Off the list or missing, it answers
-  `null` and **strips the node, shell and all.** A stored value edited by hand is caught right
-  here.
-
-::: tip A command that changes the value
-There is no public helper yet for a value mark's "set it to this value" command. The
-`action: { kind: 'mark' }` that toggles from a toolbar button alone works as shown, and when
-you need value picking, reach for the four built-in value marks (highlight, text colour, font
-size, typeface) or spread their declarations.
-:::
+- **`repair`** — re-checks at the JSON door whether the value is still on the list. Off the
+  list, and it **normalizes the node automatically.** A stored value edited by hand is caught
+  right here.
 
 ---
 
@@ -162,10 +153,6 @@ Type one character and the arming is spent and gone.
 <kbd>Ctrl</kbd>(caret)  →  Escape  →  typing "+"  →  <kbd>Ctrl</kbd>+
 ```
 
-Several wings may claim the same key — the arming only takes hold while the caret really is
-inside that mark, so of the marks overlapping there, only the matching ones come off together.
-<kbd>Escape</kbd> also serves to **undo** an arming that is already in place.
-
 ::: tip Tapping <kbd>Esc</kbd> twice carries past that
 The double-tap count runs **regardless of whether the branch before it consumed the key.** So even
 when the first <kbd>Esc</kbd> undid an arming or armed a mark escape, the second <kbd>Esc</kbd>
@@ -178,14 +165,9 @@ each other.
 
 ## Marks cannot own keys
 
-Write `onKey` and **it never reaches a mark.** A caret position is `{ path, offset }`, and the
-end of `path` is **the holder carrying the characters** — a mark is an inline node inside that
-holder, so it never appears on the path at all. The core walks up this path to decide who owns
-a key, so it never meets a mark.
-
-The reason is overlap. Press <kbd>Enter</kbd> inside a link inside an italic inside a bold and
-there is no way to say which of the three owns it. The one door a mark has onto keys is
-`escapeKeys`.
+Write `onKey` and **it never reaches a mark.** Ownership of a keyboard event belongs to the
+block container up the caret's path (a paragraph, a quote, a table, and the like) — a mark is
+an inline node nested inside text, so it can never hold sole keyboard ownership.
 
 ---
 

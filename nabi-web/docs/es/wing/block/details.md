@@ -6,29 +6,24 @@ title: Bloque plegable
 
 ## Descripción
 
-`detailsWing` (id `details`, atajo `D`) posee la caja plegable (`<details>` +
-`<summary>`). La línea de resumen se trae junto con él mediante `parts`, así que no se
-registra aparte — no es un arreglo, es un registro.
+`detailsWing` (id `details`, atajo `D`) gestiona el bloque plegable tipo acordeón (`<details>` +
+`<summary>`). La línea de resumen (`<summary>`) viene incorporada mediante el atributo `parts`,
+así que no hace falta registrarla por separado.
 
 ```ts
 parts: { summary: { holds: 'inline' } }
 ```
 
-Al pulsar el botón, los bloques que abarque el cursor quedan envueltos en una nueva
-caja plegable, con una línea de resumen vacía al frente. Si pulsa Enter en la línea de
-resumen, pasa al contenido (la línea de resumen en sí no se parte).
+Al pulsar el botón de la barra de herramientas, los bloques que toca el cursor quedan envueltos en
+un bloque plegable, con una línea de resumen vacía creada en la parte superior. Si pulsa Enter en
+la línea de resumen, pasa al área de contenido del cuerpo (dentro de la línea de resumen un salto
+de línea nunca la divide).
 
-**El editor dibuja siempre la forma que se va a guardar.** Una caja guardada plegada
-también se ve plegada en el editor, y al pulsar el triángulo se pliega o despliega ahí
-mismo — esa pulsación cambia directamente el valor guardado (`o`). Si el cursor estaba
-dentro al plegarla, sale fuera de la caja.
-
-::: tip No hay barra contextual
-Antes había dos botones: **Guardar abierto** y **Guardar plegado**. En la época en que
-la pantalla siempre se dibujaba desplegada, esa era la única forma de decir con cuál de
-las dos se iba a guardar. Ahora que la pantalla dibuja exactamente el valor guardado y
-el triángulo lo cambia, decir lo mismo dos veces sobraba, así que se retiró.
-:::
+**La pantalla de edición también se dibuja exactamente como quedará guardado.** Un bloque guardado
+plegado (sin `open`) se carga plegado también en el editor, y al hacer clic en el icono de flecha
+de la izquierda se puede desplegar o plegar en cualquier momento (ese clic cambia de inmediato el
+atributo `o` del nabi-tree). Si el cursor estaba dentro del cuerpo al plegar el bloque, se mueve de
+forma segura fuera de él.
 
 ## Ejemplo de uso
 

@@ -114,9 +114,10 @@ nabi.redo()
 
 ## कोड की परतें
 
-यह **निर्भरता की दिशा** है — नीचे से ऊपर की ओर। नियम एक ही है — **नीचे की परत ऊपर की परत को नहीं जानती।** इसलिए नीचे की
-परतें (`style`, `locale`, `code`, `schema`, `doc`, `html`) DOM नहीं छूती, और यही वजह है कि यह सर्वर पर भी ज्यों का
-त्यों चलता है। मान किस रास्ते आता-जाता है यह ऊपर के nabi-tree डायग्राम में है।
+नीचे की बनावट डेटा के चलने का क्रम नहीं है — यह `src/` फ़ोल्डर में बनी **चौदह परतें**
+दिखाती है। मूल नियम एक ही है — **नीचे की परत ऊपर की परत को कभी नहीं जानती।** इसलिए नीचे की
+परतें (`schema`, `doc`, `html` वग़ैरह) DOM को बिलकुल नहीं छूती, और सर्वर पर (Node.js) भी
+बिना बदले वैसे ही चलती हैं।
 
 ```
 src/
@@ -180,7 +181,6 @@ src/
 
 <script setup lang="ts">
 import FlowHub from '../.vitepress/ui/FlowHub.vue'
-import LayerStack from '../.vitepress/ui/LayerStack.vue'
 import { useTranslate } from '../.vitepress/src/langs.ts'
 
 const { t } = useTranslate()

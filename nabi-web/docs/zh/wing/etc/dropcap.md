@@ -6,17 +6,13 @@ title: 首字下沉
 
 ## 说明
 
-`dropCapWing` 是往段落上挂 `data-nabi-dropcap="1"` 的单值段落属性。不会造出
-新的块,只在已有的段落上添一个标记。
+`dropCapWing` 是把段落首字放大装饰显示的段落属性翅膀(`data-nabi-dropcap="1"`)。
 
-- 值只有开和关一种——再按一次按钮,属性就掉下来。
-- **没有决定包住几行的选项,也没有变量。** 核心样式表里一条 `::first-letter`
-  规则把大小定死了——`font-size: 5.9em; line-height: .83`。实际会盖住几行,
-  由那个段落的行高决定。
-- 碰到的只有开头那一个字,所以 Enter 把这个属性当标记来处理——把段落一分
-  为二,它不会复制到两边,而是跟着那个字走。
+- 以开/关单一切换的方式工作。
+- 首字的大小由核心样式表中的一条 `::first-letter` 规则固定渲染(`font-size: 5.9em; line-height: .83`)。
+- 用 Enter 分割段落时,首字属性不会被复制,只保留在原来的首字上。
 
-想改大小就覆盖那条规则。
+想改大小,可以覆盖下面这条 CSS 规则:
 
 ```css
 .nabi-content [data-nabi-dropcap="1"]::first-letter { font-size: 4.6em; line-height: .86; }

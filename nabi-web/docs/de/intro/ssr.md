@@ -1,20 +1,18 @@
 ---
 title: SSR-Unterstützung
-description: Gespeicherte Werte serverseitig vorab zeichnen und Editor sowie Werkzeugleiste per hydrate übernehmen.
+description: Gespeicherte Dokumente serverseitig vorab rendern und Editor sowie Werkzeugleiste per Hydration sofort übernehmen.
 ---
 
-# SSR-Unterstützung
+# SSR (Server-Side Rendering) Unterstützung
 
-## Nur den gespeicherten Wert zeichnen — ohne einen Editor aufzustellen
+## Gespeicherte Dokumente rendern (nur lesende Ansichten)
 
-Ein Ort, der nur anzeigt — etwa eine Kommentarliste — **braucht keinen Editor.** Um ein Dokument zu
-zeichnen, ist einzig die Liste der registrierten Flügel (`registry`) nötig, und dafür gibt es einen
-eigenen Zugang, der nur das entgegennimmt.
+Ein Bildschirm, der ein Dokument nur **anzeigt** — etwa eine Kommentarliste oder eine Beitragsansicht —, braucht keine Editor-Instanz. Um ein Dokument zu HTML zu rendern, reicht die Liste der registrierten Flügel (`registry`), dafür gibt es eine eigene, serverseitige Render-Funktion.
 
 ```ts
 import { makeRegistry, defaultWings, renderStoredHtml, renderStoredEditorHtml } from 'nabi-note/ssr'
 
-// einmal, wenn der Server startet — beliebig viele gespeicherte Werte teilen sich diese eine
+// Einmal beim Serverstart erzeugen und über mehrere Anfragen hinweg wiederverwenden.
 const registry = makeRegistry(defaultWings)
 
 const saved = [{ w: 'p', ch: ['Ein Kommentar'] }]   // Nabi-Baum, aus der Datenbank gelesen
@@ -23,52 +21,35 @@ renderStoredHtml(saved, registry)        // '<p>Ein Kommentar</p>'
 renderStoredEditorHtml(saved, registry)  // '<p data-key="n0">Ein Kommentar</p>'
 ```
 
-**`nabi-note/ssr` ist der Einstiegspunkt, der nur das zum Zeichnen Nötige trägt.** Er rührt keine
-einzige Datei von Editier-Oberfläche (`surface`) oder Bildschirmwerkzeugen (`ui`) an (ein Netz
-erzwingt das), sodass sich kein DOM-Code in das Server-Bündel mischt. Denselben Zugang gibt es auch
-unter `nabi-note` — eine Seite, die den Editor ohnehin schon lädt, kann einfach den nehmen.
+**`nabi-note/ssr` ist ein leichtgewichtiger Einstiegspunkt, der nur die zum Rendern nötige Kernlogik enthält.** Er referenziert weder die Editierfläche (`surface`) noch die Bildschirm-UI-Werkzeuge (`ui`), und Architektur-Unit-Tests stellen sicher, dass kein DOM-Code in das Server-Bündel gelangt. Lädt Ihre Umgebung bereits das vollständige Editor-Bündel, stehen dieselben Funktionen auch über das Paket `nabi-note` zur Verfügung.
 
-| | |
+| Funktion | Beschreibung |
 |---|---|
-| `renderStoredHtml(json, registry, options?)` | das HTML, das Sie speichern und veröffentlichen — derselbe Wert wie `getHtml()` |
-| `renderStoredEditorHtml(json, registry, options?)` | das Editor-HTML — derselbe Wert wie `getEditorHtml()` (trägt `data-key`) |
+| `renderStoredHtml(json, registry, options?)` | HTML zum Speichern und Veröffentlichen — derselbe Wert wie `getHtml()` des Editors |
+| `renderStoredEditorHtml(json, registry, options?)` | HTML zum Initialisieren des Editors — derselbe Wert wie `getEditorHtml()` (trägt `data-key`) |
 
-- **Beide brauchen kein DOM** — sie laufen unverändert auf dem Server.
-- **Ist es kein Nabi-Baum, ist die Antwort `null`** — die Ablehnungsregel ist dieselbe wie bei
-  `setJson()` (das ganze Dokument muss ein Array sein). Sie werfen nicht — auch ein Wert, der beim
-  Lesen eine Ausnahme auslöst, wird zu `null` und über `console.error` gemeldet.
-- **Unterscheidet sich um kein einziges Zeichen von dem, was der Editor liefert.** Beide durchlaufen
-  denselben Weg (Normalisierung → Zusammenbau), also ist auch die Stelle, an der XSS herausgefiltert
-  wird, exakt dieselbe — die anzeigende Seite wird nie weniger gründlich gewaschen.
-- `options` ist ein einziges Feld, `{ allowLocalUrls }` — dieselbe Bedeutung wie die gleichnamige
-  Option von `createNabiWith`.
+- **Verwendet überhaupt keine DOM-API.** Läuft direkt in Serverumgebungen wie Node.js.
+- **Gibt `null` zurück, wenn es kein gültiger Nabi-Baum ist.** Die Validierungsregeln sind dieselben wie bei `setJson()`. Ungültige Eingaben werfen nie eine Ausnahme — die Funktion gibt `null` zurück und protokolliert die Ursache über `console.error`.
+- **Entspricht exakt dem, was die Editor-Instanz erzeugt.** Beide durchlaufen dieselbe Normalisierungs- und Zusammenbau-Pipeline, daher wird XSS-Filterung identisch angewendet.
+- Der Parameter `options` unterstützt `{ allowLocalUrls?: boolean }` — dieselbe Rolle wie die gleichnamige Option von `createNabiWith`.
 
-**Derselbe gespeicherte Wert erhält immer denselben `data-key`.** Zeichnet der Server den Editor
-darum mit `renderStoredEditorHtml` vorab und übernimmt ihn der Browser mit `hydrate`, wird der
-Bildschirm nicht neu gezeichnet.
+**Dieselben Nabi-Baum-Daten erzeugen immer denselben `data-key`.** Deshalb können Sie mit `renderStoredEditorHtml` das initiale Editor-HTML serverseitig vorab rendern, an den Client senden und dort mit der Option `hydrate: true` mounten — der Editor aktiviert sich sofort, ohne erneutes Rendern oder Flackern.
 
 ```ts
 mountSurface({ nabi, registry, root: surface, hydrate: true })
 ```
 
-Weichen sie voneinander ab, wird an Ort und Stelle neu gezeichnet — Server und Client müssen also
-nur dieselbe Flügelliste teilen.
+Weichen Server- und Client-Rendering zufällig voneinander ab, fällt der Client automatisch auf ein normales Rendering zurück — es reicht also, dass Server und Client dieselbe Flügelliste (`registry`) verwenden.
 
-::: tip Genau so macht es diese Website mit ihrer eigenen Startseite
-Das Dokument der Startseiten-Demo wird **beim Build mit `renderStoredEditorHtml` vorab gezeichnet**
-und in die Seite eingebettet, und der Editor erwacht darauf mit `hydrate`. So lässt sich der Text
-schon lesen, bevor der Editor-Code überhaupt angekommen ist — es gibt keine Phase, in der eine leere
-Stelle plötzlich gefüllt wird.
+::: tip Die Startseite dieser Website läuft genau so, über SSR-Hydration
+Das Dokument der Startseiten-Demo wird **zur Build-Zeit mit `renderStoredEditorHtml` vorab gerendert** und im HTML eingebettet; sobald das Client-Skript geladen ist, weckt `hydrate` den Editor darauf. Deshalb ist der Fließtext sofort sichtbar, noch bevor JS geladen ist — es entsteht kein Layout-Sprung (CLS).
 :::
 
 ---
 
-## Auch die Werkzeugleiste lässt sich vorab zeichnen
+## Werkzeugleiste vorab rendern
 
-Die Reihe der Schaltflächen **sieht sich das Dokument nicht an.** Sie hängt nur von der Liste der
-registrierten Flügel, den Bezeichnungen und der Gruppenreihenfolge ab, und deshalb ist der
-ausgegebene Text eine **Konstante** — Sie rufen sie einmal, wenn der Server startet, und verwenden
-diesen Text danach weiter. Es gibt nichts, das Sie bei jeder Anfrage erneut aufrufen müssten.
+Der Aufbau der Werkzeugleiste **hängt nicht vom Dokumentinhalt ab.** Er entsteht allein aus der Liste der registrierten Flügel, der Anzeigesprache (Locale) und der Gruppenreihenfolge — das Ergebnis ist also deterministisch. Einmal beim Serverstart rendern, cachen und über mehrere Anfragen hinweg wiederverwenden.
 
 ```ts
 import { makeRegistry, defaultWings, renderToolbarHtml } from 'nabi-note/ssr'
@@ -79,39 +60,21 @@ const toolbarHtml = renderToolbarHtml({ registry, locale: 'de' })
 // '<div class="nabi-group" data-group="font">…</div>'
 ```
 
-Schicken Sie diesen Text unverändert in den Werkzeugleisten-Kasten hinein, zeichnet ihn der Browser
-mit **derselben Funktion**, die `mountToolbar` dafür verwendet. Steht bereits dieselbe Zeile,
-**zeichnet es nicht neu, sondern verdrahtet nur.**
+Betten Sie diesen HTML-String in den Werkzeugleisten-Container ein und senden Sie ihn zum Client — `mountToolbar` erkennt im Browser das vorhandene Markup und **bindet nur die Event-Listener, ohne neu zu rendern.**
 
 ```ts
 mountToolbar({ nabi, registry, surface, root: toolbar })
 ```
 
-::: warning Geben Sie dem Kasten von Anfang an `class="nabi-toolbar-row"` mit
-Schicken Sie eine vorab gezeichnete Zeile hinaus, muss diese Klasse **von der allerersten Zeichnung
-an** vorhanden sein. Fehlt sie, hängt der Kern sie beim Mounten selbst an — dann kommen die
-seitlichen Abstände erst in diesem Moment hinzu, und **die Zeile der Schaltflächen rutscht einmal
-seitlich.** Trägt der Host sie schon vorher ein, rührt der Kern sie nicht an (er entfernt nur das,
-was er selbst angeheftet hat).
-
-```html
-<div class="nabi-toolbar-row">vorab gezeichnete Zeile</div>
-```
+::: warning Setzen Sie `class="nabi-toolbar-row"` selbst auf den Container
+Wenn Sie eine vorab gerenderte Werkzeugleiste ausliefern, muss die Zeile von Anfang an `class="nabi-toolbar-row"` tragen. Fehlt sie, wird die Klasse erst beim Mounten hinzugefügt — und das damit verbundene Padding kommt erst in diesem Moment hinzu, wodurch **die Button-Zeile sichtbar verrutscht.**
 :::
 
-- **Ein Abweichen bricht nichts** — steht dort eine Zeile, die nicht mehr zur aktuellen Flügelliste
-  passt, wird an Ort und Stelle neu gezeichnet. Verloren geht nur der vorab gezeichnete Wert, der
-  Bildschirm ist immer korrekt.
-- **Die vorab gezeichnete Zeile steht im Zustand „nichts gedrückt, nichts versteckt".** Ob gedrückt
-  (`aria-pressed`) oder versteckt, entscheidet der Caret, und den kennt der Server nicht. Ist Ihre
-  Konstellation so gebaut, dass Schaltflächen je nach Caret verschwinden, können nach dem Mounten
-  einige davon verschwinden und die Zeile sich neu zusammenziehen.
-- **Setzen Sie das nur dort ein, wo Sie einen Editor aufstellen.** Eine nur lesende Seite hat keine
-  Werkzeugleiste, also gibt es keinen Grund, diesen Text entgegenzunehmen.
+- **Sicher auch bei abweichender Struktur.** Weicht das gelieferte HTML von der aktuellen Flügelliste ab, rendert der Client sofort neu — nichts bleibt kaputt.
+- **Eine vorab gerenderte Werkzeugleiste startet im Standardzustand** (nichts gedrückt, nichts versteckt). Gedrückt-Zustand (`aria-pressed`) und kontextabhängige Sichtbarkeit hängen von der Caret-Position ab und synchronisieren sich automatisch, sobald der Client mountet.
+- **Nur auf Bildschirmen mit Editor einsetzen.** Eine reine Leseseite braucht keine Werkzeugleiste.
 
-**Die beiden Schaltflächen Vorschau und Vollbild gehen denselben Weg.** Die beiden sind kein Flügel,
-sondern Teile der Überlagerung, und stecken deshalb nicht im obigen Werkzeugleisten-Text — sie
-werden separat gezeichnet und in den Kasten gesetzt, den `mountViewTools` aufstellt.
+**Vorschau- und Vollbild-Button lassen sich genauso vorab rendern.** Da es sich um View-Tool-Komponenten und nicht um Flügel handelt, werden sie separat mit `renderViewToolsHtml` gerendert.
 
 ```ts
 import { renderViewToolsHtml } from 'nabi-note/ssr'
@@ -120,19 +83,16 @@ renderViewToolsHtml({ locale: 'de' })
 // '<span class="nabi-tools">…</span>'
 ```
 
-::: tip Genau so macht es diese Website mit ihrer eigenen Startseite
-Die Werkzeugleiste der Startseiten-Demo wird **beim Build mit `renderToolbarHtml` und
-`renderViewToolsHtml` vorab gezeichnet** und eingebettet, und `mountToolbar` sowie `mountViewTools`
-erkennen diese Zeile und verdrahten nur. Es gibt also keine Phase, in der fünfunddreißig Icons erst
-mit Verzögerung eintrudeln.
+::: tip Auch die Werkzeugleiste der Startseiten-Demo ist vorab gerendert
+Die Werkzeugleiste der Startseiten-Demo wird **zur Build-Zeit mit `renderToolbarHtml` und `renderViewToolsHtml` vorab gerendert**, und `mountToolbar`/`mountViewTools` erkennen diese Zeile und verdrahten nur. Deshalb poppen nie Dutzende Werkzeugleisten-Icons verspätet auf.
 :::
 
 ---
 
-## Weiterführende Seiten
+## Weiter lesen
 
-- [{{ t('menu_intro_usage') }}](./usage) — der npm-Weg, Zusammenbau, Ein- und Ausgabe im Ganzen
-- [{{ t('menu_intro_cdn') }}](./cdn) — ohne Build-Werkzeug, mit einem einzigen `<script>`
+- [{{ t('menu_intro_usage') }}](./usage) — npm-Installation und die vollständige Nutzung des Editors
+- [{{ t('menu_intro_cdn') }}](./cdn) — mit einem einzigen `<script>`-Tag, ohne Build-Tool
 
 <script setup lang="ts">
 import { useTranslate } from '../../.vitepress/src/langs.ts'

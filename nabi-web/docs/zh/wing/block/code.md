@@ -6,18 +6,13 @@ title: 代码
 
 ## 说明
 
-`codeWing`（名字 `code`）是拥有代码块（`<pre>`）的**常量**——不带括号调用。
+`codeWing`(标识 `code`)是处理代码块(`<pre><code>`)的不可变翅膀对象。
 
-它是 `holds: 'inline'` 的容器，里面由 `repair` 强制压成纯文本——标记或别的
-翅膀都插不进来。这不是契约里另外开的一个字段，而是这只翅膀自己收拾自己的
-内容。
+它是 `holds: 'inline'` 的容器,里面的文本在 `repair` 阶段会被规整为纯文本,不会嵌套别的行内标记或块。
 
-在空行里敲 ` ``` ` 再按空格或 Enter，就成了代码块——像 ` ```ts ` 那样在后面
-接上语言，那门语言也会一起被认出来。用 `Tab`/`Shift+Tab` 给行加减缩进（选中
-多行就一起来）。Enter 会承接上一行的缩进。
+在空行敲 ` ``` ` 再按空格或 Enter,就会变成代码块——像 ` ```ts ` 那样在后面接上语言,那门语言也会一并被识别。用 `Tab`/`Shift+Tab` 给代码行加缩进或减缩进,选中多行时一并生效。按 Enter 会自动延续上一行的缩进深度。
 
-只有光标在代码里面时上下文工具栏才会出现——一个直接敲语言的输入框、
-"无语言"，还有几个常用语言的格子。
+光标在代码块内时会出现动态上下文工具栏,提供直接输入语言的框、"无语言"按钮,以及常用语言的快捷按钮:
 
 ```
 javascript typescript jsx tsx · python java kotlin swift
@@ -26,56 +21,42 @@ html xml css scss · json yaml toml markdown
 bash powershell dockerfile diff
 ```
 
-这份清单只是**捷径**——不是核心认得的语言清单。这里没有的语言，直接敲进
-第一个框里就行,那个值会原样交给上色器。
+即使是上面列表里没有的语言,也可以直接在输入框里敲上去,输入的值会原样传给语法高亮器。
 
 ## 上色要接到翅膀上
 
-`highlight` 是一个**返回种类而不是颜色的钩子**——形状是 `(源码, 语言) =>
-{text, type?}[]`，`type` 固定是 `keyword`·`string`·`number`·`comment`·
-`function`·`class`·`variable`·`operator`·`punctuation`·`tag`·`attribute`·
-`literal`·`regexp`·`meta` 这十四个里的一个（`CODE_TOKEN_TYPES`）。
+`highlight` 是一个接收源码和语言、返回令牌数组的钩子函数:`(source, lang) => { text: string, type?: string }[]`。
 
-颜色由核心样式表直接用 `[data-nabi-token="…"]` 选择器定死——**只有五个种类
-有颜色**（`comment`·`string`·`keyword`·`number`·`literal`）。其余种类只挂
-标记、没有颜色规则,就用正文颜色。因为值是写死的颜色而不是 CSS 变量,想用
-别的颜色或深色版本就得自己覆盖那个选择器。
+令牌的 `type` 返回 `CODE_TOKEN_TYPES` 中定义的十四种标准令牌类型之一(`keyword`、`string`、`number`、`comment`、`function`、`class`、`variable`、`operator`、`punctuation`、`tag`、`attribute`、`literal`、`regexp`、`meta`)。
+
+核心样式表通过 `[data-nabi-token="…"]` 选择器,给五种默认令牌(`comment`、`string`、`keyword`、`number`、`literal`)赋上主题颜色。要用深色模式或自定义颜色,可以覆盖对应的 CSS 选择器。
 
 ```css
 .dark .nabi-content [data-nabi-token="keyword"] { color: #c9a0ff; }
 ```
 
-语法词典本身不在这个包里——Prism、highlight.js、Shiki 这类得自己接上。
-
-上色这一边**接在翅膀上**——不用另外 mount。用 `makeCodeAttach` 造一个
-`attach` 换到代码翅膀上，`mountSurface` 就会把它挂上。这个站点的演示就是
-这样接上 Shiki 的例子（`.vitepress/src/highlight.ts`）。
+要接入 Shiki、Prism 这类外部高亮器时,用 `makeCodeAttach` 来搭建 `attach` 钩子。
 
 ```ts
 import { codeWing, makeCodeAttach } from 'nabi-note'
 
-// 翅膀是常量 —— 只换掉附着的那部分（`attach`）
-const wing = { ...codeWing, attach: makeCodeAttach({ highlight }) }
+const wing = { ...codeWing, attach: makeCodeAttach({ highlight: myHighlighter }) }
 ```
 
-一起给 `version` 的话,**文档没变、但上色那一边变了**的时候会重新上色。
-异步取语法的上色器（Shiki 第一次遇到某门语言时就是这样）正是这种情况——
-语法到了但文档没变，`onChange` 不会响，没有这个就得随便再敲一个字才上得了
-色。
+如果像 Shiki 那样异步加载语法包,可以传入 `version` 选项,在语法加载完成时重新给编辑器画面上色:
 
 ```ts
 let grammarAge = 0
 const wing = {
   ...codeWing,
-  attach: makeCodeAttach({ highlight, version: () => grammarAge }),
+  attach: makeCodeAttach({ highlight: myHighlighter, version: () => grammarAge }),
 }
-// 语法晚到时 —— 把这个数加一就会重新上色
+
+// 异步语言语法加载完成时
 grammarAge += 1
 ```
 
-存下来的值遵照外面的惯例——`<pre data-nabi-lang="ts"><code
-class="language-ts">`，颜色以 `data-nabi-token` 属性的形式出去（不是内联
-`style`）。
+存下来的 HTML 结构遵循标准格式:`<pre data-nabi-lang="ts"><code class="language-ts">`。每个令牌都用 `data-nabi-token` 属性安全地标记。
 
 ## 使用示例
 

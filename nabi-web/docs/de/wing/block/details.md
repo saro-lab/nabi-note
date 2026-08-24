@@ -7,8 +7,7 @@ title: Klappbox
 ## Beschreibung
 
 `detailsWing` (Name `details`, Kürzel `D`) besitzt die Klappbox (`<details>` + `<summary>`). Die
-Zusammenfassungszeile kommt über `parts` mit, wird also nicht separat registriert — ein Datensatz,
-kein Array.
+Zusammenfassungszeile kommt über das `parts`-Attribut mit, muss also nicht separat registriert werden.
 
 ```ts
 parts: { summary: { holds: 'inline' } }
@@ -16,19 +15,12 @@ parts: { summary: { holds: 'inline' } }
 
 Ein Druck auf die Schaltfläche hüllt die vom Caret erfassten Blöcke in eine neue Klappbox, und eine
 leere Zusammenfassungszeile steht ganz vorn. Drücken Sie in der Zusammenfassungszeile Enter, gelangen
-Sie in den Inhalt hinab (die Zusammenfassungszeile selbst wird nicht gespalten).
+Sie in den Inhalt hinab (ein Zeilenumbruch innerhalb der Zusammenfassungszeile spaltet sie nie).
 
-**Der Editor zeichnet genau die Gestalt, die gespeichert wird.** Ein zugeklappt gespeicherter Kasten
-ist auch im Editor zugeklappt, und ein Druck auf das Dreieck klappt ihn an Ort und Stelle auf und zu
-— dieser Druck ändert genau den gespeicherten Wert (`o`). Stand der Caret beim Zuklappen im Inneren,
-tritt er aus dem Kasten heraus.
-
-::: tip Keine Kontextzeile
-Früher gab es zwei Schaltflächen — **Aufgeklappt gespeichert** und **Zugeklappt gespeichert**. In
-den Zeiten, als der Bildschirm immer aufgeklappt zeichnete, war das der einzige Weg zu sagen, in
-welcher Form gespeichert wird. Jetzt zeichnet der Bildschirm genau den gespeicherten Wert, und das
-Dreieck ändert ihn, sodass dies dasselbe zweimal gesagt hätte und entfernt wurde.
-:::
+**Der Bildschirm zeichnet genau die Gestalt, die tatsächlich gespeichert ist.** Ein zugeklappt
+gespeicherter Block (`open` nicht gesetzt) lädt auch im Editor zugeklappt, und ein Klick auf das
+Pfeilsymbol links klappt ihn jederzeit auf oder zu (dieser Klick ändert sofort das `o`-Attribut des
+Nabi-Baums). Stand der Caret beim Zuklappen im Inneren des Blocks, wandert er sicher nach außen.
 
 ## Anwendungsbeispiel
 

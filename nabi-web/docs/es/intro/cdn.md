@@ -1,6 +1,6 @@
 ---
 title: Usar con CDN
-description: Ejemplo de CDN
+description: Cómo usar NABI NOTE solo con etiquetas HTML, sin ninguna herramienta de build.
 ---
 
 # Usar con CDN
@@ -9,177 +9,129 @@ description: Ejemplo de CDN
 
 ---
 
-## Qué se acaba de hacer
+## Estructura básica y cómo funciona
 
-No hace falta leerlo para que el archivo de arriba funcione. Lea esto solo cuando quiera
-modificarlo.
+El ejemplo de arriba funciona con un solo archivo HTML, sin bundler ni herramienta de build.
 
-### Dos etiquetas son la instalación entera
+### Dos etiquetas HTML para integrarlo
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@latest/dist/nabi.css">
 <script src="https://cdn.jsdelivr.net/npm/nabi-note@latest"></script>
 ```
 
-**Todo** lo que exporta el paquete cuelga de un único global, `NabiNote`. **La hoja de
-estilos se conecta a mano** — los `mount*` no inyectan CSS, así que si falta el
-`<link>`, el editor se ve desnudo.
+Todo lo que exporta el paquete queda colgado del objeto global `NabiNote` (o su forma corta `N`). **La hoja de estilos hay que enlazarla a mano.** Las funciones de montaje no inyectan CSS por su cuenta, así que si falta la etiqueta `<link>`, todo se muestra sin ningún estilo aplicado.
 
-### El esqueleto
+### Estructura HTML
 
 ```html
-<div id="app" class="nabi">                    <!-- la raíz donde viven color, bordes y tipografía -->
-  <div id="chrome" class="nabi-toolbar">        <!-- la barra de herramientas y la contextual se pegan juntas -->
+<div id="app" class="nabi">                    <!-- raíz: tema de color, bordes, tipografía -->
+  <div id="chrome" class="nabi-toolbar">        <!-- cabecera fija que envuelve la barra de herramientas y la barra contextual -->
     <div class="nabi-toolbar-row">
-      <span id="tools"></span>                 <!-- vista previa · pantalla completa (extremo derecho) -->
+      <span id="tools"></span>                 <!-- botones de vista previa y pantalla completa (alineados a la derecha) -->
       <div id="toolbar"></div>
     </div>
-    <div id="context"></div>                   <!-- se llena sola según lo que toque el cursor -->
+    <div id="context"></div>                   <!-- barra contextual que aparece dinámicamente según la posición del cursor -->
   </div>
   <div id="editor" class="nabi-content" contenteditable="true"></div>
 </div>
 ```
 
-El `id` puede ser cualquier nombre — lo que se le pasa al `mount` es el **elemento**, no
-el nombre. Las cuatro clases (`nabi`, `nabi-toolbar`, `nabi-toolbar-row`,
-`nabi-content`) son los tiradores que agarra la hoja de estilos, así que déjelas tal
-cual. Si no va a usar vista previa ni pantalla completa, puede borrar juntos el
-`<span id="tools">` y la línea de `mountViewTools`. El recipiente se le puede pasar
-donde sea — `mountViewTools` levanta su propia caja que flota sola al extremo derecho,
-así que pasarle la barra de herramientas tal cual no desordena la fila de botones.
+El `id` de cada elemento se puede elegir libremente. Lo que se le pasa a las funciones de montaje es el objeto DOM real, no una cadena de id. Las cuatro clases (`nabi`, `nabi-toolbar`, `nabi-toolbar-row`, `nabi-content`) son clases obligatorias que usa la hoja de estilos, así que hay que dejarlas tal cual. Si no necesita vista previa ni pantalla completa, puede omitir juntos el elemento `<span id="tools">` y la llamada a `mountViewTools`. `mountViewTools` construye automáticamente su propia zona de botones dentro del contenedor que se le pase.
 
 ### Elegir los wings
 
-Elegir wings es una sola línea con el constructor. El archivo de arriba parte de los
-**veintiséis wings sin cableado**, agrega guardar y abrir, y limita la tipografía a dos.
+Elegir los wings se hace con una sola cadena del constructor. El ejemplo de arriba parte de los 26 wings básicos —los que funcionan sin integración adicional del host—, agrega guardar y abrir, y limita las opciones de tipografía a dos.
 
 ```js
 var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 ```
 
-- `all()` arranca con todos los wings oficiales. **Si no se llama, empieza con las manos
-  vacías** — solo se cargan los que se agregan con `use()`.
-- **`allBasic()`** arranca con solo los wings que corren sin cableado (26). Guardar, abrir y subida necesitan cableado del host, así que faltan.
-- `use('nombre', opciones?)` agrega uno más. Si se llama sobre un wing que ya está,
-  solo le pone las opciones — así es `use('tf', { values: [...] })` de arriba. Si hace
-  falta un wing del que depende (la subida necesita que haya imagen o enlace), se trae
-  en silencio junto con él.
-- `drop('nombre')` quita uno de los que están. Si se intenta quitar uno del que depende
-  otro wing, lanza una excepción ahí mismo y avisa cuál hay que quitar junto con él.
-- El nombre es la clave corta que queda escrita en el valor guardado — como `b`
-  (negrita), `tf` (tipografía), `upload`. La lista completa se ve con
-  `console.log(N.wingNames())`.
-- **Si se llama mal, lanza una excepción en esa misma línea.** Un nombre mal escrito,
-  una clave de opción desconocida, un valor fuera de la lista — todo eso lanza, y el
-  mensaje trae cómo corregirlo — `use('bod')` responde "¿tal vez 'b' (negrita)?". No hay
-  ningún lugar donde se ignore en silencio.
+- `all()` activa todos los wings oficiales. Si no se llama, los wings por defecto no se incluyen — solo se registran los que se declaren explícitamente con `use()`.
+- `allBasic()` selecciona, de entre los wings oficiales, **los 26 que funcionan sin integración adicional de la aplicación anfitriona.** Subida, guardar y abrir quedan fuera porque necesitan algo que el host debe proveer, como un endpoint de servidor o un almacenamiento de archivos — por eso el ejemplo de arriba declara guardar y abrir aparte con `use()`.
+- `use('nombre', opciones?)` agrega un wing en concreto. Si se llama sobre uno ya registrado, solo actualiza sus opciones (por ejemplo, `use('tf', { values: [...] })`). Si un wing depende de otro (la subida necesita el wing de imagen o el de enlace), esa dependencia se registra automáticamente junto con él.
+- `drop('nombre')` quita un wing de la lista registrada. Si se intenta quitar uno del que depende otro wing, lanza una excepción indicando los wings relacionados que habría que quitar junto con él.
+- El nombre del wing es la clave corta y única (`w`) que se guarda en el nabi-tree (por ejemplo, `b` para negrita, `tf` para tipografía, `upload`, etc.). La lista completa se puede consultar con `console.log(N.wingNames())`.
+- **Pasar un nombre u opción incorrectos lanza un error de inmediato.** Errores de tipeo, claves de opción no soportadas, valores fuera del rango válido, etc., generan un mensaje de error que indica cómo corregirlo.
 
-`createNabiWith` recibe el constructor tal cual, así que no hace falta llamar a
-`build()` — `build()` solo entrega un arreglo donde hace falta un arreglo. Cuando se
-eligen solo unos pocos, el arreglo sigue siendo la respuesta.
+`createNabiWith` puede recibir directamente una instancia del constructor, así que no es necesario llamar a `build()` por separado. También se pueden pasar los wings como un array directamente.
 
 ```js
 var wings = [N.boldWing, N.italicWing, N.headingWing, N.bulletListWing]
 ```
 
-Un wing hecho a mano se agrega como objeto — como en `N.wings().all().use(customWing)`.
-El `w` de ese wing debe empezar con `ex` (`exNote`) — porque si coincide con un nombre
-oficial futuro en el valor guardado, un documento ya guardado se leería con otro
-sentido. Cómo construirlo está en
-[{{ t('menu_wing_custom') }}](../wing/custom).
+Un wing personalizado que se haya creado se pasa como objeto (`N.wings().all().use(customWing)`). Se recomienda que el identificador `w` de un wing personalizado empiece con el prefijo `ex` (por ejemplo, `exNote`) para evitar colisiones con los identificadores de los wings oficiales. Para ver cómo construirlo en detalle, consulte [{{ t('menu_wing_custom') }}](../wing/custom).
 
-Cada wing por separado se ve en [{{ t('menu_wing') }}](../wing/inline/bold).
+Las especificaciones detalladas de cada wing se pueden consultar en el menú [{{ t('menu_wing') }}](../wing/inline/bold).
 
-### Preguntar y notificar
+### Diálogos y notificaciones
 
-El archivo de arriba conectó `alert` y `confirm` del navegador con `ask` — una pregunta
-como "hay texto sin guardar, ¿de todos modos quiere abrirlo?" va a esa caja. Si no se
-conecta, la respuesta a la pregunta es "no", y un mensaje que no necesita respuesta lo
-muestra el recipiente de toast que ya trae el núcleo, debajo de la barra de
-herramientas — no hay nada aparte que conectar para avisos como un error de subida. Los
-detalles están en [{{ t('menu_intro_usage') }}](./usage).
+El ejemplo de arriba conecta, mediante la opción `ask`, el `alert` y el `confirm` propios del navegador. Por ejemplo, un mensaje de confirmación como "Hay contenido sin guardar. ¿Desea continuar?" se puede mostrar como un popup nativo del navegador.
 
-- `choose(question, options: ChooseOption[]) → number | Promise<number>` — una pregunta de "elige uno". El panel de guardado se levanta si está conectado el toolbar (no hay que cablearlo por aparte).
+Si no se pasa `ask`, la respuesta por defecto de los cuadros de confirmación se procesa como cancelar (`false`), y los mensajes simples de aviso se muestran automáticamente con la interfaz de toast integrada en el núcleo, debajo de la barra de herramientas. Para más detalles, consulte [{{ t('menu_intro_usage') }}](./usage).
 
-### Sacar el valor
+`ask` también incluye una función `choose` para elegir una opción entre varias. Sin embargo, **el popup de selección de formato al pegar desde el portapapeles funciona por defecto sin ninguna configuración adicional** — al montarse `mountToolbar`, el núcleo conecta automáticamente su propia interfaz de popup, así que cualquier página que use la barra de herramientas obtiene ese popup de selección sin implementación extra. Solo hace falta pasar `ask.choose` si se quiere sustituirlo por una interfaz modal propia.
 
-| | |
+### Métodos de entrada y salida
+
+| Método | Descripción |
 |---|---|
-| `nabi.getHtml()` | el HTML que se guarda o se publica |
-| `nabi.getJson()` | el árbol de nabi (JSON) |
-| `nabi.setHtml(html)` · `nabi.setJson(json)` | para volver a cargarlo |
-| `nabi.onChange(fn)` | cada vez que cambia el valor |
-| `N.renderStoredHtml(json, registry)` | el valor guardado a HTML sin levantar el editor (ver [Lado de solo lectura](#lado-de-solo-lectura) abajo) |
+| `nabi.getHtml()` | devuelve el HTML para guardar y publicar |
+| `nabi.getJson()` | devuelve los datos del árbol de nabi (JSON) |
+| `nabi.setHtml(html)` · `nabi.setJson(json)` | reemplaza el documento con datos nuevos |
+| `nabi.onChange(fn)` | registra un listener para los cambios del documento |
+| `N.renderStoredHtml(json, registry)` | convierte un árbol de nabi en HTML sin usar el editor (ver [Visor de solo lectura](#visor-de-solo-lectura-viewer) más abajo) |
 
 ---
 
-## Direcciones
+## Direcciones de distribución CDN
 
-Para fijar una versión, ponga el número de versión en la dirección. unpkg entrega el
-mismo archivo.
+Para fijar una versión concreta, indique el número de versión en la URL del CDN. Se admiten tanto jsDelivr como unpkg.
 
-**No use la dirección sin versión (`/npm/nabi-note`)** — jsDelivr la cachea por mucho
-tiempo en ese lugar, y el paquete y la hoja de estilos podrían quedar mezclados entre
-versiones distintas.
+Una URL sin versión indicada (`/npm/nabi-note`) puede hacer que el script y el CSS queden en versiones distintas por problemas de caché del CDN, así que se recomienda fijar la versión o usar la etiqueta `@latest`.
 
-| | Dirección |
+| Tipo | Dirección |
 |---|---|
-| **Paquete (última)** | `https://cdn.jsdelivr.net/npm/nabi-note@latest` |
-| **Paquete (fija)** | <code>{{ CDN_BUNDLE }}</code> |
+| **Script empaquetado (última)** | `https://cdn.jsdelivr.net/npm/nabi-note@latest` |
+| **Script empaquetado (versión fija)** | <code>{{ CDN_BUNDLE }}</code> |
 | **Hoja de estilos (última)** | `https://cdn.jsdelivr.net/npm/nabi-note@latest/dist/nabi.css` |
-| **Hoja de estilos (fija)** | <code>{{ CDN_SHEET }}</code> |
-| **Paquete** (unpkg) | `https://unpkg.com/nabi-note` |
+| **Hoja de estilos (versión fija)** | <code>{{ CDN_SHEET }}</code> |
+| **Script empaquetado (unpkg)** | `https://unpkg.com/nabi-note` |
 
-El paquete viaja incluido dentro de lo que se publica en npm, así que **no existe una
-distribución de CDN aparte.**
+El paquete del CDN es idéntico al resultado de build en `dist/` dentro del paquete publicado en npm.
 
 ---
 
-## Lado de solo lectura
+## Visor de solo lectura (Viewer)
 
-Una página que **solo muestra** el HTML guardado no levanta el editor. Con la misma
-hoja de estilos y el valor puesto dentro de `.nabi-content`, sale exactamente igual que
-se veía en el editor.
+En una página que solo **muestra** un documento HTML guardado, no es necesario crear una instancia del editor. Basta con enlazar la misma hoja de estilos y renderizar el HTML dentro de un contenedor `.nabi-content` para obtener el mismo aspecto que tenía en el editor.
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@latest/dist/nabi.css">
 
 <div class="nabi-content">
-  <!-- el valor guardado con getHtml() -->
+  <!-- cadena HTML guardada con nabi.getHtml() -->
 </div>
 ```
 
-Si lo que se guardó **no es HTML sino el árbol de nabi (JSON)**, se dibuja ahí mismo sin
-levantar el editor. Lo que recibe son dos cosas: el valor guardado y la lista de wings
-registrados.
+Si el documento se guardó **en forma de árbol de nabi (JSON)**, se puede llamar a la función de renderizado para convertirlo en HTML con JavaScript puro. Recibe como argumentos los datos JSON guardados y la lista de wings registrados (`registry`).
 
 ```html
 <script>
   var registry = N.makeRegistry(N.wings().all().build())
 
-  var saved = [{ w: 'p', ch: ['una línea de comentario'] }]   // árbol de nabi recibido del servidor
+  var saved = [{ w: 'p', ch: ['una línea de comentario'] }]   // árbol de nabi cargado desde el servidor
   document.querySelector('.nabi-content').innerHTML = N.renderStoredHtml(saved, registry)
 </script>
 ```
 
-Si no es un árbol de nabi responde `null`, y el valor que pasa no difiere ni un
-carácter del `getHtml()` que produce el editor — el filtrado de XSS ocurre en el mismo
-lugar. Esta puerta no usa DOM, así que corre igual en el servidor (Node.js), y por la
-misma puerta se abre **la vía de generar el HTML de antemano en el servidor y
-enviarlo** (vea [{{ t('menu_intro_ssr') }}](./ssr#solo-dibujar-el-valor-guardado-sin-levantar-el-editor)).
+Si no es un árbol de nabi válido, devuelve `null`, y el resultado del renderizado es idéntico, carácter por carácter, al que produce el `getHtml()` de una instancia del editor — se aplican las mismas reglas de filtrado de XSS. Como no depende del DOM, funciona igual en un servidor (Node.js, etc.) (ver [{{ t('menu_intro_ssr') }}](./ssr)).
 
-Un servidor que se conecta por npm usa **`nabi-note/ssr`** en vez del paquete global —
-es el punto de entrada que solo trae lo necesario para dibujar, así que ni la
-superficie de edición ni las herramientas de pantalla se cargan.
+En un entorno de servidor que use el paquete de npm, se usa el módulo ligero **`nabi-note/ssr`** en lugar del bundle global — solo incluye la lógica necesaria para renderizar, así que el área de edición y el código de UI nunca terminan en el bundle del servidor.
 
-Un solo archivo de hoja de estilos **lleva el CSS de todos los wings** — el archivo no
-puede saber qué wings se registraron, así que los incluye todos.
+La hoja de estilos CSS **incluye los estilos de todos los wings.**
 
-Lo que se ve lo cubre por completo la hoja de estilos, pero **ordenar tablas y colorear
-código son tareas que le tocan a JavaScript del lado de lectura** — pulsar un
-encabezado de columna para reordenar filas, o trocear el código y ponerle color, son
-cosas que el CSS no puede hacer. Si hace falta, se conecta el runtime del lado de
-lectura con una sola línea.
+El formato básico se expresa solo con CSS, pero **ordenar tablas y resaltar la sintaxis del código requieren JavaScript del lado del cliente.** Si se necesita ordenar filas al hacer clic en el encabezado de columna, o tokenizar y colorear el código, se puede conectar el runtime ligero del visor.
 
 ```html
 <script type="module">
@@ -189,30 +141,22 @@ lectura con una sola línea.
 </script>
 ```
 
-- Sin conectarlo, el documento se ve perfectamente bien — solo que una tabla con el
-  orden activado no ordena y el código queda en un solo color.
-- El orden de tabla solo se conecta a las tablas que tenían el orden activado en el
-  editor (queda la marca `data-nabi-sortable`).
-- El coloreado de código lo responde el tokenizador integrado, así que no necesita
-  ninguna dependencia. Para usar un resaltador como Shiki, se conecta como gancho —
-  `{ locale: 'es', highlight }` — y ese peso corre por cuenta de la página que lo
-  conecta.
-- El paquete global `NabiNote` no tiene esta puerta — para que una página de lectura no
-  cargue el editor completo, `nabi-note/viewer` vive aparte. Un host que se conecta por
-  npm también conecta la misma puerta en la vista previa, como en
-  [{{ t('menu_intro_usage') }}](./usage#se-conecta-el-runtime-del-lado-de-lectura-a-la-vista-previa).
+- El documento se muestra correctamente incluso sin conectar el visor — solo se pierden el ordenamiento de tablas y el coloreado de código.
+- El ordenamiento de tablas solo funciona en las tablas donde se activó esa opción en el editor (marcadas con el atributo `data-nabi-sortable`).
+- El resaltado de sintaxis de código viene con un tokenizador integrado, sin depender de nada externo. Para usar un resaltador externo como Shiki, se puede pasar mediante la opción `{ locale: 'es', highlight }`.
+- El bundle global `NabiNote` no incluye el punto de entrada del visor — se distribuye por separado como `nabi-note/viewer` para mantener livianas las páginas de solo lectura.
 
 ---
 
 ## Próximos documentos
 
-- [{{ t('menu_intro_usage') }}](./usage) — la vía con npm, ensamblaje, entrada y salida completos
-- [{{ t('menu_wing_custom') }}](../wing/custom) — crear a mano un formato que no existe
+- [{{ t('menu_intro_usage') }}](./usage) — instalación vía npm y el uso detallado del editor
+- [{{ t('menu_wing_custom') }}](../wing/custom) — crear un nuevo wing de formato personalizado
 
 <script setup lang="ts">
 import CdnDemo from '../../.vitepress/ui/CdnDemo.vue'
 import { useTranslate } from '../../.vitepress/src/langs.ts'
-// el número de versión no se escribe a mano — se lee directamente del package.json de nabi-npm
+// el número de versión se referencia dinámicamente desde la versión del paquete
 import { CDN_BUNDLE, CDN_SHEET } from '../../.vitepress/src/version.ts'
 
 const { t } = useTranslate()

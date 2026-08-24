@@ -6,57 +6,35 @@ title: Lista con viñetas
 
 ## Descripción
 
-`bulletListWing` (id `ul`, atajo `L`) es el propietario de `<ul>`. Los elementos se
-traen junto con él mediante `parts`, así que `li` no se registra aparte — no es un
-arreglo, es un registro.
+`bulletListWing` (identificador `ul`, atajo `L`) gestiona las listas no ordenadas (`<ul>`). Los elementos de lista (`<li>`) están incorporados mediante el atributo `parts`, así que no es necesario registrar `li` por separado.
 
 ```ts
 parts: { li: { holds: 'blocks' } }
 ```
 
-Al pulsar el botón, el bloque donde está el cursor (o los bloques que abarque la
-selección) queda envuelto en una lista; al pulsarlo de nuevo se deshace y vuelve a ser
-párrafo. Si pulsa el botón de otra lista, cambia a ese tipo.
+Al hacer clic en el botón de la barra de herramientas, el bloque donde está el cursor (o todos los bloques seleccionados) se convierte en una lista con viñetas; al pulsarlo de nuevo, vuelve a ser un párrafo normal. Al pulsar otro botón de lista (numerada, lista de tareas, etc.) cambia directamente a ese tipo.
 
-Escribir un guion y un espacio (`- `) al principio de una línea da el mismo resultado.
-**No hace falta que la línea esté vacía** — solo se mide el principio de línea antes del
-cursor, así que si escribe el espacio en `- texto`, también se activa y el texto que
-sigue queda dentro del elemento. Pero solo se activa en la **primera línea** del
-párrafo.
+Escribir `- ` (un guion y un espacio) al principio de un párrafo también lo convierte automáticamente en lista. Como solo se comprueba el patrón de caracteres justo antes del cursor, escribir el espacio después de `- texto` también convierte correctamente, y el texto ya escrito se conserva como contenido del elemento de lista (esto solo ocurre en la **primera línea** del párrafo).
 
-- `Tab` sangra un nivel, colocando el elemento bajo el hermano de justo arriba. En el
-  primer elemento no hay dónde meterlo, así que no pasa nada — dentro de una lista,
-  `Tab` no inserta espacios.
-- `Shift+Tab` lo saca al siguiente hermano del padre — si lo saca desde el primer
-  nivel, sale de la lista y se convierte en párrafo. Si tiene una selección que abarca
-  varios elementos, todos se mueven juntos.
-- **Pulsar Enter en un elemento vacío quita la sangría.** Si estaba en el primer nivel,
-  la lista termina ahí y el cursor pasa a un párrafo nuevo debajo. Así es como se
-  termina una lista.
-- **Al pulsar Retroceso al principio de un elemento, se fusiona con el elemento
-  anterior.** Si no hay elemento anterior con el que fusionarse, cae a quitar la
-  sangría. Suprimir al final de un elemento hace lo contrario: trae el elemento
-  siguiente.
-- El interior de un elemento es un bloque, así que lleva un párrafo dentro. Las marcas
-  (negrita, etc.) y los demás wings en línea se usan con normalidad dentro de ese
-  párrafo.
-- Atributos que llevara la etiqueta, como `type`, no sobreviven. Si algo que no es un
-  elemento entra dentro de la lista, no se descarta: se envuelve en un elemento.
-- La lista de tareas comparte la etiqueta (`<ul>`), pero son wings distintos — se
-  separan por un atributo distintivo (si lleva `data-nabi-list="task"`, es una lista de
-  tareas).
+### Atajos y comportamiento de edición
 
-## El anidamiento es marcado real
+- <kbd>Tab</kbd>: sangra el elemento actual un nivel, colocándolo bajo el elemento justo de arriba. En el primer elemento no hay nada bajo lo cual anidarlo, así que no ocurre nada — y dentro de una lista, <kbd>Tab</kbd> nunca inserta un espacio.
+- <kbd>Shift</kbd>+<kbd>Tab</kbd>: quita un nivel de sangría al elemento actual. Si se quita la sangría de un elemento de nivel superior, sale de la lista y se convierte en un párrafo normal. Con varios elementos seleccionados, toda la selección se mueve junta.
+- **Pulsar <kbd>Enter</kbd> en un elemento vacío**: le quita la sangría. Si era un elemento vacío de nivel superior, la lista termina ahí y aparece un nuevo párrafo debajo.
+- **Pulsar <kbd>Retroceso</kbd> al principio de un elemento**: fusiona su contenido con el final del elemento anterior. Si no hay un elemento anterior con el que fusionarse, se le quita la sangría en su lugar. Por el contrario, pulsar <kbd>Suprimir</kbd> al final de un elemento trae el siguiente elemento a la línea actual.
+- Como un elemento (`li`) es un contenedor de bloques, contiene un párrafo (`p`), y cualquier formato en línea — negrita, cursiva y demás — se puede usar libremente dentro de él.
+- Los atributos no estándar de la etiqueta se eliminan durante la normalización, y cualquier cosa que no sea un `li` encontrada dentro de una lista se envuelve automáticamente en un elemento `li` para corregirlo.
+- Las listas de tareas comparten la misma etiqueta `<ul>`, pero ambos wings se distinguen por la presencia del atributo `data-nabi-list="task"`.
 
-La estructura queda tal cual en el valor guardado. Pero, como **el elemento contiene
-bloques y no texto suelto**, el texto lleva un párrafo puesto encima, y una lista
-anidada va dentro de un párrafo envoltorio.
+## Estructura de marcado y anidamiento
+
+La estructura anidada del árbol de Nabi se traslada directamente al HTML. Como un elemento de lista (`li`) contiene bloques y no texto, el texto dentro de un elemento se envuelve en un párrafo `<p>`, y una sublista anidada se coloca de forma segura dentro de un párrafo envoltorio (`<div data-nabi-p>`).
 
 ```html
-<li><p>a</p><div data-nabi-p><ul><li><p>b</p></li></ul></div></li>
+<li><p>Elemento superior</p><div data-nabi-p><ul><li><p>Elemento hijo</p></li></ul></div></li>
 ```
 
-## Ejemplo de uso
+## Uso
 
 ```ts
 import { createNabiWith, mountSurface, mountToolbar, bulletListWing } from 'nabi-note'
@@ -64,7 +42,7 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// la lista de wings construye juntos el conocimiento de tipo, los comandos y el ensamblador — eso es `registry`
+// Construye el registry y la instancia de nabi a partir de la lista de wings registrados.
 const { nabi, registry } = createNabiWith([bulletListWing])
 
 mountSurface({ nabi, registry, root: surface })
@@ -73,7 +51,7 @@ mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement
 // nabi.onChange(() => user_callback(nabi.getHtml()))
 ```
 
-`li` llega solo a través de `parts`, así que no se pone directamente en el arreglo.
+`li` se registra automáticamente a través de `parts`, así que nunca se pasa directamente al arreglo.
 
 ## Demo
 

@@ -10,47 +10,54 @@ NABI NOTE ist ein **quelloffener WYSIWYG-Editor**, der im Browser läuft.
 
 ## Der Nabi-Baum
 
-Verarbeitet man HTML direkt, lässt sich das auf einem Server ohne DOM nicht durchführen. Deshalb
-wird das Dokument als JavaScript-Objekt namens **Nabi-Baum** gehalten und in beide Richtungen —
-JSON und HTML — serialisiert. Beim Übergang zwischen Nabi-Baum und HTML werden zudem XSS-Elemente
-entfernt.
+Verarbeitet man HTML direkt, stößt man auf ein Problem: serverseitig (Node.js und Ähnliches) gibt
+es kein DOM, mit dem sich arbeiten ließe. NABI NOTE verwaltet das Dokument deshalb als reines
+JavaScript-Baumobjekt namens **Nabi-Baum**, das sich in beide Richtungen — zu JSON und zu HTML —
+serialisieren lässt. Beim Übergang zwischen Nabi-Baum und HTML werden zudem böswillige Inhalte,
+die XSS auslösen könnten, automatisch entfernt.
 
-> Alle von NABI NOTE mitgelieferten Flügel filtern XSS. Bei einem `benutzerdefinierten Flügel
-> (externes Plugin)` müssen Sie beim jeweiligen Entwickler nachfragen, ob er das ebenfalls tut.
+> Jeder von NABI NOTE offiziell unterstützte Standard-Flügel übernimmt den XSS-Schutz. Schreiben
+> oder binden Sie jedoch einen `benutzerdefinierten Flügel (ein Drittanbieter-Plugin)` ein, prüfen
+> Sie bei dessen eigenem Autor, ob er dasselbe tut.
 
 <FlowHub :sources="hubSources" :core="hubCore" :targets="hubTargets" caption="" />
 
-## Unterstützung für DOM-loses SSR (serverseitig)
+## Unterstützung für DOM-loses SSR (Server-Side Rendering)
 
-Einen gespeicherten Nabi-Baum können Sie **auf dem Server (Node.js) unverändert einlesen** und
-daraus das zu sendende HTML zusammensetzen. Ein DOM brauchen nur die **Eingabe** (`setHtml()`) und
-die `mount*`-Aufrufe, die sich an den Bildschirm heften.
+Einen in einer Datenbank oder anderswo gespeicherten Nabi-Baum können Sie **unverändert auf dem
+Server (Node.js und Ähnliches) einlesen** und daraus das an den Client gesendete HTML zusammensetzen.
+Eine DOM-API braucht nur die **Eingabe** aus einem externen HTML-String (`setHtml()`) und die
+`mount*`-Funktionen, die den Editor auf den Bildschirm rendern.
 
-Ein Ort, der nur anzeigt, kommt ohne einen aufgebauten Editor aus — ein einziger Aufruf genügt. Er
-nimmt zwei Dinge entgegen, den gespeicherten Wert und die `registry` (die Liste der registrierten
-Flügel), und antwortet mit einer HTML-Zeichenkette.
+Ein Bildschirm, der ein Dokument nur lesend anzeigt, braucht überhaupt keinen aufgebauten Editor —
+rufen Sie die einzige Rendering-Funktion (`renderStoredHtml`) auf. Sie nimmt den gespeicherten
+Nabi-Baum und die `registry` (die Liste der registrierten Flügel) als Argumente und liefert einen
+sicheren HTML-String zurück.
 
-**Auf dem Server binden Sie `nabi-note/ssr` ein** — dieser Einstiegspunkt trägt nur das zum
-Zeichnen Nötige, Editier-Oberfläche und Bildschirmwerkzeuge sind darin überhaupt nicht enthalten.
+**Verwenden Sie im Server-Umfeld den Einstiegspunkt `nabi-note/ssr`** — ein schlankes Modul, das
+nur die für das Rendern nötige Kernlogik enthält, sodass Code für die Editier-Oberfläche (`surface`)
+oder UI-Werkzeuge (`ui`) niemals im Server-Bundle landet.
 
 ```ts
 import { makeRegistry, defaultWings, renderStoredHtml } from 'nabi-note/ssr'
 
-// Die Flügelliste bauen Sie nur einmal auf, wenn der Server startet — beliebig viele gespeicherte Werte teilen sich diese eine.
+// Die Flügelliste einmal beim Serverstart aufbauen und bei jeder weiteren Anfrage wiederverwenden.
 const registry = makeRegistry(defaultWings)
 
-const saved = [{ w: 'p', ch: ['Ein Kommentar'] }]   // Nabi-Baum, aus der Datenbank gelesen
+const saved = [{ w: 'p', ch: ['Ein Kommentar'] }]   // ein Nabi-Baum, aus der Datenbank gelesen
 renderStoredHtml(saved, registry)
 // '<p>Ein Kommentar</p>'
 ```
 
-**Ist es kein Nabi-Baum, antwortet die Funktion mit `null`** — die Ablehnungsregel ist dieselbe wie
-bei `setJson()`. Ein bestandener Wert unterscheidet sich **um kein einziges Zeichen** von dem
-`getHtml()`, das der Editor liefert. Beide durchlaufen denselben Weg (Normalisierung →
-Zusammenbau), weshalb auch die Stelle, an der XSS herausgefiltert wird, exakt dieselbe ist.
+**Alles, was kein gültiger Nabi-Baum ist, erhält `null` zurück** — die Validierungsregel ist
+identisch mit der von `setJson()`. Ein Wert, der die Validierung besteht, **stimmt exakt** mit dem
+Ergebnis von `getHtml()`, aufgerufen auf einer Editor-Instanz, überein — er durchläuft dieselbe
+Normalisierungs-und-Zusammenbau-Pipeline, weshalb die XSS-Filterung auch an derselben Stelle
+angewendet wird.
 
-Um den Editor bereits auf dem Server vorab zu zeichnen, nutzen Sie den passenden Gegenpart — das
-Einzige, was hinzukommt, ist `data-key`.
+Um den eigenen Editier-Bildschirm des Editors auf dem Server vorzurendern (SSR), verwenden Sie die
+Funktion `renderStoredEditorHtml`. Sie erzeugt HTML, dem bei jedem Knoten ein `data-key`-Attribut
+hinzugefügt wurde.
 
 ```ts
 import { renderStoredEditorHtml } from 'nabi-note/ssr'
@@ -59,28 +66,31 @@ renderStoredEditorHtml(saved, registry)
 // '<p data-key="n0">Ein Kommentar</p>'
 ```
 
-Derselbe gespeicherte Wert erhält immer denselben `data-key`. Senden Sie dieses HTML unverändert
-hinunter, und übernimmt es der Browser mit `mountSurface({ nabi, registry, root, hydrate: true })`,
-wird der Bildschirm nicht neu gezeichnet. **Genau so läuft die Startseiten-Demo dieser Website** —
-das Dokument des ersten Bildschirms ist vom Server gezeichnet, und der Editor erwacht darauf.
+Dieselben gespeicherten Daten erzeugen immer denselben `data-key`. Sie können also das auf dem
+Server gerenderte HTML herunterschicken und im Browser mit
+`mountSurface({ nabi, registry, root, hydrate: true })` hydrieren — der Editor übernimmt, ohne den
+Bildschirm neu zu zeichnen. **Genau so läuft auch die Homepage-Demo dieser Website.** Das Dokument
+auf dem ersten Bildschirm wurde vom Server vorgerendert, und auf dem Client aktiviert sich der
+Editor direkt über diesem DOM.
 
-### Drei Einstiegspunkte
+### Paket-Einstiegspunkte
 
 | Einstiegspunkt | Was er enthält | Wann |
 |---|---|---|
-| `nabi-note` | den ganzen Editor — Zusammenbau, Oberfläche, Bildschirmwerkzeuge | dort, wo **geschrieben** wird |
-| `nabi-note/ssr` | nur das Zeichnen eines gespeicherten Werts zu HTML | auf dem Server, oder auf einer nur lesenden Seite |
-| `nabi-note/viewer` | Verhalten der Leseseite (Tabellensortierung, Code-Einfärbung) | dort, wo veröffentlichtes HTML **angezeigt** wird |
+| `nabi-note` | der komplette Editor (Dokumentmodell, Editierbereich, Toolbar und UI-Werkzeuge) | ein Bildschirm zum **Schreiben/Bearbeiten** eines Dokuments |
+| `nabi-note/ssr` | ein schlankes, reines SSR-Modul, das einen Nabi-Baum zu HTML rendert | eine Serverumgebung oder eine nur lesende Seite |
+| `nabi-note/viewer` | Nur-Lese-Verhalten (Tabellenspalten sortieren, Code einfärben usw.) | ein Bildschirm zum **Anzeigen** veröffentlichten HTML |
 
-`nabi-note/ssr` **rührt keine einzige Datei** von Editier-Oberfläche (`surface`) oder
-Bildschirmwerkzeugen (`ui`) an — ein Netz durchkämmt den Quellcode und erzwingt das. Deshalb gibt
-es keinen Weg, wie sich DOM-Code in das Server-Bündel mischen könnte.
+`nabi-note/ssr` **referenziert nie** die Editier-Oberfläche (`surface`) oder UI-Werkzeuge (`ui`).
+Ein Architektur-Unit-Test verifiziert das streng, sodass kein Risiko besteht, dass
+DOM-abhängiger Code ins Server-Bundle rutscht.
 
-## Formatierung ist durchweg ein Flügel
+## Jede Formatierung ist ein Flügel (Wing)
 
-Die Einheit, die andere Editoren „Plugin" nennen, heißt hier **Flügel (wing)**. Was der Kern
-unmittelbar kennt, sind der Absatz (`p`), die Zeile (`br`) und reiner Text; Überschrift, Liste,
-Tabelle und Fett sind allesamt Flügel.
+Was andere Editoren „Plugin" nennen, heißt bei NABI NOTE **Flügel (Wing)**. Der Editor-Kern
+behandelt direkt nur den einfachen Absatz (`p`), den Zeilenumbruch (`br`) und reinen Text — jede
+Formatierung und Erweiterung, von Überschriften und Listen bis zu Tabellen und Fettdruck, wird als
+eigenständiger Flügel bereitgestellt.
 
 ```ts
 import { createNabiWith, parseNodes, boldWing } from 'nabi-note'
@@ -96,8 +106,9 @@ bold.getHtml()
 // '<p><b>fett</b> kursiv</p>'              — nur boldWing ist deklariert, also überlebt nur boldWing und der Rest wird zu reinem Text.
 ```
 
-Nicht als Flügel registriertes Markup wird **zu reinem Text.** Deshalb fällt nicht deklariertes
-HTML heraus, und jeder von NABI offiziell mitgelieferte Flügel entfernt bösartige Skripte.
+Nicht als Flügel registriertes Markup wird **automatisch in reinen Text umgewandelt.** So wird
+jedes nicht deklarierte HTML-Element sicher entfernt, und jeder von NABI NOTE offiziell
+unterstützte Flügel filtert bösartige Skripte gründlich heraus.
 
 
 ## Schnittstelle
@@ -116,11 +127,11 @@ er mit `false` und hinterlässt weder einen Eintrag in der Historie noch eine Ä
 
 ## Die Schichten des Codes
 
-**Das heißt nicht, dass Werte in dieser Reihenfolge fließen.** Es ist die
-**Abhängigkeitsrichtung**, von unten nach oben gestapelt, und die Regel ist eine einzige — **eine
-untere Schicht kennt die obere nie.** Deshalb rühren die unteren Schichten (`schema` · `doc` ·
-`html`) kein DOM an, und genau deshalb laufen sie unverändert auf dem Server. Der Weg, auf dem
-Werte hinein- und herausgehen, ist das Nabi-Baum-Bild oben.
+Die Struktur unten zeigt nicht die Reihenfolge, in der Daten ausgeführt werden — sie zeigt die
+**vierzehn Schichten (Layer)**, die im Verzeichnis `src/` angeordnet sind. Das Kernprinzip: **eine
+untere Schicht referenziert nie eine obere.** Deshalb hängen die unteren Schichten (`schema`,
+`doc`, `html` usw.) überhaupt nicht vom DOM ab und laufen unverändert auch in einer Serverumgebung
+(Node.js).
 
 ```
 src/

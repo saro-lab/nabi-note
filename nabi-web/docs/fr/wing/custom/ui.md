@@ -1,94 +1,85 @@
 ---
 title: Interface et actions
-description: Les boutons de barre d'outils (button), la ligne contextuelle (context), les feuilles de style (styles) — les trois endroits où une wing se présente devant une personne.
+description: Guide de rattachement des boutons de barre d'outils (button), de la ligne contextuelle (context), des feuilles de style (styles) et des dialogues avec la personne (ask).
 ---
 
 # Interface et actions
 
-Il y a trois endroits où une wing se présente devant une personne.
-
-| Champ | Où |
-|---|---|
-| `button` · `buttons` | la **barre d'outils** en haut — l'endroit toujours visible |
-| `context` | la **ligne contextuelle** — l'endroit qui n'apparaît que pour ce que touche le caret |
-| `styles` | le **CSS** que porte cette wing |
+Une wing propose son interface à trois endroits fixes : la **barre d'outils principale** (`button`/`buttons`), la **ligne contextuelle** (`context`) et le **CSS propre à la wing** (`styles`).
 
 ---
 
-## Les boutons de la barre d'outils
+## Boutons de la barre d'outils (`button` / `buttons`)
 
 ```ts
 button: {
   group: 'emphasis',                   // dans quel groupe il se tient — requis
-  svg: '<path d="…"/>',                // l'intérieur sur une grille 16×16. Sans cela, il se tient en texte
+  svg: '<path d="…"/>',                // chaîne du path SVG à l'intérieur d'un viewBox 16×16
   label: { fr: 'Gras' },
-  shortcut: 'B',                       // cette lettre en mode indice
+  shortcut: 'B',                       // cette lettre affichée en mode indice (Shift tapé deux fois)
   accelerator: 'mod+b',                // la combinaison Ctrl/⌘
-  action: { kind: 'mark' },
+  action: { kind: 'mark' },            // bascule d'une marque en ligne
 }
 ```
 
-Pour plusieurs boutons, écrivez un tableau dans `buttons` — c'est ainsi qu'une seule wing
-d'alignement se dresse à gauche, au centre et à droite. Alors `name` les distingue et `value` dit
-quelle valeur chacun représente.
+Quand une wing propose plusieurs boutons, définissez-les dans un tableau `buttons` (par exemple, une wing d'alignement de texte proposant trois boutons gauche/centre/droite). Chaque bouton se distingue par `name`, et `value` indique la valeur que ce bouton représente.
 
-### `group` — le groupe décide de l'ordre
+### Ordre des groupes de boutons (`group`)
+
+L'ordre d'affichage des groupes de la barre d'outils est fixé ainsi :
 
 ```
 font · heading · emphasis · script · color · link ·
 align · list · structure · media · container · clear · file
 ```
 
-**Cet ordre est fixé.** Où que vous mettiez une wing dans le tableau, son bouton se tient à la
-place de son groupe. L'ordre d'enregistrement ne range les choses qu'**à l'intérieur** d'un
-groupe. Utilisez un nom hors de cette liste et un nouveau groupe apparaît tout à la fin.
+Où que vous déclariez une wing dans le tableau, son bouton se place automatiquement à la position de son groupe, et au sein d'un même groupe, seul l'ordre d'enregistrement des wings détermine le tri. Indiquer un nom de groupe absent de cette liste ajoute un nouveau groupe à la toute fin de la barre d'outils.
 
-Quand un groupe se vide entièrement (tous ses boutons cachés), ce groupe disparaît de l'écran —
-aucun séparateur vide ne reste derrière.
+Quand tous les boutons d'un groupe donné sont masqués dans l'état actuel, ce groupe et son séparateur sont automatiquement masqués aussi.
 
-### `action` — ce qui se passe quand on appuie
+### Types d'action de bouton (`action`)
 
-| `kind` | Ce que ça fait | Ce qui va avec |
+| `kind` | Effet | Propriétés supplémentaires |
 |---|---|---|
-| `'mark'` | va au bascule de marque du cœur. **Vous n'avez pas besoin d'écrire de commande** | — |
-| `'command'` | exécute une commande | `command` · `args?` |
-| `'menu'` | ouvre une liste de valeurs en panneau | `command` · `argKey` · `values` |
-| `'grid'` | ouvre une grille lignes×colonnes (insérer un tableau) | `command` · `rowsKey` · `colsKey` · `max?` |
-| `'prompt'` | lève des champs de saisie et transmet ce qui revient à la commande | `command` · `fields` |
-| `'file'` | ouvre le sélecteur de fichier | `accept?` · `multiple?` |
-| `'host'` | transmet à l'hôte (`onHost` de `mountToolbar`) | — |
+| `'mark'` | bascule une marque en ligne (fonctionne via la logique de base du cœur) | — |
+| `'command'` | exécute la commande indiquée | `command`, `args?` |
+| `'menu'` | affiche un menu déroulant de sélection de valeur | `command`, `argKey`, `values` |
+| `'grid'` | affiche un sélecteur de grille lignes×colonnes pour insérer un tableau | `command`, `rowsKey`, `colsKey`, `max?` |
+| `'prompt'` | lève une fenêtre de saisie et transmet la valeur saisie à la commande | `command`, `fields` |
+| `'file'` | ouvre la boîte de dialogue de sélection de fichier | `accept?`, `multiple?` |
+| `'host'` | est transmis au callback de l'hôte (`onHost` de `mountToolbar`) | — |
 
-Omettez `action` et appuyer sur le bouton ne fait rien du tout.
+Un bouton sans `action` défini ne fait rien lorsqu'on clique dessus.
 
-### `shortcut` et `accelerator`
+### Raccourcis (`shortcut` et `accelerator`)
 
-| | Forme | Règle |
+| Champ | Forme | Règle |
 |---|---|---|
 | `shortcut` | `'B'` | **une seule lettre latine majuscule ou un chiffre** |
-| `accelerator` | `'mod+b'` | `mod+` suivi d'**une seule lettre minuscule** |
+| `accelerator` | `'mod+b'` | préfixe `mod+` suivi d'**une seule lettre minuscule** |
 
-Les deux **tuent l'enregistrement si deux wings entrent en collision.** Aucune des deux ne cesse
-tranquillement de fonctionner plus tard.
+Si deux wings différentes déclarent le même raccourci, une exception est levée immédiatement à l'initialisation.
 
-Écrivez un `accelerated` séparé et l'accélérateur fait quelque chose de différent — le bouton
-ouvre un panneau tandis que <kbd>Ctrl</kbd>+touche applique la valeur par défaut directement, par
-exemple.
+L'option `accelerated` permet de faire exécuter une action différente uniquement lorsqu'on déclenche via le raccourci clavier (par exemple : un clic sur le bouton ouvre une fenêtre d'options, tandis que le raccourci applique directement la valeur par défaut).
+
+::: warning Les raccourcis ne fonctionnent qu'à l'intérieur de la zone d'éditeur assignée
+Les événements de raccourci ne détectent que les frappes survenant à l'intérieur de la zone d'édition transmise à `mountToolbar({ surface })`. Si plusieurs éditeurs existent sur une même page, l'option `surface` doit impérativement être précisée pour éviter les interférences entre les événements de touches.
+:::
 
 ---
 
-## Comment un bouton a l'air enfoncé
+## Règle d'affichage de l'état actif (Pressed) des boutons
 
-Il n'y a qu'une seule base pour peindre un bouton « actif en ce moment ».
+Le critère selon lequel un bouton de la barre d'outils s'affiche comme « actuellement actif (Pressed) » dépend du type de wing (`place`) :
 
-| `place` | Ce qu'il lit |
+| `place` | Critère de détermination de l'activation |
 |---|---|
-| `'mark'` | cette marque est-elle au caret |
-| `'attr'` | le `currentValue` du paragraphe où se tient le caret |
-| `'container'` · `'void'` | le caret est-il à l'intérieur ou sur ce bloc |
-| `'tool'` | **toujours éteint** |
+| `'mark'` | si cette marque en ligne est appliquée à la position actuelle du curseur |
+| `'attr'` | si la valeur retournée par `currentValue` du nœud de paragraphe actuel correspond au `value` du bouton |
+| `'container'` · `'void'` | si le curseur se trouve à l'intérieur ou sur ce bloc |
+| `'tool'` | reste toujours inactif |
 
-Une wing à plusieurs valeurs (alignement, titres) écrit un `value` sur chaque bouton, et seul le
-bouton qui correspond à ce qu'a répondu le `currentValue` de la wing est peint.
+Pour une wing à plusieurs valeurs (titre, alignement, etc.), seul le bouton dont le `value` correspond à la chaîne retournée par la fonction `currentValue` est peint comme actif.
 
 ```ts
 currentValue: (node) => {
@@ -97,33 +88,21 @@ currentValue: (node) => {
 }
 ```
 
-**`currentValue` répond une chaîne** — même une valeur numérique repasse par `String()`.
-`undefined` signifie « ce nœud ne porte aucune valeur qui soit la mienne ».
+---
+
+## Règle de masquage automatique des boutons
+
+Le cœur de l'éditeur désactive ou masque automatiquement les boutons de barre d'outils concernés lorsqu'une mise en forme ne peut pas être appliquée :
+
+- Dans les **zones où la mise en forme est restreinte**, comme à l'intérieur d'un bloc de code, les marques en ligne et les autres boutons de création de bloc sont automatiquement masqués.
+- Dans le paragraphe enveloppe d'un bloc (image, tableau, etc.), les attributs de paragraphe comme le titre sont masqués (l'alignement du texte (`a`) reste toutefois une exception, pour permettre l'alignement de l'objet).
+- Les boutons d'une wing absente de la liste `allows` du conteneur parent sont automatiquement masqués.
 
 ---
 
-## Les boutons se cachent tout seuls là où ils ne peuvent pas se tenir
+## Ligne contextuelle dynamique (`context`)
 
-| `place` | Quand il se cache |
-|---|---|
-| `'mark'` | dans un endroit où seul du texte vit (à l'intérieur d'une boîte de code, par exemple), quand il possède cet endroit |
-| `'attr'` | quand le caret est sur un paragraphe enveloppe qui porte un bloc. **L'alignement (`a`) est la seule exception** |
-| `'void'` · `'container'` | dans un endroit où seul du texte vit, ou quand l'`allows` du conteneur actuel ne l'accepte pas |
-| `'tool'` | ne se cache jamais |
-
-L'alignement est l'exception pour la raison vue plus tôt — l'alignement d'un bloc n'est pas porté
-par le bloc mais par le paragraphe enveloppe autour de lui. Il faut pouvoir appuyer sur « centrer »
-en se tenant sur une image.
-
-Écrivez `allows` et **la barre d'outils suit toute seule.** Le bouton de tableau qui disparaît à
-l'intérieur d'une boîte de code n'est pas une règle écrite à part ; elle découle de ce seul champ.
-
----
-
-## La ligne contextuelle
-
-La ligne qui n'apparaît que pour ce que le caret touche en ce moment. Cliquez sur une image et le
-contrôle de taille est là ; posez le caret dans un lien et la boîte d'adresse est là.
+Une barre d'outils auxiliaire qui propose des outils de réglage spécialisés pour l'élément situé au curseur actuel (par exemple : curseur de redimensionnement au clic sur une image, formulaire de saisie d'URL au clic sur un lien, boutons d'ajout de ligne/colonne quand le curseur est dans un tableau).
 
 ```ts
 context: {
@@ -135,7 +114,7 @@ context: {
       label: { fr: 'Ton' },
       command: 'setNoteTone',
       argKey: 'value',
-      attr: 't',                                    // l'emplacement d'attribut où lire la valeur actuelle
+      attr: 't',                                    // clé d'attribut du nœud d'où lire la valeur actuelle
       values: [
         { value: 'info', label: { fr: 'Info' } },
         { value: 'warn', label: { fr: 'Avertissement' } },
@@ -145,131 +124,68 @@ context: {
 }
 ```
 
-### Quand elle apparaît
+### Types de contrôles de la ligne contextuelle (`ContextControl`)
 
-**Tout ce que le caret touche** ouvre sa propre ligne.
-
-- les conteneurs sur le chemin du caret (le plus intérieur d'abord, le plus extérieur en dernier)
-- le bloc visé (une image sélectionnée alors qu'on est sur son paragraphe enveloppe, par exemple)
-- les **marques** au caret — contrairement aux boutons de la barre d'outils, les marques ont bien
-  une ligne contextuelle
-- une wing d'**attribut de paragraphe** dont le paragraphe du caret porte la valeur
-
-Posez le caret dans un lien à l'intérieur d'un tableau et la ligne du lien et la ligne du tableau
-apparaissent ensemble.
-
-### Les sept sortes de `ContextControl`
-
-| `kind` | Quoi | Ce qui va avec |
+| `kind` | Forme du contrôle | Propriétés principales |
 |---|---|---|
-| `'button'` | un appui, une commande | `command` · `args?` |
-| `'toggle'` | deux états, allumé et éteint | `command` · `token` |
-| `'select'` | un parmi une liste | `command` · `argKey` · `values` · `attr?` |
-| `'range'` | glisser sur une échelle (redimensionner) | `command` · `argKey` · `values` · `rest?` · `readout?` |
-| `'text'` | un seul champ de texte (une adresse de lien) | `command` · `argKey` · `initial?` · `placeholder?` · `validate?` |
-| `'prompt'` | plusieurs champs en panneau | `command` · `fields` |
-| `'lightbox'` | voir en grand | `src` · `alt?` |
+| `'button'` | simple clic sur un bouton | `command`, `args?` |
+| `'toggle'` | interrupteur (ON/OFF) | `command`, `token` |
+| `'select'` | menu déroulant de sélection | `command`, `argKey`, `values`, `attr?` |
+| `'range'` | barre de curseur (ajustement de largeur, etc.) | `command`, `argKey`, `values`, `rest?`, `readout?` |
+| `'text'` | champ de texte (URL de lien, etc.) | `command`, `argKey`, `initial?`, `placeholder?`, `validate?` |
+| `'prompt'` | fenêtre de formulaire composite | `command`, `fields` |
+| `'lightbox'` | fenêtre d'agrandissement d'image | `src`, `alt?` |
 
-Les sept partagent `name` (requis) · `label?` · `svg?` · `tip?` · `visible?`.
-
-`visible: (node) => boolean` est la porte pour **cacher un contrôle au sein d'une même wing** —
-ne montrer « défusionner » que sur des cellules déjà fusionnées, par exemple.
-
-Écrivez `attr` et la valeur actuelle est lue directement dans cet emplacement d'attribut pour la
-peindre. `'toggle'` utilise `token` pour comparer à la chaîne que `currentValue` a répondue.
+Tous les contrôles partagent en commun `name` (requis), `label?`, `svg?`, `tip?`, `visible?`. La fonction `visible(node)` permet de contrôler dynamiquement l'affichage d'un contrôle selon une condition donnée (par exemple, n'afficher le bouton « défusionner » que lorsque des cellules sont fusionnées).
 
 ---
 
-## `styles` — le CSS que porte une wing
+## Styles propres à la wing (`styles`)
+
+Une wing peut intégrer elle-même le CSS dont elle a besoin.
 
 ```ts
 styles: `
-.nabi-content aside[data-nabi-note] {
-  border-inline-start: 3px solid var(--nabi-accent);
-  padding: .6rem .9rem;
-  background: color-mix(in srgb, var(--nabi-accent) 8%, transparent);
-}
+  .nabi-content aside[data-nabi-note] {
+    border-left: 3px solid var(--nabi-accent);
+    padding: 0.5rem 1rem;
+    margin: 1rem 0;
+  }
 `
 ```
 
-Quatre règles.
-
-- **Confinez tout sous `.nabi-content`.** Ça ne doit jamais déborder sur le reste de la page
-  hôte.
-- **Écrivez les tailles de texte en `rem` ou en `em`.**
-- **Distinguez le sombre uniquement par la classe `.dark`.** Le faire par une media query ferait
-  passer l'éditeur seul en sombre sur un hôte qui a choisi le clair.
-- **Mesurez large et étroit par une container query.** L'étalon est la largeur de l'endroit où se
-  trouve l'éditeur, pas la largeur de l'écran.
-
-Si vous ne voulez que ce que vous avez enregistré, rassemblez et injectez les feuilles vous-même.
-
-```ts
-import { collectSheets, injectSheets } from 'nabi-note'
-
-const detach = injectSheets(document, collectSheets(registry))
-```
-
-Une feuille au même texte n'est chargée **qu'une fois** — plusieurs wings peuvent partager le
-même CSS et une seule copie atterrit dans le document. La réponse est une fonction de démontage,
-et elle ne retire que **ce que cet appel a nouvellement ajouté**.
+Via `collectSheets(registry)` et `injectSheets(document, sheets)`, seuls les styles des wings enregistrées peuvent être injectés dynamiquement dans le document ; une même chaîne de style n'est jamais injectée en double.
 
 ---
 
-## S'adresser à la personne
+## Rattachement des dialogues avec la personne (`ask`)
 
 ```ts
 const { nabi, registry } = createNabiWith(wings, {
   ask: {
     message: (text) => window.alert(text),
     confirm: (text) => window.confirm(text),
-    choose: (question, options) => user_callback(question, options),   // la réponse est un indice
   },
 })
 ```
 
-`confirm` accepte un `boolean` ou une `Promise<boolean>` — branchez le `confirm` du navigateur
-lui-même, ou levez votre propre panneau et répondez plus tard.
+- `message` : affiche une simple notification (`(text: string) => void`)
+- `confirm` : fenêtre de choix confirmer/annuler (`(text: string) => boolean | Promise<boolean>`)
+- `choose` : fenêtre de choix à options multiples (`(question: string, options: ChooseOption[]) => number | Promise<number>`)
 
-Une troisième place, `choose`, est **une parmi plusieurs** — cette porte s'ouvre quand un collage
-compte deux candidates ou plus.
+La structure `ChooseOption` est `{ label: string, icon?: string }`, et la valeur retournée est l'index base 0 de l'option choisie (`-1` en cas d'annulation).
 
-La liste qu'elle reçoit est un tableau de `ChooseOption`, qui porte deux champs.
-
-| | |
-|---|---|
-| `label` | le nom qui se dresse sur cet emplacement |
-| `icon?` | l'**intérieur** d'un SVG 16×16 (quelques chemins). La plate-forme pose la coque, et **sans lui le nom se dresse seul** |
-
-La réponse est **un indice** — `0` est celui du haut, et `-1` (ou tout ce qui sort de la plage) est
-une annulation, auquel cas rien ne se colle. `number` et `Promise<number>` sont acceptés.
-
-::: warning Laisser de côté, `confirm` répond « non » et `choose` répond le haut
-Ne fournissez aucun `ask` et une valeur par défaut silencieuse entre en jeu. `message` ne va nulle
-part et `confirm` répond `false`. Le raisonnement est qu'**un « demander puis supprimer » qui ne
-fonctionne tranquillement pas** vaut mieux que le voir arriver tranquillement. Le « vraiment
-supprimer ceci ? » de l'historique local passe par cette porte.
-
-`choose` seul tourne l'autre sens — son défaut est **0 (celui du haut)**. Répondre annulation ici
-ferait que le collage disparaisse entièrement, et la première candidate de la liste est toujours
-« la lecture la plus probable », si bien que sans quelqu'un pour demander c'est la bonne réponse.
-Et `choose` n'a généralement besoin d'aucun branchement du tout — dès que la barre d'outils se
-dresse, elle y accroche sa propre plate-forme au cœur.
-:::
-
-::: tip Les commandes ne peuvent pas demander
-Une commande est une fonction pure ; elle ne connaît ni l'écran ni le temps. Demandez en dehors de
-la commande et appelez la commande **une fois la réponse obtenue**. À l'intérieur d'une wing,
-l'endroit pour cela est `attach`, où vous l'atteignez par `host.nabi.$ask`.
+::: warning Comportement par défaut sans handler ask
+Si aucun handler `ask` n'est fourni, la valeur de retour par défaut de `confirm` est `false` (annulation), par sécurité.
+Pour `choose`, sans handler, la première candidate (index `0`) est sélectionnée par défaut. L'interface de sélection de format au collage, par exemple, se rattache automatiquement à l'interface dédiée intégrée au cœur dès que `mountToolbar` est monté — dans un environnement courant, il n'est donc généralement pas nécessaire d'implémenter `choose` soi-même.
 :::
 
 ---
 
 ## Documents suivants
 
-- [Écrire une marque en ligne](../custom/inline) · [Blocs et attributs de paragraphe](../custom/block) ·
-  [Touches, transformations automatiques, collage](../custom/input)
-- [Thème et variables CSS](../../style/custom) — les noms de variables qu'attendent les feuilles
+- [Écrire une marque en ligne](../custom/inline) · [Créer des blocs et des attributs de paragraphe](../custom/block) · [Touches, transformations automatiques, collage](../custom/input)
+- [Personnaliser le thème](../../style/custom) — guide des variables CSS et des thèmes
 
 <script setup lang="ts">
 import { useTranslate } from '../../../.vitepress/src/langs.ts'

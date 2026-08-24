@@ -135,17 +135,9 @@ Deux choses que `valueMark` pose pour vous :
 
 - **`currentValue`** — la valeur là où le caret se trouve maintenant. La barre d'outils et la
   ligne contextuelle peignent quel emplacement est actif d'après cette réponse.
-- **`repair`** — revérifie la valeur à la porte du JSON. Hors liste ou absente, elle répond
-  `null` et **retire le nœud, enveloppe comprise.** Une valeur enregistrée modifiée à la main est
+- **`repair`** — revérifie à la porte du JSON si la valeur est encore sur la liste. Si elle n'y est
+  plus, **elle normalise automatiquement le nœud.** Une valeur enregistrée modifiée à la main est
   attrapée ici même.
-
-::: tip Une commande qui change la valeur
-Il n'existe pas encore d'auxiliaire public pour la commande « fixe-la à cette valeur » d'une
-marque de valeur. L'`action: { kind: 'mark' }` qui bascule depuis un simple bouton de barre
-d'outils fonctionne comme montré, et quand vous avez besoin de choisir une valeur, tournez-vous
-vers les quatre marques de valeur d'origine (surlignage, couleur de texte, taille de police,
-police) ou étalez leurs déclarations.
-:::
 
 ---
 

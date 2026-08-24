@@ -1,15 +1,13 @@
 ---
 title: 自定义样式
-description: 颜色、外观都用 CSS 变量来覆盖。
+description: 介绍如何用 CSS 变量自定义 NABI NOTE 的颜色、字体、留白等样式。
 ---
 
 # 自定义样式
 
-样式表**由宿主来挂**——用打包工具就是一行 `import 'nabi-note/nabi.css'`，
-CDN 就是一行 `<link>`。挂上之后，剩下的只要覆盖变量就行。
+样式表**由宿主应用自己来挂**——打包工具环境下用一行 `import 'nabi-note/nabi.css'`，CDN 环境下用一个 `<link>` 标签。之后只要覆盖需要的 CSS 变量，整个编辑器的主题就会跟着一起变。
 
-组件规则里**没有一个字的颜色字面量。** 全都用 `--nabi-*` 变量画出来，所以只要
-覆盖变量，其余的都会跟着变。
+NABI NOTE 的所有 UI 组件都**只用 `--nabi-*` CSS 变量来画样式，没有一个写死的颜色字面量**，所以只要覆盖变量就能轻松配出自己的品牌色。
 
 ```css
 .nabi.nabi.nabi {
@@ -17,75 +15,62 @@ CDN 就是一行 `<link>`。挂上之后，剩下的只要覆盖变量就行。
 }
 ```
 
-类名叠三遍的原因在下面的[不被特异度挡住](#不被特异度挡住)里。
+类选择器叠三遍的原因，请看下面的 [CSS 特异度指南](#css-特异度specificity-指南) 一节。
 
-::: tip 这篇文档的大前提——存下来的值不能独自站起来
-导出的 HTML（`getHtml()`）里**没有一个字的内联 `style`。** 存下来的值只用属性
-说"是什么"（`data-nabi-align="center"`），"看起来怎样"由这份样式表来说。所以
-读取存下来的 HTML 去画的那一边，也要**挂着这份样式表的 `.nabi-content` 里面**
-才会和编辑器长得一样——见下面[在外面画存下来的 HTML 时](#在外面画存下来的html时)。
+::: tip 存下来的 HTML 里没有内联样式
+编辑器输出的 HTML(`getHtml()`)**里没有一个内联 `style` 属性。** HTML 标记只表示语义结构和属性（比如 `data-nabi-align="center"`），视觉表现全部交给样式表。所以在外部页面渲染存下来的 HTML 时，也要把它**放进挂着 `nabi.css` 的 `.nabi-content` 容器里面**，才会和编辑器画面长得一样。
+
+详情见下面的[在外面渲染存下来的 HTML 时](#在外面渲染存下来的html时)一节。
 :::
 
-::: tip 深色·浅色已经内置好了
-为了主题，宿主**不需要**覆盖任何标记。核心样式表自带浅色默认值、`.dark` 覆盖、
-显式 `.light` 覆盖三套。这个站点自己在编辑器里面除了四个字体标记之外，什么都
-没有覆盖。
+::: tip 浅色和深色主题已经内置好了
+为了默认主题，宿主不需要额外定义任何变量。核心样式表里已经装好了浅色默认值、`.dark` 主题和显式的 `.light` 主题这三套。
 :::
 
-## 颜色·外观标记
+## 颜色·主题标记
 
 | 标记 | 意思 | 默认值（浅色） |
 |---|---|---|
 | `--nabi-bg` · `--nabi-soft` | 底色 · 略微按下去的面 | `#fff` · `rgb(0 0 0 / 4.5%)` |
 | `--nabi-fg` · `--nabi-muted` · `--nabi-on-accent` | 文字 · 淡文字 · 强调色上的文字 | `#1b1b1f` · `#6b6b76` · `#fff` |
-| `--nabi-line` · `--nabi-accent` | 线条 · 强调色 | `#e2e2e8` · `#3b6fe0` |
+| `--nabi-line` · `--nabi-accent` | 线条 · 主强调色(聚焦/激活) | `#e2e2e8` · `#3b6fe0` |
 | `--nabi-danger` · `--nabi-on-danger` | 危险色 · 那上面的文字 | `#d93b3b` · `#fff` |
-| `--nabi-shadow` · `--nabi-scrim` | 盒子阴影 · 预览背景 | — |
-| `--nabi-radius` · `--nabi-radius-sm` · `--nabi-radius-xs` | 圆角 | `6px` · `4px` · `3px` |
-| `--nabi-layer-radius` | 层（面板、预览、灯箱）的圆角 | `.25rem` |
-| `--nabi-z-sticky` | 贴住的那一行的层级 | `20` |
-| `--nabi-grid-cell` | 表格尺寸格子的单格大小 | `1.125rem` |
+| `--nabi-shadow` · `--nabi-scrim` | 下拉阴影 · 弹窗/预览的暗背景 | — |
+| `--nabi-radius` · `--nabi-radius-sm` · `--nabi-radius-xs` | 圆角(默认·小·最小) | `6px` · `4px` · `3px` |
+| `--nabi-layer-radius` | 弹出层/弹窗的圆角 | `.25rem` |
+| `--nabi-z-sticky` | 顶部固定头部的 z-index | `20` |
+| `--nabi-grid-cell` | 表格插入选择器等的格子大小 | `1.125rem` |
 | `--nabi-hl-yellow`·`green`·`cyan`·`pink`·`purple`·`orange` | 荧光笔六色 | 半透明色 |
 | `--nabi-tc-green`·`coral`·`violet`·`amber`·`blue` | 文字色五色 | 深色 |
 
-这张表只列了核心样式表（`nabi.css`）**自己声明**的部分。声明的地方不是只有
-`.nabi` 一处，而是三处——`:is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *)))`。
-预览浮层是 `body` 的子元素，从 `.nabi` 那儿继承不到；孤零零站在编辑器外面的
-`.nabi-content` 也得直接拿到标记才行。
+上表里的变量都是核心样式表(`nabi.css`)**直接声明**的标记。声明的地方不只是 `.nabi`，为了支持独立渲染，还绑定在 `:is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *)))` 这三个选择器上。
 
-同一份清单写了三遍（浅色默认值·`.dark`·显式 `.light`）。**覆盖的一方不需要看
-全部三遍**——只要赢过特异度，覆盖一次就对三种情况都生效。只是想在深色下用别的
-值，就得自己加上 `.dark` 条件。
+## 只引用的标记(可以写在 :root)
 
-## 只引用、没有值的标记
+下面这些是核心样式表**不直接声明、只用 `var(--变量, 后备值)` 形式引用**的标记。宿主不给值的话，就用指定的后备值。因为核心层没有声明它们，所以**可以写在 `:root` 里全局生效**。
 
-下面是核心**只引用、不声明**的变量。宿主不给值的话，括号里的后备值就会生效。
-因为没有声明的地方，**写在 `:root` 里就直接生效**——这正是和上面颜色·外观
-标记的区别（那些声明在 `.nabi` 上，继承赢不了）。
-
-| 标记 | 意思 | 后备值 |
+| 标记 | 意思 | 默认后备值 |
 |---|---|---|
-| `--nabi-font` · `--nabi-font-serif` · `--nabi-font-mono` · `--nabi-font-cursive` | 实际接到字体翅膀四个分支上的字体 | 系统字体 |
-| `--nabi-cursive-adjust` | 手写体的 `font-size-adjust`。手写体字形的 x-高度偏低，同样的 px 看起来会更小，这个值按 x-高度重新配平 | `0.4` |
-| `--nabi-sticky-top` | 贴住的行要往下让多少。站点上有固定头部的话就是它的高度 | `0px` |
-| `--nabi-preview-width` | 预览卡片的宽度。**`openPreview` 打开时会量出编辑区域的宽度直接写在卡片上**，宿主从外面覆盖也拗不过那个内联值 | `720px` |
-| `--nabi-placeholder` | 空编辑器显示的那句提示，是个带引号的字符串。**`mountSurface` 会把自己 `placeholder` 选项里的话（或者核心词典里的话）写到编辑根节点上**，宿主从外面覆盖也拗不过那个内联值——要改它的质感，覆盖 `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` | （没有提示） |
-| `--nabi-placeholder-color` | 那句提示的颜色。核心**不声明**这个标记，背后站着的是 `--nabi-placeholder-color-fallback`——它认得浅色、深色（浅色 `#6b6b76aa` · 深色 `#9a9aa6aa`）。把这个标记写在 `:root` 上，浅色深色都会赢 | `--nabi-placeholder-color-fallback` |
-| `--nabi-content-min-height` | 空编辑器立着的最小高度。**只作用在编辑表面上**（`.nabi-content.nabi-editing`）——发布出去或者预览的 `.nabi-content` 上，高度就是文字本身的高度，所以短文字下面不会留空 | `12.5rem` |
-| `--nabi-touch-font-size` | 核心画的输入框（`.nabi-input`——链接地址、保存名字、提示框）在手指设备（`pointer: coarse` **或者**宽度 `40rem` 以下）上的字号。**iOS 上的 Safari 在焦点落进字号小于 16px 的表单框时会把整个页面放大**，这个值就是挡住这件事的底线。鼠标屏幕上一个像素都不会变 | `16px` |
+| `--nabi-font` · `--nabi-font-serif` · `--nabi-font-mono` · `--nabi-font-cursive` | 编辑器和字体翅膀各分支实际用到的字体 | 系统字体 |
+| `--nabi-cursive-adjust` | 手写体字体的 `font-size-adjust` 比例 | `0.4` |
+| `--nabi-sticky-top` | 顶部固定工具栏的上边距(设为固定头部的高度) | `0px` |
+| `--nabi-preview-width` | 预览弹窗卡片的默认宽度 | `720px` |
+| `--nabi-placeholder` | 空编辑器要显示的占位文字 | 无 |
+| `--nabi-placeholder-color` | 占位文字的颜色(不指定就用各主题的后备色) | `--nabi-placeholder-color-fallback` |
+| `--nabi-content-min-height` | 空编辑器编辑区域的最小高度(只作用于编辑区域 `.nabi-editing`) | `12.5rem` |
+| `--nabi-touch-font-size` | 触屏设备(`pointer: coarse` 或宽度 40rem 以下)上表单输入框(`.nabi-input`)的字号(防止 iOS Safari 自动放大) | `16px` |
 
-`--nabi-typeface-base` 不属于这一类——**是核心声明的**（默认跟着 `--nabi-font`
-走）。字体翅膀没有选项能定这个值，想改就覆盖这个标记。
+`--nabi-typeface-base` 不属于只引用的一类——**是核心直接声明的**标记(默认会引用 `--nabi-font`)。要改默认字体的话，覆盖 `--nabi-font` 就行。
 
-`--nabi-keyboard-top` · `--nabi-keyboard-bottom` 也站在同样的位置，但这个是
-**核心自己写的**——`mountSticky()` 量出手机键盘顶起画面的距离写在这里，贴住的行
-和全屏读的就是这个值。不是手写的值。
+`--nabi-keyboard-top` 和 `--nabi-keyboard-bottom` 是 **`mountSticky()` 量出移动端键盘高度后动态写入**的内部变量。
 
-## 没有标记的地方——要覆盖规则本身
+`--nabi-bar-height` 同样是 **`mountSticky()` 量出工具栏实际高度后写入**的内部变量。`.nabi-content > *` 元素的 `scroll-margin-block-start` 会用这个值，滚动定位时才不会被工具栏挡住。
 
-下面三处**没有变量。** 核心把值钉死在规则里，想改就得覆盖那个选择器。
+## 没有变量的固定样式——要覆盖规则
 
-**文字大小四级**——用 `em`，所以跟着父级大小走。
+下面这三处不是用 CSS 变量、而是用固定的 CSS 规则定义的，想改就直接覆盖对应的类选择器。
+
+**文字大小四级**(用 `em`，跟着父级大小走)：
 
 ```css
 .nabi-content [data-nabi-size="xs"] { font-size: .75em; }
@@ -94,15 +79,13 @@ CDN 就是一行 `<link>`。挂上之后，剩下的只要覆盖变量就行。
 .nabi-content [data-nabi-size="xl"] { font-size: 1.5em; }
 ```
 
-**首字下沉的大小**——不是定几行的值，而是一个字号。实际盖住几行由那个段落的
-行高决定。
+**首字下沉的大小**：
 
 ```css
 .nabi-content [data-nabi-dropcap="1"]::first-letter { font-size: 5.9em; line-height: .83; }
 ```
 
-**代码标记颜色**——代码翅膀的样式表直接给 `[data-nabi-token]` 写颜色。现在有
-颜色的分支是**五个**。
+**代码块标记颜色**：
 
 ```css
 .nabi-content [data-nabi-token="comment"] { color: #7a8a7a; font-style: italic; }
@@ -112,74 +95,49 @@ CDN 就是一行 `<link>`。挂上之后，剩下的只要覆盖变量就行。
 .nabi-content [data-nabi-token="literal"] { color: #2f8f4e; }
 ```
 
-上色器答出的 `type` 是任意字符串——答出上面五个之外的名字就没有颜色，想用的
-分支由宿主用同样的写法自己加规则。深色下想用别的颜色，要自己加 `.dark` 条件——
-核心没有给这五个配深色版本。
+---
 
-上传翅膀的进度动画（`--nabi-per`·`--nabi-t`·`--nabi-span`·`--nabi-clear`·
-`--nabi-blur-max`）是**翅膀内部实现用的**——名字虽然以 `--nabi-` 开头，但不是
-开放给宿主覆盖的地方。
+## 单位规格
+
+按钮大小、留白、工具栏高度等大多数 UI 尺寸都用 `rem` 定义，所以会**跟着根元素(`html`)的字号设置成比例缩放**。用户在浏览器或系统里调大默认字号，编辑器 UI 也会自然跟着一起变大。
 
 ---
 
-## 外观尺寸用的是 `rem`
+## CSS 特异度(Specificity)指南
 
-按钮、留白、工具栏标签这些外观尺寸大多是 `rem`，**跟着根元素（`html`）的字号
-一起变大。** 用户在浏览器或系统里调大字号，编辑器的框架也会跟着变大。想改大小
-就改根元素的 `font-size`。边框（`border`）不是尺寸而是**线**，所以有的地方还
-留着 `px`。
-
----
-
-## 不被特异度挡住
-
-要覆盖颜色·外观标记，得叠上**三个类名**。
+要覆盖核心声明的主题颜色变量时，为了确实把样式优先级提上去，推荐**叠三个类名**的写法。
 
 ```css
 .nabi.nabi.nabi,
 .nabi-scrim.nabi-scrim.nabi-scrim {
-  --nabi-accent: var(--我的强调色);
+  --nabi-accent: #7c3aed;
 }
 ```
 
-数一下是这样的。浅色默认规则 `:is(.nabi, …)` 因为 `:is()` 按参数里最高的算，
-所以是 **(0,1,0)**；深色规则 `:where(html, body).dark :is(.nabi, …)` 里
-`:where()` 算 0，`.dark` 和 `:is()` 各算一个类，所以是 **(0,2,0)**。因此
-`.nabi.nabi` 和深色规则打**平手**——平手时后写的那条赢，而核心样式表完全可能
-比宿主样式表晚加载。叠到三个变成 (0,3,0) 才不用靠加载顺序。
+- 浅色默认规则 `:is(.nabi, …)` 的特异度是 **(0, 1, 0)**。
+- 深色模式规则 `:where(html, body).dark :is(.nabi, …)` 的特异度是 **(0, 2, 0)**。
+- 所以像 `.nabi.nabi.nabi` 这样叠三个类名，就能拿到 **(0, 3, 0)** 的特异度，不管 CSS 加载顺序如何都能稳定覆盖。
 
-预览浮层立在 `.nabi` 外面（`body` 的子元素），那边的选择器也要一起写，颜色
-才会一致。
-
-**像字体这种核心不声明的标记不需要打这场仗**——没有声明的地方，光靠继承就够得
-到，`:root` 写一行就行。
-
-```css
-:root {
-  --nabi-font: 'Noto Sans', system-ui, sans-serif;
-}
-```
+预览弹窗是挂在 `body` 的直接子元素上的，所以要同时写上 `.nabi-scrim.nabi-scrim.nabi-scrim` 选择器，那边才会用上一样的主题颜色。
+像字体标记这种核心不声明、只引用的标记，在 `:root` 里声明一次就能正常生效。
 
 ---
 
-## 浅色·深色
+## 浅色 / 深色主题
 
-`html` 或 `body` **两者之一**上有 `dark` 类就是深色，`light` 就是浅色。没有类
-的话浅色是默认，两个都有的话显式的 `light` 赢（`.light` 规则加载在 `.dark`
-规则后面）。
+`html` 或 `body` 元素上有 `dark` 类就用深色主题，有 `light` 类就用浅色主题。没有类名的话默认走浅色主题，两个类名都有的话显式的 `light` 优先。
 
 ```html
 <html class="dark"><!-- 或者 <body class="dark"> --></html>
 ```
 
-切换类名之后 CSS 会自动反应。没有要调用的 API。主题只换颜色变量，组件规则不变
-——自己写的样式只要用 `--nabi-*` 变量，也会跟着深色走。
+切换主题只靠切类名就会立刻反应，不需要额外调用 JavaScript API。写自定义样式时，只要用上 `--nabi-*` 变量，切换主题时颜色也会自动跟着联动。
 
 ---
 
-## 挂样式表的两条路
+## 挂样式表的方式
 
-**① 一个文件**——最常见的路。装着所有翅膀的 CSS。
+**1. 整个导入 CSS 文件**(最常见、最推荐的方式)
 
 ```ts
 import 'nabi-note/nabi.css'
@@ -189,124 +147,64 @@ import 'nabi-note/nabi.css'
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note/dist/nabi.css">
 ```
 
-**② 只注入注册过的**——只想装真正打开的那些翅膀的样式表时用。
+**2. 只动态注入注册过的翅膀的样式**
 
 ```ts
 import { collectSheets, injectSheets } from 'nabi-note'
 
 const drop = injectSheets(document, collectSheets(registry))
-// 调用 drop() 只撤掉这次调用放进去的部分
+// 调用 drop() 后，注入进去的样式会从 DOM 里清除
 ```
 
-同一段文字的样式表**只会进去一次**——去重的钥匙是样式表的**内容**，所以一份
-文档里立好几个编辑器也不会叠加，就算翅膀组合各不相同也会合并成一份并集。
-
-:::: tip 两者有两点不一样——装的是什么，什么时候挂上
-**装的是什么。** 文件没法知道注册了哪些翅膀，所以**全部**装进去。注入会看
-`registry`，**只装注册过的**。只展示保存的 HTML、没有编辑器的页面没有
-`registry`，就用文件那条路。
-
-**什么时候挂上。** 文件以 `<link>` 的样子进头部，加载期间**挡住画面渲染**；
-注入则要等**编辑器的 JavaScript 到达之后**才会挂上。所以在服务器上把文档
-预先画好送下去的页面，该走文件这条路——走注入的话，服务器送来的文档会先
-光秃秃地画一遍，样式贴上去之后又要重新排布局。
-::::
-
-注册的翅膀的样式表加载在核心样式表**之后**，所以同等优先级下翅膀会赢。
+同一份样式表内容不会被重复注入，会作为单个标签统一管理。
+在服务端渲染(SSR)环境下，为了防止客户端 JS 跑起来之前出现样式闪烁(FOUC)，最好用加载静态 CSS 文件的方式，而不是注入。
 
 ---
 
-## 能挂东西的地方
+## 可自定义的 CSS 类和 UI 元素
 
-变量做不到的，就直接瞄准真实存在的类名。
-
-| 选择器 | 是什么 | 谁挂上去的 |
+| 选择器 | 说明 | 创建方 |
 |---|---|---|
-| `.nabi` | 包住整个编辑器（工具栏区 + 编辑区域）的外壳。颜色·外观标记挂在这里 | 宿主 |
-| `.nabi-content[contenteditable]` | 编辑区域本身 | 宿主 |
-| `.nabi-toolbar` | 包住工具栏行 + 上下文工具栏行的地方。这个类名本身就是"贴在上面" | 宿主 |
-| `.nabi-toolbar-row` | 工具栏坐进去的容器 | `mountToolbar()` |
-| `.nabi-context` | 上下文工具栏坐进去的容器 | `mountContextToolbar()` |
-| `.nabi-tools` | 预览、全屏两个按钮的位置——核心会浮到右上角 | `mountViewTools()` |
-| `.nabi-tool` | 那两个按钮本身 | `mountViewTools()` |
-| `.tb-group` | 工具栏的按钮分组 | `mountToolbar()` |
-| `.ctb-group` · `.ctb-button` · `.ctb-swatch` · `.ctb-input` | 上下文工具栏的分组·按钮·色样·文字框 | `mountContextToolbar()` |
-| `.tb-picker` · `.tb-picker-grid` · `.tb-picker-cell` | 表格尺寸格子等按钮下弹出的盒子 | `mountToolbar()` |
-| `.tb-prompt` · `.tb-prompt-input` | 新建时弹出的地址输入层 | `mountToolbar()` |
-| `.nabi-hints [data-hint]` | 连按两下 Shift 弹出的快捷键提示——标签是 `::before`，名字是 `::after`，两个一起显示 | `mountHints()` |
-| `[data-nabi-tip]` | 提示（tooltip）——只用 CSS `::after` 画 | 核心整体 |
-| `.nabi-content.nabi-dropping` | 拖着文件悬停时的编辑区域。提示文字挂在 `data-nabi-drop` 属性上 | `mountUpload()` |
+| `.nabi` | 包住整个编辑器(工具栏+编辑区域)的最上层容器 | 宿主 |
+| `.nabi-content[contenteditable]` | 实际的正文编辑区域 | 宿主 |
+| `.nabi-toolbar` | 包住工具栏和上下文栏的固定头部容器 | 宿主 |
+| `.nabi-toolbar-row` | 主工具栏的按钮行 | `mountToolbar()` |
+| `.nabi-context` | 动态上下文工具栏容器 | `mountContextToolbar()` |
+| `.nabi-tools` | 预览和全屏按钮的外层 | `mountViewTools()` |
+| `.nabi-hints [data-hint]` | 连按两下 Shift 时出现的快捷键提示徽标 | `mountHints()` |
+| `[data-nabi-tip]` | 按钮提示(用 CSS `::after` 渲染) | 核心组件 |
+| `.nabi-content.nabi-dropping` | 正在拖拽文件时的编辑区域 | `mountUpload()` |
 
-预览、全屏也是**核心自己搭的。**
+### 弹窗和浮层元素
 
-| 选择器 | 是什么 | 谁 |
+| 选择器 | 说明 | 创建函数 |
 |---|---|---|
-| `.nabi-scrim` > `.nabi-card` > (`.nabi-close` · `.nabi-content.nabi-preview-body`) | 文档预览浮层 | `openPreview()` |
-| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | 单张图片放大看的盒子 | `openLightbox()` |
-| `.nabi-scrim` > `.nabi-card.nabi-choose` > (`.nabi-choose-title` · `.nabi-choose-list` > `.nabi-choose-row` > `.nabi-choose-icon` · `.nabi-choose-label`) | 挑粘贴候选的面板 | `openChoosePanel()` |
-| `.nabi-scrim` > `.nabi-card.nabi-save` > (`.nabi-save-title` · `.nabi-save-name` > `.nabi-input` · `.nabi-save-ext` · `.nabi-save-list` > `.nabi-save-row` > `.nabi-save-icon` · `.nabi-save-label` · `.nabi-save-note`) | 保存面板——名字框、扩展名标记、格式格子 | `openSavePanel()` |
-| `.nabi.is-fullscreen` | 全屏——把 `.nabi` 容器固定到整个画面 | `setFullscreen()`（类名是 `FULLSCREEN_CLASS`） |
-
-::: tip 两个面板共用**同一套规则**
-粘贴面板和保存面板是从同一个格子部件搭出来的，所以选择器成对出现——
-`.nabi-choose-list`/`.nabi-save-list` · `.nabi-choose-row`/`.nabi-save-row` ·
-`.nabi-choose-icon`/`.nabi-save-icon` · `.nabi-choose-label`/`.nabi-save-label`。**两边**
-都用 `[aria-selected="true"]` 标记瞄准的格子，标记本身只是一道 `--nabi-accent`
-边框——两个面板都不会给格子填色。
-
-只属于保存面板的有三样：`.nabi-save-name`（名字行）、`.nabi-save-ext`（扩展名
-标记）、`.nabi-save-note`（有损提示——字比名字小，也不用警告色）。
-
-`--nabi-grid-cols` 是格子的列数，但**立起面板的那只手会写它**——面板数好自己的
-格子，最多写三列内联到列表本身，所以不是给宿主从外面设的值。`--nabi-save-ext-len`
-（扩展名标记的字宽）也是同一类值。
-:::
-
-::: warning `.nabi-save-format` 没了
-那是保存面板还是竖排列表时候的名字。宿主要是用它覆盖悬停填色，会**悄悄失效**——
-格子现在是 `.nabi-save-row`（和粘贴面板里的位置同名），悬停、瞄准都没有内部
-填色这回事了。
-:::
-
-挂上 `mountViewTools()`，那两个按钮就会自己开关这些。想自己手动开，就调用
-`openPreview({ nabi, surface })` · `openLightbox({ surface, src, alt?, locale? })` ·
-`setFullscreen(root, on)` · `isFullscreen(root)`。
-
-::: tip 工具的位置是自己立起来的
-`mountViewTools` 会自己造出 `.nabi-tools` 盒子，塞进拿到的容器最前面。宿主不用
-自己先把 `<span>` 放在工具栏前面——先占好位置反而会立出两个盒子。
-:::
-
-编辑画面专用的标记也能瞄准——`[data-nabi-token]`（代码块的标记颜色）、
-`[data-nabi-lang]`（代码块的语言）、`[data-color]`（荧光笔·文字色——靠
-`<mark>`·`<span>` 标签区分）、`data-nabi-align`·`data-nabi-typeface`·
-`data-nabi-size`·`data-nabi-dropcap`（段落属性）。这些标记的真正名字以各个
-翅膀文件里的 `*_ATTR` 常量为准。
+| `.nabi-scrim` > `.nabi-card` > `.nabi-content.nabi-preview-body` | 文档预览弹窗 | `openPreview()` |
+| `.nabi-scrim` > `.nabi-card.nabi-lightbox` | 图片灯箱弹窗 | `openLightbox()` |
+| `.nabi-scrim` > `.nabi-card.nabi-choose` | 粘贴格式选择弹窗 | `openChoosePanel()` |
+| `.nabi-scrim` > `.nabi-card.nabi-save` | 文件保存弹窗(文件名输入和格式选择) | `openSavePanel()` |
+| `.nabi.is-fullscreen` | 编辑器全屏模式激活时的类 | `setFullscreen()` |
 
 ---
 
-## 在外面画存下来的 HTML 时
+## 在外面渲染存下来的 HTML 时
 
-导出的值（`getHtml()`）是留着 `data-nabi-*` 属性的 HTML，**一个字的内联
-`style` 都没有。** 意思是外观全归样式表管，所以没有样式表去画的话，就是一段
-没有对齐、没有字号、没有表格分隔线的裸 HTML。
-
-想画得和编辑器一样，用 `.nabi-content` 包起来——这个类名不用 `.nabi` 包着也能
-直接拿到颜色·外观标记（`nabi.css` 的 `.nabi-content:where(:not(.nabi *))`
-规则）。
+用 `getHtml()` 取出的 HTML 字符串只由语义标记和 `data-nabi-*` 属性组成，没有内联 `style`。
+想在外部页面用和编辑器一样的样式渲染，就把正文包在 `.nabi-content` 类里面，再挂上 `nabi.css`。
 
 ```html
-<div class="nabi-content">保存下来的 HTML</div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note/dist/nabi.css">
+
+<div class="nabi-content">
+  <!-- 用 nabi.getHtml() 存下来的 HTML 正文 -->
+</div>
 ```
 
-样式表照上面「挂样式表的两条路」那样挂就行——打包工具就是 `import
-'nabi-note/nabi.css'`，其余情况一行 `<link>`。就算不立编辑器的页面，只要有
-`.nabi-content`，核心样式表就会把标记声明好。
+就算不用 `.nabi` 包起来，`.nabi-content` 自己也能拿到主题和字体标记，所以能原样还原编辑器里看到的样式。
 
-### 只在阅读一侧跑的行为——表格排序
+### 开启只读表格排序功能
 
-现在**只有表格排序**是以只读一侧专用函数的形式提供的。还没有让任意翅膀各自挂
-读取端行为的通用体系。
+想在发布出去的 HTML 页面里开启表格列排序功能，就挂上 `attachTableSort` 函数。
 
 ```ts
 import { attachTableSort } from 'nabi-note/viewer'
@@ -314,20 +212,18 @@ import { attachTableSort } from 'nabi-note/viewer'
 const detach = attachTableSort(document.querySelector('#article')!, { locale: 'zh' })
 ```
 
-会找出挂着 `data-nabi-sortable` 的表格，往表头格上加排序按钮。解绑函数
-（`detach`）会撤掉插上去的按钮、还原换过的行顺序。
+会检测带有 `data-nabi-sortable` 属性的表格，往列标题上加排序按钮。调用返回的 `detach()` 函数，就会撤掉加上去的 DOM 按钮，还原成原来的行顺序。
 
-::: danger 不要挂在正在编辑的元素上
-`attachTableSort()` 会往 DOM 里插按钮、改行顺序。挂着的时候把 DOM 存下来，
-这些改动就会被固化进值里——只读一侧只该挂在只读的副本上。
+::: warning 不要把 attachTableSort 用在正在编辑的 DOM 上
+`attachTableSort()` 直接操作 DOM 结构，如果用在正在编辑的编辑器区域上，排序按钮的 UI 可能会被永久存进文档正文里。一定要只用在只读的浏览页面上。
 :::
 
 ---
 
 ## 接下来的文档
 
-- [{{ t('menu_wing_custom') }}](../wing/custom) —— 亲手做出没有的格式
-- [{{ t('menu_intro_index') }}](../intro) —— 这篇文档用的词
+- [{{ t('menu_wing_custom') }}](../wing/custom) —— 亲手做一个还没有的自定义格式翅膀
+- [{{ t('menu_intro_index') }}](../intro) —— NABI NOTE 的介绍和架构
 
 <script setup lang="ts">
 import { useTranslate } from '../../.vitepress/src/langs.ts'

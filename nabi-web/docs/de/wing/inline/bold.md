@@ -6,20 +6,18 @@ title: Fett
 
 ## Beschreibung
 
-`boldWing` ist der Eigentümer (claim) von `<b>`. Wählen Sie Text aus und drücken Sie
-in der Werkzeugleiste **B** oder greifen Sie im Hinweismodus (zweimal Shift
-hintereinander, dann `B`) zu — der Bereich wird fett.
+`boldWing` ist der Inline-Mark-Wing für Fettschrift (`<b>`). Wählen Sie Text aus und
+drücken Sie **B** in der Werkzeugleiste, greifen Sie im Hinweismodus dazu (zweimal
+Shift, dann `B`), oder nutzen Sie die Tastenkombination (`Strg`/`⌘`+`B`).
 
-- Beim Einlesen werden `<b>` und `<strong>` gleichermaßen anerkannt, beim
-  Hinausgehen steht immer nur `<b>`. Kein einziges Attribut überlebt —
-  `class`, `style` und `data-*` fallen weg, nur das Tag bleibt.
-- Das Hinweismodus-Kürzel ist `B`, der Beschleuniger ist `Strg`/`⌘`+`B` (`mod+b`).
-- Wird die Taste bei ausgewähltem Text gedrückt, ist es ein Umschalter
-  (`toggleMark`) — ist bereits alles fett, wird es abgenommen, sonst gesetzt. Der
-  Flügel deklariert kein eigenes Command: Seine Schaltfläche ist `action: { kind:
-  'mark' }`, was direkt zum `toggleMark` des Kerns geht.
-- Ohne Registrierung wird `<b>` entkleidet und fällt zu reinem Text herab (so
-  ergeht es jedem nicht registrierten Tag — das ist die Regel in ganz nabi).
+- Beim Einlesen werden `<b>` und `<strong>` gleichermaßen erkannt; bei der Ausgabe
+  steht immer nur das Standard-Tag `<b>`.
+- Mit ausgewähltem Text ist es ein Umschalter — ist die Auswahl bereits fett, wird
+  es entfernt, sonst angewendet.
+- Ohne Auswahl, nur mit dem Cursor, reserviert die Tastenkombination die
+  Fettschrift für den nächsten eingegebenen Text.
+- Ist der Wing nicht registriert, wird das `<b>`-Tag automatisch entfernt und nur
+  der reine Text bleibt erhalten.
 
 ## Anwendungsbeispiel
 
@@ -29,7 +27,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// Die Flügelliste baut Sortenwissen, Commands und Baukästen zusammen — das ist die `registry`
 const { nabi, registry } = createNabiWith([boldWing])
 
 mountSurface({ nabi, registry, root: surface })

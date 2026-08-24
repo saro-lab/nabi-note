@@ -41,10 +41,7 @@ mountSurface({ nabi, registry, root: surface })
 ```
 
 Was `simpleMark` für Sie ausfüllt, sind zwei Dinge: `place: 'mark'` und `escapeKeys: ['Escape']`.
-Alles andere geht unverändert durch. **Beim Drücken von Esc mehrmals in Folge geht selbst dann die
-zweite Taste zur Formatierung löschen, wenn die erste Esc eine Reservierung aufgelöst hat** — das
-Zählen der Doppeldrücke funktioniert unabhängig davon, ob der vorherige Zweig verbraucht wurde.
-Eine Glyphenbürste mitten im Caret ist das Beispiel dafür.
+Alles andere geht unverändert durch.
 
 ---
 
@@ -137,17 +134,9 @@ Zwei Dinge, die `valueMark` für Sie auflegt:
 
 - **`currentValue`** — der Wert an der Stelle, an der der Caret jetzt steht. Werkzeugleiste und
   Kontextzeile bemalen anhand dieser Antwort, welcher Platz an ist.
-- **`repair`** — prüft den Wert an der JSON-Tür erneut. Außerhalb der Liste oder fehlend, antwortet
-  es mit `null` und **entfernt den Knoten, Hülle und alles.** Ein von Hand bearbeiteter gespeicherter
+- **`repair`** — prüft an der JSON-Tür erneut, ob der Wert noch auf der Liste steht. Steht er nicht
+  mehr darauf, **normalisiert es den Knoten automatisch.** Ein von Hand bearbeiteter gespeicherter
   Wert wird genau hier gefangen.
-
-::: tip Ein Command, das den Wert ändert
-Für das „setze auf diesen Wert"-Command eines Wert-Marks gibt es noch keinen öffentlichen Helfer.
-Das `action: { kind: 'mark' }`, das allein von einer Werkzeugleisten-Schaltfläche umschaltet,
-funktioniert wie gezeigt, und brauchen Sie Wertauswahl, greifen Sie zu den vier mitgelieferten
-Wert-Marks (Hervorhebung, Textfarbe, Schriftgröße, Schriftart) oder breiten Sie deren Deklarationen
-aus.
-:::
 
 ---
 
@@ -171,6 +160,15 @@ Mehrere Flügel dürfen dieselbe Taste beanspruchen — die Bewaffnung greift nu
 wirklich innerhalb dieses Marks steht, sodass von den dort überlappenden Marks nur die passenden
 gemeinsam abgehen. <kbd>Escape</kbd> dient auch dazu, eine bereits gesetzte Bewaffnung
 **rückgängig zu machen**.
+
+::: tip Zweimaliges Drücken von Esc trägt darüber hinaus
+Die Doppel-Tipp-Zählung läuft **unabhängig davon, ob der vorherige Zweig die Taste verbraucht
+hat.** Selbst wenn das erste <kbd>Esc</kbd> eine Bewaffnung aufgehoben oder eine Mark-Flucht
+bewaffnet hat, trägt das zweite <kbd>Esc</kbd> bis ganz zum [Formatierung
+löschen](../etc/clear-format) — ein Caret mitten in einer Hervorhebung ist das Beispiel dafür.
+`escapeKeys` und `doubleKeys` sehen sich als Wörter nur ähnlich; sie blockieren sich nicht
+gegenseitig.
+:::
 
 ---
 

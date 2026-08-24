@@ -6,26 +6,20 @@ title: Trennlinie
 
 ## Beschreibung
 
-`dividerWing` (Name `hr`) besitzt ein einziges `<hr>`. **`place: 'void'`** — ein Klotz ohne
-Inneres, der Caret hat also keinen Platz, um hineinzugelangen. Drücken Sie unmittelbar vor oder
-hinter der Trennlinie Rücktaste oder Entf, verschwindet dieser eine Block als Ganzes, und eine
-Bereichsauswahl führt zum selben Ergebnis.
+`dividerWing` (Name `hr`) verwaltet die horizontale Trennlinie (`<hr>`). Sie ist ein **`place: 'void'`**-Objekt ohne Platz für Text im Inneren; drücken Sie unmittelbar vor oder hinter der Trennlinie Rücktaste oder Entf, verschwindet der gesamte Trennlinien-Block.
 
-Ein Druck auf die Schaltfläche stellt die Trennlinie **mit ihrem eigenen Wrapper-Absatz** auf. Es
-entsteht dabei kein zusätzlicher leerer Absatz — der Caret setzt sich auf diesen Wrapper-Absatz,
-direkt hinter die Trennlinie.
+Ein Klick auf die Schaltfläche fügt die Trennlinie **eingehüllt in einen eigenen Wrapper-Absatz (`<div data-nabi-p>`)** ein. Der Caret landet direkt hinter der Trennlinie.
 
-Wo sie landet, entscheidet sich daran, ob der Absatz, in dem der Caret stand, Text enthielt.
+Wo sie eingefügt wird, richtet sich nach dem Zustand des Absatzes, in dem der Caret gerade steht:
 
-| Wo der Caret stand | Ergebnis |
+| Caret-Position | Einfügeverhalten |
 |---|---|
-| Absatz mit Text | steht **hinter** diesem Absatz |
-| leerer Absatz | **übernimmt** diesen Absatz — keine leere Zeile bleibt zurück |
+| Absatz mit Text | Neue Trennlinie wird **hinter** diesem Absatz eingefügt |
+| Leerer Absatz | Dieser leere Absatz wird **durch die Trennlinie ersetzt** (kein überflüssiger Leerraum) |
 
-Übernimmt sie einen leeren Absatz, überlebt dessen Ausrichtung unverändert.
+Wird ein leerer Absatz ersetzt, bleibt dessen Textausrichtung erhalten.
 
-Schreiben Sie in einer leeren Zeile nur drei oder mehr Bindestriche (`---`) und drücken Enter, ist
-das Ergebnis dasselbe — bei dieser automatischen Umwandlung ist **Enter der Auslöser**.
+Tippen Sie in einer leeren Zeile drei oder mehr Bindestriche und drücken Sie Enter (`---` + Enter), wird daraus automatisch eine Trennlinie.
 
 ## Anwendungsbeispiel
 

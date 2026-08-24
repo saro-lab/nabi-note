@@ -6,25 +6,12 @@ title: Subscrito
 
 ## Descrição
 
-`subscriptWing` é o dono (claim) de `<sub>`. Use-o em fórmulas químicas ou em
-números escritos abaixo da linha.
+`subscriptWing` é um wing de marca inline que trata a formatação em subscrito
+(`<sub>`). Use para fórmulas químicas, números de nota de rodapé e afins.
 
-- A única tag aceita é `<sub>`. Nenhum atributo sobrevive.
-- Não há atalho no modo de dicas nem acelerador. O grupo na barra de ferramentas
-  é `script`, lado a lado com o sobrescrito (na ordem de registro, o sobrescrito
-  vem primeiro).
-- Pressionar com o texto selecionado é uma alternância.
-- A aparência vem da folha de estilo que este wing carrega em `Wing.styles`.
-
-```css
-.nabi-content sub, .nabi-content sup { font-size: .72em; line-height: 0; position: relative; }
-.nabi-content sub { vertical-align: sub; }
-```
-
-**Essa folha é compartilhada com o sobrescrito.** Os dois wings carregam o mesmo
-texto, então mesmo que registre os dois, ela entra **uma única vez** no
-documento (`collectSheets` remove as folhas repetidas). No valor salvo (HTML)
-fica só a tag `<sub>`; o estilo em si não vai junto.
+- Reconhece a tag `<sub>` na entrada e a devolve do mesmo jeito na saída.
+- Fica no grupo `script` da barra de ferramentas, ao lado do sobrescrito.
+- Com o texto selecionado, pressionar o botão alterna a marca.
 
 ## Exemplo de uso
 
@@ -34,7 +21,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// a lista de wings monta junto o conhecimento de tipos, os comandos e o montador — isso é o `registry`
 const { nabi, registry } = createNabiWith([subscriptWing])
 
 mountSurface({ nabi, registry, root: surface })

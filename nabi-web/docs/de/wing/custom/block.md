@@ -171,8 +171,6 @@ Es gibt vier Regeln.
   kollidieren.
 - Braucht ein Teil Glättung, schreiben Sie es unter dem Namen des Teils in `partRepair`.
 
-`StructureDecl` nimmt drei Dinge — `holds`, `singleParagraph` und `boolAttrs`.
-
 ### `singleParagraph`
 
 Das Innere ist **auf einen Absatz festgelegt**. Das ist, was eine Tabellenzelle ausmacht — drücken
@@ -203,9 +201,6 @@ Ein von Hand bearbeiteter gespeicherter Wert, ein Dokument aus einem anderen Bui
 anderem gebautes JSON — all das geht durch diese Tür. Nur was hier durchkommt, wird zu einem
 Dokument, was dies zu **der einen Stelle macht, an der ein Flügel für die Gestalt seines eigenen
 Knotens bürgen kann.**
-
-Schreiben Sie `allows` und `repair` zusammen, läuft die `allows`-Glättung **zuerst**, und ihr
-Ergebnis wird an `repair` weitergereicht.
 
 ---
 
@@ -240,13 +235,6 @@ belegt, was faktisch keinen Raum lässt, einen neuen `place: 'attr'`-Flügel zu 
 einen Wert auf jeden Absatz legen, ist das Umhüllen mit einem Container vorerst der Weg.
 :::
 
-Es gibt zwei Felder, um den Wert zu handhaben.
-
-| | |
-|---|---|
-| `attrValues` | Die Liste der Werte, die es annimmt (für eine Überschrift `[1,2,3,4,5,6]`) |
-| `currentValue` | Der Wert, den dieser Absatz jetzt trägt. Werkzeugleiste und Kontextzeile bemalen den gedrückten Platz anhand dieser Antwort |
-
 ---
 
 ## Die öffentlichen Dokument-Helfer
@@ -266,13 +254,6 @@ Command antwortet.
 ```ts
 return { doc: r.doc, selection: { anchor: r.caret, focus: r.caret } }
 ```
-
-::: tip Brauchen Sie feinere Bearbeitung als diese
-Die inneren Helfer, die Zeichen für Zeichen schneiden und verbinden (einen Mark auflegen, ein
-Absatzattribut schreiben und so weiter), sind noch keine öffentliche API. Bis dahin dürfen Sie das
-`doc`-Array selbst neu bauen und damit antworten — das Dokument, mit dem Sie antworten, wird noch
-einmal von `cocoon` geglättet, sodass ein Dokument, das die Regeln bricht, nie so überlebt.
-:::
 
 ---
 

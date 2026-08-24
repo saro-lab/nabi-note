@@ -6,21 +6,13 @@ title: Code
 
 ## Description
 
-`codeWing` (nom `code`) est propriétaire du bloc de code (`<pre>`) et c'est une **constante** —
-elle ne s'appelle pas avec des parenthèses.
+`codeWing` (id `code`) est un objet wing constant qui gère le bloc de code (`<pre><code>`).
 
-C'est un container déclaré `holds: 'inline'`, et son `repair` aplatit en texte brut tout ce qui y
-entre — aucune marque et aucune autre wing ne survit à l'intérieur. Ce n'est pas un champ à part
-dans le contrat, c'est la wing qui remet elle-même son intérieur en ordre.
+C'est un container `holds: 'inline'`, et son texte est normalisé en texte brut pendant l'étape `repair`, si bien qu'aucune autre marque ni aucune autre wing ne peut s'y imbriquer.
 
-Tapez ` ``` ` sur une ligne vide et appuyez sur espace ou sur Entrée, et cela devient un bloc de
-code — écrivez un langage à la suite, comme dans ` ```ts `, et le langage est capté aussi.
-`Tab` / `Shift+Tab` indentent et désindentent des lignes (toutes ensemble, si plusieurs sont
-sélectionnées). Entrée reprend l'indentation de la ligne au-dessus.
+Tapez ` ``` ` sur une ligne vide et appuyez sur espace ou sur Entrée, et cela devient un bloc de code (ajoutez un identifiant de langage à la suite, comme dans ` ```ts `, et ce langage est repris automatiquement). `Tab` et `Shift+Tab` indentent et désindentent les lignes de code, y compris en bloc lorsque plusieurs lignes sont sélectionnées. Appuyer sur Entrée reprend automatiquement la profondeur d'indentation de la ligne précédente.
 
-La ligne contextuelle n'apparaît que tant que le caret est à l'intérieur du code — un champ de
-saisie pour taper le langage soi-même, un bouton « aucun langage » qui ne montre que quand un
-langage est fixé, et un bouton par langage couramment utilisé.
+Tant que le caret est à l'intérieur d'un bloc de code, la barre d'outils contextuelle dynamique s'active et propose un champ pour taper le langage directement, un bouton « Aucun langage » et des boutons de raccourci pour les langages les plus courants :
 
 ```
 javascript typescript jsx tsx · python java kotlin swift
@@ -29,62 +21,42 @@ html xml css scss · json yaml toml markdown
 bash powershell dockerfile diff
 ```
 
-Cette liste n'est qu'un **raccourci** — ce n'est pas la liste des langages que connaît le cœur.
-Un langage absent de cette liste se tape directement dans le champ, et la valeur passe telle
-quelle jusqu'au surligneur.
+Un langage absent de cette liste peut aussi être tapé directement dans le champ de saisie ; la valeur saisie est transmise telle quelle au surligneur syntaxique.
 
 ## La coloration se branche sur la wing
 
-`highlight` est un crochet qui **renvoie des sortes, pas des couleurs** — sa forme est
-`(source, langage) => {text, type?}[]`, et `type` est fixé à l'une des quatorze de
-`CODE_TOKEN_TYPES` : `keyword`, `string`, `number`, `comment`, `function`, `class`, `variable`,
-`operator`, `punctuation`, `tag`, `attribute`, `literal`, `regexp`, `meta`.
+`highlight` est une fonction crochet qui reçoit le code source et le langage et renvoie un tableau de jetons : `(source, lang) => { text: string, type?: string }[]`.
 
-Les couleurs sont fixées directement par la feuille du cœur, via des sélecteurs
-`[data-nabi-token="…"]`, et **seules cinq d'entre elles sont colorées** (`comment`, `string`,
-`keyword`, `number`, `literal`). Les autres reçoivent l'attribut mais aucune règle de couleur,
-donc elles sortent dans la couleur du corps du texte. Les valeurs sont des couleurs fixes plutôt
-que des variables CSS, donc redéfinissez vous-même le sélecteur pour une autre palette ou une
-variante sombre.
+Le `type` d'un jeton renvoie l'un des 14 types de jetons standards définis dans `CODE_TOKEN_TYPES` (`keyword`, `string`, `number`, `comment`, `function`, `class`, `variable`, `operator`, `punctuation`, `tag`, `attribute`, `literal`, `regexp`, `meta`).
+
+La feuille de style du cœur attribue des couleurs de thème à cinq types de jetons par défaut (`comment`, `string`, `keyword`, `number`, `literal`) via le sélecteur `[data-nabi-token="…"]`. Pour appliquer un mode sombre ou des couleurs personnalisées, il suffit de redéfinir ce sélecteur CSS.
 
 ```css
 .dark .nabi-content [data-nabi-token="keyword"] { color: #c9a0ff; }
 ```
 
-Les grammaires elles-mêmes ne sont pas dans le paquet — vous apportez les vôtres, comme Prism,
-highlight.js ou Shiki.
-
-Le côté qui colore se pose **sur la wing**, pas dans un mount séparé. Bâtissez un `attach` avec
-`makeCodeAttach` et échangez-le sur la wing code, et `mountSurface` le branche avec l'`attach` de
-chaque autre wing enregistrée. La démo de ce site est un exemple de Shiki branché ainsi
-(`.vitepress/src/highlight.ts`).
+Pour brancher un surligneur externe comme Shiki ou Prism, utilisez `makeCodeAttach` pour construire le crochet `attach`.
 
 ```ts
 import { codeWing, makeCodeAttach } from 'nabi-note'
 
-// La wing est une constante — seul ce qui s'attache est échangé
-const wing = { ...codeWing, attach: makeCodeAttach({ highlight }) }
+const wing = { ...codeWing, attach: makeCodeAttach({ highlight: myHighlighter }) }
 ```
 
-Passez aussi `version` et cela redessine **quand le document est inchangé mais que le côté
-coloration a changé.** C'est le cas d'un surligneur qui va chercher les grammaires de façon
-asynchrone (Shiki le fait, la première fois qu'il rencontre un langage) : la grammaire arrive
-mais le document n'a pas changé, donc `onChange` ne se déclenche jamais, et sans ceci il faudrait
-taper un caractère de plus pour voir les couleurs arriver.
+Si, comme Shiki, votre surligneur charge ses paquets de grammaire de façon asynchrone, passez l'option `version` pour redessiner l'écran de l'éditeur une fois le chargement de la grammaire terminé :
 
 ```ts
 let grammarAge = 0
 const wing = {
   ...codeWing,
-  attach: makeCodeAttach({ highlight, version: () => grammarAge }),
+  attach: makeCodeAttach({ highlight: myHighlighter, version: () => grammarAge }),
 }
-// quand la grammaire arrive en retard — augmentez le nombre et ça redessine
+
+// une fois le chargement asynchrone de la grammaire du langage terminé
 grammarAge += 1
 ```
 
-La valeur enregistrée suit la convention extérieure — `<pre data-nabi-lang="ts"><code
-class="language-ts">`, les couleurs sortant comme des attributs `data-nabi-token` (pas comme un
-`style` en ligne).
+La structure HTML enregistrée suit le format standard : `<pre data-nabi-lang="ts"><code class="language-ts">`. Chaque jeton est balisé de façon sûre avec l'attribut `data-nabi-token`.
 
 ## Exemple d'utilisation
 
@@ -94,7 +66,6 @@ import 'nabi-note/nabi.css'
 
 const surface = document.querySelector<HTMLElement>('#editor')!
 
-// La liste des wings bâtit ensemble la connaissance des sortes, les commandes et les assembleurs — c'est le `registry`
 const { nabi, registry } = createNabiWith([codeWing])
 
 mountSurface({ nabi, registry, root: surface })

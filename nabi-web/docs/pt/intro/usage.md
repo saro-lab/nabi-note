@@ -165,6 +165,57 @@ estilos. Para mudar a cor ou o traço, sobrescreva esta regra.
 código precisa de alguém para colorir (`makeCodeAttach`, veja
 [{{ t('menu_block_code') }}](../wing/block/code)).
 
+### Onde os aceleradores são ouvidos
+
+Um único lugar escuta aceleradores como <kbd>⌘</kbd><kbd>S</kbd>: a barra de ferramentas. Até onde
+esse ouvido alcança é traçado por `mountToolbar({ surface })` — **só uma tecla levantada dentro
+dessa superfície ou das linhas da barra** pertence a esse editor.
+
+- **Com dois editores numa página, é preciso passar `surface`.** Sem isso a barra volta a escutar
+  o documento inteiro, e então <kbd>⌘</kbd><kbd>S</kbd> digitado no editor de baixo salva o texto
+  do editor de cima. Até uma tecla digitada num campo comum do próprio host pode ser capturada.
+- **Sem registrar nenhum wing, a tecla não existe.** Salvar e abrir vivem no núcleo (`mountFile`),
+  mas o botão e o acelerador pertencem ao wing — então um editor montado só com
+  `wings().allBasic()` não tem <kbd>⌘</kbd><kbd>S</kbd> nem <kbd>⌘</kbd><kbd>O</kbd>. O único
+  caminho de volta é `.use('save').use('open')`.
+- **Sem lugar para chegar, a tecla não é engolida.** Numa montagem em que o botão de salvar não
+  alcança nada (nem `file` nem `onHost` encaixados), a tecla segue para o navegador como se fosse
+  dele. Não tiramos um atalho por um trabalho que não fazemos — engolir em silêncio faria o leitor
+  pensar que o navegador quebrou.
+
+Para salvar e abrir sem wings, use a alça que `mountFile` devolve — num editor sem botão nem
+atalho, o próprio host chama `file.save()` e `file.open()`.
+
+### O teclado móvel e a barra fixa
+
+`mountSticky` faz mais no celular agora — observa o teclado subir e descer, e traz o cursor
+**para debaixo da barra e acima do teclado**. Três coisas que o host deve saber.
+
+- **Só se move enquanto o editor tem o foco.** Sem foco não dá nem um passo — a tela não deve
+  saltar enquanto o host empurra um valor via `setHtml()`.
+- **Enquanto uma mão está rolando a tela, não se move nem um pixel.** Fica travado por 250ms
+  depois de uma rolagem — tirar a tela de uma mão em movimento é exatamente o que causa o tremor.
+- **Só uma mudança do tamanho de um teclado abre a porta.** O recolhimento da barra de endereço
+  (poucos pixels) não move nada; a porta só abre passado `max(120px, 15% da altura da janela)`.
+
+Ao digitar, empurra **só o necessário** — arrastar a tela até a barra a cada caractere seria
+inutilizável. No instante em que o teclado sobe, porém, alinha a vista para que **a barra fique
+colada no topo da janela**, e depois que o viewport se acomoda, alinha mais uma vez.
+
+`--nabi-bar-height` é o valor que esse passo usa — `mountSticky` grava a **altura medida** do
+chrome ao qual se prende na raiz `.nabi`, e a folha de `.nabi-content > *` soma esse valor a
+`scroll-margin-block-start`. **Não é um valor para o host ajustar, mas a explicação de por que o
+cursor nunca fica escondido debaixo da barra** — sem esse mount, uma estimativa de `3.5rem` fica
+no lugar, e ela fica bem curta quando a barra quebra em duas linhas ou a linha de contexto sobe.
+
+::: warning Não bloqueie o zoom com a meta viewport
+O Safari do iOS amplia a página inteira quando o foco cai num campo de formulário cujo texto tem
+menos de 16px. O núcleo evita isso **aumentando o texto** — `--nabi-touch-font-size` (`16px` por
+padrão). **Não** tomamos o outro caminho de bloquear o zoom em si com `user-scalable=no` ou
+`maximum-scale=1`: isso tira do leitor o direito de ampliar. Se o host escrever essa meta na
+própria página, o piso que o núcleo definiu perde o sentido — por isso, não a escreva.
+:::
+
 ### Prendendo o runtime do lado da leitura na prévia
 
 A prévia é o `getHtml()` colocado direto num HTML estático, então o que **o lado da leitura faz
@@ -273,8 +324,27 @@ tocam no documento.
 | `setHtml` | o adaptador `parseHtml` não foi encaixado (veja abaixo), ou a edição está bloqueada |
 | `applyCommand` | esse comando não existe, ou **nada muda** |
 
-A última linha é uma regra: **se nada muda, fica quieto.** Aplicar `setHeading` de novo num
+**O documento vazio tem uma única forma — `[{"w":"p","ch":[]}]`.** Ao selecionar tudo e apagar,
+o título ou o alinhamento do primeiro bloco não sobrevive. Esvaziar só uma linha entre várias é
+diferente — como a intenção é continuar escrevendo naquela linha, os atributos do parágrafo
+permanecem.
+
+**Um valor vazio não é um erro de forma, é o documento vazio.** Dar `null`, `undefined`, uma
+string vazia (mesmo só com espaços) ou um array vazio não é rejeitado — o editor **se acomoda
+numa tela vazia e responde `true`**, tanto em `setJson` quanto em `setHtml`; por isso "esvaziar"
+sempre funciona. Como não há nada para ler num valor vazio, `setHtml` nem precisa do adaptador
+(abaixo) nesse caso. Um valor com a forma errada continua sendo rejeitado — vazio e errado não
+são a mesma coisa.
+
+A última linha é uma regra à parte: **se nada muda, fica quieto.** Aplicar `setHeading` de novo num
 parágrafo que já é título de nível 2 responde `false`, sem deixar ponto de desfazer nem sinal.
+
+O terceiro argumento de `applyCommand` é **a mão que chama** — em `applyCommand(name, args?,
+by?)`, `by` é `'keyboard' | 'pointer'` (o tipo `CommandHand`), e vale teclado quando não é dito.
+Há um único lugar em que isso muda o resultado: um comando de marca com o cursor recolhido fica
+reservado quando vem do teclado (passa a valer a partir do próximo caractere), mas responde
+`false` sem reserva quando vem de um ponteiro, avisando por toast que "não há nada para aplicar".
+Ao construir uma UI própria que chama comandos por clique, indique `'pointer'`.
 
 ### `setHtml` precisa de um adaptador
 
@@ -297,7 +367,7 @@ gerar HTML para enviar continua aberto.
 
 **Colar lê uma área de transferência através de vários olhos** — `HTML`, `MARKDOWN`, `TEXT` e o formato próprio do nabi (`NABI`). Quando há mais de uma leitura, um painel pequeno pergunta qual colar; quando há só uma, cola sem perguntar. Uma cola sem texto algum (só arquivos) pula o painel e vai para [{{ t('menu_etc_upload') }}](../wing/etc/upload).
 
-**Três formatos salvam** — `.nabi` (o original), `.nhtml` (uma página HTML independente) e `.md` (markdown; o que não cabe ali vira HTML, então pode não voltar como era). **Quatro abrem** — esses três mais um `.html` simples de fora. Essa porta precisa do `mountFile()` da tabela acima, e encaixar um formato a mais está em [{{ t('menu_wing_custom') }}](../wing/custom#plugging-in-an-io-filter).
+**Três formatos salvam** — `.nabi` (o original), `.nhtml` (uma página HTML independente) e `.md` (markdown; o que não cabe ali vira HTML, então pode não voltar como era). **Quatro abrem** — esses três mais um `.html` simples de fora. Essa porta precisa do `mountFile()` da tabela acima, e encaixar um formato a mais está em [{{ t('menu_wing_custom') }}](../wing/custom#plugando-um-filtro-de-e-s).
 
 ---
 
@@ -391,6 +461,13 @@ nabi.$markSaved(savedDoc)   // depois que o salvamento se concretiza — passe o
 porque, enquanto o salvamento demora, o que foi digitado nesse meio-tempo ainda precisa
 continuar marcado como "alterado". O wing de salvar (`save`) chama isso depois que o arquivo é
 de fato gravado, então salvar como `.nabi` faz `isChanged()` virar `false`.
+
+::: warning Só `.nabi` move a linha de base
+O que sai como `.nhtml` ou `.md` é uma **cópia**, e uma cópia não move a linha de base — depois de
+salvá-la, `isChanged()` continua `true`. Tratar uma cópia como "salva" faria a janela se fechar
+sem perguntar, levando o original ainda incompleto com ela. Quando o salvamento é assíncrono, a
+linha de base só se move **depois que ele tem sucesso** — um salvamento que falha não a toca.
+:::
 
 **Desfazer até voltar ao ponto inicial também deixa `false`** — como a árvore nabi é imutável e
 cada edição a troca por inteiro, saber se é o mesmo documento não exige varrer nem gerar hash:

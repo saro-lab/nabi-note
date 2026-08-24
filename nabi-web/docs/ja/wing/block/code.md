@@ -6,20 +6,13 @@ title: コード
 
 ## 説明
 
-`codeWing`(名前 `code`)はコードブロック(`<pre>`)を所有する **定数**です — 括弧を
-付けて呼びません。
+`codeWing`(識別子 `code`)はコードブロック(`<pre><code>`)を処理する不変の翼オブジェクトです。
 
-`holds: 'inline'` の器で、中は `repair` が平文に押さえておきます — マークや他の翼が
-割り込めません。そういう欄が契約に別にあるのではなく、翼が自分の中身を自ら整えて
-いるだけです。
+`holds: 'inline'` のコンテナで、内部のテキストは `repair` の段階で純粋なテキストに正規化されるため、他のインラインマークやブロックが入り込みません。
 
-空の行で ` ``` ` を打ってスペースか Enter を押すとコードブロックになります —
-` ```ts ` のように言語を続けて書けば、その言語も一緒に取り込まれます。`Tab`/
-`Shift+Tab` で行をインデント・アウトデントします(複数行を選べば一度に)。Enter は
-前の行のインデントを引き継ぎます。
+空の行で ` ``` ` を入力してスペースか Enter を押すとコードブロックに変換されます(` ```ts ` のように言語識別子を一緒に入力すると、その言語が自動的に設定されます)。<kbd>Tab</kbd> と <kbd>Shift</kbd>+<kbd>Tab</kbd> でコード行のインデントを増減でき、複数行を選択している場合は一括で適用されます。Enter キーを押すと前の行のインデント幅が自動的に引き継がれます。
 
-キャレットがコードの中にあるときだけ状況行が出ます — 言語を直接打ち込む入力欄、
-「言語なし」、そしてよく使う言語の欄です。
+キャレットがコードブロック内にあるとき、動的コンテキストツールバーが有効になり、言語を直接入力する欄、「言語なし」ボタン、よく使う主要言語のショートカットボタンが表示されます:
 
 ```
 javascript typescript jsx tsx · python java kotlin swift
@@ -28,56 +21,42 @@ html xml css scss · json yaml toml markdown
 bash powershell dockerfile diff
 ```
 
-この一覧は **近道**にすぎません — コアが知っている言語の一覧ではありません。ここに
-ない言語は最初の欄に直接打ち込めばよく、その値はハイライターにそのまま渡ります。
+上のリストにない言語でも入力フォームに直接言語名を入力でき、入力された値はそのまま文法ハイライターに渡されます。
 
 ## 色付けは翼に差し込みます
 
-`highlight` は **色ではなく種類を返すフック**です — `(ソース, 言語) =>
-{text, type?}[]` の形で、`type` は `keyword`・`string`・`number`・`comment`・
-`function`・`class`・`variable`・`operator`・`punctuation`・`tag`・`attribute`・
-`literal`・`regexp`・`meta` の十四のうちのひとつに固定されています(`CODE_TOKEN_TYPES`)。
+`highlight` オプションはソースコードと言語を受け取り、トークン配列を返すフック関数です:`(source, lang) => { text: string, type?: string }[]`。
 
-色はコアのシートが `[data-nabi-token="…"]` セレクタで直接決めます — **五つだけ色が
-あります**(`comment`・`string`・`keyword`・`number`・`literal`)。残りの種類は印だけが
-付いて色の規則がなく、本文の色のまま出ます。値が CSS 変数ではなく固定色なので、別の色
-やダークのバリエーションを使うにはそのセレクタを直接上書きします。
+トークンの `type` は `CODE_TOKEN_TYPES` に定義された14種類の標準トークン型のいずれかを返します(`keyword`、`string`、`number`、`comment`、`function`、`class`、`variable`、`operator`、`punctuation`、`tag`、`attribute`、`literal`、`regexp`、`meta`)。
+
+コアのスタイルシートは `[data-nabi-token="…"]` セレクタで、既定の5種類のトークン(`comment`、`string`、`keyword`、`number`、`literal`)にテーマカラーを与えます。ダークモードやカスタムカラーを適用するには、そのCSSセレクタを上書きできます。
 
 ```css
 .dark .nabi-content [data-nabi-token="keyword"] { color: #c9a0ff; }
 ```
 
-文法辞書そのものはパッケージにありません — Prism・highlight.js・Shiki のようなものを
-自分で繋ぐ必要があります。
-
-色を塗る側は **翼に差し込みます** — 別に mount しません。`makeCodeAttach` で
-`attach` を作りコードの翼に差し替えると、`mountSurface` がそれを付けます。このサイト
-のデモは Shiki をそうやって繋いだ例です(`.vitepress/src/highlight.ts`)。
+Shiki や Prism など外部のハイライターを接続するときは、`makeCodeAttach` を使って `attach` フックを構成します。
 
 ```ts
 import { codeWing, makeCodeAttach } from 'nabi-note'
 
-// 翼は定数です — 付随処理(`attach`)だけを差し替えます
-const wing = { ...codeWing, attach: makeCodeAttach({ highlight }) }
+const wing = { ...codeWing, attach: makeCodeAttach({ highlight: myHighlighter }) }
 ```
 
-`version` を一緒に渡すと **文書はそのままなのに塗る側が変わったとき**に塗り直します。
-文法を非同期で取ってくるハイライター(Shiki は言語に初めて出会うとそうです)がその
-場合です — 文法が届いても文書は変わっていないので `onChange` が鳴らず、これがないと
-何か文字をもう一つ打たないと色が入りません。
+Shiki のように文法バンドルを非同期で読み込む場合は、`version` オプションを渡すことで、文法の読み込みが完了したときにエディタ画面を再度ハイライトできます:
 
 ```ts
 let grammarAge = 0
 const wing = {
   ...codeWing,
-  attach: makeCodeAttach({ highlight, version: () => grammarAge }),
+  attach: makeCodeAttach({ highlight: myHighlighter, version: () => grammarAge }),
 }
-// 文法が遅れて届いたとき — 数を上げれば塗り直します
+
+// 非同期の言語文法読み込みが完了したとき
 grammarAge += 1
 ```
 
-保存値は外の慣例に従います — `<pre data-nabi-lang="ts"><code class="language-ts">`
-であり、色は `data-nabi-token` 属性として出ます(インライン `style` ではありません)。
+保存されるHTML構造は標準形式に従います:`<pre data-nabi-lang="ts"><code class="language-ts">`。各トークンは `data-nabi-token` 属性で安全にマークアップされます。
 
 ## 使用例
 

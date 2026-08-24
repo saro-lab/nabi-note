@@ -6,35 +6,22 @@ title: Citação
 
 ## Descrição
 
-`quoteWing` (id `quote`) é dono da caixa de citação (`<blockquote>`). É
-`place: 'container'` e `holds: 'blocks'` — por dentro moram blocos. Como
-qualquer outro objeto, a própria citação também usa um parágrafo-invólucro e
-fica no nível superior.
-
-**Ela não define `allows`.** O interior da citação segue a mesma regra do nível
-superior, então tabela e imagem também podem entrar, cada uma com seu
-parágrafo-invólucro — colar ou importar um HTML desse tipo preserva a
-estrutura tal e qual.
+O `quoteWing` (id `quote`) cuida do bloco de citação (`<blockquote>`). Ele tem `place: 'container'`
+e `holds: 'blocks'`, então, além de parágrafos comuns, também pode conter outros elementos de
+bloco, como uma tabela ou uma imagem.
 
 ```json
 [{"w":"p","ch":[{"w":"quote","ch":[
-  {"w":"p","ch":["texto"]},
+  {"w":"p","ch":["texto citado"]},
   {"w":"p","ch":[{"w":"table","ch":[]}]}
 ]}]}]
 ```
 
-Só que **os botões de inserir não colocam nada dentro da citação.** Coisas como
-imagem, tabela e divisor, que entram por `insertLump`, sempre se instalam no
-**nível superior** — então mesmo com o cursor dentro da citação, o objeto novo
-fica **depois** dela. Para colocar algo dentro, é preciso colar.
+Clique no botão da barra de ferramentas e os blocos da seleção são envolvidos em uma citação. Se a
+seleção já for uma citação, o mesmo botão a desfaz.
 
-Pressionar o botão envolve em citação todos os blocos de nível superior que a
-seleção abrange. Só desfaz quando tudo o que está selecionado **já é
-citação** — se for uma mistura, envolve tudo de novo, mais uma camada.
-
-Digitar `>` sozinho no começo da linha e depois espaço também torna aquela
-linha uma citação — nessa conversão automática **o gatilho é o espaço** (não o
-Enter), porque você continua escrevendo na mesma linha.
+Digite `>` seguido de um espaço no início de um parágrafo, e ele se converte automaticamente em
+citação.
 
 ## Exemplo de uso
 
