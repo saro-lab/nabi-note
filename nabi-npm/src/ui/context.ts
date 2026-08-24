@@ -20,6 +20,7 @@ import type { Panel } from './parts/panel.js';
 import { watchSettle, type Settle } from './parts/settle.js';
 import { openLightbox } from './overlay.js';
 import type { Overlay } from './overlay.js';
+import { watchNarrow } from './narrow.js';
 
 export interface ContextToolbarOptions {
   readonly nabi: Nabi;
@@ -83,6 +84,8 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
   let lightbox: Overlay | null = null;
 
   root.classList.add('nabi-context');
+  // 한 줄 모드 (260824_000) — 줄 자체가 flex 그릇이라 툴바처럼 감쌀 것 없이 제가 구른다.
+  const stopNarrow = watchNarrow(root);
 
   const closeFloating = (): void => {
     panel?.close();
@@ -227,6 +230,7 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
       lightbox?.close();
       lightbox = null;
       if (ownSettle) settle.unmount();
+      stopNarrow();
       root.classList.remove('nabi-context');
       root.replaceChildren();
       root.hidden = false;

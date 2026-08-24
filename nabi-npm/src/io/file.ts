@@ -29,7 +29,7 @@ export interface NabiFileBody {
 //
 // 여기 손으로 적는 까닭: 코어는 `package.json` 을 안 읽는다(번들러마다 읽는 법이 다르고, 서버에서
 // 도 돌아야 한다). 판을 올릴 때 이 줄도 함께 올린다(`scripts/sync-version.mjs` 가 맞춘다).
-export const NABI_VERSION = '0.8.1';
+export const NABI_VERSION = '0.8.2';
 export const NABI_FILE_VERSION = NABI_VERSION.split('.').slice(0, 2).join('.');
 
 export function writeNabiFile(body: unknown): string {

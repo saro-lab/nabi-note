@@ -10,6 +10,7 @@ import { localeDirection, makeTranslator, type Translator } from '../locale/inde
 import { markNode, pressedOf, pressedValue, type PressEnv } from './press.js';
 import { reachAt, visibleAt } from './visible.js';
 import { focusQuiet, make } from './parts/dom.js';
+import { watchNarrow } from './narrow.js';
 import { iconButton, setPressed, wireIconButton } from './parts/button.js';
 import { TOOLBAR_GROUPS as GROUP_ORDER, renderToolbarHtml, toolbarSlots } from '../wing/toolbar-html.js';
 import { openPanel, type Panel } from './parts/panel.js';
@@ -383,6 +384,15 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     if (name !== null) groups.set(name, el);
   }
 
+  // 그룹만 한 겹 감싼다 — 한 줄 모드(260824_000)의 스크롤 그릇이다. 넓은 폭에서는
+  // display: contents 라 없는 셈이고(float 도구·줄바꿈이 지금 그대로), 좁은 폭에서만 flex 로
+  // 서서 가로로 구른다. 도구(.nabi-tools)와 toast 선반은 밖에 남는다 — 도구는 늘 보이고,
+  // 선반은 스크롤에 안 잘린다. unmount 는 replaceChildren 이 함께 걷는다.
+  const strip = make(owner, 'div', 'nabi-strip');
+  strip.append(...Array.from(root.querySelectorAll<HTMLElement>(':scope > .nabi-group')));
+  root.append(strip);
+  const stopNarrow = watchNarrow(root);
+
   slots.forEach((slot, at) => {
     const el = standingButtons[at];
     if (!el) return;
@@ -498,6 +508,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
       toast.unmount();
       stopChange();
       stopSettle();
+      stopNarrow();
       if (options.accelerators !== false) owner.removeEventListener('keydown', onKey, true);
       if (ownSettle) settle.unmount();
       if (ownRow) root.classList.remove('nabi-toolbar-row');

@@ -251,6 +251,12 @@ export const CORE_CSS = `
   margin-inline-end: .75rem; min-inline-size: 0; position: relative;
 }
 .nabi-group[hidden] { display: none; }
+/* 그룹들을 감싼 한 겹 — 한 줄 모드(아래 .nabi-narrow 절)의 스크롤 그릇이다. mountToolbar 가
+   그룹만 이 안에 담는다. 넓은 폭에서는 contents 로 **없는 셈**이라 float 도구와 줄바꿈이 위의
+   규칙 그대로다. 줄(.nabi-toolbar-row)이 아니라 이 속 겹이 구르는 까닭: 줄은 toast 선반의
+   닻(relative)이라 제가 스크롤 그릇이 되면 아래로 늘어뜨린 선반을 제 상자에서 잘라 버린다 —
+   절대 배치는 containing block 이 스크롤 그릇 밖이어야 안 잘린다. */
+.nabi-strip { display: contents; }
 
 .nabi-btn {
   appearance: none; border: 0; background: transparent; color: inherit; cursor: pointer;
@@ -449,6 +455,26 @@ export const CORE_CSS = `
   /* 틀렸다는 빨간 한 줄은 접힌 판에서 제 줄을 갖는다 — 칸 옆에 끼면 칸이 그만큼 더 줄어든다.
      비어 있을 때는(맞는 값·아직 안 쓴 값) 줄을 안 만든다. */
 }
+/* 한 줄 모드(.nabi-narrow, 아래 절)도 같은 판을 쓴다 — 그릇이 좁으면 뷰포트가 넓어도 단추
+   곁은 답이 아니다: 단추가 가로로 구르는 줄 속에 있어 붙인 판이 그 줄에 잘린다. 위 미디어
+   블록과 다른 것은 폭뿐이다 — 넓은 화면 한가운데 90vw 는 판이 아니라 화면이라, 기본 상한
+   30rem 을 그대로 두고 남는 자리를 좌우로 나눠 가운데 세운다(양변 inset + margin auto).
+   좁은 뷰포트에서는 두 블록이 함께 걸리는데 90vw 가 대개 이 상한 아래라 모습이 같다. */
+.nabi-narrow .nabi-panel {
+  position: fixed !important;
+  inset-inline: 5vw !important;
+  inset-block-start: var(--nabi-panel-mid, 50%) !important;
+  transform: translateY(-50%);
+  inline-size: auto; max-inline-size: 30rem; margin-inline: auto;
+  max-block-size: 90vh;
+  max-block-size: var(--nabi-panel-room, 90dvh);
+  overflow: auto;
+  box-shadow: var(--nabi-shadow), 0 0 0 100vmax var(--nabi-scrim);
+}
+.nabi-narrow .nabi-menu { max-inline-size: 100%; }
+.nabi-narrow .nabi-panel:has(> .nabi-grid) { inline-size: fit-content !important; margin-inline: auto; }
+.nabi-narrow .nabi-prompt { flex-wrap: wrap; }
+.nabi-narrow .nabi-prompt .nabi-input { inline-size: auto; flex: 1 1 8rem; }
 /* 칸과 확인 단추가 **같은 높이**로 나란히 선다 — 둘이 한 줄로 읽히려면 키가 같아야 한다. */
 .nabi-input {
   flex: 1 1 auto; min-inline-size: 0; box-sizing: border-box;
@@ -465,7 +491,9 @@ export const CORE_CSS = `
    선이 아니라 면으로 나눈다(툴바 그룹이 상자·테두리 대신 간격으로 나뉘는 것과 같은 결). */
 .nabi-context {
   display: flex; flex-wrap: wrap; align-items: center;
-  gap: 0 .75rem; padding: .25rem .375rem; min-block-size: 2rem;
+  /* 세로 패딩은 안 준다 (주인 지시 2026-08-24) — 높이는 min-block-size 가 잡고 컨트롤은
+     가운데 맞춤으로 선다. 세로 여백까지 있으면 줄이 그만큼 더 두꺼워질 뿐이다. */
+  gap: 0 .75rem; padding: 0 .375rem; min-block-size: 2rem;
   background: var(--nabi-soft);
 }
 .nabi-context[hidden] { display: none; }
@@ -517,6 +545,71 @@ export const CORE_CSS = `
      같은 규칙이다 — 호스트가 :root 에 적은 값이 이긴다. */
   .nabi-input { font-size: var(--nabi-touch-font-size, 16px); }
 }
+
+/* --- 한 줄 모드 (260824_000) ---
+   그릇이 좁으면(폭 40rem 아래) 툴바 줄·상황 줄은 접히는 대신 **한 줄로 서서 가로로 구른다.**
+   문턱이 뷰포트가 아니라 그릇의 제 폭인 까닭(주인의 "컨텍스트 가로크기"): 넓은 화면이라도
+   좁은 칼럼에 박힌 편집기는 모바일과 같은 처지다. 판정은 ui/narrow.ts 가 재서 .nabi-narrow 를
+   단다 — 컨테이너 쿼리를 안 쓰는 까닭도 그 파일 맨 위에 있다(containment 가 fixed 판을 가둔다).
+   위 손가락 분기와는 서로 다른 것을 잰다(겨눔의 굵기 / 그릇의 폭) — 겹쳐 걸리면 "한 줄인데
+   단추가 크다"로 자연히 합쳐진다.
+   스크롤바는 숨긴다 — 손가락은 어차피 맨살로 굴리고, 고정폭 스크롤바가 줄 높이에 얹히면
+   --nabi-bar-height 가 그만큼 불어 시트의 스크롤 보정이 밀린다. */
+.nabi-toolbar-row.nabi-narrow .nabi-strip {
+  display: flex; flex-wrap: nowrap; align-items: center;
+  overflow-x: auto; scrollbar-width: none;
+  /* 더 있다는 표식 (주인 신고 2026-08-24 "그냥 보면 거기서 끝난 것 같다") — 넘친 쪽 가장자리에
+     옅은 그늘 한 뼘. 넉 장을 겹친다: 그늘 두 장(scroll)은 양 끝에 제자리로 서고, 바탕색 막
+     두 장(local)은 내용과 함께 구르며 제 쪽 그늘을 덮는다 — 그래서 그늘은 **그쪽에 더 있을
+     때만** 보이고, 끝까지 굴리면 막이 덮어 사라진다. 스크롤 위치를 JS 로 안 듣는다.
+     그늘색을 fg 로 섞는 까닭: 검정 고정이면 다크에서 바탕보다 옅어 안 보인다.
+     막의 **불투명 구간(1rem)은 그늘 폭(.875rem)보다 넓어야 한다** — 좁으면 스크롤이 없는
+     줄에서도 덜 덮인 그늘 끝이 비쳐 보인다 (주인 신고 2026-08-24, 상황 줄에서 실제로 비쳤다). */
+  background:
+    linear-gradient(to right, var(--nabi-bg) 1rem, transparent) left / 2rem 100%,
+    linear-gradient(to left, var(--nabi-bg) 1rem, transparent) right / 2rem 100%,
+    radial-gradient(farthest-side at 0 50%, color-mix(in srgb, var(--nabi-fg) 32%, transparent), transparent) left / .875rem 100%,
+    radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, var(--nabi-fg) 32%, transparent), transparent) right / .875rem 100%;
+  background-repeat: no-repeat;
+  background-attachment: local, local, scroll, scroll;
+}
+.nabi-toolbar-row.nabi-narrow .nabi-strip::-webkit-scrollbar { display: none; }
+/* 시작 여백은 줄이 아니라 **스크롤 그릇 안**에 둔다 (주인 지시 2026-08-24) — 여백이 그릇
+   밖(줄의 padding)에 있으면 그늘이 줄의 첫머리가 아니라 그 여백 뒤에서 시작한다. 안으로
+   들이면 그늘은 줄의 시작 끝선에서 서고, 단추들의 들여쓰기(.375rem)는 그대로다. 끝쪽 여백은
+   줄에 남긴다 — 그 자리는 도구 둘의 몫이라 그릇 밖이 맞다. */
+/* :has 갈래는 이 클래스가 겹쳐 붙는 호스트의 것 — 바깥 줄(호스트가 감싼 겹)의 시작 여백도
+   같이 걷어야 그늘이 정말 첫머리에서 선다. 겹마다 .375rem 씩 두 번 밀리던 자리다. */
+.nabi-toolbar-row.nabi-narrow,
+.nabi-toolbar-row:has(> .nabi-toolbar-row.nabi-narrow) { padding-inline-start: 0; }
+.nabi-toolbar-row.nabi-narrow .nabi-strip { padding-inline-start: .375rem; }
+/* 도구(.nabi-tools)는 그릇 밖이라 손을 안 댄다 — float 그대로 오른쪽에 늘 보이고, 속 겹은
+   BFC 라 뜬 것 곁에서 남은 폭만 차지한다. */
+.nabi-context.nabi-narrow {
+  flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+  /* 같은 표식 — 다만 이 줄의 바탕(--nabi-soft)은 **반투명**이라 그대로는 막이 못 된다:
+     4% 회색 한 겹으로는 밑의 그늘이 그대로 비친다 (주인 신고 2026-08-24 "스크롤이 없을 때도
+     보인다"). 그래서 막을 두 겹으로 깐다 — 불투명한 --nabi-bg 위에 --nabi-soft. 이 줄은
+     크롬(배경 --nabi-bg) 안에 사니 그 합성이 곧 줄의 실제 색이라 이음매가 안 보인다. */
+  background:
+    linear-gradient(to right, var(--nabi-soft) 1rem, transparent) left / 2rem 100%,
+    linear-gradient(to right, var(--nabi-bg) 1rem, transparent) left / 2rem 100%,
+    linear-gradient(to left, var(--nabi-soft) 1rem, transparent) right / 2rem 100%,
+    linear-gradient(to left, var(--nabi-bg) 1rem, transparent) right / 2rem 100%,
+    radial-gradient(farthest-side at 0 50%, color-mix(in srgb, var(--nabi-fg) 32%, transparent), transparent) left / .875rem 100%,
+    radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, var(--nabi-fg) 32%, transparent), transparent) right / .875rem 100%,
+    var(--nabi-soft);
+  background-repeat: no-repeat;
+  background-attachment: local, local, local, local, scroll, scroll, scroll;
+}
+.nabi-context.nabi-narrow::-webkit-scrollbar { display: none; }
+/* 그룹이 눌리지 않아야 넘친다 — nowrap flex 에서 줄어들 수 있으면 스크롤 대신 단추가
+   짜부라진다. 그룹 안 접힘도 함께 끈다(접힐 줄이 이제 없다). */
+.nabi-narrow .nabi-group, .nabi-narrow .nabi-ctx-group { flex: none; flex-wrap: nowrap; }
+/* 스크롤 그릇 안의 툴팁은 끈다 — 줄 밖으로 나가는 절대 배치라 잘리거나, 그릇에 세로 넘침을
+   만들어 줄이 위아래로도 구르게 된다. 도구 둘의 툴팁은 그릇 밖이라 그대로 산다. */
+.nabi-toolbar-row.nabi-narrow .nabi-strip [data-nabi-tip]:hover::after,
+.nabi-context.nabi-narrow [data-nabi-tip]:hover::after { content: none; }
 
 /* 눈금 슬라이더 — 값이 순서를 갖는 것(글자 크기·서체·폭)의 손잡이다. 칸 여섯이 줄을 여섯 칸
    먹는 자리에서 이것은 하나로 끝난다 — 상황 줄이 한 줄로 남는 까닭. */

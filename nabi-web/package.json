@@ -19,7 +19,7 @@
     "@shikijs/langs": "^4.4.3",
     "@shikijs/themes": "^4.4.3",
     "minisearch": "^7.2.0",
-    "nabi-note": "file:nabi-note-0.8.1.tgz",
+    "nabi-note": "file:nabi-note-0.8.2.tgz",
     "shiki": "^4.4.3"
   },
   "devDependencies": {
@@ -28,7 +28,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vitepress": "^2.0.0-alpha.19",
-    "vue": "^3.6.0-rc.4",
-    "wrangler": "^4.123.0"
+    "vue": "^3.6.0-rc.5",
+    "wrangler": "^4.125.0"
   }
 }

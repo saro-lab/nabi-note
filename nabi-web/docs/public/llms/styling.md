@@ -153,6 +153,19 @@ Buttons, spacing, toolbar chips, and most other outer sizes are `rem`, so they *
 root (`html`) font size** - zooming text in the browser or OS grows the editor chrome with it.
 Change size by changing the root `font-size`. Borders are lines, not sizes, so some stay `px`.
 
+## Narrow chrome becomes one scrolling line
+
+When the toolbar row or the context row itself is 40rem wide or less (its own width, not the
+viewport - an editor in a narrow column counts), `mountToolbar()` and `mountContextToolbar()`
+add a `nabi-narrow` class to it. In that state each row stays on **one line and scrolls
+horizontally** instead of wrapping; scrollbars are hidden, and a soft shade at an edge marks
+that more buttons lie in that direction (it disappears once you reach that end, and never shows
+on a row that does not overflow). The preview/fullscreen tools stay pinned and do not scroll
+away. Pickers and prompts open centered on screen in this state, the same way they do on small
+viewports. The measurement needs `ResizeObserver`; without it rows simply keep wrapping.
+`mountToolbar()` wraps its button groups in a `.nabi-strip` element (invisible at wide widths)
+to act as the scroll container - do not rely on groups being direct children of the row.
+
 ## Winning specificity
 
 Override a color/shape token by stacking **three classes**:
