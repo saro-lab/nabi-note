@@ -490,4 +490,17 @@ function watch(nabi: Nabi): NabiChange[] {
   ok('getHtml — data-key 없음', !nabi.getHtml().includes('data-key'));
 }
 
+// --- loaded 깃발 — 문서 교체(setJson·setHtml)의 신호에만 실린다 (260825_005, diff 스냅샷) ------
+{
+  const nabi = createNabi({ env: ENV, parseHtml: tinyHtml, doc: [p(['처음'])] });
+  const seen = watch(nabi);
+  ok('setJson 이 loaded 를 든다', nabi.setJson([p(['교체'])]) && seen[seen.length - 1]?.loaded === true);
+  ok('setHtml 도 loaded 를 든다', nabi.setHtml('<p>둘째</p>') && seen[seen.length - 1]?.loaded === true);
+  ok('빈 값으로 비우는 것도 교체다', nabi.setJson(null) && seen[seen.length - 1]?.loaded === true);
+  nabi.applyCommand('insertText', { text: 'ㄱ' });
+  ok('타자에는 loaded 가 없다', seen[seen.length - 1]?.loaded !== true);
+  nabi.undo();
+  ok('undo 에도 loaded 가 없다 — 시간 여행은 교체가 아니다', seen[seen.length - 1]?.loaded !== true);
+}
+
 done('editor');

@@ -161,6 +161,15 @@ const LINK_CSS = `
    골라진 표시(data-nabi-picked 의 점선 테두리)는 ui 시트의 공용 규칙이 그린다 — 여기는
    커서 하나만 보탠다. */
 .nabi-content.nabi-editing a[data-nabi-file] { cursor: pointer; }
+/* 터치 기기의 WebKit(iOS Safari)은 contenteditable 안의 <a> 를 탭하면 click 리스너의
+   preventDefault 와 무관하게 링크로 이동해 버린다(네이티브 앵커 활성화가 합성 click 보다
+   먼저/별도로 처리된다) — 마우스 환경(hover 있음)의 click 가로채기(mount 의 onClick)만으로는
+   못 막는 자리라 여기서 포인터 자체를 죽인다. 캐럿 배치는 좌표 기반이라 부모가 대신 받아도
+   그대로 되고, 첨부(attach.ts)는 자기 pointer 로 통째 선택을 하므로 이 규칙에서 뺀다.
+   .nabi-editing 로 편집기 안에서만 죽이므로 발행된 페이지(뷰어)의 링크는 그대로 이동한다. */
+@media (hover: none) {
+  .nabi-content.nabi-editing a:not([data-nabi-file]) { pointer-events: none; }
+}
 /* 봉해진 첨부는 **고를 수도 없다** — 편집기 안에서만 (101, 주인 신고 2026-08-21).
    contenteditable="false" 는 "못 고친다" 는 말이지 "못 고른다" 는 말이 아니다. iOS 는 안 고쳐지는
    조각을 탭하면 그 속 글자를 통째로 골라 손잡이를 띄운다 — 눈에는 "링크 안의 글자가 잡힌" 모양이고,

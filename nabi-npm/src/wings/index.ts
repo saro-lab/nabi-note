@@ -35,6 +35,7 @@ export { quoteWing } from './quote/quote.js';
 export { detailsWing } from './details/details.js';
 export { codeWing } from './code/code.js';
 export { dividerWing } from './hr/hr.js';
+export { diffWing } from './diff/diff.js';
 export { tableWings } from './table/index.js';
 export * from './extra.js';
 // wing 고르기 빌더 (087) — `wings().all().drop('upload').use('tf', { values: [...] })`.

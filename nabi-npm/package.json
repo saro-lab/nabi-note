@@ -27,6 +27,10 @@
       "types": "./dist/viewer/index.d.ts",
       "default": "./dist/viewer/index.js"
     },
+    "./diff": {
+      "types": "./dist/diff/index.d.ts",
+      "default": "./dist/diff/index.js"
+    },
     "./nabi.css": "./dist/nabi.css",
     "./package.json": "./package.json"
   },

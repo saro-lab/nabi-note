@@ -12,6 +12,7 @@ import {
   browserHistoryStorage,
   collectSheets,
   createNabiWith,
+  diffWing,
   injectSheets,
   localHistoryWing,
   mountContextToolbar,
@@ -45,6 +46,8 @@ import {
 // 겪는 것(표 정렬·코드 색칠)도 살아 있어야 한다. 코어가 대신 걸어 줄 수 없다: viewer 는 ui 의
 // 위층이다. 문은 하나뿐이라(`attachViewer`) 나중에 보는 쪽 기능이 늘어도 이 줄은 그대로다.
 import { attachViewer } from '../src/viewer/index.js';
+// diff wing 의 배선 — 대조 스냅샷(setJson/setHtml 순간)과 전체화면 판. diff 는 제 엔트리다.
+import { mountDiffWing, type DiffWingMount } from '../src/diff/index.js';
 
 // 편집기가 들어설 자리들 — 전부 호스트의 DOM 이다 (`index.html` 이 그 모양을 보여 준다).
 export interface EditorHosts {
@@ -54,8 +57,9 @@ export interface EditorHosts {
   readonly chrome: HTMLElement;
   readonly toolbar: HTMLElement;
   readonly context: HTMLElement;
-  // 보기 도구(미리보기·전체화면) 둘이 서는 자리.
-  readonly tools: HTMLElement;
+  // 보기 도구(미리보기·전체화면) 둘이 서는 자리 — 안 주면 그 둘을 아예 안 세운다
+  // (diff 데모가 그 자리다: 툴바 횡스크롤을 보려고 도구 없이 선다).
+  readonly tools?: HTMLElement;
   // 쓰는 자리 — contenteditable.
   readonly content: HTMLElement;
 }
@@ -80,6 +84,7 @@ export interface StoodEditor {
   readonly upload: UploadMount;
   readonly file: FileMount | null;
   readonly history: HistoryMount | null;
+  readonly diff: DiffWingMount | null;
   unmount(): void;
 }
 
@@ -188,6 +193,11 @@ export function standEditor(hosts: EditorHosts, options: StandOptions = {}): Sto
   // **저장소가 막혀도 부속은 세운다** (`file://` 에서 열면 null 이 온다). 안 세우면 wing 단추가
   // 아무 데도 안 닿아 조용히 죽고, 왜 안 열리는지 말할 자리가 사라진다 — 그 말은 판의 것이다.
   const history = options.bare ? null : mountLocalHistory({ nabi, storage: browserHistoryStorage(owner.defaultView) });
+  // diff wing 의 배선 — 대조 상태는 문서를 실은 순간(setJson·setHtml)마다 갈리고, 단추는
+  // 아래 툴바의 onHost 로 되돌아와 전체화면 판을 연다.
+  const diff = options.bare
+    ? null
+    : mountDiffWing({ nabi, registry, surface: hosts.content, allowLocalUrls: true, ...(locale ? { locale } : {}) });
 
   // 4. 편집 표면 — 드롭·붙여넣기로 온 파일은 전부 업로드로 간다. **파일로 문서를 여는 길은
   // 열기 단추 하나다**: 떨어뜨린 것을 열지 업로드할지 우리가 짐작하면, 첨부하려던 `.nabi` 가
@@ -214,6 +224,10 @@ export function standEditor(hosts: EditorHosts, options: StandOptions = {}): Sto
     // ui 가 부품 하나(`openHistoryPanel`)로 내놓으므로 호스트는 그 문을 부르기만 한다.
     // 호스트가 직접 그리면 호스트마다 다른 모양이 나오고, 그러면 이 기능의 생김새란 것이 없어진다.
     onHost: (w) => {
+      if (w === diffWing.w) {
+        diff?.open();
+        return;
+      }
       if (w !== localHistoryWing.w || !history) return;
       openHistoryPanel({
         history,
@@ -229,19 +243,21 @@ export function standEditor(hosts: EditorHosts, options: StandOptions = {}): Sto
   const hints = mountHints({ toolbar, context, root: hosts.chrome, surface: hosts.content });
   // 골라진 물건의 표시 — 브라우저가 그림·영상 위에 선택을 안 그려 주므로 우리가 말한다.
   const picked = mountPickedMark({ nabi, surface: hosts.content });
-  const view = mountViewTools({
-    nabi,
-    surface: hosts.content,
-    root: hosts.root,
-    container: hosts.tools,
-...(locale ? { locale } : {}),
-    // 선언 한 줄 — 보는 쪽 런타임을 미리보기 본문에 통째로 건다(표 정렬 + 코드 색칠).
-    // 표식(`data-nabi-sortable`)이 달린 표만 붙는다 — 기본값 그대로다. 여기서 `'all'` 로 넓히면
-    // 발행 페이지에서 안 도는 표가 미리보기에서만 돌아, 미리보기가 거짓말을 하게 된다.
-    // 색칠에 `highlight` 를 안 넘긴다 — **내장 토크나이저로 색이 뜨는지**가 데모가 보일 것이다
-    // (하이라이터를 꽂는 견본은 nabi-web 의 데모가 shiki 로 보인다).
-    onBody: (body) => attachViewer(body, ...(locale ? [{ locale }] : [])),
-  });
+  const view = !hosts.tools
+    ? null
+    : mountViewTools({
+        nabi,
+        surface: hosts.content,
+        root: hosts.root,
+        container: hosts.tools,
+        ...(locale ? { locale } : {}),
+        // 선언 한 줄 — 보는 쪽 런타임을 미리보기 본문에 통째로 건다(표 정렬 + 코드 색칠).
+        // 표식(`data-nabi-sortable`)이 달린 표만 붙는다 — 기본값 그대로다. 여기서 `'all'` 로 넓히면
+        // 발행 페이지에서 안 도는 표가 미리보기에서만 돌아, 미리보기가 거짓말을 하게 된다.
+        // 색칠에 `highlight` 를 안 넘긴다 — **내장 토크나이저로 색이 뜨는지**가 데모가 보일 것이다
+        // (하이라이터를 꽂는 견본은 nabi-web 의 데모가 shiki 로 보인다).
+        onBody: (body) => attachViewer(body, ...(locale ? [{ locale }] : [])),
+      });
   // 붙는 크롬의 셋 중 **보정**만 mount 다 — 붙을지 말지는 `.nabi-toolbar` 클래스이고, 얼마나
   // 내려 붙을지는 `--nabi-sticky-top` 토큰이다. 둘은 호스트가 DOM·CSS 로 직접 만진다.
   const sticky =
@@ -257,16 +273,18 @@ export function standEditor(hosts: EditorHosts, options: StandOptions = {}): Sto
     upload,
     file,
     history,
+    diff,
     unmount() {
       // 세운 역순으로 뗀다.
       sticky?.unmount();
-      view.unmount();
+      view?.unmount();
       picked.unmount();
       hints.unmount();
       context.unmount();
       toolbar.unmount();
       settle.unmount();
       surface.unmount();
+      diff?.unmount();
       history?.unmount();
       file?.unmount();
       upload.unmount();

@@ -366,4 +366,8 @@ export const DICTIONARY: Dictionary = {
     ur: 'اپ لوڈ جاری ہے — مکمل ہونے پر دوبارہ کوشش کریں',
     id: 'sedang mengunggah — coba lagi setelah selesai',
   },
+  // --- diff 화면의 말 (260825_001) — 새 말이라 ko·en 만 채운다(폴백 규칙이 나머지를 잇는다) ----
+  'diff.prev': { ko: '이전 변경', en: 'Previous change' },
+  'diff.next': { ko: '다음 변경', en: 'Next change' },
+  'diff.onlyChanges': { ko: '바뀐 부분만', en: 'Changes only' },
 };

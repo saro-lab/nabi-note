@@ -65,9 +65,23 @@ const FILLER_BR = `<br ${FILLER_ATTR}/>`;
 // 받침은 **화면의 사정**이라 저장·발행되는 값에는 안 나간다 — 그 갈림이 `job.keys` 다
 // (편집기 DOM 을 그릴 때만 참). 표식이 붙어 있어 캐럿 사상이 셈에서 건너뛰므로, 이 br 하나가
 // 트리의 라인 수를 바꾸지 않는다.
-function bodyOf(inner: string, job: Job): string {
+
+// ②의 판정은 **트리**로 한다. 옛 판은 조립된 글자열의 `endsWith('<br/>')` 였는데, 끝줄이
+// 마크 속(insertLine 은 캐럿의 마크를 이어받아 br 을 그 안에 넣는다 — `<span>글<br/></span>`)
+// 이면 `</span>` 으로 끝나 못 봤다: 서체·굵게가 걸린 문단에서 Shift+Enter 첫 타가 화면에서
+// 무시되던 버그다(주인 신고 2026-08-25, ailog 260825_004). 마크만 파고든다 — 블록급
+// (문단·물건·홀더)은 제가 제 받침을 챙기므로 여기서 서면 이중 받침이 된다(td 속 문단).
+function trailingLine(nodes: readonly NabiNode[], env: SchemaEnv): boolean {
+  const last = nodes[nodes.length - 1];
+  if (last === undefined || !isElement(last)) return false;
+  if (last.w === BR) return true;
+  if (isBlockGrade(last.w, env)) return false;
+  return trailingLine(last.ch, env);
+}
+
+function bodyOf(inner: string, job: Job, nodes: readonly NabiNode[]): string {
   if (inner === '') return FILLER;
-  if (job.keys && inner.endsWith(FILLER)) return inner + FILLER_BR;
+  if (job.keys && trailingLine(nodes, job.env)) return inner + FILLER_BR;
   return inner;
 }
 
@@ -115,7 +129,7 @@ function contextFor(job: Job, node: ElementNode, block: boolean): HtmlContext {
     url: (raw) => safeUrl(raw),
     // 가져오는 자리에서만 로컬 주소가 산다.
     src: (raw) => safeUrl(raw, job.allowLocal),
-    filled: (inner) => bodyOf(inner, job),
+    filled: (inner) => bodyOf(inner, job, node.ch),
     keys: job.keys,
   };
 }
@@ -162,7 +176,7 @@ function renderParagraph(p: ElementNode, job: Job): string {
   if (!wrapper && p.a?.['dc'] === 1) attrs['data-nabi-dropcap'] = '1';
 
   const inner = renderChildren(p.ch, job);
-  return tagOf(tag, bodyOf(inner, job), attrs);
+  return tagOf(tag, bodyOf(inner, job, p.ch), attrs);
 }
 
 // --- 문 -------------------------------------------------------------------------------------

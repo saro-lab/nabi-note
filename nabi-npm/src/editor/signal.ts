@@ -6,6 +6,10 @@ export interface NabiChange {
   readonly doc: boolean;
   readonly selection: boolean;
   readonly armed: boolean;
+  // 문서 **교체**(setJson·setHtml)의 신호에만 실리는 참 — 타자·붙여넣기·undo 는 안 든다.
+  // 붙여넣기는 setHtml 을 안 타므로(표면의 붙여넣기 길은 커맨드다) 이 깃발로 "문서를 새로
+  // 실은 순간"을 밖에서 가를 수 있다 — diff 의 대조 스냅샷이 그 자리다 (260825_005).
+  readonly loaded?: boolean;
   // 바뀌었거나 새로 선 최상위 문단의 _id — 09 의 부분 재그리기가 그대로 쓴다.
   readonly paragraphs: readonly string[];
   // 사라진 최상위 문단의 _id — DOM 에서 걷을 것.

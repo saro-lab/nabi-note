@@ -37,6 +37,7 @@ import { youtubeWing } from './youtube/youtube.js';
 import { makeUploadWing, uploadWing } from './upload/upload.js';
 import { openFileWing, saveFileWing } from './file/file.js';
 import { localHistoryWing } from './local-history/local-history.js';
+import { diffWing } from './diff/diff.js';
 import { clearFormatWing } from './clear-format/clear-format.js';
 
 // 옵션 값의 모양 — 키 검사 다음의 두 번째 그물이다. `values: 'sans'`(배열 아님)나
@@ -75,6 +76,7 @@ const CATALOG = [
   { w: 'save', wing: saveFileWing },
   { w: 'open', wing: openFileWing },
   { w: 'localHistory', wing: localHistoryWing },
+  { w: 'diff', wing: diffWing },
   { w: 'clearFormat', wing: clearFormatWing },
 ] as const;
 

@@ -171,6 +171,35 @@ eq(
   ];
   ok('표 칸 속의 끝 라인도 받침을 받는다', renderEditorHtml(inCell, OPT).includes('a<br/><br data-nabi-filler/>'));
   ok('그 받침은 발행값에 없다', !renderHtml(inCell, OPT).includes('filler'));
+  ok('칸의 받침은 문단의 것 하나뿐이다 — 이중 받침이 없다', renderEditorHtml(inCell, OPT).split('filler').length === 2);
+
+  // 끝줄이 **마크 속**일 때 — insertLine 은 캐럿의 마크를 이어받아 br 을 마크 안에 넣는다
+  // (`<b>abc<br/></b>`). 옛 판정(endsWith('<br/>'))은 `</b>`·`</span>` 으로 끝나는 이 모양을
+  // 못 봐서, 서체·굵게가 걸린 문단의 첫 Shift+Enter 가 화면에서 무시됐다 (ailog 260825_004).
+  eq(
+    '마크 속 끝 라인에도 받침이 선다 (굵게)',
+    renderEditorHtml(tail([{ w: 'b', ch: ['abc', line] }]), OPT),
+    '<p data-key="k1"><b>abc<br/></b><br data-nabi-filler/></p>',
+  );
+  eq(
+    '마크 속 끝 라인에도 받침이 선다 (서체 — 신고된 그 자리)',
+    renderEditorHtml(tail([{ w: 'tf', a: { v: 'serif' }, ch: ['abc', line] }]), OPT),
+    '<p data-key="k1"><span data-nabi-typeface="serif">abc<br/></span><br data-nabi-filler/></p>',
+  );
+  eq(
+    '겹마크 속 끝 라인도 본다',
+    renderEditorHtml(tail([{ w: 'tf', a: { v: 'serif' }, ch: [{ w: 'b', ch: ['abc', line] }] }]), OPT),
+    '<p data-key="k1"><span data-nabi-typeface="serif"><b>abc<br/></b></span><br data-nabi-filler/></p>',
+  );
+  ok(
+    '마크 속 끝 라인도 발행값은 그대로다',
+    !renderHtml(tail([{ w: 'b', ch: ['abc', line] }]), OPT).includes('filler'),
+  );
+  eq(
+    '마크 속 가운데 라인에는 안 붙는다 — 끝일 때만이다',
+    renderEditorHtml(tail([{ w: 'b', ch: ['abc', line] }, 'def']), OPT),
+    '<p data-key="k1"><b>abc<br/></b>def</p>',
+  );
 }
 
 eq('제목은 속성이 태그를 정한다', renderHtml([{ w: 'p', a: { h: 3 }, ch: ['셋'] }], OPT), '<h3>셋</h3>');

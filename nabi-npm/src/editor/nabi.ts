@@ -352,6 +352,7 @@ export function createNabi(options: NabiOptions): Nabi {
         doc: true,
         selection: true,
         armed: takeArmedFlag(),
+        loaded: true,
         paragraphs: diff.paragraphs,
         removed: diff.removed,
       });

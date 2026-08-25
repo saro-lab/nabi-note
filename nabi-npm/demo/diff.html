@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NABI NOTE — diff</title>
+  <link rel="stylesheet" href="./demo.css" />
+</head>
+<body class="diff-demo">
+  <h1>NABI NOTE — diff</h1>
+
+  <div id="app" class="nabi">
+    <div id="chrome" class="nabi-toolbar">
+      <div class="nabi-toolbar-row">
+        <div id="toolbar"></div>
+      </div>
+      <div id="context" class="nabi-context" hidden></div>
+    </div>
+    <div id="content" class="nabi-content" contenteditable="true" spellcheck="false"></div>
+  </div>
+
+  <section class="pane wide">
+    <header><h2>Nabi tree JSON — 지금 상태(getJson)</h2></header>
+    <textarea id="json" spellcheck="false" readonly></textarea>
+  </section>
+
+  <div class="row">
+    <button id="mark-baseline" class="icon" type="button" title="지금 상태를 대조 상태로" aria-label="지금 상태를 대조 상태로">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 2.5h8a.5.5 0 0 1 .5.5v10.5L8 10 3.5 13.5V3a.5.5 0 0 1 .5-.5Z" />
+      </svg>
+    </button>
+    <span id="baseline-status" class="note">대조 상태 없음</span>
+    <span class="spacer"></span>
+    <button id="show-diff" class="icon" type="button" title="diff 보기" aria-label="diff 보기">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M5.5 2v12M10.5 2v12" /><path d="M2 5.5h2M2 10.5h2M12 5.5h2M12 10.5h2" />
+      </svg>
+    </button>
+  </div>
+
+  <section id="diff-section" hidden>
+    <h2>Diff — before(대조) · after(지금)</h2>
+    <p class="note">비교 버튼을 누른 시점의 두 상태를 그린다 — 편집을 이어가면 다시 눌러 새로 그린다.</p>
+    <div id="diff-root"></div>
+  </section>
+
+  <script type="module" src="./diff.ts"></script>
+</body>
+</html>

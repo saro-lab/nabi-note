@@ -888,30 +888,31 @@ function dies(name: string, fn: () => unknown, needles: readonly string[]): void
 }
 
 {
-  // .allBasic() — 배선 없이 도는 것만. 빠지는 셋은 호스트가 제 것을 대야 사는 것들이다:
-  // upload 는 올려 줄 서버, save·open 은 FileStore. 판정은 wing 의 선언(`basic`) 하나다.
-  const WIRED = ['upload', 'save', 'open'];
+  // .allBasic() — 배선 없이 도는 것만. 빠지는 넷은 호스트가 제 것을 대야 사는 것들이다:
+  // upload 는 올려 줄 서버, save·open 은 FileStore, diff 는 mountDiffWing(스냅샷·전체화면 판).
+  // 판정은 wing 의 선언(`basic`) 하나다.
+  const WIRED = ['upload', 'save', 'open', 'diff'];
   const basic = wings().allBasic().build();
   const names = basic.map((wing) => wing.w);
   eq(
-    '빌더 — .allBasic() 은 배선 필요한 셋만 뺀 나머지 전부다',
+    '빌더 — .allBasic() 은 배선 필요한 넷만 뺀 나머지 전부다',
     names,
     defaultWings.map((wing) => wing.w).filter((w) => !WIRED.includes(w)),
   );
-  eq('빌더 — .allBasic() 의 개수는 차례표에서 셋 준 것이다', basic.length, defaultWings.length - WIRED.length);
+  eq('빌더 — .allBasic() 의 개수는 차례표에서 넷 준 것이다', basic.length, defaultWings.length - WIRED.length);
   ok(
     '빌더 — .allBasic() 이 든 것은 defaultWings 와 같은 인스턴스다',
     basic.every((wing) => wing === defaultWings.find((one) => one.w === wing.w)),
   );
   ok('빌더 — 든 것은 전부 스스로 basic 이라 말한 것이다', basic.every((wing) => wing.basic === true));
-  ok('빌더 — 뺀 셋은 basic 을 안 단다', WIRED.every((w) => defaultWings.find((wing) => wing.w === w)?.basic !== true));
+  ok('빌더 — 뺀 넷은 basic 을 안 단다', WIRED.every((w) => defaultWings.find((wing) => wing.w === w)?.basic !== true));
 
   // 빠진 것을 도로 넣는 길은 이미 있는 문 하나뿐이다 — .use().
   const withSave = wings().allBasic().use('save').use('open').build();
   eq(
     '빌더 — .allBasic().use(save·open) 은 차례표 차례 그대로 도로 든다',
     withSave.map((wing) => wing.w),
-    defaultWings.map((wing) => wing.w).filter((w) => w !== 'upload'),
+    defaultWings.map((wing) => wing.w).filter((w) => w !== 'upload' && w !== 'diff'),
   );
 
   // 잣대는 이름이 아니라 선언이다 — 커스텀도 같은 문을 쓴다.

@@ -204,7 +204,8 @@ ok('데모: 편집기 선언부가 갈려 있다 (main 이 editor.ts 를 부른�
 // 파는 것(`../src/ui/parts/…`)만 막는 규칙이라 엔트리는 둘 다 열려 있다. 보는 쪽 런타임을
 // 여기서 무는 까닭: 미리보기의 표 정렬은 **호스트의 일**이다(viewer 는 ui 의 위층이라 코어가
 // 대신 걸 수 없다 — 경계 그물이 그것을 막는다).
-const DEMO_ENTRIES = ['../src/index.js', '../src/viewer/index.js'];
+// diff 도 발행되는 엔트리다 — tsup 이 dist/diff 를 낸다 (package.json 의 exports 항목은 주인 몫).
+const DEMO_ENTRIES = ['../src/index.js', '../src/viewer/index.js', '../src/diff/index.js'];
 ok(
   '데모: 선언부가 발행 엔트리만 문다 (층 소스를 직접 안 판다)',
   [...strip(read('demo/editor.ts')).matchAll(/\bfrom\s*['"](\.\.[^'"]+)['"]/g)].every((m) =>
