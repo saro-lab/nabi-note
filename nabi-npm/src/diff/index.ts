@@ -621,20 +621,33 @@ export const DIFF_CSS = `
 }
 :where(html, body).dark .nabi-diff:not([data-nabi-theme="light"]),
 .nabi-diff[data-nabi-theme="dark"] {
-  --nabi-diff-del: rgb(240 97 106 / 14%);
-  --nabi-diff-del-hard: rgb(240 97 106 / 34%);
-  --nabi-diff-ins: rgb(74 222 128 / 12%);
-  --nabi-diff-ins-hard: rgb(74 222 128 / 30%);
-  --nabi-diff-move: rgb(126 162 255 / 14%);
-  --nabi-diff-move-hard: rgb(126 162 255 / 32%);
-  --nabi-diff-line-del: color-mix(in srgb, rgb(240 97 106) 14%, var(--nabi-bg, #16161a));
-  --nabi-diff-line-ins: color-mix(in srgb, rgb(74 222 128) 12%, var(--nabi-bg, #16161a));
-  --nabi-diff-line-move: color-mix(in srgb, rgb(126 162 255) 14%, var(--nabi-bg, #16161a));
-  --nabi-diff-mark-del: color-mix(in srgb, rgb(240 97 106) 34%, var(--nabi-bg, #16161a));
-  --nabi-diff-mark-ins: color-mix(in srgb, rgb(74 222 128) 30%, var(--nabi-bg, #16161a));
+  /* 표준 토큰도 제 몸에 든다 — 이 층은 편집기(.nabi) 밖(body·홀로 선 자리)에 설 수 있어
+     상속이 안 닿는다(scrim 이 제 몸에 토큰을 드는 그 규칙). 실측 2026-08-26: 다크 페이지에서
+     패인만 흰색으로 남았다 — 패인의 var(--nabi-bg, #fff) 가 대체값으로 떨어져서다. */
+  color-scheme: dark;
+  --nabi-fg: #e8e8ee; --nabi-bg: #16161a; --nabi-muted: #9a9aa6; --nabi-line: #2e2e36;
+  --nabi-accent: #7ea2ff; --nabi-soft: rgb(255 255 255 / 7%);
+  /* 다크의 기조색 — **흰색 쪽으로 밝히고 채도를 뺀** 파스텔이다(주인 지시 2026-08-26, 두 차례:
+     "밝기 올리고 채도 빼기" → "더 흰색에 가깝게, 묻혀서 안 보인다"). 어두운 바탕에서 칠이
+     보이는 것은 색상이 아니라 **밝기 차**라, 알파도 한 단계 올렸다. 이음선(line)의 혼합비는
+     블록 알파와 같은 값이어야 한다 — 다르면 패인 끝에서 색이 이어지다 톤이 갈린다. */
+  --nabi-diff-del: rgb(248 196 200 / 18%);
+  --nabi-diff-del-hard: rgb(248 196 200 / 40%);
+  --nabi-diff-ins: rgb(178 238 200 / 16%);
+  --nabi-diff-ins-hard: rgb(178 238 200 / 36%);
+  --nabi-diff-move: rgb(200 214 250 / 18%);
+  --nabi-diff-move-hard: rgb(200 214 250 / 38%);
+  --nabi-diff-line-del: color-mix(in srgb, rgb(248 196 200) 18%, var(--nabi-bg, #16161a));
+  --nabi-diff-line-ins: color-mix(in srgb, rgb(178 238 200) 16%, var(--nabi-bg, #16161a));
+  --nabi-diff-line-move: color-mix(in srgb, rgb(200 214 250) 18%, var(--nabi-bg, #16161a));
+  --nabi-diff-mark-del: color-mix(in srgb, rgb(248 196 200) 40%, var(--nabi-bg, #16161a));
+  --nabi-diff-mark-ins: color-mix(in srgb, rgb(178 238 200) 36%, var(--nabi-bg, #16161a));
 }
 :where(html, body).light .nabi-diff:not([data-nabi-theme="dark"]),
 .nabi-diff[data-nabi-theme="light"] {
+  color-scheme: light;
+  --nabi-fg: #1b1b1f; --nabi-bg: #fff; --nabi-muted: #6b6b76; --nabi-line: #e2e2e8;
+  --nabi-accent: #3b6fe0; --nabi-soft: rgb(0 0 0 / 4.5%);
   --nabi-diff-del: rgb(217 59 59 / 12%);
   --nabi-diff-del-hard: rgb(217 59 59 / 30%);
   --nabi-diff-ins: rgb(22 163 74 / 12%);
@@ -687,23 +700,12 @@ export const DIFF_CSS = `
 }
 .nabi-diff-pane { scrollbar-width: thin; }
 /* 좌우 여백이 없다 — 색 블록이 패인의 양 끝까지 닿아, 거터의 이음선과 한 몸으로 이어진다
-   (주인 지시 2026-08-25: 좌우 패딩·앞 보더를 걷고 연한 색으로 라인까지 연결). */
-.nabi-diff-doc { padding: .75rem 0; box-sizing: border-box; min-inline-size: 100%; inline-size: max-content; }
-
-/* 그림·영상 — 문서 그릇이 max-content 폭이라 %(nabi.css 의 폭 표식·max-inline-size:100%)가
-   기준을 잃고 원본 크기로 터져 나온다(주인 신고 2026-08-25). 패인을 크기 컨테이너로 세워
-   그 폭(cqw)을 기준으로 상한과 폭 표식을 다시 건다. 셀렉터에 .nabi-content 를 겹쳐 쓰는 것은
-   특이도 — nabi.css 의 같은 표식 규칙과 비기면 시트 순서 싸움이 된다. */
-.nabi-diff-pane { container-type: inline-size; }
-.nabi-diff-doc.nabi-content img, .nabi-diff-doc.nabi-content iframe { max-inline-size: 100cqw; }
-.nabi-diff-doc.nabi-content [data-nabi-width="30"] { inline-size: 30cqw; }
-.nabi-diff-doc.nabi-content [data-nabi-width="40"] { inline-size: 40cqw; }
-.nabi-diff-doc.nabi-content [data-nabi-width="50"] { inline-size: 50cqw; }
-.nabi-diff-doc.nabi-content [data-nabi-width="60"] { inline-size: 60cqw; }
-.nabi-diff-doc.nabi-content [data-nabi-width="70"] { inline-size: 70cqw; }
-.nabi-diff-doc.nabi-content [data-nabi-width="80"] { inline-size: 80cqw; }
-.nabi-diff-doc.nabi-content [data-nabi-width="90"] { inline-size: 90cqw; }
-.nabi-diff-doc.nabi-content [data-nabi-width="100"] { inline-size: 100cqw; }
+   (주인 지시 2026-08-25: 좌우 패딩·앞 보더를 걷고 연한 색으로 라인까지 연결).
+   폭은 패인 그대로다 — 옛 판의 \`inline-size: max-content\` 는 **문단의 줄바꿈을 죽여서**
+   (max-content 는 글을 한 줄로 잰다) 문서가 패인의 여덟 배(실측 1855px/패인 223px)로 터졌고
+   그림·영상의 % 폭 표식도 기준을 잃었다(주인 신고 2026-08-25). 패인 폭이 기준이면 글은
+   줄바꿈하고, %는 살아나고, 넓은 표는 제 스크롤 겉옷(.nabi-scroll) 안에서 구른다. */
+.nabi-diff-doc { padding: .75rem 0; box-sizing: border-box; }
 
 .nabi-diff-gutter { position: relative; overflow: hidden; background: var(--nabi-soft, rgb(0 0 0 / 4.5%)); }
 .nabi-diff-gutter svg { position: absolute; inset: 0; display: block; }

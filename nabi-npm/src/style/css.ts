@@ -563,13 +563,14 @@ export const CORE_CSS = `
      두 장(local)은 내용과 함께 구르며 제 쪽 그늘을 덮는다 — 그래서 그늘은 **그쪽에 더 있을
      때만** 보이고, 끝까지 굴리면 막이 덮어 사라진다. 스크롤 위치를 JS 로 안 듣는다.
      그늘색을 fg 로 섞는 까닭: 검정 고정이면 다크에서 바탕보다 옅어 안 보인다.
-     막의 **불투명 구간(1rem)은 그늘 폭(.875rem)보다 넓어야 한다** — 좁으면 스크롤이 없는
+     굵기·짙기(.5rem·20%)는 주인 지시 2026-08-26 — 처음 값(.875rem·32%)이 너무 두껍고 진했다.
+     막의 **불투명 구간(1rem)은 그늘 폭(.5rem)보다 넓어야 한다** — 좁으면 스크롤이 없는
      줄에서도 덜 덮인 그늘 끝이 비쳐 보인다 (주인 신고 2026-08-24, 상황 줄에서 실제로 비쳤다). */
   background:
     linear-gradient(to right, var(--nabi-bg) 1rem, transparent) left / 2rem 100%,
     linear-gradient(to left, var(--nabi-bg) 1rem, transparent) right / 2rem 100%,
-    radial-gradient(farthest-side at 0 50%, color-mix(in srgb, var(--nabi-fg) 32%, transparent), transparent) left / .875rem 100%,
-    radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, var(--nabi-fg) 32%, transparent), transparent) right / .875rem 100%;
+    radial-gradient(farthest-side at 0 50%, color-mix(in srgb, var(--nabi-fg) 20%, transparent), transparent) left / .5rem 100%,
+    radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, var(--nabi-fg) 20%, transparent), transparent) right / .5rem 100%;
   background-repeat: no-repeat;
   background-attachment: local, local, scroll, scroll;
 }
@@ -596,8 +597,8 @@ export const CORE_CSS = `
     linear-gradient(to right, var(--nabi-bg) 1rem, transparent) left / 2rem 100%,
     linear-gradient(to left, var(--nabi-soft) 1rem, transparent) right / 2rem 100%,
     linear-gradient(to left, var(--nabi-bg) 1rem, transparent) right / 2rem 100%,
-    radial-gradient(farthest-side at 0 50%, color-mix(in srgb, var(--nabi-fg) 32%, transparent), transparent) left / .875rem 100%,
-    radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, var(--nabi-fg) 32%, transparent), transparent) right / .875rem 100%,
+    radial-gradient(farthest-side at 0 50%, color-mix(in srgb, var(--nabi-fg) 20%, transparent), transparent) left / .5rem 100%,
+    radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, var(--nabi-fg) 20%, transparent), transparent) right / .5rem 100%,
     var(--nabi-soft);
   background-repeat: no-repeat;
   background-attachment: local, local, local, local, scroll, scroll, scroll;
@@ -652,9 +653,10 @@ export const CORE_CSS = `
   white-space: pre-wrap; overflow-wrap: break-word;
   color: var(--nabi-fg); background: var(--nabi-bg);
   /* 급의 색은 왼쪽 선 하나가 말한다 — 상자를 통째로 칠하면 글자 대비가 급마다 달라져서,
-     라이트·다크마다 급별 글자색을 또 정해야 한다. 선이면 토큰 그대로 두 테마를 다 산다. */
-  border: 1px solid var(--nabi-line); border-inline-start: 3px solid var(--nabi-accent);
-  border-radius: var(--nabi-layer-radius); box-shadow: var(--nabi-shadow);
+     라이트·다크마다 급별 글자색을 또 정해야 한다. 선이면 토큰 그대로 두 테마를 다 산다.
+     둘레 테두리·라운드는 없다(주인 지시 2026-08-26) — 떠 있음은 그림자가 말한다. */
+  border: 0; border-inline-start: 3px solid var(--nabi-accent);
+  border-radius: 0; box-shadow: var(--nabi-shadow);
   /* 남은 시간 0.5초부터 옅어져 0 에서 걷힌다 — 500ms 는 ui/toast.ts 의 TOAST_FADE_MS 와
      같아야 한다(그보다 짧게 사는 말은 JS 가 duration 을 제 수명으로 줄인다). */
   transition: opacity 500ms linear;
