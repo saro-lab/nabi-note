@@ -4,6 +4,7 @@
 // 갓 열린 입력 칸에는 `preventScroll` 을 안 건다 — 여기서 막으면 입력 칸이 키보드 뒤로 숨는다
 // (040 §6.1 이 그 예외를 짚어 뒀다).
 import { make } from './dom.js';
+import { suppressMousedownTap } from './button.js';
 import { openPanel, type Panel, type PanelOptions } from './panel.js';
 
 export interface PromptField {
@@ -112,7 +113,7 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
       }
     });
   }
-  ok.addEventListener('mousedown', (event) => event.preventDefault());
+  suppressMousedownTap(ok);
   ok.addEventListener('click', submit);
 
   sync();

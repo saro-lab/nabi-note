@@ -500,6 +500,22 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   ok('CSS: 코어 시트가 맨 앞이다', sheets[0] === CORE_CSS.trim());
   ok('CSS: 같은 글은 한 번만 실린다', new Set(sheets).size === sheets.length);
 
+  {
+    const hover = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-btn:hover, .nabi-btn.nabi-kbd {'));
+    const hoverBody = hover.slice(0, hover.indexOf('}'));
+    ok('CSS: 툴바 hover는 바탕을 칠하지 않고 색만 바꾼다',
+      /color:\s*var\(--nabi-accent\)/.test(hoverBody) && !/background:/.test(hoverBody));
+    const on = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-btn.on, .nabi-btn.on:hover {'));
+    const onBody = on.slice(0, on.indexOf('}'));
+    ok('CSS: 툴바 on도 바탕을 칠하지 않고 색만 바꾼다',
+      /color:\s*var\(--nabi-accent\)/.test(onBody) && !/background:/.test(onBody));
+    const tap = CORE_CSS.slice(CORE_CSS.indexOf('@keyframes nabi-tap'));
+    ok('CSS: 누름 반응은 아래로 내려갔다 돌아온다', /translateY\(2px\)/.test(tap.slice(0, tap.indexOf('\n}'))));
+    ok('CSS: 버튼 아닌 요소도 같은 tap 클래스를 쓴다', CORE_CSS.includes('.nabi-tap { animation: nabi-tap'));
+    ok('CSS: 네이티브 active도 아래로 눌린다',
+      /\.nabi-btn:active:not\(:disabled\)[\s\S]*?translateY\(2px\)/.test(CORE_CSS));
+  }
+
   // 도구 둘(미리보기·전체화면)이 위치 잡힌 층에 **함께** 서야 한다 — 안 서면 손이 안 닿는다.
   // 실제로 그렇게 됐던 자리다: toast 닻으로 `.nabi-toolbar-row` 에 relative 를 주자 같은 클래스를
   // 단 툴바 뿌리가 위치 잡힌 요소가 되면서, 뜬(float) 도구 위를 덮어 진짜 클릭을 가로챘다.

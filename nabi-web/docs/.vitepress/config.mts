@@ -18,6 +18,8 @@ const NABI_NOTE_SRC = fileURLToPath(new URL('../../../nabi-npm/src/index.ts', im
 // `…/src/index.ts/viewer` 라는 없는 길이 된다.
 // The viewer entry needs its own line, and it must come first: string aliases match by prefix
 const NABI_VIEWER_SRC = fileURLToPath(new URL('../../../nabi-npm/src/viewer/index.ts', import.meta.url))
+// diff 엔트리도 같은 접두사 규칙 때문에 코어보다 먼저 서야 한다.
+const NABI_DIFF_SRC = fileURLToPath(new URL('../../../nabi-npm/src/diff/index.ts', import.meta.url))
 // 서버 진입점(`nabi-note/ssr`)도 같은 규칙이다 — **`nabi-note` 보다 먼저 서야 한다** (095).
 const NABI_SSR_SRC = fileURLToPath(new URL('../../../nabi-npm/src/ssr.ts', import.meta.url))
 // 발행 시트 — 여기만 소스가 아니라 **빌드 산출물**을 문다. 코어 시트와 wing 시트를 이어 붙이는
@@ -239,6 +241,7 @@ export default defineConfig({
     resolve: {
       alias: {
         'nabi-note/viewer': NABI_VIEWER_SRC,
+        'nabi-note/diff': NABI_DIFF_SRC,
         'nabi-note/nabi.css': NABI_CSS,
         'nabi-note/ssr': NABI_SSR_SRC,
         'nabi-note': NABI_NOTE_SRC,

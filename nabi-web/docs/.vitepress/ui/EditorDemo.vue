@@ -485,6 +485,10 @@ let nabiModule: NabiModule | null = null
 // The reading-side runtime is a separate entry, loaded on the client like the editor is
 type ViewerModule = typeof import('nabi-note/viewer')
 let viewerModule: ViewerModule | null = null
+// diff 도 다른 엔트리다(`nabi-note/diff`) — 같은 규칙으로 클라이언트에서만 온다
+// The diff runtime is another entry, loaded on the client by the same rule
+type DiffModule = typeof import('nabi-note/diff')
+let diffModule: DiffModule | null = null
 
 // 데모의 wing 목록 — `defaultWings` 에서 셋만 갈아 끼운다.
 //
@@ -580,6 +584,7 @@ let upload: (Unmountable & { take(files: readonly File[]): void }) | null = null
 let uploadView: Unmountable | null = null
 let fileMount: (Unmountable & Record<string, unknown>) | null = null
 let historyMount: (Unmountable & { sessionId: string }) | null = null
+let diffMount: (Unmountable & { open(): void }) | null = null
 // 첫 조립인가 — 서버가 그린 DOM 을 이어받을 수 있는 것은 이때뿐이다 (095 ⓐ).
 let firstBuild = true
 let nabi: ReturnType<NabiModule['createNabiWith']>['nabi'] | null = null
@@ -607,12 +612,14 @@ function unmountAll(): void {
   toolbar?.unmount()
   settle?.unmount()
   surface?.unmount()
+  diffMount?.unmount()
   historyMount?.unmount()
   fileMount?.unmount()
   upload?.unmount()
   uploadView?.unmount()
   viewTools = pickedMark = hints = contextToolbar = toolbar = surface = uploadView = null
   settle = null
+  diffMount = null
   historyMount = null
   fileMount = null
   upload = null
@@ -687,10 +694,10 @@ function build(): void {
   //    런타임에 붙이면 서버가 보낸 문서가 잠깐 맨몸으로 그려졌다 스타일이 얹히며 펴진다 (095).
   // Sheets are linked statically at the top of this file, not injected here — see the import
 
-  // 3. 배선이 있어야 사는 wing 넷 — upload·save·open·localHistory. 등록만 하면 커맨드가 조용히
-  //    아무 일도 안 한다. 화면(자리표시자·진행률·나비·거절 문구·취소)은 ui 의 것이고 전송은
-  //    surface 의 것이라, 둘을 잇는 선은 넷뿐이다: 시작·진행·끝·거절
-  // Four wings need wiring; the view and the transfer meet on four lines only
+  // 3. 배선이 있어야 사는 wing 다섯 — upload·save·open·localHistory·diff. 등록만 하면 커맨드가
+  //    조용히 아무 일도 안 한다. 화면(자리표시자·진행률·나비·거절 문구·취소)은 ui 의 것이고
+  //    전송은 surface 의 것이라, 둘을 잇는 선은 넷뿐이다: 시작·진행·끝·거절
+  // Five wings need wiring; the view and the transfer meet on four lines only
   if (wings.some((wing) => wing.w === 'upload')) {
     upload = mod.mountUpload({
       nabi,
@@ -732,6 +739,18 @@ function build(): void {
   if (wings.some((wing) => wing.w === 'localHistory')) {
     historyMount = mod.mountLocalHistory({ nabi, storage: mod.browserHistoryStorage(window) }) as never
   }
+  // diff — 대조 상태는 문서를 실은 순간(setJson·setHtml)마다 갈리고, 단추는 아래 툴바의
+  // onHost 로 되돌아와 전체화면 판을 연다
+  // The diff wing: the baseline follows every document load; the button opens a fullscreen panel
+  if (diffModule && wings.some((wing) => wing.w === 'diff')) {
+    diffMount = diffModule.mountDiffWing({
+      nabi,
+      registry,
+      surface: content,
+      allowLocalUrls: true,
+      locale: here,
+    }) as never
+  }
 
   // 4. 편집 표면 — 드롭·붙여넣기로 온 파일은 업로드로 간다.
   // The edit surface: a dropped file goes to upload
@@ -769,6 +788,10 @@ function build(): void {
     // ui 가 부품 하나(`openHistoryPanel`)로 내놓으므로 호스트는 그 문을 부르기만 한다
     // A tool that needs a panel comes back to the host — but the host does not draw it
     onHost: (w: string) => {
+      if (w === 'diff') {
+        diffMount?.open()
+        return
+      }
       if (w !== 'localHistory' || !historyMount) return
       mod.openHistoryPanel({
         history: historyMount as never,
@@ -1082,15 +1105,17 @@ onMounted(async () => {
   window.addEventListener('resize', measureViewport)
   // 셋을 **함께** 부른다 — 서로를 안 기다린다. 차례로 await 하면 왕복이 셋이 되고, 그동안
   // 데모 자리는 빈 상자로 남는다(095). 코어가 제일 크므로 그 하나가 곧 이 구간의 길이다.
-  const [nabi, viewer, trees] = await Promise.all([
+  const [nabi, viewer, diff, trees] = await Promise.all([
     import('nabi-note'),
     import('nabi-note/viewer'),
+    import('nabi-note/diff'),
     // 예문 한 벌 — 페이지의 언어 것만 온다. 편집기 표시 언어(칩)와는 다른 축이다
     // One sheet of samples, in the page's language — a different axis from the editor's own locale
     loadSampleTrees(lang.value),
   ])
   nabiModule = nabi
   viewerModule = viewer
+  diffModule = diff
 
   // Shuffled once, when the demo is built — the same rule the header's language list follows.
   // A fixed order always puts the same two languages under the reader's thumb.

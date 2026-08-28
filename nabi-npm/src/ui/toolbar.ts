@@ -11,7 +11,7 @@ import { markNode, pressedOf, pressedValue, type PressEnv } from './press.js';
 import { reachAt, visibleAt } from './visible.js';
 import { focusQuiet, make } from './parts/dom.js';
 import { watchNarrow } from './narrow.js';
-import { iconButton, setPressed, wireIconButton } from './parts/button.js';
+import { iconButton, setPressed, suppressMousedownTap, wireIconButton } from './parts/button.js';
 import { TOOLBAR_GROUPS as GROUP_ORDER, renderToolbarHtml, toolbarSlots } from '../wing/toolbar-html.js';
 import { openPanel, type Panel } from './parts/panel.js';
 import { openPrompt } from './parts/prompt.js';
@@ -212,7 +212,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
       const r = Math.floor(i / max) + 1;
       const c = (i % max) + 1;
       const cell = make(owner, 'button', 'nabi-cell', { type: 'button', tabindex: '-1' }) as HTMLButtonElement;
-      cell.addEventListener('mousedown', (event) => event.preventDefault());
+      suppressMousedownTap(cell);
       cell.addEventListener('mouseenter', () => {
         rows = r;
         cols = c;

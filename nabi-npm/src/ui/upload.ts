@@ -26,6 +26,7 @@ import type { Translator } from '../locale/index.js';
 import { makeTranslator } from '../locale/index.js';
 import type { StartedTask, UploadMount } from '../surface/index.js';
 import { extensionOf, formatBytes } from '../wings/upload/upload.js';
+import { suppressMousedownTap } from './parts/button.js';
 import { make } from './parts/dom.js';
 import { createTicker, type Ticker } from './parts/ticker.js';
 
@@ -260,7 +261,7 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
       stop.setAttribute('aria-label', t.t('cancel'));
       stop.setAttribute('data-nabi-tip', t.t('cancel'));
       stop.textContent = '×';
-      stop.addEventListener('mousedown', (event) => event.preventDefault());
+      suppressMousedownTap(stop);
       stop.addEventListener('click', () => options.upload?.cancel());
       el.append(stop);
     }

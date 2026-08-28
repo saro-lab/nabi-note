@@ -123,7 +123,8 @@ renderViewToolsHtml({ locale: 'en' })
 `renderHtml`/`renderEditorHtml` sit one step below `renderStoredHtml`/`renderStoredEditorHtml` -
 for code that already holds the internal tree (tests, custom assembly) rather than raw external
 JSON. Prefer the `renderStored*` pair for anything that receives untrusted/external input, since
-that pair also normalizes and validates it.
+that pair also normalizes and validates it. All four renderers preserve runs of two or more ASCII
+spaces in text with alternating `&nbsp;` and plain spaces. Attribute values are not rewritten.
 
 ## See also
 

@@ -453,10 +453,19 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
     requestDraw();
   });
 
+  const openLinksInNewTab = (root: HTMLElement): void => {
+    for (const link of root.querySelectorAll<HTMLAnchorElement>('a[href]')) {
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+    }
+  };
+
   const paint = (before: unknown, after: unknown): void => {
     model = diffDocs(before, after, registry, options.allowLocalUrls ? { allowLocalUrls: true } : undefined);
     beforeDocEl.innerHTML = model ? paneHtml(model.before, model.entries) : '';
     afterDocEl.innerHTML = model ? paneHtml(model.after, model.entries) : '';
+    openLinksInNewTab(beforeDocEl);
+    openLinksInNewTab(afterDocEl);
     beforeEls = [...beforeDocEl.children] as HTMLElement[];
     afterEls = [...afterDocEl.children] as HTMLElement[];
     cursor = -1;
@@ -670,12 +679,10 @@ export const DIFF_CSS = `
   display: inline-flex; align-items: center; justify-content: center;
   font: inherit; font-size: .8125rem;
 }
-.nabi-diff-btn:hover:not(:disabled) { background: var(--nabi-soft, rgb(0 0 0 / 4.5%)); }
+.nabi-diff-btn:hover:not(:disabled) { color: var(--nabi-accent, #3b6fe0); }
 .nabi-diff-btn:disabled { opacity: .4; cursor: default; }
-.nabi-diff-btn[aria-pressed="true"] {
-  color: var(--nabi-accent, #3b6fe0);
-  background: color-mix(in srgb, var(--nabi-accent, #3b6fe0) 14%, transparent);
-}
+.nabi-diff-btn[aria-pressed="true"] { color: var(--nabi-accent, #3b6fe0); }
+.nabi-diff-btn:active:not(:disabled) { transform: translateY(2px); transition: transform 60ms ease-out; }
 .nabi-diff-btn svg { inline-size: 1rem; block-size: 1rem; }
 .nabi-diff-count {
   font-size: .75rem; color: var(--nabi-muted, #6b6b76);

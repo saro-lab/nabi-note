@@ -55,11 +55,8 @@ export function wireIconButton(button: HTMLElement, press: (by: CommandHand) => 
   // 그 한 줄의 값: `mousedown` 을 삼키면 브라우저의 `:active` 도 안 걸린다. 그래서 **누른 티가
   // 아무 데도 안 난다** — 마크처럼 눌림이 남는 단추는 그것으로 알겠지만, 그 자리에서 아무 일도
   // 안 하는 단추(침묵)는 화면이 통째로 조용해서 "이 단추 안 눌리나?" 가 된다.
-  // 그래서 눌린 티를 우리가 낸다: 짧게 물들었다 스스로 돌아오는 표식 하나.
-  button.addEventListener('mousedown', (event) => {
-    event.preventDefault();
-    tap(button);
-  });
+  // 그래서 눌린 티를 우리가 낸다: 짧게 아래로 내려갔다 돌아오는 표식 하나.
+  suppressMousedownTap(button);
   button.addEventListener('click', (event) => {
     event.preventDefault();
     // 손 판정은 `detail` 하나다 — 키보드가 만든 클릭(겨눈 버튼의 Enter/Space·`el.click()`)은
@@ -68,7 +65,14 @@ export function wireIconButton(button: HTMLElement, press: (by: CommandHand) => 
   });
 }
 
-// 눌렀다 뗀 티 — 시트가 그리는 짧은 물듦(`.nabi-tap`). 애니메이션이 끝나면 스스로 걷힌다.
+export function suppressMousedownTap(element: HTMLElement): void {
+  element.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    tap(element);
+  });
+}
+
+// 눌렀다 뗀 티 — 시트가 그리는 짧은 움직임(`.nabi-tap`). 애니메이션이 끝나면 스스로 걷힌다.
 // 연타에도 매번 다시 시작해야 하므로 표식을 한 번 걷고 강제로 리플로를 태운 뒤 다시 단다.
 const TAP_CLASS = 'nabi-tap';
 const TAP_MS = 260; // 시트의 220ms + 여유

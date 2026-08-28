@@ -73,6 +73,10 @@ export function openPreview(options: PreviewOptions): Overlay {
   const body = make(owner, 'div', 'nabi-content nabi-preview-body');
   // 보기 HTML 그대로 — 이스케이프는 render 안의 태그 문 하나가 이미 했다 (06 규칙).
   body.innerHTML = options.nabi.getHtml();
+  for (const link of body.querySelectorAll<HTMLAnchorElement>('a[href]')) {
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+  }
 
   card.append(close, body);
   let inner: Overlay | null = null;

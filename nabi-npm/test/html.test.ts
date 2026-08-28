@@ -267,6 +267,28 @@ eq(
   renderHtml([{ w: 'p', ch: ['<script>alert(1)</script>'] }], OPT),
   '<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>',
 );
+eq(
+  '이어진 공백은 화면에서도 접히지 않게 교대로 보호한다',
+  renderHtml([{ w: 'p', ch: ['abc   def'] }], OPT),
+  '<p>abc&nbsp; &nbsp;def</p>',
+);
+eq(
+  '공백 하나는 손대지 않는다',
+  renderHtml([{ w: 'p', ch: ['abc def'] }], OPT),
+  '<p>abc def</p>',
+);
+eq(
+  'wing이 ctx.escape로 낸 글자도 이어진 공백을 보존한다',
+  renderHtml([{ w: 'p', ch: [{ w: 'x', a: { v: 'a  b' }, ch: [] }] }], {
+    env: ENV,
+    builders: {
+      x: (node, _children, ctx) => ctx.element('span', ctx.escape(String(node.a?.['v'] ?? '')), {
+        'data-value': String(node.a?.['v'] ?? ''),
+      }),
+    },
+  }),
+  '<p><span data-value="a  b">a&nbsp; b</span></p>',
+);
 // 공격을 나르는 칸은 **글자를 그대로 받는 칸**이어야 한다 — 첨부 표식(`file`)이 그 자리다
 // (그림의 `alt` 는 대체 글을 걷으면서 값을 안 받게 됐다).
 eq(

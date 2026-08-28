@@ -17,6 +17,11 @@ function escapeText(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function escapeTextRun(text: string): string {
+  return escapeText(text).replace(/ {2,}/g, (spaces) =>
+    Array.from(spaces, (_space, at) => at % 2 === 0 ? '&nbsp;' : ' ').join(''));
+}
+
 function escapeAttr(value: string): string {
   return escapeText(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
@@ -124,7 +129,7 @@ function contextFor(job: Job, node: ElementNode, block: boolean): HtmlContext {
   return {
     element: (tag, inner, attrs) => tagOf(tag, inner, { ...key, ...attrs }),
     wrap: (tag, inner, attrs) => tagOf(tag, inner, attrs ?? {}),
-    escape: escapeText,
+    escape: escapeTextRun,
     // 가는 자리는 언제나 엄격하다 — 호스트의 allowLocalUrls 가 여기까지 오지 않는다.
     url: (raw) => safeUrl(raw),
     // 가져오는 자리에서만 로컬 주소가 산다.
@@ -135,7 +140,7 @@ function contextFor(job: Job, node: ElementNode, block: boolean): HtmlContext {
 }
 
 function renderNode(node: NabiNode, job: Job): string {
-  if (!isElement(node)) return escapeText(node);
+  if (!isElement(node)) return escapeTextRun(node);
   if (node.w === P) return renderParagraph(node, job);
   // 라인은 코어의 것이라 조립 맵을 안 거친다 — wing 이 예약어를 못 쓰기 때문이다.
   if (node.w === BR) return FILLER;

@@ -15,7 +15,6 @@ import {
   HTML_LABEL,
   MARKDOWN_ICON,
   MARKDOWN_LABEL,
-  NABI_ICON,
   NABI_LABEL,
   NHTML_FILE_EXTENSION,
 } from './marks.js';

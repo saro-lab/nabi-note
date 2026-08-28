@@ -372,7 +372,9 @@ parseNodes(...): ParseNode  // browser-only HTML-in adapter, DOMParser-backed
 `renderStoredHtml`/`renderStoredEditorHtml` accept raw external JSON and reject anything that is
 not a valid NABI TREE (`null`, not a throw; a value that throws mid-read also answers `null`
 with a `console.error` report). `renderHtml`/`renderEditorHtml` sit one layer lower,
-for code that already holds the internal tree. Full detail in `llms/ssr.md`.
+for code that already holds the internal tree. Text output preserves runs of two or more ASCII
+spaces with alternating `&nbsp;` and plain spaces; attribute values keep their original spaces.
+Full detail in `llms/ssr.md`.
 
 Types: `EditSurfacePort` (surface section, above), `HtmlAttrs`, `HtmlBuilder`, `HtmlBuilders`,
 `HtmlContext`, `HtmlOptions`, `ParseNode`, `StoredHtmlOptions`.

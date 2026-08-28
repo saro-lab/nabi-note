@@ -264,39 +264,37 @@ export const CORE_CSS = `
   border-radius: calc(var(--nabi-radius-sm) - .1875rem);
   display: inline-flex; align-items: center; justify-content: center; position: relative;
 }
-.nabi-btn:hover, .nabi-btn.nabi-kbd { background: var(--nabi-soft); }
+.nabi-btn:hover, .nabi-btn.nabi-kbd { color: var(--nabi-accent); }
 /* 눌렀다 뗀 티 — **아무 일도 안 하는 누름에도** 화면이 답한다.
    툴바 단추는 캐럿을 지키려고 mousedown 을 삼키는데(parts/button.ts), 그러면 브라우저의
    :active 도 안 걸려서 누른 티가 아무 데도 안 난다. 마크처럼 눌림이 남는 단추는 그것으로
    알지만, 그 자리에서 조용히 아무 일도 안 하는 단추는 화면이 통째로 조용해 "안 눌리나?" 가
-   된다. 짧게 물들었다 스스로 돌아오는 것이 그 답이다 — 상태가 아니라 **응답**이라 눌림
-   표시(.on)와 색을 나눠 쓰되 훨씬 짧게 산다. */
+   된다. 짧게 아래로 내려갔다 돌아오는 것이 그 답이다 — 상태가 아니라 **응답**이다. */
 @keyframes nabi-tap {
-  from { background: color-mix(in srgb, var(--nabi-accent) 26%, transparent); transform: scale(.92); }
-  to { background: transparent; transform: scale(1); }
+  0% { transform: translateY(0); }
+  45% { transform: translateY(2px); }
+  100% { transform: translateY(0); }
 }
-.nabi-btn.nabi-tap { animation: nabi-tap 220ms ease-out; }
-/* 움직임을 줄이라는 사람에게는 크기만 안 움직이고 물듦은 남는다 — 응답 자체가 사라지면 안 된다. */
+.nabi-tap { animation: nabi-tap 220ms ease-out; }
+/* 움직임을 줄이라는 사람에게는 이동 폭을 줄이되 응답 자체는 남긴다. */
 @media (prefers-reduced-motion: reduce) {
   @keyframes nabi-tap {
-    from { background: color-mix(in srgb, var(--nabi-accent) 26%, transparent); }
-    to { background: transparent; }
+    0% { transform: translateY(0); }
+    45% { transform: translateY(1px); }
+    100% { transform: translateY(0); }
   }
 }
-/* **눌린 단추는 옅게 물든다 — 강조색으로 통째 칠하지 않는다.** 통짜 칠은 눌린 것 하나가
-   툴바에서 제일 무거운 물건이 되어, 글을 보러 온 눈이 자꾸 그리로 끌린다. 물든 바탕에 강조색
-   글자면 "켜져 있다"를 충분히 말하면서 자기 자리를 안 넘는다. 14% 는 문서 사이트의 칩과 같은
-   농도다 — 편집기와 그것을 감싼 페이지가 같은 값을 쓴다. */
-.nabi-btn.on {
-  background: color-mix(in srgb, var(--nabi-accent) 14%, transparent);
-  color: var(--nabi-accent);
-}
-.nabi-btn.on:hover { background: color-mix(in srgb, var(--nabi-accent) 22%, transparent); }
+/* 눌린 단추는 바탕을 칠하지 않고 아이콘·글자 색으로만 켜진 상태를 말한다. */
+.nabi-btn.on, .nabi-btn.on:hover { color: var(--nabi-accent); }
 .nabi-btn[hidden] { display: none; }
 /* display:inline-flex 가 UA 의 [hidden] 규칙을 이기므로 직접 끈다 — 버튼이 전부 숨은 그룹은
    상자째 사라진다. */
 .nabi-group[hidden] { display: none; }
 .nabi-btn:disabled { opacity: .4; cursor: default; }
+.nabi-btn:active:not(:disabled), .nabi-close:active, .nabi-input:active,
+.nabi-choose-row:active, .nabi-save-row:active {
+  transform: translateY(2px); transition: transform 60ms ease-out;
+}
 .nabi-btn svg { inline-size: 1rem; block-size: 1rem; }
 .nabi-btn.nabi-word { inline-size: auto; padding: 0 .5rem; }
 /* 색 견본 — 자기 색이 곧 내용이라, **눌림을 배경으로 말할 수 없다**(제 색에 묻힌다).
