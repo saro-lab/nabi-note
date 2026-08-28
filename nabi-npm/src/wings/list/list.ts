@@ -599,9 +599,10 @@ const FALLBACK_FONT_SIZE = 16;
 
 const taskAttach: Wing['attach'] = ({ root, nabi }) => {
   const onClick = (event: MouseEvent): void => {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
-    const item = target.closest('li[data-nabi-checked]');
+    const target = event.target as Node | null;
+    if (target?.nodeType !== 1) return;
+    const element = target as Element;
+    const item = element.closest('li[data-nabi-checked]');
     if (!item || !root.contains(item)) return;
     const id = item.getAttribute('data-key');
     if (!id) return;

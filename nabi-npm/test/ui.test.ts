@@ -568,10 +568,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   // 그리는 자리는 **편집 뿌리의 층**이다 — 빈 블록 자신의 ::before 였을 때는 그 블록이 입은 옷
   // (제목·정렬·드롭캡)을 통째로 상속해 안내글이 제목 얼굴로 떴다(주인 신고 2026-08-23).
   {
-    const mark = '.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before';
+    const mark = '.nabi-content.nabi-editing:not(:focus):has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before';
     const rule = CORE_CSS.slice(CORE_CSS.indexOf(mark));
     const body = rule.slice(0, rule.indexOf('}'));
     ok('CSS: 안내글은 편집 뿌리의 층이다', CORE_CSS.includes(mark));
+    ok('CSS: 포커스 중에는 안내글 가상 요소가 IME 조합 자리에서 물러난다', mark.includes(':not(:focus)'));
     // 블록 자신에 붙던 옛 겨눔이 남아 있으면 제목·드롭캡이 도로 샌다.
     ok('CSS: 안내글이 문서 블록의 몸에 안 붙는다',
       !CORE_CSS.includes(':only-child:has(> br:only-child)::before'));
@@ -715,6 +716,12 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   const family = ['h', 'align', 'dc'].map((w) => registry.wingOf(w)?.styles);
   ok('CSS: 문단 속성 셋이 같은 시트를 든다', new Set(family).size === 1 && family[0] !== undefined);
   ok('CSS: 그 시트는 목록에 한 번만 있다', sheets.filter((sheet) => sheet === family[0]?.trim()).length === 1);
+  ok(
+    'CSS: 편집 표면은 first-letter 대신 실제 첫 글자 요소를 그린다',
+    CORE_CSS.includes('.nabi-content:not(.nabi-editing) [data-nabi-dropcap="1"]::first-letter') &&
+      CORE_CSS.includes('.nabi-content.nabi-editing [data-nabi-dropcap-letter]') &&
+      !CORE_CSS.includes('.nabi-content [data-nabi-dropcap="1"]::first-letter'),
+  );
 
   const lists = ['ul', 'ol', 'tl'].map((w) => registry.wingOf(w)?.styles);
   ok('CSS: 리스트 셋도 같은 시트를 든다', new Set(lists).size === 1 && lists[0] !== undefined);

@@ -30,7 +30,8 @@ export interface Hints {
 }
 
 const isTyping = (target: EventTarget | null): boolean =>
-  target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+  (target as Node | null)?.nodeType === 1 &&
+  ((target as Element).tagName === 'INPUT' || (target as Element).tagName === 'TEXTAREA');
 
 // 이 편집기의 땅인가 — 표면과 크롬(툴바·상황 줄)이 한 섬이다.
 //
@@ -38,7 +39,8 @@ const isTyping = (target: EventTarget | null): boolean =>
 // 달린 귀가 **같은 키를 저마다 한 번씩** 먹는다 — Shift 두 번에 배지가 양쪽에서 뜨고, 이어 친
 // 글자가 양쪽 툴바의 단추를 눌러 표가 두 곳에 생기고 화면이 남의 편집기로 끌려간다.
 const inside = (root: Node, target: EventTarget | null): boolean =>
-  target instanceof Node && (target === root || root.contains(target));
+  target !== null && typeof (target as Node).nodeType === 'number' &&
+  (target === root || root.contains(target as Node));
 
 export function mountHints(options: HintOptions): Hints {
   const owner = options.root.ownerDocument;

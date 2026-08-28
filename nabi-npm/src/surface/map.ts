@@ -25,7 +25,9 @@ function escapeId(id: string): string {
 
 export function holderElOf(root: Element, id: string): HTMLElement | null {
   const el = root.querySelector(`[data-key="${escapeId(id)}"]`);
-  return el instanceof HTMLElement ? el : null;
+  // root 가 iframe·jsdom 같은 다른 realm 에서 왔으면 전역 HTMLElement 와 instanceof 가
+  // 거짓이다. 홀더는 우리 렌더러가 만든 HTML 요소라는 계약으로 querySelector의 답을 쓴다.
+  return el as HTMLElement | null;
 }
 
 // `data-key` 하나의 문서 경로. **홀더만이 아니라 노드 전부**를 뒤진다 — DOM 에 키를 다는 것은

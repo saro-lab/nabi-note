@@ -70,6 +70,21 @@ readonly File[]) => void` (drag/paste files, wired up by the upload wing - a pas
 **any** text at all, `text/html` or `text/plain`, never reaches it), `doubleEnterMs?`,
 `correctionDeferMs?`.
 
+During an IME composition, the live DOM is authoritative and the tree is reconciled when the
+composition ends. At `compositionstart`, `mountSurface` snapshots the current DOM path but does
+not change the tree or emit a change signal. A selected-range replacement is reconciled as one
+edit and one undo step at the end. Redraws are suppressed until then, so a delayed
+`selectionchange` cannot move or duplicate adjacent composition text. A document change outside
+the active paragraph is redrawn after composition. If external code changes the active paragraph,
+that explicit tree change wins and the unfinished composition is discarded. Hosts must not
+replace the editing root or its active text nodes directly while a composition is in progress.
+
+Outside composition, `selectionchange` is only an asynchronous notification. Before a structural
+edit, the surface adopts the current DOM selection again. For `beforeinput`, it prefers
+`InputEvent.getTargetRanges()` because that range describes the exact content the browser intends
+to replace or delete, including mobile keyboards and multi-code-point characters. Cross-paragraph
+deletion from a collapsed caret still follows nabi's own list and container rules.
+
 ```ts
 mountFile(options: FileMountOptions): FileMount
 mountLocalHistory(options): HistoryMount
@@ -373,7 +388,11 @@ parseNodes(...): ParseNode  // browser-only HTML-in adapter, DOMParser-backed
 not a valid NABI TREE (`null`, not a throw; a value that throws mid-read also answers `null`
 with a `console.error` report). `renderHtml`/`renderEditorHtml` sit one layer lower,
 for code that already holds the internal tree. Text output preserves runs of two or more ASCII
-spaces with alternating `&nbsp;` and plain spaces; attribute values keep their original spaces.
+spaces with alternating `&nbsp;` and plain spaces, and protects the last space at a text-container
+boundary with `&nbsp;`; attribute values keep their original spaces. Editor HTML also carries
+`data-key`, editing seals, and an editor-only `[data-nabi-dropcap-letter]` span around the first
+grapheme of a drop-cap paragraph. That real span keeps the WYSIWYG drop cap visible without using
+the caret-unsafe `::first-letter` pseudo-element inside `contenteditable`; it is not storage HTML.
 Full detail in `llms/ssr.md`.
 
 Types: `EditSurfacePort` (surface section, above), `HtmlAttrs`, `HtmlBuilder`, `HtmlBuilders`,

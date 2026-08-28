@@ -1,6 +1,6 @@
 {
   "name": "nabi-note",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "open-source WYSIWYG editor",
   "keywords": [
     "wysiwyg",
@@ -64,6 +64,8 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
+    "@types/jsdom": "^30.0.0",
+    "jsdom": "^29.1.1",
     "tsup": "^8.5.1",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",

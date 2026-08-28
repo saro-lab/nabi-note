@@ -17,8 +17,10 @@ import type { Attach } from '../../wing/index.js';
 
 export const attachDetailsOpen: Attach = ({ root, nabi, pathOfKey }) => {
   const onToggle = (event: Event): void => {
-    const box = event.target;
-    if (!(box instanceof HTMLDetailsElement) || !root.contains(box)) return;
+    const target = event.target as Node | null;
+    if (target?.nodeType !== 1) return;
+    const box = target as HTMLDetailsElement;
+    if (box.tagName !== 'DETAILS' || !root.contains(box)) return;
     const key = box.getAttribute('data-key');
     if (key === null || key === '') return;
     const path = pathOfKey(key);

@@ -89,7 +89,7 @@ them).
 | `--nabi-cursive-adjust` | `font-size-adjust` for the cursive family (handwriting faces have a low x-height and look small at the same px; this re-measures by x-height) | `0.4` |
 | `--nabi-sticky-top` | How far down the sticky row sits. Set this to your fixed header's height if you have one | `0px` |
 | `--nabi-preview-width` | Width of the preview card. `openPreview` measures the edit area's width when it opens and writes it directly onto the card, so a host override loses to that inline value | `720px` |
-| `--nabi-placeholder` | The quoted string shown on the first line while the document is empty. `mountSurface` writes it onto the editing root from its `placeholder` option (or the core dictionary), so a host override loses to that inline value; restyle the hint through `.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` instead. Note where that `::before` sits - **on the editing root, not inside the first block** - so the hint is a separate layer that the document's own heading, alignment and drop cap never reach | empty (no hint) |
+| `--nabi-placeholder` | The quoted string shown on the first line while the document is empty and unfocused. It is hidden while the editing surface has focus so Android IMEs can use a real empty text slot without generated content interfering with the first composition. `mountSurface` writes it onto the editing root from its `placeholder` option (or the core dictionary), so a host override loses to that inline value; restyle the hint through `.nabi-content.nabi-editing:not(:focus):has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before` instead. Note where that `::before` sits - **on the editing root, not inside the first block** - so the hint is a separate layer that the document's own heading, alignment and drop cap never reach | empty (no hint) |
 | `--nabi-placeholder-color` | Color of that hint. The core never declares it; it reads it with a fallback of `--nabi-placeholder-color-fallback`, which **is** declared in a light and a dark pair (`#6b6b76aa` / `#9a9aa6aa`). Three links in the chain, so `:root { --nabi-placeholder-color: ... }` wins outright - and if you only need a different dark value, override the fallback instead | `var(--nabi-placeholder-color-fallback, #6b6b76aa)` |
 | `--nabi-content-min-height` | Minimum height of the editing surface. **Only `.nabi-editing` gets it** - a published or previewed `.nabi-content` is as tall as its text | `12.5rem` |
 | `--nabi-touch-font-size` | Font size of the core's own input boxes (`.nabi-input`: link URL, save name, prompt) on a coarse pointer or under 40rem wide. **iOS Safari zooms the whole page when the caret enters a form field smaller than 16px**, which then throws off every rect the editor measures; this floor prevents it. Mouse screens are untouched. Do not fight the same problem with `user-scalable=no` or `maximum-scale=1` on your viewport meta - besides taking away the reader's right to zoom, it makes this value pointless | `16px` |
@@ -123,11 +123,23 @@ Four text sizes (`em`-based, follow the parent's size):
 ```
 
 Drop cap size - not a line count, a single font size; actual lines covered follow that
-paragraph's line-height:
+paragraph's line-height. Previewed and published content uses `::first-letter`. The live
+`.nabi-editing` surface uses the editor-only real `[data-nabi-dropcap-letter]` span instead,
+because browser caret and selection mapping is unreliable around a `::first-letter` pseudo-element
+inside `contenteditable`. Both paths paint the same values:
 
 ```css
-.nabi-content [data-nabi-dropcap="1"]::first-letter { font-size: 5.9em; line-height: .83; }
+.nabi-content:not(.nabi-editing) [data-nabi-dropcap="1"]::first-letter,
+.nabi-content.nabi-editing [data-nabi-dropcap-letter] {
+  float: inline-start;
+  font-size: 5.9em;
+  line-height: .83;
+}
 ```
+
+Override both selectors together to keep editing, preview, and published output visually aligned.
+The real span is display-only editor HTML. It is removed from copied HTML and never appears in
+`renderHtml()` or saved content.
 
 Code token colors - five types get a color:
 

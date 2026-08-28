@@ -121,12 +121,18 @@ eq('보기 HTML 은 예시 전체를 고정된 한 모양으로 낸다', view, V
 ok('조립이 Node(러너)에서 실제로 돈다', view.length > 0);
 
 const editor = renderEditorHtml(EXAMPLE, OPT);
-// 편집기가 보기와 갈리는 곳은 **둘뿐이다** — 재그리기의 자리(`data-key`)와 첨부의 봉인(101).
+// 편집기가 보기와 갈리는 곳은 **셋뿐이다** — 재그리기의 자리(`data-key`), 첨부의 봉인(101),
+// 드롭캡의 실제 첫 글자 상자다. 마지막 것은 contenteditable의 ::first-letter 캐럿 버그를 피하는
+// 화면 요소라 저장·발행에는 나가지 않는다.
 // 봉인은 편집기에서만 첨부를 캐럿이 안 드는 섬으로 만드는 손이라, 저장·발행값에는 영영 안 나간다.
-// 셋째가 생기면 이 자물쇠가 먼저 운다 — 편집기와 보기가 조용히 갈라지는 것을 막는 자리다.
+// 넷째가 생기면 이 자물쇠가 먼저 운다 — 편집기와 보기가 조용히 갈라지는 것을 막는 자리다.
 const SEAL = ' contenteditable="false" draggable="false"';
-const bare = editor.replace(/ data-key="[^"]*"/g, '').split(SEAL).join('');
-ok('편집기 HTML 은 같은 조립에 data-key 와 첨부 봉인만 더 붙는다', bare === view, [bare.slice(0, 200)]);
+const bare = editor
+  .replace(/ data-key="[^"]*"/g, '')
+  .split(SEAL).join('')
+  .replace(/<span data-nabi-dropcap-letter>([^<]*)<\/span>/g, '$1');
+ok('편집기 HTML 은 화면 전용 세 가지를 걷으면 보기와 같다', bare === view, [bare.slice(0, 200)]);
+ok('편집 드롭캡은 가상 요소 대신 실제 첫 글자 상자를 가진다', editor.includes('<span data-nabi-dropcap-letter>맨</span>'));
 ok(
   '첨부는 편집기에서 봉해진다 — 캐럿이 안 드는 섬',
   editor.includes('data-nabi-file="\uCCA8\uBD80.png" download' + SEAL),
@@ -216,6 +222,26 @@ eq(
   '<p data-nabi-dropcap="1">가</p>',
 );
 eq(
+  '편집 드롭캡만 첫 문자소를 실제 요소로 감싼다',
+  renderEditorHtml([{ w: 'p', a: { dc: 1 }, ch: ['가나다'], _id: 'k1' }], OPT),
+  '<p data-key="k1" data-nabi-dropcap="1"><span data-nabi-dropcap-letter>가</span>나다</p>',
+);
+eq(
+  '첫 글자의 마크 안에서도 드롭캡 요소가 글자를 직접 감싼다',
+  renderEditorHtml([{ w: 'p', a: { dc: 1 }, ch: [{ w: 'b', ch: ['가나다'] }], _id: 'k1' }], OPT),
+  '<p data-key="k1" data-nabi-dropcap="1"><b><span data-nabi-dropcap-letter>가</span>나다</b></p>',
+);
+eq(
+  '앞 문장부호는 첫 문자소와 한 드롭캡 상자에 든다',
+  renderEditorHtml([{ w: 'p', a: { dc: 1 }, ch: ['“Drop'], _id: 'k1' }], OPT),
+  '<p data-key="k1" data-nabi-dropcap="1"><span data-nabi-dropcap-letter>“D</span>rop</p>',
+);
+eq(
+  '이모지 묶음은 한 문자소인 채 드롭캡이 된다',
+  renderEditorHtml([{ w: 'p', a: { dc: 1 }, ch: ['👨‍👩‍👧‍👦abc'], _id: 'k1' }], OPT),
+  '<p data-key="k1" data-nabi-dropcap="1"><span data-nabi-dropcap-letter>👨‍👩‍👧‍👦</span>abc</p>',
+);
+eq(
   '래퍼문단은 div 다 — p 는 표·리스트를 못 품는다',
   renderHtml([{ w: 'p', a: { a: 'c', dc: 1, h: 2 }, ch: [{ w: 'hr', ch: [] }] }], OPT),
   '<div data-nabi-p data-nabi-align="c"><hr/></div>',
@@ -273,9 +299,29 @@ eq(
   '<p>abc&nbsp; &nbsp;def</p>',
 );
 eq(
+  '문단 끝 공백은 마지막 한 칸까지 접히지 않는다',
+  renderHtml([{ w: 'p', ch: ['abc    '] }], OPT),
+  '<p>abc&nbsp; &nbsp;&nbsp;</p>',
+);
+eq(
+  '문단 끝 공백 하나도 접히지 않는다',
+  renderHtml([{ w: 'p', ch: ['abc '] }], OPT),
+  '<p>abc&nbsp;</p>',
+);
+eq(
   '공백 하나는 손대지 않는다',
   renderHtml([{ w: 'p', ch: ['abc def'] }], OPT),
   '<p>abc def</p>',
+);
+eq(
+  '인라인 경계 앞 공백 하나는 줄바꿈 자리를 막지 않는다',
+  renderHtml([{ w: 'p', ch: ['abc ', { w: 'b', ch: ['def'] }] }], OPT),
+  '<p>abc <b>def</b></p>',
+);
+eq(
+  '마크 안에서 문단 끝까지 이어진 공백도 접히지 않는다',
+  renderHtml([{ w: 'p', ch: ['abc', { w: 'b', ch: ['  '] }] }], OPT),
+  '<p>abc<b>&nbsp;&nbsp;</b></p>',
 );
 eq(
   'wing이 ctx.escape로 낸 글자도 이어진 공백을 보존한다',

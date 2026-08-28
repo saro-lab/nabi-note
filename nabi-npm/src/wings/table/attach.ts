@@ -53,7 +53,8 @@ export const attachCellRange: Attach = ({ root, nabi, pathOfKey }) => {
 
   // 이벤트가 난 자리의 칸 — 칸의 `_id` 가 곧 DOM 의 `data-key` 다(칠할 때 쓰는 그 손잡이).
   const cellKeyAt = (target: EventTarget | null): string | null => {
-    const el = target instanceof Element ? target.closest('td, th') : null;
+    const node = target as Node | null;
+    const el = node?.nodeType === 1 ? (node as Element).closest('td, th') : null;
     if (!el || !root.contains(el)) return null;
     const key = el.getAttribute('data-key');
     return key === null || key === '' ? null : key;

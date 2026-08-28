@@ -89,10 +89,12 @@ Without a toolbar, pass `locale` directly to `createNabiWith`'s options instead.
 
 ### Placeholder
 
-An empty editor shows a dimmed hint on its first line, and it disappears the moment a character
-is typed. The word comes from the core dictionary in the mount's language, so nothing has to be
-wired for it to appear. It sits at the line start for the text direction (left in LTR, right in
-RTL) and does not follow the line's own alignment.
+An empty editor shows a dimmed hint on its first line while it is not focused. The hint disappears
+as soon as the editing surface receives focus. This lets Android IMEs attach to a real empty text
+slot without generated placeholder content interfering with the first composed character. The
+word comes from the core dictionary in the mount's language, so nothing has to be wired for it to
+appear. It sits at the line start for the text direction (left in LTR, right in RTL) and does not
+follow the line's own alignment.
 
 ```ts
 mountSurface({ nabi, registry, root: surface, placeholder: 'Write your notes here' })
@@ -107,7 +109,7 @@ since a published or previewed `.nabi-content` is as tall as its text.
 
 The stylesheet reads the word from the `--nabi-placeholder` custom property on the editing root
 and draws it with
-`.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before`,
+`.nabi-content.nabi-editing:not(:focus):has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before`,
 so its color or style can be restyled from the host CSS. Note where that `::before` sits: **the
 hint is a separate layer on the editing root, not something inside the first block**, so a
 document's own formatting - heading level, alignment, drop cap - never reaches it. Its color is
@@ -129,7 +131,7 @@ makes the core's floor value meaningless. Mouse screens are not changed by one p
 | Mount | Required | Does |
 |---|---|---|
 | `createNabiWith(wings, options?)` | yes | Returns `{ nabi, registry }`. No DOM needed. Accepts a plain wing array or the picker builder (`wings()`, see `llms/quickstart-cdn.md`) |
-| `mountSurface({ nabi, registry, root })` | yes | Wires caret/IME/input to the document tree; also attaches every registered wing's `attach` |
+| `mountSurface({ nabi, registry, root })` | yes | Wires caret/IME/input to the document tree; it keeps the live DOM authoritative and emits no tree change at composition start, so do not replace the root or its active text nodes directly mid-composition; also attaches every registered wing's `attach` |
 | `mountToolbar({ nabi, registry, root, surface?, locale?, file? })` | no | Main toolbar. Without it, editing still works via `nabi.applyCommand()`. `surface` is also **the ground the accelerators are heard on** - two editors on one page must both be given it, or they eat each other's Cmd+S. `file` takes the `FileMount` and stands the save panel up with no further wiring |
 | `mountContextToolbar({ nabi, registry, root, surface? })` | no | Caret-position context row (table row/column, code language, link address, etc.) |
 | `mountHints({ toolbar, context?, root, surface? })` | no | Shortcut badges shown on a fast double-tap of Shift |
@@ -153,7 +155,7 @@ Swapping which wings are registered means unmounting everything (`unmount()`) an
 ```ts
 nabi.getHtml()        // Output HTML - what you store or publish
 nabi.getJson()        // NABI TREE (JSON)
-nabi.getEditorHtml()  // Current editor-screen HTML (carries data-key) - not for storage
+nabi.getEditorHtml()  // Current editor-screen HTML (data-key and display-only wrappers) - not for storage
 ```
 
 Store one of the first two. `getJson()` returns an array of blocks with no wrapping root node:

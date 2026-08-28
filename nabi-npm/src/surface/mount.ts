@@ -5,8 +5,8 @@
 // 원칙: 정본은 트리다. 화면 캐럿은 파생이고, 어긋나면 트리 쪽으로 교정한다.
 // 예외 구간은 IME 조합뿐 — 그동안은 DOM 이 정답이고, 끝나는 순간 한 번에 따라잡는다.
 import { isElement, isWrapper, type NabiDoc } from '../schema/index.js';
-import { isHolder, nodeAt, terminalOf } from '../doc/index.js';
-import { caretAt, isCollapsed, sameSelection, selectObject, type Selection } from '../caret/index.js';
+import { holders, isHolder, nodeAt, terminalOf } from '../doc/index.js';
+import { isCollapsed, sameSelection, selectObject, type Selection } from '../caret/index.js';
 import { localeDirection, translate } from '../locale/index.js';
 import type { Nabi, NabiChange } from '../editor/index.js';
 import type { Registry } from '../wing/index.js';
@@ -23,7 +23,11 @@ import { planRedraw } from './redraw.js';
 import type { EditSurfacePort, ReadCaret } from './port.js';
 
 const TEXT_NODE = 3;
+const ELEMENT_NODE = 1;
 const SHOW_TEXT = 4;
+
+const eventElement = (target: EventTarget | null): Element | null =>
+  target !== null && (target as Node).nodeType === ELEMENT_NODE ? (target as Element) : null;
 
 export interface SurfaceOptions {
   readonly nabi: Nabi;
@@ -129,8 +133,16 @@ export function mountSurface(options: SurfaceOptions): Surface {
   let expected: Selection | null = null; // 쓰기 토큰 — 우리가 쓴 선택의 지문 (setTimeout 금지)
   let lastCorrectionAt = 0;
   let correctionQueued = false;
+  let correctionFrame = 0;
   let replaySelectAll = false;
   let deferred: (() => void)[] = [];
+  let compositionPath: readonly number[] | null = null;
+  let compositionSelection: Selection | null = null;
+  let compositionAnchorId: string | null = null;
+  let compositionHolderId: string | null = null;
+  let compositionTopIds: readonly string[] = [];
+  let redrawAfterComposition = false;
+  let compositionConflict = false;
 
   // --- 그리기 (문단 단위 — 전체 innerHTML 은 mount 최초와 어긋난 hydrate 뿐) ------------------
   const childOf = (id: string): Element | null => {
@@ -146,6 +158,16 @@ export function mountSurface(options: SurfaceOptions): Surface {
     const ids = doc().map((node) => node._id);
     const keys = Array.from(root.children).map((el) => el.getAttribute('data-key'));
     return ids.length === keys.length && ids.every((id, i) => id !== undefined && keys[i] === id);
+  };
+
+  const domMatchesTree = (): boolean => {
+    if (!adopted()) return false;
+    for (const item of holders(doc(), env)) {
+      if (typeof item.node._id !== 'string') return false;
+      const el = holderElOf(root, item.node._id);
+      if (!el || domTextOf(el) !== holderTextOf(item.node, terminalOf(env))) return false;
+    }
+    return true;
   };
 
   const applyRedraw = (change: NabiChange): void => {
@@ -168,6 +190,13 @@ export function mountSurface(options: SurfaceOptions): Surface {
     }
   };
 
+  const redrawTopAt = (path: readonly number[]): void => {
+    const top = nodeAt(doc(), [path[0] as number]);
+    if (top && typeof top._id === 'string') {
+      applyRedraw({ doc: true, selection: false, armed: false, paragraphs: [top._id], removed: [] });
+    }
+  };
+
   // --- 캐럿 사상 ------------------------------------------------------------------------------
   const domSelection = (): globalThis.Selection | null => owner.getSelection?.() ?? view?.getSelection() ?? null;
 
@@ -180,6 +209,10 @@ export function mountSurface(options: SurfaceOptions): Surface {
     expected = sel;
     try {
       s.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
+      // 빈 편집기를 지운 직후처럼 포커스가 이미 안에 있는 상태에서는 다음 compositionstart 를
+      // 기다리면 Android IME 가 <br> 위에서 조합 대상을 먼저 정해 버린다. 캐럿을 쓴 이 순간에
+      // 진짜 텍스트 노드 자리를 함께 준비한다.
+      if (owner.activeElement === root || root.contains(owner.activeElement)) ensureCaretSlot();
     } catch {
       expected = null;
     }
@@ -195,6 +228,62 @@ export function mountSurface(options: SurfaceOptions): Surface {
       selection: { anchor: anchor.pos, focus: focus.pos },
       corrected: anchor.corrected || focus.corrected,
     };
+  };
+
+  // DOM Selection은 화면에서 방금 일어난 몸짓의 자리이고, 트리 Selection은 마지막으로
+  // selectionchange를 받은 자리다. 그 이벤트는 task로 예약되므로 다음 keydown/beforeinput보다
+  // 늦을 수 있다. 구조 입력을 실행하기 직전에는 화면의 최신 자리를 트리가 한 번 따라잡는다.
+  const adoptSelection = (selection: Selection): void => {
+    expected = null;
+    if (!sameSelection(nabi.getSelection(), selection)) {
+      syncing = true;
+      try {
+        nabi.select(selection);
+      } finally {
+        syncing = false;
+      }
+    }
+    // 첨부처럼 구독자가 표현 가능한 바깥 경계로 넓힌 경우에는 화면도 그 답을 따른다.
+    const settled = nabi.getSelection();
+    if (!sameSelection(settled, selection)) writeCaret(settled);
+  };
+
+  const syncSelectionNow = (): void => {
+    const read = readCaret();
+    if (read) adoptSelection(read.selection);
+  };
+
+  // beforeinput의 target range는 "브라우저가 이번 입력으로 바꿀 내용"이다. 특히 모바일
+  // 가상 키보드는 keydown 없이 이 이벤트만 내고, Backspace 한 번이 지울 글자 수도 플랫폼과
+  // 문자군마다 다르므로 현재의 접힌 캐럿을 다시 계산하는 것보다 이 범위가 더 정확하다.
+  const targetSelectionOf = (ev: InputEvent): Selection | null => {
+    let ranges: readonly StaticRange[];
+    try {
+      ranges = ev.getTargetRanges();
+    } catch {
+      return null;
+    }
+    const range = ranges[0];
+    if (!range) return null;
+    const anchor = fromDomPoint(root, doc(), env, range.startContainer, range.startOffset);
+    const focus = fromDomPoint(root, doc(), env, range.endContainer, range.endOffset);
+    if (!anchor || !focus) return null;
+    return { anchor: anchor.pos, focus: focus.pos };
+  };
+
+  const syncSelectionForInput = (ev: InputEvent): void => {
+    const live = readCaret();
+    const target = targetSelectionOf(ev);
+    if (target) {
+      // 접힌 캐럿의 문단 경계 Backspace는 목록·인용 같은 nabi 구조 규칙이 먼저다. 브라우저가
+      // 제안한 문단 간 삭제 범위로 바꾸면 그 규칙을 건너뛰므로, 그때만 실제 접힌 캐럿을 쓴다.
+      const crosses = !samePath(target.anchor.path, target.focus.path);
+      if (!(live && isCollapsed(live.selection) && crosses)) {
+        adoptSelection(target);
+        return;
+      }
+    }
+    if (live) adoptSelection(live.selection);
   };
 
   const caretRect = (): { top: number; bottom: number; left: number; right: number } | null => {
@@ -230,18 +319,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
       expected = null;
       return;
     }
-    expected = null;
-    syncing = true;
-    try {
-      nabi.select(read.selection);
-    } finally {
-      syncing = false;
-    }
-    // 구독자가 선택을 고쳐 세웠으면(첨부 링크의 통째 넓히기) 화면도 따라간다 — syncing 동안은
-    // 트리 → 화면 되쓰기가 꺼져 있어서, 여기서 안 쓰면 캐럿이 첨부 속에 선 채로 남는다
-    // (트리는 통째로 골랐는데 화면은 캐럿 하나 — 두 정답이 갈린 채 멈춘다).
-    const settled = nabi.getSelection();
-    if (!sameSelection(settled, read.selection)) writeCaret(settled);
+    adoptSelection(read.selection);
     if (read.corrected) {
       // 표현 불가 자리(문단 사이·물건 속)의 캐럿 — 트리 자리로 되쓴다. 직후에 또 오면 한 프레임
       // 쉬어 브라우저와의 교정 핑퐁을 끊는다 (Q10 — 조정 가능한 상수).
@@ -250,7 +328,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       if (t - lastCorrectionAt < deferMs) {
         if (!correctionQueued && view) {
           correctionQueued = true;
-          view.requestAnimationFrame(() => {
+          correctionFrame = view.requestAnimationFrame(() => {
+            correctionFrame = 0;
             correctionQueued = false;
             writeCaret(nabi.getSelection());
           });
@@ -265,25 +344,23 @@ export function mountSurface(options: SurfaceOptions): Surface {
   // --- 트리 → 화면 (단일 신호의 바뀐 문단 목록 = 재그리기 목록) --------------------------------
   const offChange = nabi.onChange((change) => {
     // 조합·되맞추기 중에는 DOM 이 정답이다 — 그리지도 되쓰지도 않는다.
-    if (composing || reconciling) return;
+    if (composing) {
+      // 조합 밖에서 온 문서 변경은 버리지 않고 끝까지 기억한다. 활성 문단 자체가 바뀌었다면
+      // DOM 조합 결과로 그 명시적 변경을 덮지 않는다 — 끝에서 트리를 다시 그려 데이터가 이긴다.
+      if (change.doc) {
+        redrawAfterComposition = true;
+        if (compositionTopIds.some((id) => change.paragraphs.includes(id) || change.removed.includes(id))) {
+          compositionConflict = true;
+        }
+      }
+      return;
+    }
+    if (reconciling) return;
     if (change.doc) applyRedraw(change);
     if ((change.doc || change.selection) && !syncing) writeCaret(nabi.getSelection());
   });
 
   // --- 키 -------------------------------------------------------------------------------------
-  const caretOnLastLine = (): boolean => {
-    const sel = nabi.getSelection();
-    const holder = nodeAt(doc(), sel.focus.path);
-    if (!holder || typeof holder._id !== 'string') return false;
-    const el = holderElOf(root, holder._id);
-    if (!el || typeof el.getBoundingClientRect !== 'function') return false;
-    const box = el.getBoundingClientRect();
-    // 빈 줄의 캐럿 사각형은 전부 0 일 수 있다 — 그때는 블록 자신이 그 줄이다 (옛 062 의 교훈).
-    const rect = caretRect() ?? { top: box.top, bottom: box.bottom, left: box.left, right: box.right };
-    const lineHeight = view ? Number.parseFloat(view.getComputedStyle(el).lineHeight) || 16 : 16;
-    return box.bottom - rect.bottom < lineHeight * 0.9;
-  };
-
   const onKeyDown = (ev: KeyboardEvent): void => {
     // 누가 이미 가져간 키는 두 번 안 먹는다.
     //
@@ -323,22 +400,26 @@ export function mountSurface(options: SurfaceOptions): Surface {
     }
     if (ev.key === 'Tab') {
       ev.preventDefault();
+      syncSelectionNow();
       actions.tab(ev.shiftKey);
       return;
     }
     if (ev.key === 'Enter') {
       ev.preventDefault();
+      syncSelectionNow();
       if (ev.shiftKey) actions.shiftEnter();
       else actions.enter();
       return;
     }
     if (ev.key === 'Backspace' && !mod) {
       ev.preventDefault();
+      syncSelectionNow();
       actions.backspace();
       return;
     }
     if (ev.key === 'Delete' && !mod) {
       ev.preventDefault();
+      syncSelectionNow();
       actions.deleteForward();
       return;
     }
@@ -349,20 +430,14 @@ export function mountSurface(options: SurfaceOptions): Surface {
       : ev.key === 'ArrowDown' ? 'down'
       : null;
     if (dir && !mod && !ev.shiftKey && !ev.altKey) {
+      syncSelectionNow();
       if (actions.arrow(dir)) {
         ev.preventDefault();
         return;
       }
-      // 드롭캡 문단으로 "내려가는" 걸음은 브라우저가 틀린다 — 우리 걸음으로 대신한다.
-      if (dir === 'down') {
-        const target = actions.dropcapBelow();
-        if (target && caretOnLastLine()) {
-          ev.preventDefault();
-          nabi.select(caretAt(target));
-        }
-      }
       return;
     }
+    syncSelectionNow();
     if (actions.escapeKey(ev.key, ev.repeat)) ev.preventDefault();
   };
 
@@ -382,21 +457,25 @@ export function mountSurface(options: SurfaceOptions): Surface {
     }
     if (t === 'insertParagraph') {
       ev.preventDefault();
+      syncSelectionForInput(ev);
       actions.enter();
       return;
     }
     if (t === 'insertLineBreak') {
       ev.preventDefault();
+      syncSelectionForInput(ev);
       actions.shiftEnter();
       return;
     }
     if (t === 'deleteContentBackward') {
       ev.preventDefault();
+      syncSelectionForInput(ev);
       actions.backspace();
       return;
     }
     if (t === 'deleteContentForward') {
       ev.preventDefault();
+      syncSelectionForInput(ev);
       actions.deleteForward();
       return;
     }
@@ -415,6 +494,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
       return;
     }
     if (t === 'insertText') {
+      syncSelectionForInput(ev);
       const sel = nabi.getSelection();
       const holder = nodeAt(doc(), sel.focus.path);
       const crosses = !samePath(sel.anchor.path, sel.focus.path);
@@ -430,10 +510,10 @@ export function mountSurface(options: SurfaceOptions): Surface {
   };
 
   // --- 되맞추기 — 브라우저가 직접 고친 문단 하나를 트리로 --------------------------------------
-  const reconcile = (): void => {
+  const reconcile = (pathHint?: readonly number[]): void => {
     const read = readCaret();
-    if (!read) return;
-    const focusPath = read.selection.focus.path;
+    const focusPath = pathHint ?? read?.selection.focus.path;
+    if (!focusPath) return;
     const holder = nodeAt(doc(), focusPath);
     if (!holder || typeof holder._id !== 'string' || isWrapper(holder, env)) return;
     const el = holderElOf(root, holder._id);
@@ -473,16 +553,24 @@ export function mountSurface(options: SurfaceOptions): Surface {
       // 예약이 소비된 타이핑 — 화면(브라우저의 맨 글자)과 트리(마크 입은 글자)가 갈린다.
       // 그 문단만 트리에서 다시 그린다 (옛 판의 전체 재그리기 없이).
       if (hadArmed) {
-        const top = nodeAt(doc(), [focusPath[0] as number]);
-        if (top && typeof top._id === 'string') {
-          applyRedraw({ doc: true, selection: false, armed: false, paragraphs: [top._id], removed: [] });
-        }
+        redrawTopAt(focusPath);
         writeCaret(nabi.getSelection());
         return;
       }
 
       // 스페이스 직후의 오토포맷 — 변환이 일어나면 신호가 그 문단을 새로 그리고 캐럿도 쓴다.
       if (change.inserted === ' ' && actions.afterSpace()) return;
+
+      // 드롭캡 span은 첫 글자의 실제 DOM이다. 브라우저가 타이핑·IME로 그 글자를 바꾼 뒤에는
+      // 새 첫 글자에 상자를 옮겨야 하므로, 화면의 최종 캐럿을 트리에 받은 다음 이 문단만 다시 그린다.
+      const current = nodeAt(doc(), focusPath);
+      if (current?.a?.['dc'] === 1) {
+        const now = readCaret();
+        if (now) adoptSelection(now.selection);
+        redrawTopAt(focusPath);
+        writeCaret(nabi.getSelection());
+        return;
+      }
     }
 
     // 화면 캐럿을 정본으로 — 브라우저가 옮긴 캐럿을 트리가 따라간다(도로 쓰지 않는다).
@@ -503,39 +591,57 @@ export function mountSurface(options: SurfaceOptions): Surface {
   const onInput = (ev: Event): void => {
     if (composing || (ev as InputEvent).isComposing) return;
     reconcile();
+    cleanupZeroWidth();
   };
 
   // --- IME 조합 (옛 판의 실기기 교훈 번역) -------------------------------------------
-  const ensureCaretSlot = (): void => {
+  function ensureCaretSlot(path: readonly number[] = nabi.getSelection().focus.path): void {
     const s = domSelection();
-    if (!s || s.rangeCount === 0 || s.anchorNode?.nodeType === TEXT_NODE) return;
-    const sel = nabi.getSelection();
-    const holder = nodeAt(doc(), sel.focus.path);
+    if (s?.anchorNode?.nodeType === TEXT_NODE && root.contains(s.anchorNode)) return;
+    const holder = nodeAt(doc(), path);
     if (!holder || typeof holder._id !== 'string' || isWrapper(holder, env)) return;
     const el = holderElOf(root, holder._id);
     if (!el || domTextOf(el) !== '') return;
-    // 조합은 진짜 텍스트 노드 안에서만 시작된다 — 빈 문단에는 그 자리가 없어 IME 가 아예 안 뜬다.
+    // Android Chrome 은 compositionstart 전에 조합 대상을 정할 수 있다. 빈 문단의 <br> 와
+    // placeholder 위에서 시작하게 두면 첫 초성·중성이 갈라지므로, 포커스 때부터 이 자리를 둔다.
     const slot = owner.createTextNode(ZERO_WIDTH);
     el.replaceChildren(slot);
     expected = null;
+    if (!s) return;
     try {
       s.setBaseAndExtent(slot, 1, slot, 1);
     } catch {
       // 자리만 만들어 둔다 — 선택을 못 옮겨도 조합은 이 노드에서 시작된다.
     }
-  };
+  }
 
   const onCompositionStart = (): void => {
+    if (composing) return;
+    // 먼저 잠근다. 아래 선택 동기화나 범위 삭제가 문단을 다시 그리면, IME 가 막 붙잡은 텍스트
+    // 노드가 사라져 모바일 조합의 첫 자모와 캐럿이 서로 다른 자리로 흩어진다.
+    composing = true;
     replaySelectAll = false;
     actions.breakDouble();
-    const sel = nabi.getSelection();
-    // 범위 위 조합 — 브라우저가 DOM 에서 범위를 지우기 전에 트리도 지워 캐럿 하나에서 시작한다.
-    if (!isCollapsed(sel)) nabi.applyCommand('deleteRange');
-    ensureCaretSlot();
-    composing = true;
+    // compositionstart 에서는 트리를 전혀 고치지 않는다. 여기서 선택이나 문서를 바꾸면 조합이
+    // 막 붙잡은 순간에 구독자들이 움직이고, 범위 교체 한 번이 삭제+삽입 두 undo로 갈라진다.
+    // 실제 DOM 경로만 기억했다가 끝에서 원래 트리와 최종 DOM을 한 번에 되맞춘다.
+    const live = readCaret();
+    compositionSelection = live?.selection ?? nabi.getSelection();
+    compositionPath = compositionSelection.focus.path;
+    const anchor = nodeAt(doc(), compositionSelection.anchor.path);
+    compositionAnchorId = anchor && typeof anchor._id === 'string' ? anchor._id : null;
+    const holder = nodeAt(doc(), compositionPath);
+    compositionHolderId = holder && typeof holder._id === 'string' ? holder._id : null;
+    const topIds = [compositionSelection.anchor.path[0], compositionSelection.focus.path[0]]
+      .map((index) => nodeAt(doc(), [index as number]))
+      .flatMap((node) => node && typeof node._id === 'string' ? [node._id] : []);
+    compositionTopIds = [...new Set(topIds)];
+    redrawAfterComposition = false;
+    compositionConflict = false;
+    ensureCaretSlot(compositionPath);
   };
 
-  const cleanupZeroWidth = (): void => {
+  const cleanupZeroWidth = (restoreEmpty = false): void => {
     const s = domSelection();
     const range = s && s.rangeCount > 0 ? s.getRangeAt(0) : null;
     const walker = owner.createTreeWalker(root, SHOW_TEXT);
@@ -546,7 +652,23 @@ export function mountSurface(options: SurfaceOptions): Surface {
     }
     for (const text of dirty) {
       const cleaned = text.data.split(ZERO_WIDTH).join('');
-      if (cleaned === '') continue; // 아직 빈 자리 — 캐럿의 집이므로 남긴다
+      if (cleaned === '') {
+        const parent = text.parentElement;
+        const caretHere = range !== null && range.collapsed && range.startContainer === text;
+        // 브라우저가 첫 글자를 slot 옆의 새 Text 노드로 넣는 경우가 있다. 같은 홀더에 진짜 글이
+        // 생겼다면 이 노드는 더 이상 캐럿의 집이 아니라 앞에 남은 유령 한 칸이다.
+        if (parent && domTextOf(parent) !== '') {
+          text.remove();
+          if (caretHere) writeCaret(nabi.getSelection());
+          continue;
+        }
+        // 포커스 중에는 다음 조합의 집으로 남긴다. 편집기를 떠날 때는 렌더러의 빈 홀더 모양인
+        // <br> 로 되돌려 placeholder 판정과 DOM 정본을 다시 맞춘다.
+        if (restoreEmpty && parent?.childNodes.length === 1) {
+          parent.replaceChildren(owner.createElement('br'));
+        }
+        continue;
+      }
       const caretHere = range !== null && range.collapsed && range.startContainer === text;
       const offset = caretHere
         ? text.data.slice(0, range.startOffset).split(ZERO_WIDTH).join('').length
@@ -562,10 +684,46 @@ export function mountSurface(options: SurfaceOptions): Surface {
     }
   };
 
-  const onCompositionEnd = (): void => {
+  const finishComposition = (data: string | null): void => {
+    if (!composing && compositionPath === null) return;
     composing = false;
-    reconcile();
+    const path = compositionHolderId ? pathOfId(doc(), env, compositionHolderId) ?? compositionPath : compositionPath;
+    const anchorPath = compositionAnchorId ? pathOfId(doc(), env, compositionAnchorId) : compositionSelection?.anchor.path;
+    const focusPath = compositionHolderId ? pathOfId(doc(), env, compositionHolderId) : compositionSelection?.focus.path;
+    const range = compositionSelection && anchorPath && focusPath ? {
+      anchor: { path: anchorPath, offset: compositionSelection.anchor.offset },
+      focus: { path: focusPath, offset: compositionSelection.focus.offset },
+    } : null;
+    const crosses = range !== null && !samePath(range.anchor.path, range.focus.path);
+    const conflict = compositionConflict;
+    const redraw = redrawAfterComposition;
+    compositionPath = null;
+    compositionSelection = null;
+    compositionAnchorId = null;
+    compositionHolderId = null;
+    compositionTopIds = [];
+    redrawAfterComposition = false;
+    compositionConflict = false;
+    if (!conflict && crosses && range) {
+      const changed = data !== null && (data !== '' || (!redraw && !domMatchesTree()));
+      reconciling = true;
+      try {
+        nabi.select(range);
+        if (changed) {
+          if (data === '') nabi.applyCommand('deleteRange');
+          else nabi.applyCommand('insertText', { text: data });
+        }
+      } finally {
+        reconciling = false;
+      }
+    } else if (!conflict) {
+      reconcile(path ?? undefined);
+    }
     cleanupZeroWidth();
+    if (redraw || crosses || conflict) {
+      renderAll();
+      writeCaret(nabi.getSelection());
+    }
     const queued = deferred;
     deferred = [];
     for (const fn of queued) fn();
@@ -573,6 +731,21 @@ export function mountSurface(options: SurfaceOptions): Surface {
       replaySelectAll = false;
       actions.selectAll();
     }
+  };
+
+  const onCompositionEnd = (event: CompositionEvent): void => {
+    finishComposition(event.data);
+  };
+
+  const onFocus = (): void => {
+    ensureCaretSlot();
+  };
+
+  const onBlur = (): void => {
+    // 일부 모바일 IME는 포커스가 먼저 떠나면 compositionend 를 빠뜨린다. 보이는 조합값을
+    // 트리에 확정해 잠금이 다음 포커스까지 영구히 남지 않게 한다.
+    finishComposition(null);
+    cleanupZeroWidth(true);
   };
 
   // --- 붙여넣기·드롭·클릭 ----------------------------------------------------------------------
@@ -675,7 +848,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
   const onMouseDown = (ev: MouseEvent): void => {
     tookLump = false;
     if (ev.button !== 0) return;
-    const target = ev.target instanceof Element ? ev.target : null;
+    const target = eventElement(ev.target);
     if (!target) return;
     const path = lumpUnder(target);
     if (!path) return;
@@ -701,7 +874,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
       writeCaret(nabi.getSelection());
       return;
     }
-    const target = ev.target instanceof Element ? ev.target : null;
+    const target = eventElement(ev.target);
     if (!target) return;
     // 편집 중 문서는 쓰는 것이지 보는 것이 아니다 — 링크는 이동하지 않는다.
     const anchor = target.closest('a');
@@ -727,6 +900,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
   root.addEventListener('input', onInput);
   root.addEventListener('compositionstart', onCompositionStart);
   root.addEventListener('compositionend', onCompositionEnd);
+  root.addEventListener('focus', onFocus);
+  root.addEventListener('blur', onBlur);
   root.addEventListener('paste', onPaste as EventListener);
   root.addEventListener('copy', onCopyOrCut as EventListener);
   root.addEventListener('cut', onCopyOrCut as EventListener);
@@ -753,11 +928,16 @@ export function mountSurface(options: SurfaceOptions): Surface {
     unmount() {
       for (const detach of detachers) detach();
       offChange();
+      if (correctionFrame !== 0) view?.cancelAnimationFrame?.(correctionFrame);
+      correctionFrame = 0;
+      correctionQueued = false;
       root.removeEventListener('keydown', onKeyDown);
       root.removeEventListener('beforeinput', onBeforeInput as EventListener);
       root.removeEventListener('input', onInput);
       root.removeEventListener('compositionstart', onCompositionStart);
       root.removeEventListener('compositionend', onCompositionEnd);
+      root.removeEventListener('focus', onFocus);
+      root.removeEventListener('blur', onBlur);
       root.removeEventListener('paste', onPaste as EventListener);
       root.removeEventListener('copy', onCopyOrCut as EventListener);
       root.removeEventListener('cut', onCopyOrCut as EventListener);

@@ -357,8 +357,9 @@ export function renderStoredHtml(json: unknown, registry: Registry, options?: St
   });
 }
 
-// 같은 문의 편집기 HTML — data-key 만 더 붙는다. cocoon 의 _id 가 결정적이라(같은 JSON 은 같은
-// 키) 서버가 이것으로 그린 DOM 을 클라이언트의 mountSurface({hydrate: true})가 입양한다.
+// 같은 문의 편집기 HTML — data-key 와 봉인·실제 드롭캡 글자 같은 화면 부속을 더한다.
+// cocoon 의 _id 가 결정적이라(같은 JSON 은 같은 키) 서버가 이것으로 그린 DOM 을 클라이언트의
+// mountSurface({hydrate: true})가 입양한다.
 export function renderStoredEditorHtml(json: unknown, registry: Registry, options?: StoredHtmlOptions): string | null {
   return $guarded('renderStoredEditorHtml', null, () => {
     const doc = $fromJson(json, registry.env);

@@ -536,6 +536,16 @@ function throws(name: string, fn: () => void, wants?: string): void {
     // 받침 br 은 **노드째** 걷는다 — 속성만 걷으면 진짜 라인이 되어 없던 줄이 생긴다.
     eq('받침 br 은 노드째 걷힌다', dressClipHtml('<p data-key="k1">글<br data-nabi-filler=""></p>'), '<p data-key="k1">글</p>');
     eq('진짜 라인은 그대로 산다', dressClipHtml('<p data-key="k1">앞<br>뒤</p>'), '<p data-key="k1">앞<br>뒤</p>');
+    eq(
+      '편집 드롭캡의 실제 첫 글자 상자는 복사 HTML에서 걷힌다',
+      dressClipHtml('<p data-key="k1"><span data-nabi-dropcap-letter>“D</span>rop</p>'),
+      '<p data-key="k1">“Drop</p>',
+    );
+    eq(
+      '브라우저가 빈 속성값을 붙여도 드롭캡 상자는 걷힌다',
+      dressClipHtml('<span class="x" data-nabi-dropcap-letter="">가</span>나다'),
+      '가나다',
+    );
     ok('data-key 는 남긴다 — ③ 겹의 잣대다', fromNabi(dressClipHtml('<p data-key="k1">글</p>')));
 
     // 블록 맥락 되씌우기 — 조상은 안쪽부터 온다.

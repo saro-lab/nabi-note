@@ -13,9 +13,9 @@ export function closeOnOutside(
 ): () => void {
   const onDown = (event: Event): void => {
     const target = event.target;
-    if (target instanceof Node) {
+    if (target !== null && typeof (target as Node).nodeType === 'number') {
       for (const el of inside()) {
-        if (el && el.contains(target)) return;
+        if (el && el.contains(target as Node)) return;
       }
     }
     close();

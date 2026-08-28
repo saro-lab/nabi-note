@@ -23,20 +23,22 @@ import { rememberClip } from './clip.js';
 //
 //  - `contenteditable`·`draggable` — `html/builders.ts` 가 **편집기 HTML 에만** 다는 봉인.
 //  - `data-nabi-picked` — `wings/link/attach.ts` 의 "지금 골라져 있다" 표시.
+//  - `data-nabi-dropcap-letter` — 편집기에서만 첫 글자를 실제 상자로 그리는 표시.
 //
 // `data-key` 는 **남긴다** — `sameClip` ③ 겹의 잣대이고, 다른 나비가 읽어도 해가 없다
 // (들여오기가 모르는 속성은 조용히 흘린다).
-const DISPLAY_ONLY = ['contenteditable', 'draggable', 'data-nabi-picked'];
+const DISPLAY_ONLY = ['contenteditable', 'draggable', 'data-nabi-picked', 'data-nabi-dropcap-letter'];
 const DISPLAY_ATTR = new RegExp(`\\s+(?:${DISPLAY_ONLY.join('|')})(?:\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]*))?`, 'gi');
 
 // 태그 하나 — 속성 자리는 따옴표 안의 `>` 를 삼킨다. 우리 조립이 낸 HTML 만 읽으면 되므로
 // 이만큼이면 넉넉하다(같은 뜻의 정규식 몇 줄이 `clip.ts` 의 포장 걷기에도 산다).
 const TAG = /<(\/?)([a-z][a-z0-9-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)>/gi;
 const FILLER = new RegExp(`\\s${FILLER_ATTR}\\b`, 'i');
+const DROP_CAP_SPAN = /<span\b(?=[^>]*\bdata-nabi-dropcap-letter(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*))?)[^>]*>([^<]*)<\/span>/gi;
 
 // 표시 전용 걷기 — 밖으로 나가는 글자에서 화면의 사정을 지운다.
 export function dressClipHtml(html: string): string {
-  return html.replace(TAG, (all: string, slash: string, name: string, attrs: string) => {
+  return html.replace(DROP_CAP_SPAN, '$1').replace(TAG, (all: string, slash: string, name: string, attrs: string) => {
     // 받침 br 은 **노드째** 걷는다. 속성만 걷으면 진짜 라인이 되어 없던 줄이 생긴다 —
     // `html/import.ts` 의 `dropFiller` 는 **혼자 선 br 하나**만 걷으므로 글 뒤에 붙은 받침은
     // 그대로 라인으로 살아난다.

@@ -287,7 +287,7 @@ export function mountSticky(options: StickyOptions): Sticky {
 
   // --- 캐럿 사각형 ------------------------------------------------------------------------------
   const caretRect = (): Rect | null => {
-    const selection = owner.getSelection?.();
+    const selection = owner.getSelection?.() ?? view?.getSelection() ?? null;
     if (!selection || selection.rangeCount === 0) return null;
     const range = selection.getRangeAt(0);
     const box = range.getBoundingClientRect();
@@ -303,7 +303,7 @@ export function mountSticky(options: StickyOptions): Sticky {
   // 선택을 뺐다 도로 넣는다 — 진짜 선택 변경이고, 진짜 선택 변경이야말로 WebKit 이 자기 방식으로
   // 캐럿을 보여 주게 만든다 (040 §3.2). 우리는 자리를 하나도 안 정한다.
   const reAim = (): void => {
-    const selection = owner.getSelection?.();
+    const selection = owner.getSelection?.() ?? view?.getSelection() ?? null;
     if (!selection || selection.rangeCount === 0) return;
     const range = selection.getRangeAt(0).cloneRange();
     selection.removeAllRanges();

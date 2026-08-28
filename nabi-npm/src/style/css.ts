@@ -911,7 +911,10 @@ export const CORE_CSS = `
    빈 판정은 그대로다: 문서가 통째로 빈 모양은 화면에서도 한 모양뿐이라 "받침 br 하나만 든 글
    블록 하나"가 곧 빈 문서다(html/render 의 받침 규칙 ①, 결정 12). 그래서 트리를 안 보고 그 모양
    하나만 겨눈다 — 글자가 한 자 들어오는 순간 받침이 사라지므로 안내글도 같이 사라진다.
-   **셈도 상태도 없다.** 제목 태그까지 세는 까닭은 빈 문서에서 제목 단추부터 누르는 걸음이다(104).
+   포커스가 들면 이 층은 없앤다. Android Chrome 의 IME 는 compositionstart 전에 가상 요소까지
+   포함한 빈 contenteditable 에서 조합 대상을 정해 첫 한글 음절을 깨뜨릴 수 있다. 표면은 그때
+   폭 없는 진짜 텍스트 노드를 먼저 세우므로, 안내글도 조합 자리와 겹치지 않게 물러나야 한다.
+   제목 태그까지 세는 까닭은 빈 문서에서 제목 단추부터 누르는 걸음이다(104).
    말은 시트가 아니라 변수로 온다 — --nabi-placeholder 에 surface 가 적는다(말은 로케일의
    것이고 시트는 모양의 것이다). 안 적혀 있으면 빈 글자열이라 아무것도 안 뜬다.
    pre-line 인 까닭은 여러 줄짜리 안내글이다 — surface 가 줄바꿈을 CSS 의 \A 로 옮겨 적는데,
@@ -931,7 +934,7 @@ export const CORE_CSS = `
    대체값은 테마를 타는 --nabi-placeholder-color-fallback 이라 다크에서도 제 밝기로 뜬다.
    맨 끝의 리터럴은 토큰이 안 닿는 자리(시트의 토큰 블록 밖)를 위한 마지막 받침이다. */
 .nabi-content.nabi-editing { position: relative; }
-.nabi-content.nabi-editing:has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before {
+.nabi-content.nabi-editing:not(:focus):has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before {
   content: var(--nabi-placeholder, "");
   position: absolute; inset-block-start: 0; inset-inline: 0;
   padding: inherit;
@@ -969,8 +972,14 @@ export const CORE_CSS = `
 
    오른쪽 사이는 두 몫이다: padding 은 띄운 상자 **안**, margin 은 그 **바깥**. 뒤 글자가
    안 달라붙게 하는 자리다(예전 .08em 은 붙어 보였다). 글자가 커졌으니 em 값을 그만큼 줄여
-   **실제 폭은 그대로** 둔다 —.14em × 4 과.095em × 5.9 가 같은 폭이다. */
-.nabi-content [data-nabi-dropcap="1"]::first-letter {
+   **실제 폭은 그대로** 둔다 —.14em × 4 과.095em × 5.9 가 같은 폭이다.
+
+   contenteditable 안에는 이 가상 상자를 만들지 않는다. ::first-letter가 있으면 WebKit은 보이는
+   캐럿과 Selection을 한 글자 어긋나게 하고, Chromium도 드롭캡 문단으로 내려가는 줄 이동을
+   문서 끝으로 보낼 수 있다(둘 다 실재 재현). 편집 조립은 첫 글자를 실제 span으로 감싸 같은
+   모양을 그린다. 실제 노드라 DOM Selection과 트리 오프셋이 같은 글자를 가리킨다. */
+.nabi-content:not(.nabi-editing) [data-nabi-dropcap="1"]::first-letter,
+.nabi-content.nabi-editing [data-nabi-dropcap-letter] {
   float: inline-start;
   font-size: 5.9em; line-height: .83;
   padding-inline-end: .095em; margin-inline-end: .04em;

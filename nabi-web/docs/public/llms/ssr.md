@@ -42,7 +42,7 @@ renderStoredEditorHtml(saved, registry)  // '<p data-key="n0">One comment line</
 | | |
 |---|---|
 | `renderStoredHtml(json, registry, options?)` | The HTML you store/publish - identical to `getHtml()` |
-| `renderStoredEditorHtml(json, registry, options?)` | Editor HTML - identical to `getEditorHtml()` (carries `data-key`) |
+| `renderStoredEditorHtml(json, registry, options?)` | Editor HTML - identical to `getEditorHtml()` (carries `data-key` and display-only wrappers) |
 
 - **Neither touches the DOM** - both run as-is on a server.
 - **Not a NABI TREE means `null`** - the same rejection rule as `setJson()` (the whole document
@@ -124,7 +124,13 @@ renderViewToolsHtml({ locale: 'en' })
 for code that already holds the internal tree (tests, custom assembly) rather than raw external
 JSON. Prefer the `renderStored*` pair for anything that receives untrusted/external input, since
 that pair also normalizes and validates it. All four renderers preserve runs of two or more ASCII
-spaces in text with alternating `&nbsp;` and plain spaces. Attribute values are not rewritten.
+spaces in text with alternating `&nbsp;` and plain spaces. They also protect the last space at a
+text-container boundary with `&nbsp;`. Attribute values are not rewritten.
+
+Editor HTML has screen-only structure in addition to `data-key`. A drop-cap paragraph wraps its
+first grapheme in `[data-nabi-dropcap-letter]`, so the live editor can paint the same drop cap with
+a real element instead of the caret-unsafe `::first-letter` pseudo-element. `renderHtml` never emits
+that span, and clipboard output removes it. Do not store editor HTML.
 
 ## See also
 

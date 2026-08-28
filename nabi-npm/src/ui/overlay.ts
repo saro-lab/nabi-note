@@ -102,8 +102,9 @@ export function openPreview(options: PreviewOptions): Overlay {
 
   // 미리보기에는 상황 줄이 없다 — 그림을 크게 보는 유일한 몸짓이 클릭이다.
   body.addEventListener('click', (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLImageElement)) return;
+    const node = event.target as Node | null;
+    if (node?.nodeType !== 1 || (node as Element).tagName !== 'IMG') return;
+    const target = node as HTMLImageElement;
     event.preventDefault();
     inner = openLightbox({
       surface: options.surface,
@@ -131,7 +132,7 @@ function revealCaretBlock(scroller: HTMLElement, body: HTMLElement, nabi: Nabi):
   // 블록이 있으면 자리가 밀리는데, 그때는 엉뚱한 데로 데려가느니 맨 위가 낫다.
   if (body.children.length !== nabi.$doc().length) return;
   const target = body.children[index];
-  if (!(target instanceof HTMLElement)) return;
+  if (!target) return;
   // "위치 **정도**" 가 핵심이다 — 3분의 1 지점에 둔다. 맨 위에 딱 붙이면 그 블록이 첫 줄이 되어
   // 문서의 처음을 보는 것과 구별이 안 된다. 앞의 것이 조금 보여야 어디쯤인지 눈이 알아본다.
   const delta = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top;

@@ -1,5 +1,6 @@
 // 조립 — 나비트리가 HTML 글자열이 되는 유일한 자리다. DOM 어휘를 전혀 안 쓰므로 서버에서도
-// 그대로 돌고(의 SSR 절반), 보기 HTML 과 편집기 HTML 이 **같은 조립**에서 나온다 (: 에디터 = 출력).
+// 그대로 돌고(의 SSR 절반), 보기 HTML 과 화면 전용 부속을 단 편집기 HTML 이 **같은 조립**에서
+// 나온다.
 //
 // **이스케이프는 여기 한 곳뿐이고 이 파일 밖으로 안 나간다** — 조립 함수(builders)는 `ctx.element`
 // 로만 태그를 짓고, 속성 값은 그 문 안에서 반드시 이스케이프된다. 밖에서 온 값이 HTML 이 되는
@@ -17,9 +18,14 @@ function escapeText(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function escapeTextRun(text: string): string {
-  return escapeText(text).replace(/ {2,}/g, (spaces) =>
-    Array.from(spaces, (_space, at) => at % 2 === 0 ? '&nbsp;' : ' ').join(''));
+function escapeTextRun(text: string, preserveEnd = false): string {
+  const escaped = escapeText(text);
+  return escaped.replace(/ +/g, (spaces, offset: number) => {
+    const atEnd = preserveEnd && offset + spaces.length === escaped.length;
+    if (spaces.length === 1) return atEnd ? '&nbsp;' : spaces;
+    return Array.from(spaces, (_space, at) =>
+      at % 2 === 0 || (atEnd && at === spaces.length - 1) ? '&nbsp;' : ' ').join('');
+  });
 }
 
 function escapeAttr(value: string): string {
@@ -99,6 +105,32 @@ interface Job {
   readonly allowLocal: boolean;
 }
 
+interface DropCapState {
+  pending: boolean;
+}
+
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+const SPACE = /^\s+$/u;
+const PUNCTUATION = /^\p{P}+$/u;
+
+function renderDropCapText(text: string, preserveEnd: boolean, state: DropCapState): string {
+  let start = -1;
+  let end = -1;
+  for (const part of GRAPHEMES.segment(text)) {
+    if (start < 0 && SPACE.test(part.segment)) continue;
+    if (start < 0) start = part.index;
+    end = part.index + part.segment.length;
+    if (!PUNCTUATION.test(part.segment)) break;
+  }
+  if (start < 0 || end < 0) return escapeTextRun(text, preserveEnd);
+
+  state.pending = false;
+  const before = escapeTextRun(text.slice(0, start));
+  const letter = tagOf('span', escapeText(text.slice(start, end)), { 'data-nabi-dropcap-letter': '' });
+  const after = escapeTextRun(text.slice(end), preserveEnd);
+  return before + letter + after;
+}
+
 const ALIGNS: ReadonlySet<string> = new Set(['l', 'c', 'r']);
 
 function jobOf(options: HtmlOptions, keys: boolean): Job {
@@ -124,12 +156,12 @@ function isBlockGrade(w: string, env: SchemaEnv): boolean {
   return w === P || env.lumps.has(w) || env.blockHolders.has(w) || env.inlineHolders.has(w);
 }
 
-function contextFor(job: Job, node: ElementNode, block: boolean): HtmlContext {
+function contextFor(job: Job, node: ElementNode, block: boolean, preserveEnd: boolean): HtmlContext {
   const key: HtmlAttrs = job.keys && block && typeof node._id === 'string' ? { 'data-key': node._id } : {};
   return {
     element: (tag, inner, attrs) => tagOf(tag, inner, { ...key, ...attrs }),
     wrap: (tag, inner, attrs) => tagOf(tag, inner, attrs ?? {}),
-    escape: escapeTextRun,
+    escape: (text) => escapeTextRun(text, preserveEnd),
     // 가는 자리는 언제나 엄격하다 — 호스트의 allowLocalUrls 가 여기까지 오지 않는다.
     url: (raw) => safeUrl(raw),
     // 가져오는 자리에서만 로컬 주소가 산다.
@@ -139,22 +171,38 @@ function contextFor(job: Job, node: ElementNode, block: boolean): HtmlContext {
   };
 }
 
-function renderNode(node: NabiNode, job: Job): string {
-  if (!isElement(node)) return escapeTextRun(node);
+function renderNode(node: NabiNode, job: Job, preserveEnd = false, dropCap?: DropCapState): string {
+  if (!isElement(node)) {
+    return dropCap?.pending === true
+      ? renderDropCapText(node, preserveEnd, dropCap)
+      : escapeTextRun(node, preserveEnd);
+  }
   if (node.w === P) return renderParagraph(node, job);
   // 라인은 코어의 것이라 조립 맵을 안 거친다 — wing 이 예약어를 못 쓰기 때문이다.
-  if (node.w === BR) return FILLER;
+  if (node.w === BR) {
+    if (dropCap) dropCap.pending = false;
+    return FILLER;
+  }
 
-  const children = (): string => renderChildren(node.ch, job);
+  const block = isBlockGrade(node.w, job.env);
+  const childEnd = block || preserveEnd;
+  const children = (): string => renderChildren(node.ch, job, childEnd, dropCap);
   const builder = job.builders[node.w];
   // 조립을 아는 이가 없는 타입 — 껍데기를 벗기고 속만 남긴다. 낯선 태그가 문서로 새지 않는다.
   if (!builder) return children();
-  return builder(node, children, contextFor(job, node, isBlockGrade(node.w, job.env)));
+  return builder(node, children, contextFor(job, node, block, childEnd));
 }
 
-function renderChildren(nodes: readonly NabiNode[], job: Job): string {
+function renderChildren(
+  nodes: readonly NabiNode[],
+  job: Job,
+  preserveEnd = false,
+  dropCap?: DropCapState,
+): string {
   let out = '';
-  for (const node of nodes) out += renderNode(node, job);
+  for (let i = 0; i < nodes.length; i += 1) {
+    out += renderNode(nodes[i] as NabiNode, job, preserveEnd && i === nodes.length - 1, dropCap);
+  }
   return out;
 }
 
@@ -180,7 +228,8 @@ function renderParagraph(p: ElementNode, job: Job): string {
   // 래퍼문단이 입는 문단 속성은 정렬뿐이다 — 드롭캡은 글의 첫 글자에 걸리는 것이다.
   if (!wrapper && p.a?.['dc'] === 1) attrs['data-nabi-dropcap'] = '1';
 
-  const inner = renderChildren(p.ch, job);
+  const dropCap = job.keys && attrs['data-nabi-dropcap'] === '1' ? { pending: true } : undefined;
+  const inner = renderChildren(p.ch, job, true, dropCap);
   return tagOf(tag, bodyOf(inner, job, p.ch), attrs);
 }
 
@@ -191,7 +240,8 @@ export function renderHtml(doc: NabiDoc, options: HtmlOptions): string {
   return renderChildren(doc, jobOf(options, false));
 }
 
-// 편집기 HTML — 같은 조립에 `data-key`(=`_id`)만 더 붙는다. Node 에서도 돈다(의 SSR 절반).
+// 편집기 HTML — 같은 조립에 `data-key`, 봉인, 실제 드롭캡 글자 같은 화면 부속을 더한다.
+// Node 에서도 돈다(의 SSR 절반).
 export function renderEditorHtml(doc: NabiDoc, options: HtmlOptions): string {
   return renderChildren(doc, jobOf(options, true));
 }

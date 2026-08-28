@@ -108,7 +108,7 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
   // 띠 안이면 `bandFix` 가 0 을 답한다 — **보이는 것을 굴려서 놀래키지 않는다**(규칙의 절반이 그
   // 0 이다). 겨누는 것은 겨눔의 사각형이고, 못 재면 캐럿이 든 맨 위 블록으로 갈음한다.
   const targetBox = (): Rect | null => {
-    const selection = owner.getSelection?.();
+    const selection = owner.getSelection?.() ?? owner.defaultView?.getSelection() ?? null;
     if (selection && selection.rangeCount > 0) {
       const box = selection.getRangeAt(0).getBoundingClientRect();
       if (box.height > 0) return { top: box.top, bottom: box.bottom };

@@ -53,7 +53,7 @@ function sourceOf(box: ElementNode): string {
 // 그런 일이 없다.
 function restoreCaretIn(el: Element, caret: { start: number; end: number }): void {
   const owner = el.ownerDocument;
-  const selection = owner.getSelection?.();
+  const selection = owner.getSelection?.() ?? owner.defaultView?.getSelection() ?? null;
   if (!selection) return;
 
   const positionAt = (target: number): { node: Node; offset: number } | null => {
@@ -153,9 +153,15 @@ export function makeCodeAttach(options: PaintOptions = {}): Attach {
       composing = false;
       schedule();
     };
+    const onBlur = (): void => {
+      if (!composing) return;
+      composing = false;
+      schedule();
+    };
 
     root.addEventListener('compositionstart', onCompositionStart);
     root.addEventListener('compositionend', onCompositionEnd);
+    root.addEventListener('blur', onBlur);
     const stop = nabi.onChange((change) => {
       // 문단이 다시 그려졌으면 그 속의 칠도 함께 지워졌다 — 기억을 걷고 다시 칠한다.
       if (change.doc) painted = new WeakMap<Element, string>();
@@ -167,6 +173,7 @@ export function makeCodeAttach(options: PaintOptions = {}): Attach {
       stop();
       root.removeEventListener('compositionstart', onCompositionStart);
       root.removeEventListener('compositionend', onCompositionEnd);
+      root.removeEventListener('blur', onBlur);
       if (frame !== 0) view?.cancelAnimationFrame?.(frame);
     };
   };
