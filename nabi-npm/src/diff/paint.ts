@@ -70,6 +70,36 @@ export function htmlText(html: string): string {
   return out;
 }
 
+// 글자마다 자신을 감싼 HTML 껍데기의 지문을 낸다. 첫 태그는 최상위 블록 자체라 제외한다:
+// 행 배경이 이미 제목·정렬 같은 블록 변경을 나타내고, 진한 강조는 그 안에서 실제로 서식이
+// 달라진 글자만 가리켜야 한다. 조립 HTML 은 올바르게 중첩되어 있으므로 닫는 태그는 제일
+// 안쪽 껍데기 하나를 걷으면 된다.
+export function htmlTextFormats(html: string): readonly string[] {
+  const formats: string[] = [];
+  const stack: string[] = [];
+  let format = '';
+  const refresh = (): void => {
+    format = stack.length > 1 ? stack.slice(1).join('\u001f') : '';
+  };
+  walk(
+    html,
+    (src) => {
+      if (/^<\/[a-z][a-z0-9]*>$/.test(src)) {
+        stack.pop();
+        refresh();
+        return;
+      }
+      if (!/^<[a-z][a-z0-9]*(?:\s|>|\/)/.test(src) || src.endsWith('/>')) return;
+      stack.push(src);
+      refresh();
+    },
+    (_src, text) => {
+      for (const _codePoint of text) formats.push(format);
+    },
+  );
+  return formats;
+}
+
 // 코드포인트 구간들에 span 을 입힌다. 구간이 엘리먼트 경계를 걸치면 경계마다 끊어 입으므로
 // 결과는 언제나 올바른 중첩이다. 구간은 정렬·비겹침을 전제한다(diff 가 그렇게 낸다).
 export function paintHtml(html: string, ranges: readonly CharRange[], className: string): string {

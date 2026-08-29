@@ -81,7 +81,7 @@ const model = diffDocs(before, after, registry, {
 - `before` and `after`: rendered blocks with text and entry index;
 - `changes`: indices of all entries except `same`.
 
-Changed blocks already contain escaped published HTML plus `.nabi-diff-del` or `.nabi-diff-ins` character ranges. Matching does not depend on internal `_id`; stored snapshots do not share reliable internal identity.
+Changed blocks already contain escaped published HTML plus `.nabi-diff-del` or `.nabi-diff-ins` character ranges. These ranges cover inserted or deleted text and unchanged text whose rendered inline wrapper or inline attributes changed, such as bold, color, or link destination changes. A block-only attribute change can still have no character range. Matching does not depend on internal `_id`; stored snapshots do not share reliable internal identity.
 
 ### Mounted two-pane diff
 
@@ -128,4 +128,3 @@ mountToolbar({
 The integration stores the last loaded document as its baseline. It updates that baseline only on a `NabiChange` with `loaded: true`; typing, paste commands, undo, and redo do not move it. `baseline()` returns the current baseline. The screen closes on Escape and restores focus to the surface.
 
 Unmount both the toolbar and diff integration.
-

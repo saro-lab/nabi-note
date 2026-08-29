@@ -3,6 +3,7 @@
 // **쪽에 보이는 코드와 내려받는 파일이 같은 문자열이다.** 둘로 두면 한쪽이 조용히 낡는다 —
 // 옛 판이 실제로 그랬다(쪽마다 사본 열넷). 주석만 로케일 사전이 들고, 코드는 이 한 벌이다.
 import { translate } from './langs.ts'
+import { CDN_BUNDLE, CDN_SHEET } from './version.ts'
 
 // 내려받는 이름 — 안내 문장의 단추 글자이자 파일 이름이다. 한 자리에서 온다.
 export const CDN_DEMO_FILE = 'demo.html'
@@ -33,7 +34,7 @@ export function cdnDemoHtml(lang: string): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NABI NOTE</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@latest/dist/nabi.css">
+  <link rel="stylesheet" href="${CDN_SHEET}">
   <style>
     html, body { height: 100%; margin: 0; }
 ${cssNote(lang, 'cdn_code_minheight')}
@@ -51,10 +52,10 @@ ${cssNote(lang, 'cdn_code_minheight')}
     </div>
     <div id="context"></div>
   </div>
-  <div id="editor" class="nabi-content" contenteditable="true"></div>
+  <div id="editor" class="nabi-content"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/nabi-note@latest"></script>
+<script src="${CDN_BUNDLE}"></script>
 <script>
   var N = NabiNote
   var app = document.querySelector('#app')
@@ -66,6 +67,7 @@ ${note(lang, 'cdn_code_faces')}
 
   var made = N.createNabiWith(wings, {
     parseHtml: N.parseNodes,
+    locale: '${lang}',
     ask: {
       message: function (text) { window.alert(text) },
       confirm: function (text) { return window.confirm(text) }
@@ -83,7 +85,7 @@ ${note(lang, 'cdn_code_faces')}
   var history = N.mountLocalHistory({ nabi: nabi, storage: N.browserHistoryStorage(window) })
   var file = N.mountFile({
     nabi: nabi, registry: registry, store: N.browserFileStore(document),
-    parse: N.parseNodes, name: function () { return 'note' }
+    parse: N.parseNodes, name: function () { return 'note' }, locale: '${lang}'
   })
 
   var toolbar = N.mountToolbar(Object.assign({}, shared, {

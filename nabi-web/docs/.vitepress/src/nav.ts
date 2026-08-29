@@ -21,14 +21,11 @@ export function isLink(entry: NavEntry): entry is NavItem {
   return 'path' in entry
 }
 
-// Reader tasks are the primary structure. Detailed wing pages keep their stable URLs, but the
-// guide is the canonical path through an editor lifecycle.
 export const NAV: readonly NavGroup[] = [
   {
     key: 'menu_start',
     entries: [
       { path: '/guide/getting-started', key: 'menu_getting_started' },
-      { path: '/guide/assemble', key: 'menu_assemble' },
       { path: '/guide/cdn', key: 'menu_cdn' },
       { path: '/intro/vibe-coding', key: 'menu_intro_vibe_coding' },
     ],
@@ -37,8 +34,10 @@ export const NAV: readonly NavGroup[] = [
     key: 'menu_concepts',
     entries: [
       { path: '/guide/document', key: 'menu_document' },
-      { path: '/guide/input', key: 'menu_input' },
       { path: '/guide/storage', key: 'menu_storage' },
+      { path: '/guide/input', key: 'menu_input' },
+      { path: '/guide/style', key: 'menu_style_guide' },
+      { path: '/guide/rendering', key: 'menu_rendering' },
     ],
   },
   {
@@ -86,8 +85,6 @@ export const NAV: readonly NavGroup[] = [
           { path: '/wing/etc/upload', key: 'menu_etc_upload' },
         ],
       },
-      { path: '/guide/style', key: 'menu_style_guide' },
-      { path: '/guide/rendering', key: 'menu_rendering' },
     ],
   },
   {

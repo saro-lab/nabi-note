@@ -1,35 +1,24 @@
 ---
-title: CDN·빌드 없는 시작
-description: 패키지 설치 없이 NABI NOTE를 연결할 때 확인할 경계입니다.
+title: CDN 이용하기
+description: 빌드 도구 없이 브라우저용 NABI NOTE를 연결하는 예제입니다.
 ---
 
-# CDN·빌드 없는 시작
-
-번들러가 없는 페이지에서도 같은 원칙을 지킵니다. CSS를 먼저 읽고, 브라우저용 엔트리로 편집기를 조립하며, 저장은 NABI TREE JSON으로 합니다. 배포 중인 패키지의 정확한 CDN URL과 버전은 릴리스 안내를 사용하세요. 예시에서 `@VERSION`은 고정할 실제 버전으로 바꾸어야 합니다.
-
-```html
-<link rel="stylesheet" href="https://cdn.example/npm/nabi-note@VERSION/nabi.css">
-<div class="nabi"><div class="nabi-content"></div></div>
-
-<script type="module">
-  import { createNabiWith, mountSurface, parseNodes, wings }
-    from 'https://cdn.example/npm/nabi-note@VERSION/+esm'
-
-  const { nabi, registry } = createNabiWith(wings().allBasic().build(), {
-    parseHtml: parseNodes,
-  })
-  mountSurface({ nabi, registry, root: document.querySelector('.nabi-content') })
+<script setup>
+import CdnDemo from '../../.vitepress/ui/CdnDemo.vue'
 </script>
-```
 
-## 운영할 때 유의할 점
+# CDN 이용하기
 
-| 항목 | 권장 |
-| --- | --- |
-| 버전 | `latest` 대신 확인한 고정 버전을 사용합니다. |
-| CSS | JavaScript보다 먼저 로드합니다. |
-| CSP | CDN과 필요한 이미지·업로드 도메인만 허용합니다. |
-| 저장 | `getJson()` 결과를 서버에 저장하고 HTML은 다시 생성합니다. |
-| 업로드 | 브라우저가 아니라 서버에서 파일과 권한을 검증합니다. |
+패키지를 설치하기 어려운 정적 페이지에서는 브라우저용 번들과 CSS를 CDN으로 불러올 수 있습니다. 아래 예제는 현재 문서와 같은 패키지 버전을 주소에 고정하고, 전역 객체 `NabiNote`로 편집기를 조립합니다.
 
-CDN은 설치 방법만 다를 뿐, `javascript:` URL이나 신뢰하지 않는 HTML을 그대로 화면에 넣어도 된다는 뜻은 아닙니다. 입력과 출력의 규칙은 [NABI TREE와 데이터](/ko/guide/document)를 따르세요.
+<CdnDemo />
+
+## NABI NOTE에서 확인할 점
+
+- CSS와 브라우저용 JavaScript는 같은 버전을 사용합니다. `latest`를 배포 코드에 두면 새 버전이 나온 날 동작이 바뀔 수 있습니다.
+- 브라우저 번들은 루트 API를 `window.NabiNote`로 제공합니다. `nabi-note/ssr`, `nabi-note/viewer`, `nabi-note/diff`는 별도의 전역 번들로 제공되지 않습니다.
+- 예제의 파일 저장과 로컬 히스토리는 사용자의 브라우저 안에서 동작합니다. 서버 저장이나 계정 동기화가 필요하면 `getJson()` 결과를 애플리케이션 API로 전송합니다.
+- 업로드를 추가할 때는 `upload` 날개뿐 아니라 실제 전송 함수와 필요한 이미지 또는 링크 날개를 연결합니다. 파일 검증은 업로드 서버가 담당합니다.
+- 외부 HTML을 `setHtml()`로 가져오려면 CDN 환경에서도 `parseHtml: NabiNote.parseNodes`가 필요합니다.
+
+CDN은 불러오는 방식만 다릅니다. 저장 형식과 입력 검증은 npm으로 설치했을 때와 같으므로 [입출력](/ko/guide/storage)과 [NABI TREE](/ko/guide/document)의 설명을 함께 확인하세요.

@@ -1,6 +1,6 @@
 ---
 title: 형광펜
-description: 선택한 글자의 배경색을 강조하는 wing입니다.
+description: 선택한 글자 뒤에 허용한 형광펜 색을 입힙니다.
 ---
 
 <script setup>
@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # 형광펜
 
-선택한 글자에 의미가 있는 색 토큰을 적용합니다. 저장 데이터에는 임의의 CSS 색상값 대신 허용된 토큰이 남습니다.
+선택한 글자 뒤에 형광펜 색을 입힙니다. 저장 데이터에는 임의의 CSS 색상값 대신 허용한 색 이름만 남아, 화면 스타일과 문서 데이터를 분리할 수 있습니다.
 
 <WingDemo path="/wing/inline/highlight" />
 
@@ -19,4 +19,4 @@ const selected = wings().use('hl', {
 }).build()
 ```
 
-`values`를 생략하면 기본 팔레트를 사용합니다.
+`values`를 생략하면 `yellow`, `green`, `cyan`, `pink`, `purple`, `orange`를 사용합니다. 목록을 좁히면 등록하지 않은 색은 불러온 문서에서도 유지되지 않습니다.

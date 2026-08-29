@@ -1,63 +1,55 @@
 ---
-title: NABI TREE와 데이터
-description: 저장 형식, HTML 변환, 정규화와 보안 경계를 이해합니다.
+title: NABI TREE
+description: NABI NOTE가 문서를 저장하고 검증하는 JSON 구조를 설명합니다.
 ---
 
-<script setup>
-import FlowChain from '../../.vitepress/ui/FlowChain.vue'
-const documentFlow = [
-  { label: '외부 JSON·HTML', note: '신뢰하지 않는 입력', kind: 'input' },
-  { label: 'registry 검증', note: '등록된 wing 어휘만 통과', kind: 'core' },
-  { label: '정규화된 NABI TREE', note: '저장할 원본', kind: 'output' },
-  { label: '게시 HTML', note: '허용된 출력으로 재생성', kind: 'output' },
-]
-</script>
+# NABI TREE
 
-# NABI TREE와 데이터
-
-NABI TREE는 문서를 표현하는 작은 JSON 트리입니다. 텍스트는 `{"t":"..."}`, 요소는 `{"w":"...","ch":[...]}`처럼 저장합니다. `w`는 wing이 소유하는 단어이고, 등록하지 않은 단어는 문서의 기능이 될 수 없습니다.
-
-<FlowChain :steps="documentFlow" caption="NABI는 입력 HTML을 보관하지 않고, 허용된 문서 어휘로 다시 만듭니다." />
+NABI TREE는 편집 가능한 문서를 표현하는 JSON 배열입니다. 화면의 DOM을 그대로 저장하지 않고, 등록된 날개가 이해하는 작은 문서 어휘만 남깁니다. 같은 JSON으로 편집기를 다시 열거나 서버에서 게시용 HTML을 만들 수 있습니다.
 
 ```json
 [
-  { "w": "p", "ch": [{ "t": "안녕하세요" }] },
-  { "w": "p", "a": { "h": 2 }, "ch": [{ "t": "제목" }] }
+  { "w": "p", "ch": ["안녕하세요"] },
+  { "w": "p", "a": { "h": 2 }, "ch": ["두 번째 제목"] }
 ]
 ```
 
-문단은 항상 `p`입니다. 제목·정렬·드롭캡은 별도 블록이 아니라 문단의 `a` 속성입니다. 목록·표·이미지처럼 독립 블록도 문단이 한 겹 감싸므로, 객체 앞뒤에 커서를 둘 수 있고 정렬도 문단이 가집니다.
+`w`는 문서 요소의 이름이고 `ch`는 자식입니다. 빈 요소에서는 `ch`가 비어 있거나 생략될 수 있습니다. 내부에서 선택을 추적할 때 쓰는 값은 `getJson()` 결과에 포함되지 않습니다.
 
-## 입력별 결과
+## 문단과 객체
 
-| 호출 | 성공 시 | 실패 시 |
-| --- | --- | --- |
-| `setJson(value)` | 정규화해 문서 교체 | `false`, 기존 문서 유지 |
-| `setHtml(html)` | 허용 HTML을 트리로 import | parser 없음·잠금·잘못된 입력이면 `false` |
-| `getJson()` | 내부 ID가 빠진 저장용 JSON | 항상 직렬화 가능한 값 |
-| `getHtml()` | 게시용 HTML | 저장 원본으로 쓰지 않음 |
+본문과 제목은 모두 `p` 문단입니다. 제목, 정렬, 드롭캡은 문단의 속성으로 저장됩니다. 목록, 표, 이미지처럼 독립된 객체는 문단이 한 겹 감싸므로 객체 앞뒤에 캐럿을 놓을 수 있고, 정렬도 그 문단에 적용됩니다.
+
+이 구조를 직접 외워서 JSON을 만들 필요는 없습니다. 편집 결과는 `getJson()`으로 읽고, 외부에서 받은 값은 `setJson()`으로 넣으면 등록된 날개가 구조와 속성을 정규화합니다.
+
+## 날개가 문서 어휘를 정합니다
+
+굵게 날개를 등록하면 `b` 마크를, 표 날개를 등록하면 표 구조를 읽고 쓸 수 있습니다. 등록되지 않은 이름을 임의의 HTML 요소로 내보내지는 않습니다. 서버와 브라우저에서 같은 문서를 다룬다면 HTML 출력에 영향을 주는 날개와 옵션도 같게 맞춥니다.
 
 ```ts
-const ok = nabi.setJson(await response.json())
-if (!ok) showError('문서 형식을 읽을 수 없습니다.')
+import { createNabiWith, wings } from 'nabi-note'
+
+const { nabi } = createNabiWith(
+  wings().allBasic().drop('youtube'),
+)
 ```
 
-## 보안 경계
+필요한 날개를 고르는 방법은 [날개 알아보기](/ko/guide/features)에서 확인할 수 있습니다.
 
-- URL은 기본적으로 안전한 `http:`/`https:`만 허용합니다. 로컬 URL은 명시적으로 켜야 합니다.
-- 등록한 wing의 HTML builder와 import claim만 문서 어휘가 됩니다.
-- JSON도 외부 입력입니다. custom wing의 `repair`와 `claim`에서 속성을 검증하세요.
-- `getHtml()` 결과도 게시 환경의 CSP, 권한, 업로드 서버 검증을 대체하지 않습니다.
+## 외부 데이터는 불러오는 문에서 검증합니다
 
-**하지 말 것:** 편집 중인 `.nabi-content`의 `innerHTML`을 직접 바꾸거나, `getEditorHtml()`을 DB에 저장하지 마세요. 선택과 composing DOM이 문서 모델과 달라질 수 있습니다.
-
-## HTML을 받아야 한다면
+JSON과 HTML은 모두 신뢰하지 않는 입력으로 다룹니다. `setJson()`은 올바른 문서만 받아들이고, 잘못된 값이면 `false`를 반환한 뒤 기존 문서를 유지합니다. HTML을 가져오려면 브라우저 파서도 연결해야 합니다.
 
 ```ts
 import { createNabiWith, parseNodes, wings } from 'nabi-note'
 
-const { nabi } = createNabiWith(wings().allBasic().build(), { parseHtml: parseNodes })
-nabi.setHtml('<p>가져온 내용</p>')
+const { nabi } = createNabiWith(wings().allBasic(), {
+  parseHtml: parseNodes,
+})
+
+const loaded = nabi.setHtml('<p>가져온 내용</p>')
 ```
 
-HTML import는 편집기의 등록된 wing 기준으로 제한됩니다. 마크다운과 클립보드, 파일 입출력의 선택 규칙은 [저장·입출력](/ko/guide/storage)에서 다룹니다.
+HTML 가져오기는 등록된 날개의 claim과 기본 구조 규칙을 거칩니다. 스크립트나 폼처럼 문서에 들어올 수 없는 요소는 제거되고, URL도 허용된 형식인지 확인합니다. 다만 이 경계가 게시 서비스의 권한 검사, 콘텐츠 보안 정책(CSP), 업로드 서버 검증을 대신하지는 않습니다. 커스텀 날개에서 원시 HTML을 직접 조립한다면 그 코드도 신뢰 경계 안에 들어옵니다.
+
+입력과 출력 함수의 역할은 [입출력](/ko/guide/storage), 서버에서 HTML을 만드는 방법은 [SSR·viewer·diff](/ko/guide/rendering)에서 이어서 설명합니다.

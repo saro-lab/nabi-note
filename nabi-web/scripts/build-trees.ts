@@ -1,8 +1,9 @@
-// 예문을 나비트리로 굳힌다 — 로케일 사전(`docs/.vitepress/locales/<lang>.ts`)의
-// `demo_html`·`demo_html_*` → `docs/.vitepress/trees/<lang>.ts`.
+// 예문과 미리 그린 화면을 검증하고 굳힌다.
 //
-// **원고는 사전에 그대로 산다.** 예문은 열넷의 번역문이라 다른 글과 같은 자리에서 고쳐야 하고,
-// 트리는 거기서 뽑은 생성물이다 — 사람이 손으로 적을 것이 아니다. 사전을 고쳤으면 이것을 돌린다.
+// 한국어는 `docs/.vitepress/trees/ko.ts` 의 NABI TREE가 사람이 직접 고치는 원본이다. 긴 HTML
+// 문자열을 로케일 사전에 두면 따옴표나 태그 하나만 어긋나도 문서 사이트 전체가 열리지 않기
+// 때문이다. 아직 번역을 확정하지 않은 다른 언어는 로케일 사전의 `demo_html`·`demo_html_*`을
+// 공식 HTML 입력 경로로 읽어 같은 모양의 `trees/<lang>.ts`를 만든다.
 //
 //   npm run build:trees      (nabi-web 폴더에서)
 //
@@ -23,7 +24,8 @@ import { createNabiWith, defaultWings, makeTranslator } from 'nabi-note';
 import { makeRegistry, renderStoredEditorHtml, renderToolbarHtml, renderViewToolsHtml } from 'nabi-note/ssr';
 import { tinyHtml } from '../../nabi-npm/test/tiny-html.ts';
 import { messages } from '../docs/.vitepress/locales/index.ts';
-import { SAMPLE_KEYS, messageKeyFor } from '../docs/.vitepress/src/sample.ts';
+import { SAMPLE_KEYS, messageKeyFor, type SampleTree, type SampleTrees } from '../docs/.vitepress/src/sample.ts';
+import { trees as koTrees } from '../docs/.vitepress/trees/ko.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, '../docs/.vitepress/trees');
@@ -62,6 +64,9 @@ const open = { allowLocalUrls: true } as const;
 //  조립 결과를 안 바꾼다 — 조립의 로컬 주소 허용은 아래 `open` 이 정한다.)
 const registry = makeRegistry(defaultWings);
 
+// 한국어는 이 트리 자체가 원본이다. 다른 언어도 번역이 확정되면 같은 방식으로 한 줄씩 옮긴다.
+const directTrees: Readonly<Partial<Record<string, SampleTrees>>> = { ko: koTrees };
+
 function treeOf(html: string): unknown[] {
   const { nabi } = createNabiWith(defaultWings, { ...open, parseHtml: tinyHtml });
   if (!nabi.setHtml(html)) throw new Error('setHtml 이 거절했다');
@@ -74,6 +79,15 @@ function treeOf(html: string): unknown[] {
   return tree;
 }
 
+function checkedTree(tree: SampleTree, code: string, key: string): unknown[] {
+  const { nabi } = createNabiWith(defaultWings, { ...open, doc: tree });
+  const normalized = nabi.getJson();
+  if (JSON.stringify(normalized) !== JSON.stringify(tree)) {
+    throw new Error(`${code} ${key} NABI TREE가 정규형이 아니다`);
+  }
+  return normalized;
+}
+
 mkdirSync(out, { recursive: true });
 
 let count = 0;
@@ -83,26 +97,36 @@ let count = 0;
 const chipRows: string[] = [];
 
 for (const [code, sheet] of Object.entries(messages)) {
-  const lines: string[] = [
-    '// 만들어진 파일이다 — 손으로 고치지 않는다.',
-    '// 원고는 `docs/.vitepress/locales/' + code + '.ts` 의 `demo_html`·`demo_html_*` 이고,',
-    '// `npm run build:trees` 가 이것을 낸다.',
-    "import type { SampleTrees } from '../src/sample.ts'",
-    '',
-    'export const trees: SampleTrees = {',
-  ];
+  const direct = directTrees[code];
+  const lines: string[] | null = direct
+    ? null
+    : [
+        '// 만들어진 파일이다 — 손으로 고치지 않는다.',
+        '// 원고는 `docs/.vitepress/locales/' + code + '.ts` 의 `demo_html`·`demo_html_*` 이고,',
+        '// `npm run build:trees` 가 이것을 낸다.',
+        "import type { SampleTrees } from '../src/sample.ts'",
+        '',
+        'export const trees: SampleTrees = {',
+      ];
   let mainTree: unknown[] | null = null;
   for (const key of SAMPLE_KEYS) {
-    const html = (sheet as Record<string, string>)[messageKeyFor(key)];
-    // 사전에 예문이 빠졌으면 그 자리에서 멈춘다 — 조용히 빈 문서를 굳히면 화면에서야 드러난다.
-    if (typeof html !== 'string') throw new Error(`${code} 사전에 ${messageKeyFor(key)} 가 없다`);
-    const tree = treeOf(html);
+    let tree: unknown[];
+    if (direct) {
+      tree = checkedTree(direct[key], code, key);
+    } else {
+      const html = (sheet as Record<string, string>)[messageKeyFor(key)];
+      // 사전에 예문이 빠졌으면 그 자리에서 멈춘다 — 조용히 빈 문서를 굳히면 화면에서야 드러난다.
+      if (typeof html !== 'string') throw new Error(`${code} 사전에 ${messageKeyFor(key)} 가 없다`);
+      tree = treeOf(html);
+    }
     if (key === 'main') mainTree = tree;
-    lines.push(`  ${key}: ${JSON.stringify(tree)},`);
+    lines?.push(`  ${key}: ${JSON.stringify(tree)},`);
     count += 1;
   }
-  lines.push('}', '');
-  freeze(`${code}.ts`, lines.join('\n'));
+  if (lines) {
+    lines.push('}', '');
+    freeze(`${code}.ts`, lines.join('\n'));
+  }
 
   // --- 홈 예문을 **미리 그려 둔다** (095 ⓐ) ---------------------------------------------------
   // 데모는 브라우저에서만 서므로, 아무것도 안 하면 서버가 보내는 데모 자리는 빈 상자다.
@@ -148,7 +172,9 @@ for (const [code, sheet] of Object.entries(messages)) {
     .map((wing) => ({ id: wing.w, label: t.pick(wing.button?.label, `wing.${wing.w}`) }));
   chipRows.push(`  ${JSON.stringify(code)}: ${JSON.stringify(chips)},`);
 
-  console.log(`[build-trees] ${code} — 예문 ${SAMPLE_KEYS.length}, 홈 미리그리기 ${mainHtml.length}자, 칩 ${chips.length}`);
+  console.log(
+    `[build-trees] ${code} — 예문 ${SAMPLE_KEYS.length}${direct ? ' 직접 트리' : ''}, 홈 미리그리기 ${mainHtml.length}자, 칩 ${chips.length}`,
+  );
 }
 
 freeze(
@@ -177,5 +203,5 @@ if (checking) {
   }
   console.log('[build-trees] 굳힌 것이 지금 코드와 같다 (트리·홈 미리그리기·툴바·칩).');
 } else {
-  console.log(`[build-trees] 나비트리 ${count} 벌을 docs/.vitepress/trees 에 굳혔다.`);
+  console.log(`[build-trees] 예문 ${count}벌을 검증하고 생성물을 굳혔다.`);
 }

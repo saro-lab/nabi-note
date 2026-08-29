@@ -16,7 +16,7 @@ import type { Registry, StoredHtmlOptions } from '../wing/index.js';
 import type { Nabi } from '../editor/index.js';
 import { translate } from '../locale/index.js';
 import { matchBlocks, type DiffEntry, type DiffKind, type MatchBlock } from './match.js';
-import { htmlText, paintHtml, type CharRange } from './paint.js';
+import { htmlText, htmlTextFormats, paintHtml, type CharRange } from './paint.js';
 
 export type { CharRange } from './paint.js';
 export type { DiffEntry, DiffKind } from './match.js';
@@ -83,7 +83,7 @@ export function diffDocs(
     const toBlocks = (doc: NabiDoc): MatchBlock[] =>
       doc.map((block: ElementNode) => {
         const html = renderParagraphHtml(block, job);
-        return { key: html, text: htmlText(html) };
+        return { key: html, text: htmlText(html), formats: htmlTextFormats(html) };
       });
     const beforeBlocks = toBlocks(beforeDoc);
     const afterBlocks = toBlocks(afterDoc);

@@ -1,74 +1,65 @@
 ---
 title: AI 바이브 코딩
-description: 코딩 에이전트가 NABI NOTE의 현재 API와 경계를 읽고 정확하게 구현하도록 안내합니다.
+description: 코딩 에이전트가 현재 공개 API와 문서 경계를 읽고 NABI NOTE를 정확하게 사용하도록 돕습니다.
 ---
 
 # AI 바이브 코딩
 
-NABI NOTE는 코딩 에이전트가 필요한 정보를 짧은 경로로 찾을 수 있도록 [`llms.txt`](/llms.txt)를 제공합니다. 에이전트에게 라이브러리 사용법을 추측하게 하지 말고, 먼저 이 파일을 읽은 뒤 현재 작업에 필요한 문서만 따라가도록 요청하세요.
+NABI NOTE에는 AI와 자동화 도구를 위한 [`llms.txt`](/llms.txt)가 있습니다. 에이전트에게 전체 라이브러리를 추측하게 하기보다 이 색인부터 읽게 하고, 필요한 주제 문서만 따라가게 하면 답변과 구현이 모두 더 정확해집니다.
 
-## 가장 짧은 시작 방법
+## 바로 사용할 프롬프트
 
-아래 내용을 복사한 뒤 사용 중인 프레임워크와 필요한 기능만 바꾸면 됩니다.
+아래 예시에 사용하는 프레임워크와 필요한 기능만 채워 넣어 보세요.
 
 ```text
-NABI NOTE(nabi-note)를 사용해 편집기를 구현해 주세요.
-먼저 https://nabi.saro.me/llms.txt를 읽고, 현재 작업에 필요한 문서만 따라가세요.
+NABI NOTE(nabi-note)로 편집기를 구현해 주세요.
+먼저 https://nabi.saro.me/llms.txt를 읽고, 이번 작업에 필요한 문서만 이어서 읽으세요.
 
 환경: Vue 3 + TypeScript
 필요한 기능: 기본 서식, 표, 이미지, 업로드
 저장 원본: NABI TREE JSON
-게시 방식: 저장된 JSON을 HTML로 변환
+게시 방식: 저장한 JSON을 서버에서 HTML로 렌더링
 
-공개 export와 타입에 실제로 존재하는 API만 사용하고,
-구현이 끝나면 타입 검사와 빌드를 실행해 주세요.
+공개 export와 설치된 타입에 실제로 있는 API만 사용하세요.
+구현 뒤에는 타입 검사와 빌드를 실행하고, 바꾼 파일과 검증 결과를 알려 주세요.
 ```
 
-URL을 읽을 수 없는 에이전트를 사용한다면 `llms.txt`와 필요한 하위 문서의 내용을 대화에 함께 넣어 주세요.
+URL을 읽을 수 없는 에이전트라면 `llms.txt`와 이번 작업에 해당하는 하위 문서 내용을 대화에 함께 넣어 주세요.
 
-## 작업에 맞는 문서 고르기
+## 필요한 문서만 고르게 합니다
 
-| 구현하려는 내용 | 먼저 읽을 문서 |
-| --- | --- |
-| npm으로 편집기 조립 | [`quickstart-npm.md`](https://nabi.saro.me/llms/quickstart-npm.md) |
-| CDN으로 연결 | [`quickstart-cdn.md`](https://nabi.saro.me/llms/quickstart-cdn.md) |
-| wing 선택 | [`wings.md`](https://nabi.saro.me/llms/wings.md) |
-| 저장 형식과 변경 알림 | [`document-model.md`](https://nabi.saro.me/llms/document-model.md) |
-| HTML·붙여넣기·업로드 보안 | [`io-security.md`](https://nabi.saro.me/llms/io-security.md) |
-| 커스텀 wing | [`custom-wing.md`](https://nabi.saro.me/llms/custom-wing.md) |
-| SSR과 hydrate | [`ssr.md`](https://nabi.saro.me/llms/ssr.md) |
-| viewer와 diff | [`viewer-diff.md`](https://nabi.saro.me/llms/viewer-diff.md) |
-| 스타일과 드롭캡 | [`styling.md`](https://nabi.saro.me/llms/styling.md) |
-| 공개 API와 타입 찾기 | [`api-reference.md`](https://nabi.saro.me/llms/api-reference.md) |
+`llms.txt`는 짧은 안내 색인입니다. 처음부터 모든 문서를 넣기보다 작업에 맞는 문서만 지정하는 편이 좋습니다.
 
-`llms.txt`는 안내 색인입니다. 처음부터 모든 문서를 한꺼번에 넣기보다, 작업에 필요한 문서만 읽히는 편이 답변이 짧고 정확합니다.
+- npm으로 편집기를 조립할 때는 [`quickstart-npm.md`](https://nabi.saro.me/llms/quickstart-npm.md)를 읽게 합니다.
+- CDN 예제는 [`quickstart-cdn.md`](https://nabi.saro.me/llms/quickstart-cdn.md)를 사용합니다.
+- wing 선택과 조합은 [`wings.md`](https://nabi.saro.me/llms/wings.md)를 확인합니다.
+- 저장 JSON, HTML, 변경 알림은 [`document-model.md`](https://nabi.saro.me/llms/document-model.md)를 봅니다.
+- HTML 가져오기, 붙여넣기, 업로드 경계는 [`io-security.md`](https://nabi.saro.me/llms/io-security.md)를 봅니다.
+- 새 wing은 [`custom-wing.md`](https://nabi.saro.me/llms/custom-wing.md), 서버 렌더링은 [`ssr.md`](https://nabi.saro.me/llms/ssr.md)를 사용합니다.
+- viewer와 diff는 [`viewer-diff.md`](https://nabi.saro.me/llms/viewer-diff.md), 스타일과 드롭캡은 [`styling.md`](https://nabi.saro.me/llms/styling.md)를 확인합니다.
+- 정확한 import와 타입은 [`api-reference.md`](https://nabi.saro.me/llms/api-reference.md)에서 찾습니다.
 
-## 요구사항을 구체적으로 전달하기
+## 요구사항을 함께 전달합니다
 
-코딩 에이전트는 편집 화면만 보고 저장·게시·보안 정책까지 알 수 없습니다. 다음 내용을 프롬프트에 함께 적어 주세요.
+에이전트는 편집 화면만 보고 저장 방식이나 보안 정책을 알 수 없습니다. 실제 프레임워크, 필요한 wing과 제외할 기능, JSON과 HTML의 저장 범위, 업로드 서버의 요청·응답 형식과 파일 제한, 게시 화면에 SSR·viewer·diff가 필요한지를 같이 알려 주세요.
 
-- React, Vue, 순수 JavaScript처럼 실제로 사용하는 환경을 알려 주세요.
-- 필요한 wing과 제외할 기능을 구체적으로 적어 주세요.
-- 원본을 JSON으로 저장할지, HTML도 함께 저장할지 정해 주세요.
-- 업로드 API의 요청·응답 형식과 파일 제한을 알려 주세요.
-- 게시 화면에서 SSR, viewer, diff가 필요한지 알려 주세요.
-- 기존 디자인 토큰과 다크 모드 적용 방식을 알려 주세요.
+아직 결정하지 못한 항목이 있다면 임의로 정해 구현하지 말고, 선택지와 영향부터 설명한 뒤 질문하도록 요청하는 편이 좋습니다.
 
-요구사항이 아직 정해지지 않았다면 에이전트에게 임의로 결정하게 하기보다, 선택지를 비교하고 질문하도록 요청하는 편이 안전합니다.
+## 결과를 검토하는 기준
 
-## 생성된 코드를 검토할 때
+생성한 코드는 일반 코드처럼 검토해야 합니다. 다음 내용은 특히 직접 확인하세요.
 
-- `nabi-note/nabi.css`가 편집 화면과 게시 화면에 로드되었는지 확인합니다.
-- 선택한 wing과 mount가 같은 `registry`를 사용하는지 확인합니다.
-- 저장 원본으로 `getJson()`을 사용하고 `getEditorHtml()`은 저장하지 않는지 확인합니다.
-- 편집 중인 `.nabi-content`의 `innerHTML`을 직접 교체하지 않는지 확인합니다.
-- 화면을 제거할 때 생성한 mount를 모두 `unmount()`하는지 확인합니다.
-- 업로드 서버가 MIME, 크기, 권한과 저장 위치를 검증하는지 확인합니다.
-- SSR과 브라우저가 같은 wing 순서와 옵션을 사용하는지 확인합니다.
-- 마지막으로 타입 검사, 테스트와 빌드를 실행해 실제 export 이름을 검증합니다.
+- 편집 화면과 게시 화면에 `nabi-note/nabi.css`를 불러왔는지
+- 선택한 wing과 모든 mount가 같은 `registry`를 쓰는지
+- 저장 원본은 `getJson()`이고 `getEditorHtml()`을 저장하지 않는지
+- 편집 중인 `.nabi-content`의 `innerHTML`을 직접 바꾸지 않는지
+- 화면을 닫을 때 만든 mount를 `unmount()`하는지
+- 업로드 서버가 MIME, 크기, 권한, 저장 위치를 검증하는지
+- SSR과 브라우저가 같은 wing 순서와 HTML 관련 옵션을 쓰는지
+- 타입 검사, 테스트, 빌드로 실제 export 이름을 확인했는지
 
-AI가 만든 코드도 일반 코드와 같은 검토가 필요합니다. 특히 입력·IME·캐럿과 저장 형식은 화면이 한 번 정상적으로 보이는 것만으로 안전하다고 판단할 수 없습니다.
+특히 IME와 캐럿, 저장 형식은 화면이 한 번 정상적으로 보인다는 이유만으로 안전하다고 판단하기 어렵습니다. 모바일 조합 입력과 저장·불러오기까지 실제로 확인해 보세요.
 
-## 설치된 패키지를 함께 확인하기
+## 설치한 버전을 우선합니다
 
-프로젝트에 `nabi-note`가 이미 설치되어 있다면 에이전트에게 `node_modules/nabi-note/package.json`의 exports와 배포된 타입 선언도 함께 확인하도록 요청하세요. 웹 문서와 설치 버전이 다를 때는 실제로 설치된 버전의 공개 타입을 우선해야 합니다.
+프로젝트에 `nabi-note`가 이미 설치되어 있다면 웹 문서보다 설치된 패키지의 `package.json` exports와 타입 선언이 현재 코드에 더 직접적인 기준입니다. 문서와 설치 버전이 다를 수 있으므로, 에이전트에게 이 차이를 먼저 확인하도록 요청하세요.

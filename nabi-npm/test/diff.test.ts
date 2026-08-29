@@ -210,6 +210,39 @@ const DOC = [
     eq('마크 경계 변경 — 글자 내용은 원문과 같다', htmlText(afterHtml), '앞 굵은 말 뒤에 더');
   }
 }
+{
+  // 글자가 같아도 인라인 서식이 달라졌다면 그 범위가 실제 변경 지점이다.
+  const before = [{ w: 'p', ch: ['앞 굵게 뒤'] }];
+  const after = [{ w: 'p', ch: ['앞 ', { w: 'b', ch: ['굵게'] }, ' 뒤'] }];
+  const result = diffDocs(before, after, registry);
+  ok('서식 변경 — 결과가 있다', result !== null);
+  if (result) {
+    const entry = result.entries[result.changes[0] as number];
+    eq('서식 변경 — changed 로 짝이 잡힌다', entry?.kind, 'changed');
+    eq('서식 변경 — before 구간', entry?.beforeRanges, [{ start: 2, end: 4 }]);
+    eq('서식 변경 — after 구간', entry?.afterRanges, [{ start: 2, end: 4 }]);
+    eq(
+      '서식 변경 — before 의 같은 글자도 del 로 강조한다',
+      result.before[0]?.html,
+      '<p>앞 <span class="nabi-diff-del">굵게</span> 뒤</p>',
+    );
+    eq(
+      '서식 변경 — after 의 같은 글자도 ins 로 강조한다',
+      result.after[0]?.html,
+      '<p>앞 <b><span class="nabi-diff-ins">굵게</span></b> 뒤</p>',
+    );
+  }
+}
+{
+  const before = [{ w: 'p', ch: ['주소: ', { w: 'a', a: { href: 'https://before.example' }, ch: ['같은 링크'] }] }];
+  const after = [{ w: 'p', ch: ['주소: ', { w: 'a', a: { href: 'https://after.example' }, ch: ['같은 링크'] }] }];
+  const result = diffDocs(before, after, registry);
+  ok('속성 변경 — 결과가 있다', result !== null);
+  if (result) {
+    eq('속성 변경 — 링크 글자만 before 에 강조한다', result.entries[0]?.beforeRanges, [{ start: 4, end: 9 }]);
+    eq('속성 변경 — 링크 글자만 after 에 강조한다', result.entries[0]?.afterRanges, [{ start: 4, end: 9 }]);
+  }
+}
 
 // --- 거절 ---------------------------------------------------------------------------------------
 

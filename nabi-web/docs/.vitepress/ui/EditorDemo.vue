@@ -911,6 +911,7 @@ const EXPORT_NAME: Readonly<Record<string, string>> = {
   save: 'saveFileWing',
   open: 'openFileWing',
   localHistory: 'localHistoryWing',
+  diff: 'diffWing',
   clearFormat: 'clearFormatWing',
 }
 // 묶음으로 나가는 것들 — 조각(tr·td, li, summary…)이 딸려 있어 한 이름이 여럿을 데려온다
@@ -938,37 +939,41 @@ const code = computed(() => {
     }
   }
 
-  // 배선이 있어야 사는 wing 넷 — 등록만으로는 커맨드가 조용히 아무 일도 안 한다
-  // Four wings need wiring; registering alone leaves their commands silent
+  // 배선이 있어야 사는 wing 다섯 — 등록만으로는 커맨드가 조용히 아무 일도 안 한다
+  // Five wings need wiring; registering alone leaves their commands silent
   const wired: string[] = []
   if (on('upload')) {
     imports.push('mountUpload', 'mountUploadView')
     wired.push(
+      'const view = mountUploadView({ nabi, surface: content })',
       'const upload = mountUpload({',
       '  nabi, root: content,',
       ko
         ? '  // 여기에 서버로 올리는 코드 — 진행률은 task.onProgress(0~100)'
         : '  // your upload goes here — report progress with task.onProgress(0–100)',
       ko
-        ? "  uploader: async (task) => ({ uri: '올라간 파일 주소' }),"
+        ? "  uploader: async (task) => ({ uri: 'https://example.com/uploaded-file' }),"
         : "  uploader: async (task) => ({ uri: 'https://cdn.example/uploaded' }),",
       "  extensions: ['png', 'jpg', 'pdf'], maxFileSize: 10 * 1024 * 1024,",
       '  onStart: (tasks) => view.start(tasks),',
       '  onProgress: (id, percent) => view.progress(id, percent),',
+      '  onSettle: () => view.settle(),',
       '  onDone: () => view.done(),',
       '})',
-      'const view = mountUploadView({ nabi, surface: content, upload })',
     )
   }
   if (on('save') || on('open')) {
-    imports.push('browserFileStore', 'mountFile')
-    wired.push("const file = mountFile({ nabi, registry, store: browserFileStore(document), name: () => 'note' })")
+    imports.push('browserFileStore', 'mountFile', 'parseNodes')
+    wired.push(
+      `const file = mountFile({ nabi, registry, store: browserFileStore(document), parse: parseNodes, locale: '${locale.value}', name: () => 'note' })`,
+    )
   }
   imports.push('mountViewTools')
   if (on('localHistory')) {
     imports.push('browserHistoryStorage', 'mountLocalHistory', 'openHistoryPanel')
     wired.push('const history = mountLocalHistory({ nabi, storage: browserHistoryStorage(window) })')
   }
+  if (on('diff')) wired.push(`const diff = mountDiffWing({ nabi, registry, surface: content, locale: '${locale.value}' })`)
   const codeNote = on('code')
     ? [
         '',
@@ -996,11 +1001,15 @@ const code = computed(() => {
 
   const lines = [
     importBlock(imports),
+    ...(on('diff') ? ["import { mountDiffWing } from 'nabi-note/diff'"] : []),
     '',
     ...askNote,
-    'const { nabi, registry } = createNabiWith([',
+    'const selected = [',
     ...wingLines,
-    asks ? '], { ask })' : '])',
+    ']',
+    asks
+      ? 'const { nabi, registry } = createNabiWith(selected, { ask })'
+      : 'const { nabi, registry } = createNabiWith(selected)',
     ...codeNote,
     '',
     "const root = document.querySelector('.nabi')!",
@@ -1010,11 +1019,11 @@ const code = computed(() => {
     ko
       ? '// locale 이 글의 방향도 정한다 — 아랍어·우르두면 오른쪽에서 왼쪽으로 선다'
       : '// The locale also sets the direction — Arabic and Urdu run right to left',
-    `mountSurface({ nabi, registry, root: content, locale: '${locale.value}' })`,
+    `mountSurface({ nabi, registry, root: content, locale: '${locale.value}'${on('upload') ? ', fileSink: upload.take' : ''} })`,
     '',
     'const settle = watchSettle(document, { surface: content })',
     `const shared = { nabi, registry, surface: content, settle, locale: '${locale.value}' }`,
-    ...(on('localHistory')
+    ...(on('localHistory') || on('diff')
       ? [
           ko
             ? '// 판이 필요한 도구는 호스트로 돌아온다 — 이 줄이 없으면 단추가 무반응이다'
@@ -1022,16 +1031,23 @@ const code = computed(() => {
           'const toolbar = mountToolbar({',
           "  ...shared, root: document.querySelector('#toolbar')!,",
           ...(on('save') || on('open') ? ['  file,'] : []),
+          ...(on('upload') ? ['  onFiles: upload.take,'] : []),
           '  onHost: (w) => {',
-          "    if (w !== 'localHistory') return",
-          `    openHistoryPanel({ history, surface: content, locale: '${locale.value}', sessionId: history.sessionId })`,
+          ...(on('diff') ? ["    if (w === 'diff') { diff.open(); return }"] : []),
+          ...(on('localHistory')
+            ? [
+                "    if (w !== 'localHistory') return",
+                '    openHistoryPanel({',
+                `      history, surface: content, locale: '${locale.value}', sessionId: history.sessionId,`,
+                '      render: (record) => createNabiWith(selected, { doc: JSON.parse(record.body) }).nabi.getHtml(),',
+                '    })',
+              ]
+            : []),
           '  },',
           '})',
         ]
       : [
-          on('save') || on('open')
-            ? "const toolbar = mountToolbar({ ...shared, file, root: document.querySelector('#toolbar')! })"
-            : "const toolbar = mountToolbar({ ...shared, root: document.querySelector('#toolbar')! })",
+          `const toolbar = mountToolbar({ ...shared, root: document.querySelector('#toolbar')!${on('save') || on('open') ? ', file' : ''}${on('upload') ? ', onFiles: upload.take' : ''} })`,
         ]),
     "const context = mountContextToolbar({ ...shared, root: document.querySelector('#context')! })",
     'mountHints({ toolbar, context, root, surface: content })',

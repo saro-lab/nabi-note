@@ -22,7 +22,7 @@
             {{ t(entry.key) }}
           </a>
 
-          <div v-else class="mt-1">
+          <div v-else class="mt-1 ml-3">
             <div class="px-2 py-1 text-[0.85rem] opacity-70">{{ t(entry.key) }}</div>
             <a
               v-for="item in entry.items"

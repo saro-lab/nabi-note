@@ -6,7 +6,7 @@
 //   1. 조립 HTML 을 그대로 열쇠로 Myers — 같은 블록을 잇는다(결정적 조립이라 같은 내용 = 같은 글자열).
 //   2. 남은 틈 안에서 글자 유사도로 "고쳐진 블록" 짝을 잇고 글자 단위 diff 를 단다.
 //   3. 남은 삭제·추가 중 열쇠가 같은 쌍을 "이동"으로 접는다.
-import { diffSeq } from './myers.js';
+import { diffSeq, type EditRun } from './myers.js';
 import { changedRanges, type CharRange } from './paint.js';
 
 export type DiffKind = 'same' | 'changed' | 'removed' | 'added' | 'moved';
@@ -23,6 +23,7 @@ export interface DiffEntry {
 export interface MatchBlock {
   readonly key: string;
   readonly text: string;
+  readonly formats: readonly string[];
 }
 
 // 두 글자열의 닮음 — 공통 코드포인트 비율(0~1).
@@ -39,10 +40,51 @@ function similarity(a: string, b: string): number {
 // 이 아래면 "고친 블록"이 아니라 지우고 새로 쓴 것이다.
 const PAIR_THRESHOLD = 0.4;
 
+function mergeRanges(first: readonly CharRange[], second: readonly CharRange[]): CharRange[] {
+  const sorted = [...first, ...second].sort((a, b) => a.start - b.start || a.end - b.end);
+  const merged: CharRange[] = [];
+  for (const range of sorted) {
+    const last = merged[merged.length - 1];
+    if (!last || range.start > last.end) {
+      merged.push(range);
+      continue;
+    }
+    merged[merged.length - 1] = { start: last.start, end: Math.max(last.end, range.end) };
+  }
+  return merged;
+}
+
+function formatChangedRanges(
+  runs: readonly EditRun[],
+  before: readonly string[],
+  after: readonly string[],
+): { readonly before: CharRange[]; readonly after: CharRange[] } {
+  const beforeRanges: CharRange[] = [];
+  const afterRanges: CharRange[] = [];
+  for (const run of runs) {
+    if (run.op !== 'eq') continue;
+    for (let k = 0; k < run.n; k += 1) {
+      const bi = run.a + k;
+      const ai = run.b + k;
+      if ((before[bi] ?? '') === (after[ai] ?? '')) continue;
+      beforeRanges.push({ start: bi, end: bi + 1 });
+      afterRanges.push({ start: ai, end: ai + 1 });
+    }
+  }
+  return { before: mergeRanges(beforeRanges, []), after: mergeRanges(afterRanges, []) };
+}
+
 function changedEntry(blocks: { before: MatchBlock; after: MatchBlock }, bi: number, ai: number): DiffEntry {
   const runs = diffSeq([...blocks.before.text], [...blocks.after.text]);
   const { del, ins } = changedRanges(runs);
-  return { kind: 'changed', before: bi, after: ai, beforeRanges: del, afterRanges: ins };
+  const formatted = formatChangedRanges(runs, blocks.before.formats, blocks.after.formats);
+  return {
+    kind: 'changed',
+    before: bi,
+    after: ai,
+    beforeRanges: mergeRanges(del, formatted.before),
+    afterRanges: mergeRanges(ins, formatted.after),
+  };
 }
 
 export function matchBlocks(before: readonly MatchBlock[], after: readonly MatchBlock[]): DiffEntry[] {

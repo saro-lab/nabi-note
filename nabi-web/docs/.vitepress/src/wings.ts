@@ -110,7 +110,10 @@ export function wingsFor(path: string): string[] {
     return id ? [id] : []
   })
 
-  // Only this page's extras — pulling in the neighbours' extras would bloat the list
-  // 곁들이는 자기 페이지의 것만 더한다 — 이웃의 곁들이까지 끌어오면 목록이 불어난다
-  return [...new Set([...ids, ...(EXTRA_BY_PATH[path] ?? [])])]
+  // A neighbour must bring its dependencies too. Clear-format sits next to upload, for example;
+  // enabling upload without image or link makes the whole registry invalid before the demo opens.
+  // 이웃으로 고른 날개도 의존성을 함께 데려온다. 서식 지우기 옆의 upload만 켜고 이미지·링크를
+  // 빼면 예문을 열기도 전에 registry 조립이 실패한다.
+  const extras = paths.flatMap((each) => EXTRA_BY_PATH[each] ?? [])
+  return [...new Set([...ids, ...extras])]
 }

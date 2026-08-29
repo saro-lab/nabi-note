@@ -9,6 +9,6 @@ description: Korean documentation is being reviewed before translation.
 
 The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This route is reserved so navigation and language links do not lead to a missing page.
 
-[Open the Korean canonical page](/ko/guide/assemble)
+[Open the Korean canonical page](/ko/guide/getting-started)
 
 </div>
