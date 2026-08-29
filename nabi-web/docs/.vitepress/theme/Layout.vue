@@ -30,7 +30,7 @@
                  크기를 타므로 `html { font-size }` 하나로 줄 전체가 같이 움직인다(px 이면 이것만
                  뒤에 남는다). -->
             <a
-              :href="`${root}/intro`"
+              :href="`${root}/guide/getting-started`"
               class="hdr-btn gap-1.5 px-2 font-medium g-link-hover"
               :title="t('menu_docs')"
               :aria-label="t('menu_docs')"

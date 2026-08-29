@@ -1,83 +1,119 @@
-# Wings
+# Built-in wings
 
-A **wing** is a plain object added to the array passed to `createNabiWith`. There is no
-inheritance, no separate registration step - being in that array is the registration. The core's
-only built-in markup is the paragraph slot and `<br>`; every other feature, including the ones
-listed below, is implemented the same way a custom wing would be (see `llms/custom-wing.md`).
+The official catalog has 30 wings in a stable order. `defaultWings` and `wings().all()` contain all of them.
 
-`defaultWings` (equivalently, `wings().all()`) is the full catalog of 29 official wings below.
-`wings().allBasic()` is the subset that runs with no host wiring at all - **26**, everything
-except the three marked "needs wiring" in the tables below (`upload`, `save`, `open`). Most are
-ready-made constants; a few take an options factory. Order in the array is scan order - when
-incoming HTML could belong to more than one wing, the first one in the array to claim it wins.
+## Marks
 
-## Marks (`place: 'mark'`) - apply to a span of text
+| `w` | Export | Stored value or behavior |
+| --- | --- | --- |
+| `b` | `boldWing` | Bold mark |
+| `i` | `italicWing` | Italic mark |
+| `u` | `underlineWing` | Underline mark |
+| `s` | `strikeWing` | Strike mark |
+| `sup` | `superscriptWing` | Superscript mark |
+| `sub` | `subscriptWing` | Subscript mark |
+| `tf` | `typefaceWing` | `a.v`: `sans|serif|mono|cursive` |
+| `fs` | `fontSizeWing` | `a.v`: `xs|sm|lg|xl`; absence means default |
+| `tc` | `textColorWing` | `a.c`: `green|coral|violet|amber|blue` |
+| `hl` | `highlightWing` | `a.c`: six named highlight colors |
+| `a` | `linkWing` | Strict `href`; attachment links also carry `file` |
 
-| `w` | Export | Note |
-|---|---|---|
-| `b` | `boldWing` | |
-| `i` | `italicWing` | |
-| `u` | `underlineWing` | |
-| `s` | `strikeWing` | |
-| `sup` | `superscriptWing` | |
-| `sub` | `subscriptWing` | |
-| `a` | `linkWing` | Carries an `href`; an existing link raises no context row - change the address by deleting and remaking it |
-| `hl` | `highlightWing` | Value mark, 6 colors. Factory: `makeHighlightWing({ values })` |
-| `tc` | `textColorWing` | Value mark, 5 colors. Factory: `makeTextColorWing({ values })` |
-| `tf` | `typefaceWing` | Value mark: sans/serif/mono/cursive. Factory: `makeTypefaceWing({ values, base? })` |
-| `fs` | `fontSizeWing` | Value mark, 5 sizes (xs/sm/default/lg/xl). Factory: `makeFontSizeWing({ values })` |
+Value factories are `makeTypefaceWing`, `makeFontSizeWing`, `makeTextColorWing`, and `makeHighlightWing`, each with `{ values }`.
 
-## Paragraph attributes (`place: 'attr'`) - change how a paragraph reads, not its content
+With a collapsed caret, font size and typeface target the paragraph's current text. Color/highlight target the current mark span or arm future text. A selected range always remains the target.
 
-| `w` | Export | Note |
-|---|---|---|
-| `h` | `headingWing` | Levels 1-6 live as `a.h` on a paragraph - there is no separate `heading1Wing`..`heading6Wing` |
-| `align` | `alignWing` | Left / center / right, one wing with three toolbar buttons |
-| `dc` | `dropCapWing` | Drop cap; the value is the string `"1"`, not a line count - actual lines covered follow the paragraph's line-height |
+## Paragraph attributes
 
-## Containers (`place: 'container'`) - hold block content or structured parts
+| `w` | Export | Paragraph attribute |
+| --- | --- | --- |
+| `h` | `headingWing` | `a.h`, integer 1..6 |
+| `align` | `alignWing` | `a.a`, `l|c|r` |
+| `dc` | `dropCapWing` | `a.dc`, numeric 1 |
 
-| `w` | Export | Note |
-|---|---|---|
-| `ul` | `bulletListWing` | |
-| `ol` | `orderedListWing` | |
-| `tl` | `taskListWing` | Checklist; check state is `data-nabi-checked` |
-| `quote` | `quoteWing` | Only character marks apply inside a quote - no nested image/code/table buttons |
-| `details` | `detailsWing` | `parts` carries the summary line |
-| `code` | `codeWing` | Single text block (`singleParagraph`). Coloring is opt-in: `{ ...codeWing, attach: makeCodeAttach({ highlight }) }` - the built-in tokenizer needs no dependency |
-| `table` | `tableWings` (plural - the wing plus its row/cell parts) | Cells are `singleParagraph`; `parts` carries rows and cells; drag-resize and cell navigation are wired through `attach` |
+A heading remains a `p` tree node. Heading, alignment, and drop cap are not separate block node types.
 
-## Void objects (`place: 'void'`) - no editable content of their own
+## Containers
 
-| `w` | Export | Note |
-|---|---|---|
-| `hr` | `dividerWing` | |
-| `img` | `imageWing` | Constant, or `makeImageWing({ allowLocalUrls })` |
-| `youtube` | `youtubeWing` | |
+| `w` | Export | Notes |
+| --- | --- | --- |
+| `ul` | `bulletListWing` | Parts include `li` |
+| `ol` | `orderedListWing` | Parts include `oli` |
+| `tl` | `taskListWing` | Parts include `tli`; check state is boolean |
+| `quote` | `quoteWing` | Block container |
+| `details` | `detailsWing` | Part `summary`; open state is boolean |
+| `code` | `codeWing` | Inline holder, one paragraph, no alignment |
+| `table` | `tableWings` | Parts `tr`, `td`; cell grid repair and cell-range attachment |
 
-## Tools (`place: 'tool'`) - leave no trace in the document
+`tableWings` is an array containing the assembled table wing. Code coloring can be replaced with `{ ...codeWing, attach: makeCodeAttach({ highlight, version }) }`. The token DOM is transient and composition-aware.
 
-| `w` | Export | Note |
-|---|---|---|
-| `upload` | `uploadWing` | **Needs wiring** (not in `allBasic()`): `mountUpload`/`mountUploadView`; requires an `img` or `a` wing also registered (`requiresAnyOf`), since uploads land as one of those. Constant, or `makeUploadWing({ allowLocalUrls })` |
-| `save` | `saveFileWing` | **Needs wiring** (not in `allBasic()`): `mountFile({ nabi, registry, store })` - `registry` is required, and `parse` too if you are headless and want `.nhtml`/`.html`. Saves in **three** formats, not one: `.nabi`, `.nhtml`, `.md`. Carries the save button and `mod+s`; without this wing that key does not exist |
-| `open` | `openFileWing` | Same `mountFile`. Opens **four** extensions: `.nabi`, `.nhtml`, `.html`, `.md`. Carries `mod+o` |
-| `localHistory` | `localHistoryWing` | Needs `mountLocalHistory({ nabi, storage })`; periodic snapshot in the browser. Mount it even when `storage` is `null` (e.g. blocked on `file://`) so the button can explain why it is disabled. **Still `basic`** - the storage and the panel both ship inside the package |
-| `clearFormat` | `clearFormatWing` | The eraser - strips **both** character-level marks (`b`, `i`, `u`, `s`, `sub`, `sup`, `hl`, `tc`, `fs`, `tf`, `a`) **and the three paragraph attributes** (`h` heading, `a` alignment, `dc` drop cap). Two exceptions: a wrapper paragraph keeps its alignment (that is where the object stands, not text formatting), and an attachment link (`a` carrying `file`) is never peeled, since peeling it would kill the attachment rather than unformat it. Also reachable by **pressing Esc twice** within 350ms (`doubleKeys`) - a bare caret does exactly what the button does, and the double-tap has the lowest priority of all, so it is heard only after every other Esc job has passed |
+## Void objects
 
-## Getting the list at runtime
+| `w` | Export | Notes |
+| --- | --- | --- |
+| `hr` | `dividerWing` | Divider |
+| `img` | `imageWing` | `src`, optional `alt`, width 30..100; factory can allow local URLs |
+| `youtube` | `youtubeWing` | Stores an 11-character video ID and width 50..100 |
+
+New images default to width 60 and centered wrapper alignment. New YouTube objects default to width 70 and centered wrapper alignment. Object alignment belongs to the wrapper paragraph, not the object.
+
+## Tools
+
+| `w` | Export | Host wiring |
+| --- | --- | --- |
+| `upload` | `uploadWing` | `mountUpload` and usually `mountUploadView`; requires `img` or `a` |
+| `save` | `saveFileWing` | `mountFile`; toolbar save panel or `onHost` |
+| `open` | `openFileWing` | `mountFile` |
+| `localHistory` | `localHistoryWing` | `mountLocalHistory`; built-in panel can be opened by host |
+| `diff` | `diffWing` | `mountDiffWing` and toolbar `onHost` |
+| `clearFormat` | `clearFormatWing` | None |
+
+`clearFormat` removes all 11 built-in marks and the `h`, `a`, and `dc` paragraph attributes. It preserves object-wrapper alignment and attachment link shells. Pressing Escape twice within the surface double-key window invokes it.
+
+## Picker behavior
 
 ```ts
-import { wingNames } from 'nabi-note'
-wingNames()  // readonly string[] of every official `w` id, in catalog order
+const selected = wings()
+  .allBasic()
+  .use('upload', { allowLocalUrls: true })
+  .drop('clearFormat')
+  .build();
 ```
 
-Under a CDN script tag: `N.wingNames()`, or the builder throws a "did you mean...?" suggestion on
-a typo (`N.wings().use('bod')`).
+- `all()`: all 30.
+- `allBasic()`: 26. It excludes `upload`, `save`, `open`, and `diff`.
+- `use(name, options?)`: add or replace one official wing.
+- `use(wing)`: add an official factory result or a custom wing.
+- `drop(nameOrWing)`: remove without cascading.
+- `build()`: return the ordered array. `createNabiWith()` also accepts the builder directly.
+- Calling `all()` after a customized `use()` fills missing official wings without overwriting the customization.
+- Official order is stable regardless of call order. Custom wings follow official wings in insertion order.
+- `use('upload')` auto-adds the first declared official dependency, `img`, only when neither `img` nor `a` is present.
+- `drop()` throws if a remaining wing would lose every required dependency.
+- Name typos, option typos, wrong option shapes, unknown values, and invalid custom names throw at the builder/registry boundary.
 
-## See also
+Builder options exist only for `tf`, `fs`, `tc`, `hl` with `{ values }`, and `img`, `upload` with `{ allowLocalUrls }`.
 
-- `llms/custom-wing.md` - the contract for building a wing that is not in this list
-- `llms/api-reference.md` - `boxObject`/`listFamily`/`simpleMark`/`valueMark` helper signatures
-- `llms/quickstart-cdn.md` - the `wings().all()` / `wings().allBasic()` `.drop().use()` picker
-  builder
+For a small tree-shakable npm build, use a direct array such as `[boldWing, italicWing]`; importing the name-based builder pulls the catalog.
+
+## Input rules
+
+The default catalog recognizes:
+
+- `#` through `######` plus space for headings;
+- `-` plus space for bullet list;
+- `1.` style plus space for ordered list;
+- `[ ]` or `[x]` plus space for task list;
+- `>` plus space for quote;
+- triple backticks plus space or Enter for code;
+- three or more hyphens plus Enter for divider;
+- an `http://` or `https://` word plus space or Enter for link.
+
+Only rules from registered wings exist.
+
+## Command names
+
+The registry exposes core commands plus registered wing commands. The default wing commands include:
+
+`setTypeface`, `setFontSize`, `setTextColor`, `setHighlight`, `setLink`, `renameLink`, `setHeading`, `setAlign`, `toggleDropCap`, list toggles, `toggleQuote`, `toggleDetails`, `setDetailsOpen`, `toggleCode`, `setCodeLanguage`, `insertDivider`, table edit commands, `insertImage`, `setImageWidth`, `insertYoutube`, `setYoutubeWidth`, `commitUpload`, `saveFile`, `openFile`, `restoreHistory`, and `clearFormat`.
+
+Use wing button/context declarations rather than hard-coding command arguments when building a generic UI.

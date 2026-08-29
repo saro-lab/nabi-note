@@ -1,37 +1,18 @@
 ---
-title: 위첨자 (Superscript)
+title: 윗첨자
+description: 각주와 지수처럼 글자를 위에 작게 표시하는 wing입니다.
 ---
 
-# 위첨자 (Superscript)
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-## 설명
+# 윗첨자
 
-`superscriptWing`은 위첨자 서식(`<sup>`)을 처리하는 인라인 마크 날개입니다. 단위의 제곱 표기나 각주 인용 번호 등에 사용합니다.
-
-- HTML 입력 시 `<sup>` 태그를 인식하며, 출력 시에도 `<sup>`로 렌더링됩니다.
-- 툴바의 `script` 그룹에 아래첨자 버튼과 함께 배치됩니다.
-- 텍스트를 선택한 상태에서 실행하면 토글 방식으로 동작합니다.
-
-## 사용 예시
-
-```ts
-import { createNabiWith, mountSurface, mountToolbar, superscriptWing } from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-const { nabi, registry } = createNabiWith([superscriptWing])
-
-mountSurface({ nabi, registry, root: surface })
-mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#toolbar')! })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-## 데모
+선택한 글자를 기준선 위에 작게 표시합니다. 지수나 각주 표시에 사용할 수 있습니다.
 
 <WingDemo path="/wing/inline/superscript" />
 
-<script setup lang="ts">
-import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
-</script>
+```ts
+const selected = wings().use('sup').build()
+```

@@ -1,47 +1,14 @@
 ---
-title: Trennlinie
+title: Translation pending
+description: Korean documentation is being reviewed before translation.
 ---
 
-# Trennlinie
+<div class="translation-shell">
 
-## Beschreibung
+# Translation pending
 
-`dividerWing` (Name `hr`) verwaltet die horizontale Trennlinie (`<hr>`). Sie ist ein **`place: 'void'`**-Objekt ohne Platz für Text im Inneren; drücken Sie unmittelbar vor oder hinter der Trennlinie Rücktaste oder Entf, verschwindet der gesamte Trennlinien-Block.
+The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
 
-Ein Klick auf die Schaltfläche fügt die Trennlinie **eingehüllt in einen eigenen Wrapper-Absatz (`<div data-nabi-p>`)** ein. Der Caret landet direkt hinter der Trennlinie.
+[Open the Korean canonical page](/ko/guide/features)
 
-Wo sie eingefügt wird, richtet sich nach dem Zustand des Absatzes, in dem der Caret gerade steht:
-
-| Caret-Position | Einfügeverhalten |
-|---|---|
-| Absatz mit Text | Neue Trennlinie wird **hinter** diesem Absatz eingefügt |
-| Leerer Absatz | Dieser leere Absatz wird **durch die Trennlinie ersetzt** (kein überflüssiger Leerraum) |
-
-Wird ein leerer Absatz ersetzt, bleibt dessen Textausrichtung erhalten.
-
-Tippen Sie in einer leeren Zeile drei oder mehr Bindestriche und drücken Sie Enter (`---` + Enter), wird daraus automatisch eine Trennlinie.
-
-## Anwendungsbeispiel
-
-```ts
-import { createNabiWith, mountSurface, mountToolbar, dividerWing } from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-// Die Flügelliste baut Sortenwissen, Commands und Baukästen zusammen — das ist die `registry`
-const { nabi, registry } = createNabiWith([dividerWing])
-
-mountSurface({ nabi, registry, root: surface })
-mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#toolbar')! })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-## Demo
-
-<WingDemo path="/wing/block/divider" />
-
-<script setup lang="ts">
-import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
-</script>
+</div>

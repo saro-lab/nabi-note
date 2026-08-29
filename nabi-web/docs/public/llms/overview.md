@@ -1,86 +1,67 @@
-# NABI NOTE - Overview
+# Architecture and boundaries
 
-NABI NOTE is a browser WYSIWYG editor written in plain vanilla JS, with **zero runtime
-dependencies** (`dependencies`/`peerDependencies` are empty) and **no framework import** - it
-mounts onto a plain `HTMLElement` with pure DOM APIs, so it drops into React, Vue, or nothing at
-all. A page can host multiple independent instances; there is no global or module-level mutable
-state. Formatting is extended only through **wings** - independent modules the core never
-special-cases - and documents round-trip through an allow-list rebuild rather than a
-sanitize-after-the-fact pass, so **XSS is blocked at the root**.
+NABI NOTE separates the stored document, pure editing commands, DOM input handling, host UI, and reader-side behavior. A `Wing` is the unit that adds vocabulary and behavior. `makeRegistry()` validates wings and derives all runtime tables from them.
 
-## Entry points
+## Public entry points
 
-| Import | Environment | Carries |
-|---|---|---|
-| `nabi-note` | Browser | Everything: wings, `createNabiWith`, `mountSurface`, `mountToolbar`, UI mounts |
-| `nabi-note/ssr` | Node.js / DOM-free | `makeRegistry`, `renderStoredHtml`, `renderStoredEditorHtml` - no `surface`/`ui` code, verified by a boundary test |
-| `nabi-note/viewer` | Browser, read-only pages | Opt-in view-side behaviors (table sort, code coloring) via `attachViewer(root, { locale?, highlight? })`, or one at a time with `attachTableSort` / `attachCodePaint` - nothing here writes to the document |
-| `nabi-note/nabi.css` | Any | The bundled stylesheet (core + all built-in wings), for hosts that skip runtime style injection |
+| Import | Environment | Owns |
+| --- | --- | --- |
+| `nabi-note` | Browser, with DOM-free assembly helpers | Editor, wings, surface, UI, IO mounts, rendering, locale, style helpers |
+| `nabi-note/ssr` | Node.js or any DOM-free runtime | Registry creation, stored/editor HTML rendering, toolbar HTML, locale and tree basics |
+| `nabi-note/viewer` | Browser, read-only | Table sorting and code painting on published HTML |
+| `nabi-note/diff` | Browser for UI; pure JSON comparison is otherwise DOM-free | Stored-document comparison and two-pane diff UI |
+| `nabi-note/nabi.css` | CSS | Core CSS plus all built-in wing styles |
 
-## The four-layer runtime model
+`nabi-note/viewer` deliberately does not import editor, surface, UI, or schema code. `nabi-note/ssr` deliberately excludes surface and UI code.
 
-What a host builds, from data to DOM. Layers below are unaware of layers above.
+## Runtime ownership
 
-| Layer | What it is | Lifetime / sharing |
-|---|---|---|
-| **Registry** | The output of `makeRegistry(wings)` - env, builders, commands, claim rules, attaches for the wings you registered | Pure, read-only, no mutable state. **Share one registry across many editors** (comment threads, etc.) instead of rebuilding it per instance |
-| **Stylesheets** | `collectSheets(registry)` + `injectSheets(document, sheets)`, or a static `<link>` to `nabi-note/nabi.css` | Deduplicated by content hash - mounting several editors never doubles up a `<style>` tag |
-| **Nabi state engine** | `createNabi`'s closure - the document tree, caret, undo history | One per open document. Reusable only by swapping documents into it with `setJson()`, not by sharing the instance |
-| **Surface & chrome mounts** | `mountSurface`, `mountToolbar`, `mountContextToolbar`, `mountViewTools`, `mountUpload`, `mountLocalHistory`, `mountFile`, and more | Bound to the `HTMLElement`s you pass in; `destroy()` unwinds every listener (all registered through one `AbortSignal`) |
+1. Wings declare words, structure, commands, HTML/Markdown builders, import claims, toolbar controls, and optional DOM attachments.
+2. `makeRegistry(wings)` validates the declarations and derives schema knowledge, commands, builders, input rules, attachments, and IO filters.
+3. `createNabiWith(wings, options)` creates one pure editor state machine plus its registry.
+4. `mountSurface()` connects that editor to one `contenteditable` root. It owns input, selection, IME, clipboard, paste, drop, and registered wing attachments.
+5. UI mounts observe or call the editor. They do not become document state.
+6. `renderStoredHtml()` or `nabi.getHtml()` creates published HTML. `attachViewer()` may add optional reader behavior to that HTML.
 
-`mountFile` is the one that reaches back down a layer: it wants **`registry` as well as `nabi`
-and `store`**, because the save formats and both sets of builders (HTML and Markdown) are
-registry knowledge. Optionally it takes `parse` (falls back to `parseNodes`, so it is required
-only headless) and `ioFilters`. It returns a `FileMount` - the canonical programmatic door for
-saving and opening, independent of whether the `save`/`open` wings are registered. Details in
-`llms/api-reference.md`.
+The document tree, not the live DOM, is the durable source of truth. During an active IME composition the surface temporarily leaves the composing DOM range alone and commits it at the composition boundary. Hosts must not replace or rewrite active surface nodes.
 
-The registry and stylesheet layers are cheap and shareable; only the state engine and DOM mounts
-are per-document. Measured (Node, all built-in wings, a comment-sized document, 200-run
-average): `makeRegistry` 0.038ms, a full `createNabiWith` 0.036ms, a stored-JSON-to-HTML render
-0.013ms - building a fresh instance per document is not the expensive part. The DOM-bound mount
-layer is. See `llms/ssr.md` for rendering documents with no editor mounted at all, and
-`llms/custom-wing.md`/`llms/wings.md` for what a wing is.
+## Assembly rule
 
-## Document model
+The registry is part of the document contract. The same stored tree renders differently when its owning wings are missing. Use the same wing list for:
 
-- Documents are stored as **NABI TREE**, a JSON array of blocks - there is no wrapping root
-  node. `getJson()`/`setJson()` move it in and out.
-- HTML has four names depending on where it sits, and the codebase does not use them
-  interchangeably:
+- the editor instance;
+- server rendering and hydration;
+- stored rendering outside an editor;
+- diff rendering;
+- CSS collection when using runtime injection.
 
-| Name | What it is | Carries |
-|---|---|---|
-| `sourceHtml` | Untrusted HTML arriving from outside (the `html` option, `setHtml()`, paste) | Anything |
-| `soul` | The normalized HTML string after the allow-list filter - the document's one source of truth | Only `data-nabi-*` attributes, no `style` |
-| `flutter` | The live `contenteditable` DOM commands actually edit | `soul` plus screen-only markup (`contenteditable="false"`, selection markers, upload placeholders) |
-| `outputHtml` | What leaves the editor (`getHtml()`, `onChange`) | `data-nabi-*` translated to inline `style` where meaning would otherwise be lost without the stylesheet |
+Unknown or unowned node types are not a plugin preservation mechanism. Normalization/import may unwrap or remove them.
 
-```
-sourceHtml -(fromSourceHtml -> filterToSoul)-> soul -> flutter
-flutter -(filterToSoul -> toOutputHtml)-> soul -> outputHtml
-```
+## Durable and transient representations
 
-`getHtml()` always re-filters the live DOM; it never trusts a cached string, and `soul` itself is
-never persisted. `outputHtml` is safe as freshly produced, but a value pulled back out of storage
-still needs host-side sanitizing before it is rendered - there is no guarantee a stored value is
-still what the editor produced (a database row can be edited directly). The library does not ship
-a sanitizer itself; re-sanitize on the host side right before storing, using an allow-list
-sanitizer of your choice.
+| Representation | Purpose | Safe to store |
+| --- | --- | --- |
+| `nabi.getJson()` | Normalized NABI TREE without internal `_` fields | Yes |
+| `nabi.getHtml()` / `renderStoredHtml()` | Published HTML | Yes |
+| `nabi.getEditorHtml()` / `renderStoredEditorHtml()` | Hydratable editing DOM with `data-key`, fillers, seals, and edit-only drop-cap markup | No |
+| Live surface DOM | Browser input and selection state | No |
 
-## Non-negotiable invariants
+## Security boundary
 
-1. **Zero runtime dependencies** - no `dependencies`, no `peerDependencies`.
-2. **Framework-agnostic** - pure DOM API only, no React/Vue import in the core.
-3. **No `document.execCommand`** - editing goes through `beforeinput` interception plus
-   `Range`/`Selection`, because `execCommand` is deprecated and inconsistent across browsers.
-4. **All formatting is a wing** - the core's only built-in markup is the block slot and `<br>`.
-5. **Editing has one gateway** - every mutation passes through `#afterEdit()`
-   (`context.commit()`/`editor.commit()` from a wing), which restores invariants, snapshots undo,
-   and fires `onChange`. There is no way to change the document that skips it.
+The package uses registered builders and an allow-list importer rather than emitting arbitrary input HTML. Text and attributes are escaped centrally. Dangerous imported subtrees are dropped. URLs pass `safeUrl()`.
 
-## Extending
+This is not permission to register unsafe custom builders or filters. Custom code is inside the trust boundary and must validate command args, imported elements, URLs, and returned nodes. See `io-security.md`.
 
-New formatting is added by registering a **wing** - see `llms/wings.md` for the built-in set and
-`llms/custom-wing.md` for the contract to build your own. Full function signatures live in
-`llms/api-reference.md`.
+## Environment and lifecycle rules
+
+- The package has no runtime dependencies.
+- Call every returned `unmount()`, `close()`, or detach function when its host goes away.
+- One mount belongs to one editor and one set of roots. Do not reuse a surface mount across editors.
+- `nabi.applyCommand()` is enough for headless control; toolbars are optional.
+- Use the `$`-prefixed members on `Nabi` only when wiring package-level integrations. They are exported in the type but are internal integration hooks, not the stable application-level API.
+
+## Next documents
+
+- First editor: `quickstart-npm.md`
+- Tree and state semantics: `document-model.md`
+- Public symbol lookup: `api-reference.md`

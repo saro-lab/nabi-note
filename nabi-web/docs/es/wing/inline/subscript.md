@@ -1,38 +1,14 @@
 ---
-title: Subíndice
+title: Translation pending
+description: Korean documentation is being reviewed before translation.
 ---
 
-# Subíndice
+<div class="translation-shell">
 
-## Descripción
+# Translation pending
 
-`subscriptWing` es un wing de marca en línea que gestiona el formato de subíndice (`<sub>`).
-Se usa para fórmulas químicas, números de nota al pie y casos parecidos.
+The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
 
-- Reconoce la etiqueta `<sub>` al entrar, y vuelve a salir igual.
-- Se ubica en el grupo `script` de la barra de herramientas, junto al superíndice.
-- Al pulsarlo con texto seleccionado, funciona como interruptor.
+[Open the Korean canonical page](/ko/guide/features)
 
-## Ejemplo de uso
-
-```ts
-import { createNabiWith, mountSurface, mountToolbar, subscriptWing } from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-const { nabi, registry } = createNabiWith([subscriptWing])
-
-mountSurface({ nabi, registry, root: surface })
-mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#toolbar')! })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-## Demo
-
-<WingDemo path="/wing/inline/subscript" />
-
-<script setup lang="ts">
-import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
-</script>
+</div>

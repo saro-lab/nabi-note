@@ -1,484 +1,360 @@
-# API Reference
+# Public API reference
 
-Source of truth: `nabi-npm/src/index.ts` (main entry, browser) and `nabi-npm/src/ssr.ts`
-(DOM-free entry, see `llms/ssr.md`). Everything below is exported from `nabi-note` unless noted
-otherwise. Options types show every field seen in the source; `?` marks optional fields.
+This is an index, not a tutorial. Import paths are public package exports; internal source paths are not.
+
+## Package subpaths
+
+| Import | Runtime values |
+| --- | --- |
+| `nabi-note` | Full root API below |
+| `nabi-note/ssr` | DOM-free rendering and toolbar HTML; see `ssr.md` |
+| `nabi-note/viewer` | Reader behavior; see `viewer-diff.md` |
+| `nabi-note/diff` | Document diff; see `viewer-diff.md` |
+| `nabi-note/nabi.css` | Bundled stylesheet |
+| `nabi-note/package.json` | Package metadata |
 
 ## Assembly
 
 ```ts
-createNabiWith(wings: Wing[] | WingsBuilder, options?: NabiOptions): { nabi: Nabi, registry: Registry }
-makeRegistry(wings: Wing[]): Registry
+function makeRegistry(
+  wings: readonly Wing[],
+  extra?: { ioFilters?: readonly IoFilter[] },
+): Registry;
+
+function createNabiWith(
+  wings: readonly Wing[] | { build(): readonly Wing[] },
+  extra?: AssemblyOptions,
+): { readonly nabi: Nabi; readonly registry: Registry };
 ```
 
-`NabiOptions`: `doc?` (start from an existing NABI TREE; a broken value falls back to the empty
-document with a `console.error` report instead of failing the whole assembly), `parseHtml?`
-(adapter for `setHtml()`, usually `parseNodes`), `locale?`, `ask?: Ask`, `toast?`, `toastMs?`,
-`toastMax?`, `allowLocalUrls?`, `ioFilters?: readonly IoFilter[]` (host IO filters - see "IO
-filters" below; `createNabiWith` peels this one off and hands it to `makeRegistry`, since a
-filter is registry knowledge, not editor state).
+`AssemblyOptions` is `NabiOptions` without `env`, `commands`, `builders`, and `claim`, plus registry `ioFilters`.
 
-`makeRegistry(wings, extra?)` takes the same `{ ioFilters }` as its second argument.
-
-`Ask`: `{ message?: (text: string) => void, confirm?: (text: string) => boolean |
-Promise<boolean>, choose?: (question: string, options: readonly ChooseOption[]) => number |
-Promise<number> }`. Unfilled `confirm` answers `false`; unfilled `message` falls back to a core
-info toast; unfilled `choose` answers `0` unless a panel is bound (`mountToolbar` binds the
-core's own choose panel, so a toolbar-equipped editor asks on screen with nothing wired).
-`ChooseOption`: `{ label: string, icon?: string }` - `icon` is the inside of a 16x16 SVG (a few
-`path`s), not a whole tag. The answer is a **position index**; `-1` and out-of-range mean cancel.
-See `llms/quickstart-npm.md`.
-
-## Wings
-
-- `defaultWings: readonly Wing[]` - all 29 official wings (see `llms/wings.md`)
-- `wings(): WingsBuilder` - `.all()`, `.allBasic()`, `.use(name, options?)`, `.drop(name)`,
-  `.build()`
-- `.allBasic()` - only the wings that declare `basic: true` (26 of the 29). The three left out
-  are the ones a host has to wire before they do anything: `upload` (needs an `uploader`),
-  `save` and `open` (need a `FileStore` through `mountFile`). `.all()` is unchanged and still
-  equals `defaultWings`
-- `wingNames(): readonly WingName[]`
-- Every built-in wing constant/factory (`boldWing`, `makeImageWing`, etc.) - see `llms/wings.md`
-  for the full catalog
-- `boxObject(spec: BoxObjectSpec): Partial<Wing>` - helper for a void/container object wing
-- `listFamily(spec: ListFamilySpec): Partial<Wing>` - helper for a list-shaped wing
-- `simpleMark(spec: SimpleMarkSpec): Partial<Wing>` - helper for an attribute-less mark
-- `valueMark(spec: ValueMarkSpec): Partial<Wing>` - helper for a value-carrying mark
-- `insertLump(doc, pos, node, env)`, `removeLump(doc, pos, env)`, `toggleWrap(...)`,
-  `topNodeAt(...)` - shared tree-editing primitives a command uses instead of hand-rolling tree
-  surgery (see `llms/custom-wing.md`)
-
-Contract types: `Wing`, `WingPlace`, `WingAction`, `WingButton`, `WingChoice`, `WingContext`,
-`WingField`, `StructureDecl`, `Attach`, `AttachHost`, `ArrowDir`, `ContextControl`, `InputRule`,
-`KeyIntent`, `KeyName`, `OnKey`, `OwnerAt`, `Registry`, `RegisteredRule`.
-
-## Editing surface
+`Registry` exposes:
 
 ```ts
-mountSurface(options: SurfaceOptions): Surface
-```
+type RegistryClaim = (
+  el: {
+    readonly kind: 'element';
+    readonly tag: string;
+    readonly attrs: Readonly<Record<string, string>>;
+    readonly children: readonly ParseNode[];
+  },
+  inner: (block: boolean) => NabiNode[],
+) => NabiNode[] | null;
 
-`SurfaceOptions`: `nabi`, `registry`, `root: HTMLElement`, `hydrate?: boolean` (adopt
-server-rendered editor DOM instead of redrawing it; see `llms/ssr.md`), `allowLocalUrls?`,
-`locale?: string` (sets text direction per `llms/quickstart-npm.md`), `placeholder?: string`
-(the hint shown on the first line while the document is empty - defaults to the core
-dictionary word for the locale, an empty string turns it off, and a `\n` becomes a line
-break), `ioFilters?: readonly IoFilter[]` (filters for this surface only - they stand ahead of
-the registry's and the built-ins'), `fileSink?: (files:
-readonly File[]) => void` (drag/paste files, wired up by the upload wing - a paste carrying
-**any** text at all, `text/html` or `text/plain`, never reaches it), `doubleEnterMs?`,
-`correctionDeferMs?`.
-
-During an IME composition, the live DOM is authoritative and the tree is reconciled when the
-composition ends. At `compositionstart`, `mountSurface` snapshots the current DOM path but does
-not change the tree or emit a change signal. A selected-range replacement is reconciled as one
-edit and one undo step at the end. Redraws are suppressed until then, so a delayed
-`selectionchange` cannot move or duplicate adjacent composition text. A document change outside
-the active paragraph is redrawn after composition. If external code changes the active paragraph,
-that explicit tree change wins and the unfinished composition is discarded. Hosts must not
-replace the editing root or its active text nodes directly while a composition is in progress.
-
-Outside composition, `selectionchange` is only an asynchronous notification. Before a structural
-edit, the surface adopts the current DOM selection again. For `beforeinput`, it prefers
-`InputEvent.getTargetRanges()` because that range describes the exact content the browser intends
-to replace or delete, including mobile keyboards and multi-code-point characters. Cross-paragraph
-deletion from a collapsed caret still follows nabi's own list and container rules.
-
-```ts
-mountFile(options: FileMountOptions): FileMount
-mountLocalHistory(options): HistoryMount
-mountUpload(options: UploadOptions): UploadMount
-browserFileStore(owner: Document, accept?: readonly string[]): FileStore
-readExtensions(filters: readonly IoFilter[]): readonly string[]
-browserHistoryStorage(view: { localStorage?: Storage } | null | undefined): HistoryStorage | null
-```
-
-`FileMountOptions`: `nabi`, `store: FileStore`, **`registry: Registry` (required** - the save
-formats, the HTML builders, and the Markdown builders all come from it), `ioFilters?` (filters
-for this mount only, first in line), `parse?: (html: string) => readonly ParseNode[]` (the
-HTML-in door; it falls back to `parseNodes`, so a browser host can omit it and still open
-`.nhtml`/`.html` - it is only required in a headless environment), `allowLocalUrls?`, `name?: ()
-=> string` (extension-less save name, called at save time), `discardMessage?: string` (default
-comes from the locale dictionary), `locale?`, `onError?: (error: unknown) => void`.
-
-`FileMount` - **the canonical programmatic door for saving and opening.** The `save`/`open`
-wings only carry the button and the accelerator; the feature itself lives here, so a host that
-called `mountFile` can save and open even with neither wing registered:
-
-```ts
-interface FileMount {
-  save(name?: string): void            // default format (.nabi); the `saveFile` command's door
-  saveAs(id: string, name?: string): void   // ids come from formats()
-  formats(): readonly SaveFormat[]
-  open(): Promise<boolean>             // true once a document actually replaced the current one
-  unmount(): void
+interface Registry {
+  readonly wings: readonly Wing[];
+  readonly env: EditEnv;
+  readonly builders: HtmlBuilders;
+  readonly commands: Readonly<Record<string, Command>>;
+  readonly claim: RegistryClaim | undefined;
+  readonly inputRules: readonly RegisteredRule[];
+  readonly attaches: readonly Attach[];
+  readonly escapes: ReadonlyMap<string, readonly string[]>;
+  readonly doubles: ReadonlyMap<string, string>;
+  readonly ioFilters: readonly IoFilter[];
+  readonly mdBuilders: MdBuilders;
+  ownerOf(typeW: string): Wing | null;
+  wingOf(w: string): Wing | null;
 }
-type SaveFormat = { id: string, label: LocaleText | string, extension: string, lossy: boolean }
 ```
 
-`nabi.applyCommand('saveFile')` also runs (`mountFile` registers that name on the instance),
-but it is the inner path the button and the key take, so it has no answer - it returns `null`
-because saving does not change the document. **Code calling in from outside uses the handle**:
-the name argument, the format choice, and open's true/false all live only there.
-
-`FileStore`: `save(file: NabiFileText): void | Promise<void>` and `open(): Promise<string |
-NabiFileText | null>`. `NabiFileText` is `{ name, text, mime? }` - the filter says which mime
-(`application/json` for `.nabi`, `text/html` for `.nhtml`, `text/markdown` for `.md`); a store
-that does not read `mime` treats the value as `.nabi`. **`open()` answers a name too**, because
-the extension decides which filter reads the text - `.nhtml`, `.html` and `.md` cannot be opened
-without one. The old shape (a bare string) is still accepted and read as `.nabi`.
-
-`browserFileStore(owner, accept?)` - saving is a download, opening is the file dialog. `accept`
-defaults to the four the built-ins read: `.nabi`, `.nhtml`, `.html`, `.md`.
-
-`readExtensions(filters)` counts only **declared save extensions**, so with the built-ins it
-answers three (`.nabi`, `.nhtml`, `.md`). The read-only `html-open` filter has no save slot and
-therefore no name to report - a host building its own store from that list adds `.html` by hand:
-`[...readExtensions(filters), '.html']`.
-
-`UploadOptions` (extends upload limits): `nabi`, `uploader: Uploader`, `root?: HTMLElement`
-(disables `contenteditable` while locked), `onStart?`, `onProgress?: (id, percent) => void`,
-`onSettle?: () => void | Promise<void>` (fires after transfer completes, before commit - lets the
-UI finish animating to 100%), `onDone?: (result: { committed: number, cancelled: boolean }) =>
-void` (fires after commit), `onReject?: (problem: UploadReject) => void` (filling this wins over
-the default toast), `locale?`, `translator?: Translator`.
-
-Types: `EditSurfacePort`, `Surface`, `SurfaceActions`, `SurfaceOptions`,
-`FileMount`, `FileMountOptions`, `SaveFormat`, `FileStore`, `NabiFileText`, `NabiFileBody`,
-`HistoryMount`, `HistoryMountOptions`, `UploadMount`, `UploadOptions`, `UploadTask`, `Uploader`.
-
-## Screen tools
+## Editor
 
 ```ts
-mountToolbar(options: ToolbarOptions): Toolbar
-mountContextToolbar(options: ContextToolbarOptions): ContextToolbar
-mountHints(options: HintOptions): Hints
-mountViewTools(options: ViewToolsOptions): ViewTools
-mountSticky(options: StickyOptions): Sticky
-mountPickedMark(options: PickedMarkOptions): PickedMark
-mountUploadView(options: UploadViewOptions): UploadView
+interface NabiOptions {
+  readonly env: EditEnv;
+  readonly doc?: unknown;
+  readonly commands?: Readonly<Record<string, Command>>;
+  readonly builders?: HtmlBuilders;
+  readonly allowLocalUrls?: boolean;
+  readonly parseHtml?: (html: string) => readonly ParseNode[];
+  readonly claim?: RegistryClaim;
+  readonly ask?: Partial<Ask>;
+  readonly toast?: Toast;
+  readonly toastMs?: number;  // default 1000
+  readonly toastMax?: number; // default 3
+  readonly locale?: string;   // default en
+}
 ```
 
-`ToolbarOptions`: `nabi`, `registry`, `root: HTMLElement`, `surface?` (focus returns here after a
-click - **and this is the ground the accelerators are heard on**: only a key raised inside the
-surface or the toolbar rows belongs to this editor. Omit it and the toolbar falls back to
-listening on the whole document, so **two editors on one page must both be given `surface`** or
-they eat each other's Cmd+S), `locale?`, `translator?`, `groups?: readonly string[]` (default:
-`TOOLBAR_GROUPS`), `settle?: Settle`, `onFiles?: (files: readonly File[]) => void`, `onHost?: (w:
-string, anchor: HTMLElement) => void` (a tool that needs a panel, e.g. local history, hands
-control back to the host here), `file?: FileMount` (plug the handle in and the save panel stands
-with no further wiring - the save button and Cmd+S both open it. Without it the save button
-falls back to `onHost('save')`), `accelerators?: boolean` (set `false` to disable keyboard
-shortcuts like mod+S).
+Application-level `Nabi` methods:
 
-**Accelerators exist only for registered wings.** Cmd+S and Cmd+O are declared by the `save` and
-`open` wings, so an editor assembled from `wings().allBasic()` alone has no such key at all and
-the browser's own "Save Page" appears as usual. Registering them back is
-`.allBasic().use('save').use('open')`. And when the save button reaches nowhere (`file` not
-plugged in and no `onHost` either), Cmd+S **does not swallow the key** - the editor does not
-take a shortcut away from the browser for something it will not do.
+| Member | Contract |
+| --- | --- |
+| `sessionId` | Stable ID for this editor instance |
+| `getJson()` | Serializable normalized tree without internal fields |
+| `setJson(value)` | Load, normalize, return success |
+| `getHtml()` | Published HTML |
+| `getEditorHtml()` | Editing/hydration HTML; never store |
+| `setHtml(html)` | Import HTML, return success |
+| `applyCommand(name, args?, by?)` | Apply registered command; `by` is `keyboard|pointer` |
+| `select(selection)` | Set a valid selection |
+| `getSelection()` | Current tree selection |
+| `undo()`, `redo()` | Return whether state changed |
+| `group(fn)` | One undo group |
+| `onChange(fn)` | Subscribe; returns unsubscribe |
+| `isChanged()` | Compare with saved baseline |
 
-`ContextToolbarOptions`: `nabi`, `registry`, `root`, `surface?`, `locale?`, `translator?`,
-`settle?: Settle`.
-
-`HintOptions`: `toolbar: Toolbar`, `context?: ContextToolbar`, `root: HTMLElement` (where the
-badge class attaches - the chrome wrapping both rows), `surface?`, `tapMs?: number`.
-
-`ViewToolsOptions` (extends `PreviewOptions`): `nabi`, `surface: HTMLElement`, `locale?`,
-`translator?`, `onBody?: (body: HTMLElement) => (() => void) | void` (fires once the preview body
-is standing - a host attaches viewer-side JS, e.g. `attachViewer`, here; the returned function
-runs when the overlay closes), `root: HTMLElement` (the `.nabi` box fullscreen pins),
-`container: HTMLElement` (where the two buttons render).
-
-`StickyOptions`: `root: HTMLElement` (the `.nabi` root CSS variables attach to), `surface:
-HTMLElement` (caret rect is measured here), `chrome?: HTMLElement` (sticky top edge; defaults to
-the window top), `settle?: Settle`, `nabi?: Nabi` (give it and the mount **aims by itself after
-an edit**, pushing the caret out from under the toolbar by exactly as much as it was covered;
-omit it and nothing changes - aiming happens only when the host calls `aim()`), `iosBranch?:
-boolean`.
-
-**Mobile keyboard behavior** (no public type grew for this - it is behavior, not API). When a
-soft keyboard rises, `mountSticky` brings the caret into the strip between the toolbar and the
-keyboard. Four rules a host should know: it runs **only while the surface holds focus**; it
-moves **nothing** while a finger is scrolling (a 250ms lock after a scroll); it reacts only to a
-**keyboard-sized** viewport change (`max(120px, 15% of window height)`), so an address bar
-collapsing by a few dozen pixels does not trigger it; and it lines up once more after the
-viewport has settled. Typing is nudged by **only as much as is missing**, while the moment the
-keyboard appears it lines the toolbar up against the top of the window. The measured chrome
-height is published as `--nabi-bar-height` (see `llms/styling.md`).
-
-`PickedMarkOptions`: `nabi`, `surface: HTMLElement`.
-
-`UploadViewOptions`: `nabi`, `surface: HTMLElement`, `upload?: Pick<UploadMount, 'cancel'>` (no
-cancel button drawn if omitted), `locale?`, `translator?`, `bandwidth?: number`.
+The `Nabi` type also contains `$`-prefixed integration hooks: `$doc`, `$env`, `$armed`, `$ask`, `$toast`, `$bindToast`, `$bindChoose`, `$toastMs`, `$toastMax`, `$bindLocale`, `$locale`, `$applyRaw`, `$markSaved`, `$registerCommand`, `$lock`, and `$lockedBy`. Use them only to build package-style mounts.
 
 ```ts
-openPanel(owner: Document, options: PanelOptions): Panel
-openPrompt(owner: Document, options: PromptOptions): Panel
-openPreview(options: PreviewOptions): Overlay
-openLightbox(options: LightboxOptions): Overlay
-openHistoryPanel(options: HistoryPanelOptions): Overlay | null
-openChoosePanel(options: ChoosePanelOptions): Promise<number>
-openSavePanel(options: SavePanelOptions): Overlay
-watchSettle(owner: Document, options?: SettleOptions): Settle
-isFullscreen(root: HTMLElement): boolean
-setFullscreen(root: HTMLElement, on: boolean): void
-```
-
-`ChoosePanelOptions`: `question: string`, `options: readonly ChooseOption[]`, `surface:
-HTMLElement` (focus returns here; the panel's document comes from it), `locale?`, `translator?`.
-This is the paste-candidate panel; `mountToolbar` binds it to the editor on its own, so a host
-does not have to call it.
-
-`SavePanelOptions`: `file: FileMount`, `surface: HTMLElement`, `locale?`, `translator?`. The
-format list and the door that actually writes both come from the `FileMount`. The panel is the
-paste panel in a second dress - centered title, up to three cells per row, icon above and name
-below, aim shown as a `--nabi-accent` border with no fill - plus a name field and, beside it, an
-extension marker that follows the aimed format. Four things a host or an agent should not get
-wrong:
-
-- **There is no confirm button.** A format cell *is* the save; Enter in the name field saves
-  with whichever format is currently aimed.
-- **Tab / Shift+Tab move between formats**, not the arrow keys. The name field is standing right
-  there, so left/right are already caret keys and up/down are text keys; the paste panel, which
-  has no text field, keeps arrows as its canonical aim keys.
-- **The first aim is not `.nabi`.** It follows the same `initialChoice` rule as the paste panel:
-  with three formats it lands on the middle of the first row, so the marker reads `.nhtml` when
-  the panel opens. Anything that says "press Enter right away to save the original" is wrong.
-- The cell names are the **lowercase extension without the dot** - `nabi`, `nhtml`, `md` - and a
-  lossy format carries a tiny "lossy save" note under its name.
-
-`CHOOSE_COLS` (`3`), `gridStep(at, len, key, cols?, rtl?)`, `initialChoice(len)` - the grid math
-the two panels share, exported as pure functions (no DOM). `initialChoice` answers `1` for three
-or more cells (the middle of the first row) and `0` otherwise.
-
-`FULLSCREEN_CLASS`, `TOOLBAR_GROUPS` - the constants those two functions and `mountToolbar`'s
-`groups?` option are built around.
-
-Types: `ContextGroupView`, `ContextToolbar`, `ContextToolbarOptions`, `ChoosePanelOptions`,
-`HintOptions`, `HistoryPanelOptions`, `Hints`, `LightboxOptions`, `Overlay`, `PickedMark`,
-`PickedMarkOptions`, `PreviewOptions`, `SavePanelOptions`, `Sticky`, `StickyOptions`, `Toolbar`,
-`ToolbarButton`, `ToolbarOptions`, `UploadView`, `UploadViewOptions`, `ViewTools`,
-`ViewToolsOptions`, `Panel`, `PanelOptions`, `PromptField`, `PromptOptions`, `Settle`,
-`SettleOptions`.
-
-## IO filters
-
-An **IO filter** is the one door text takes coming into a document (paste, open) and going out
-of it (save). A filter is not a wing: it erects no node and owns no key - all it knows is "can I
-read this text". Registration has three doors, and their order is the scan order:
-
-1. the host's - `createNabiWith(wings, { ioFilters })` / `makeRegistry(wings, { ioFilters })`,
-   and per-mount `mountSurface({ ioFilters })` / `mountFile({ ioFilters })`, which stand ahead
-   of the registry's
-2. a wing's own - `Wing.ioFilter` (the table wing's TSV is the model)
-3. the four built-ins, always last
-
-A duplicate `ioFilter.id` fails registration.
-
-`io` is its own internal layer, sitting between `html` and `editor` - it handles only
-`schema`/`html`/`locale` values and bites neither the editor nor the surface, which is why the
-wing contract is allowed to reference `ioFilter` and `toMd`. The internal stack is **fourteen**
-layers deep, and a boundary test (`test/boundaries.test.ts`, the `ORDER` constant) keeps the
-direction honest: `style, locale, code, schema, doc, caret, html, io, editor, wing, wings,
-surface, ui, viewer`. Hosts never import these paths - the entry points in `llms/overview.md`
-are the public surface - but knowing where `io` and `style` sit explains why a filter cannot
-reach the editor and why a stylesheet can be collected without one.
-
-```ts
-interface IoFilter {
-  readonly id: string
-  readonly label: LocaleText | string
-  paste?: (data: PasteData) => PasteCandidate | readonly PasteCandidate[] | null
-  save?: {
-    extension: string
-    write: (doc: DocSource) => string
-    lossy?: boolean      // the save panel writes a "lossy save" note under this format
-    mime?: string
-  }
-  read?: (name: string, text: string) => unknown   // null = not mine, try the next filter
+interface Ask {
+  message(text: string): void;
+  confirm(text: string): boolean | Promise<boolean>;
+  choose?(
+    question: string,
+    options: readonly { label: string; icon?: string }[],
+  ): number | Promise<number>;
 }
 
-interface PasteData { html: string, plain: string, files: readonly ClipFile[], types: readonly string[] }
-interface PasteCandidate {
-  id: string
-  label: LocaleText | string
-  build(): readonly ElementNode[]   // dug LATE - the panel lists a row without building a document
-  icon?: string                     // inside of a 16x16 SVG; without it the name stands alone
-  inline?: boolean                  // one-line text: written into the caret without splitting the paragraph
+type ToastLevel = 'info' | 'warn' | 'error';
+type Toast = (level: ToastLevel, message: string, ms?: number) => void;
+```
+
+`silentAsk` is the no-UI implementation. Missing partial ask members fall back to nonblocking defaults: messages may use the core toast, confirmation is false, and choice cancels when no choose sink is bound.
+
+## Surface
+
+```ts
+interface SurfaceOptions {
+  readonly nabi: Nabi;
+  readonly registry: Registry;
+  readonly root: HTMLElement;
+  readonly hydrate?: boolean;
+  readonly allowLocalUrls?: boolean;
+  readonly locale?: string;
+  readonly placeholder?: string;
+  readonly ioFilters?: readonly IoFilter[];
+  readonly fileSink?: (files: readonly File[]) => void;
+  readonly doubleEnterMs?: number;      // default 350
+  readonly correctionDeferMs?: number; // default 80
 }
-interface DocSource { json(): unknown, html(): string, md(): string }  // all lazy
+
+interface Surface {
+  readonly actions: SurfaceActions;
+  readonly port: EditSurfacePort;
+  focus(): void;
+  redrawAll(): void;
+  unmount(): void;
+}
+
+function mountSurface(options: SurfaceOptions): Surface;
 ```
 
-**The four built-ins**, in scan order: `nabi` (`.nabi`, `application/json`, save + read; never a
-paste candidate, because what lands on the clipboard is a file, not text), `html`
-(`text/html` paste candidate, saves as **`.nhtml`** with mime `text/html`, reads), `markdown`
-(`.md`, `text/markdown`, **`lossy: true`**; it offers a paste candidate only when the plain text
-actually smells of Markdown *and* some registered wing could receive it), and `html-open` - a
-**read-only twin** with no save slot that exists so an ordinary `.html` file from elsewhere can
-still be opened. So the save panel shows **three** formats and the open dialog accepts **four**.
+`SurfaceActions`: `enter`, `shiftEnter`, `tab`, `backspace`, `deleteForward`, `arrow`, `selectAll`, `escapeKey`, `breakDouble`, `afterSpace`, and `dropcapBelow`.
 
-Building a document from `text/html` needs a parser: the io layer knows no DOM, so `parseNodes`
-is injected (the browser default). Without one the html filter simply sleeps.
+`EditSurfacePort`: `focus`, `readCaret`, `writeCaret`, `onInput`, and `caretRect`.
 
-`writeHtmlFile(options: HtmlFileOptions): string` - the standalone page an `.nhtml` save
-produces: doctype, `<html lang>`, `<meta charset>`, `<meta name="viewport">`, `<title>`, the
-sheets inlined in one `<style>`, and the fragment wrapped in `<div class="nabi-content">`.
-`HtmlFileOptions`: `title`, `sheets` (from `collectSheets(registry)`), `body` (from
-`nabi.getHtml()`), `lang?`, `dir?`.
-
-`NABI_VERSION`, `NABI_FILE_EXTENSION`, `NABI_FILE_VERSION`, `writeNabiFile`, `readNabiFile`,
-`isNabiFile`, `defaultFileName`, `today` now live in `io/file.ts`; the old path
-(`wings/file/file.ts`) re-exports them, so nothing an importer wrote has to change.
-
-Contract types: `IoFilter`, `PasteData`, `PasteCandidate`, `ClipFile`, `DocSource`, `MdContext`,
-`MdBuilder`, `MdBuilders`.
-
-### The nabi clipboard shortcut
-
-Copying or cutting inside a nabi editor and pasting it back **skips the candidate panel
-entirely** and goes straight to the html candidate - there is no format to choose when a
-document's own fragment comes home. Nabi loads the clipboard itself on copy/cut, so attachments
-and headings survive the trip, and editor-only markers are stripped on the way out.
-
-The memory is **one global** (the clipboard is global too: cutting in editor A and pasting into
-editor B is one gesture), and pasting does **not** consume it - only the next copy or cut
-clears it, and copying something from outside makes the returning text differ, which drops the
-paste back into the ordinary flow.
-
-Two more clipboard rules worth knowing: copying a selected object (image, box) carries **its
-wrapper paragraph's alignment** along with it, and copying exactly one attachment (a file link)
-wraps it in its own paragraph followed by one blank line, so attachments never tangle onto a
-single line.
-
-## Stylesheets
+## File, upload, and history mounts
 
 ```ts
-collectSheets(registry: Registry): readonly string[]
-injectSheets(document: Document, sheets: readonly string[]): () => void  // call to remove what this call added
-CORE_CSS: string
-sheetKey(sheet: string): string  // the content-hash dedup key
+function browserFileStore(
+  owner: Document,
+  accept?: readonly string[],
+): FileStore;
+
+function mountFile(options: FileMountOptions): FileMount;
 ```
 
-See `llms/styling.md`.
+`FileMountOptions`: `nabi`, `store`, `registry`, optional `ioFilters`, `parse`, `allowLocalUrls`, `name`, `discardMessage`, `locale`, and `onError`.
 
-## Pre-rendering the toolbar
+`FileMount`: `save(name?)`, `saveAs(id, name?)`, `formats()`, `open()`, and `unmount()`.
 
 ```ts
-renderToolbarHtml(options: ToolbarHtmlOptions): string
-renderViewToolsHtml(options: { locale?: string }): string
-toolbarSlots(registry: Registry): readonly ToolbarSlot[]
+type Uploader = (
+  task: UploadTask,
+) => { readonly uri: string } | null |
+     Promise<{ readonly uri: string } | null>;
+
+function mountUpload(options: UploadOptions): UploadMount;
 ```
 
-Also exported from `nabi-note/ssr`. See `llms/ssr.md`.
-
-## Assembled HTML (also runs on a server)
+`UploadOptions` contains `nabi`, `uploader`, optional `root`, limits `extensions|maxFileSize|maxTotalSize`, lifecycle callbacks `onStart|onProgress|onSettle|onDone|onReject`, and locale/translator. `UploadMount`: `take`, `isRunning`, `cancel`, `unmount`.
 
 ```ts
-renderEditorHtml(doc: NabiDoc, options: HtmlOptions): string
-renderHtml(doc: NabiDoc, options: HtmlOptions): string
-renderStoredHtml(json: unknown, registry: Registry, options?: StoredHtmlOptions): string | null
-renderStoredEditorHtml(json: unknown, registry: Registry, options?: StoredHtmlOptions): string | null
-safeUrl(url: string): string | null  // null for anything but http:/https:/relative
-parseNodes(...): ParseNode  // browser-only HTML-in adapter, DOMParser-backed
+function browserHistoryStorage(
+  view: { localStorage?: Storage } | null | undefined,
+): HistoryStorage | null;
+
+function mountLocalHistory(options: HistoryMountOptions): HistoryMount;
 ```
 
-`renderStoredHtml`/`renderStoredEditorHtml` accept raw external JSON and reject anything that is
-not a valid NABI TREE (`null`, not a throw; a value that throws mid-read also answers `null`
-with a `console.error` report). `renderHtml`/`renderEditorHtml` sit one layer lower,
-for code that already holds the internal tree. Text output preserves runs of two or more ASCII
-spaces with alternating `&nbsp;` and plain spaces, and protects the last space at a text-container
-boundary with `&nbsp;`; attribute values keep their original spaces. Editor HTML also carries
-`data-key`, editing seals, and an editor-only `[data-nabi-dropcap-letter]` span around the first
-grapheme of a drop-cap paragraph. That real span keeps the WYSIWYG drop cap visible without using
-the caret-unsafe `::first-letter` pseudo-element inside `contenteditable`; it is not storage HTML.
-Full detail in `llms/ssr.md`.
+`HistoryMountOptions`: `nabi`, `storage`, optional `limit`, `minIntervalMs`, `now`. `HistoryMount`: `snapshot`, `alive`, `list`, `restore`, `forget`, `remove`, `clear`, `sessionId`, `ask`, `toast`, `unmount`.
 
-Types: `EditSurfacePort` (surface section, above), `HtmlAttrs`, `HtmlBuilder`, `HtmlBuilders`,
-`HtmlContext`, `HtmlOptions`, `ParseNode`, `StoredHtmlOptions`.
+File/history utility exports:
 
-## Editor, document, and command contract types
+- `NABI_VERSION`, `NABI_FILE_VERSION`, `NABI_FILE_EXTENSION`;
+- `writeNabiFile`, `readNabiFile`, `isNabiFile`, `defaultFileName`, `today`;
+- `HISTORY_KEY`, `HISTORY_LIMIT`, `HISTORY_CREATED_GAP`;
+- `readHistory`, `writeHistory`, `removeHistory`, `clearHistory`, `historyStorageAlive`, `historyView`, `showsCreated`, `summarize`, `exactTime`;
+- `readExtensions`, `acceptFiles`, `extensionOf`, `formatBytes`, `isImageFile`.
+
+## UI mounts
+
+| Function | Required options | Result |
+| --- | --- | --- |
+| `mountToolbar` | `nabi, registry, root` | `Toolbar { buttons, refresh, unmount }` |
+| `mountContextToolbar` | `nabi, registry, root` | groups/buttons plus refresh/unmount |
+| `mountHints` | `toolbar, root` | active/hide/unmount |
+| `mountPickedMark` | `nabi, surface` | refresh/unmount |
+| `mountSticky` | `root, surface` | aim/unmount |
+| `mountViewTools` | `nabi, surface, root, container` | buttons/unmount |
+| `mountUploadView` | `nabi, surface` | start/progress/settle/done/unmount |
+
+Important optional toolbar inputs: `surface`, `locale`, `translator`, `groups`, `settle`, `onFiles`, `onHost`, `file`, and `accelerators`.
+
+Overlay/panel functions:
+
+- `openPreview({ nabi, surface, locale?, translator?, onBody? })`;
+- `openLightbox({ surface, src, alt?, locale?, translator? })`;
+- `openSavePanel({ file, surface, locale?, translator? })`;
+- `openHistoryPanel({ history, surface, render, locale?, translator?, sessionId? })`;
+- `openChoosePanel({ question, options, surface, locale?, translator? })`;
+- `openPanel(owner, { anchor, className?, restore?, onClose? })`;
+- `openPrompt(owner, { anchor, fields, okLabel, onSubmit, ... })`;
+- `watchSettle(owner, { surface?, quietMs? })`.
+
+Fullscreen exports: `FULLSCREEN_CLASS`, `isFullscreen`, and `setFullscreen`. UI constants: `TOOLBAR_GROUPS`.
+
+## Rendering and style
 
 ```ts
-type Nabi = { ... }               // the assembled editor instance returned by createNabiWith
-type NabiChange = { ... }         // payload passed to nabi.onChange
-type NabiDoc = readonly NabiNode[]  // a document - an array of blocks, no wrapping root
-type NabiNode = ElementNode | string
-type Command = (doc: NabiDoc, sel: Selection, args: Record<string, unknown>, env: EditEnv) =>
-  { doc: NabiDoc, selection: Selection } | null
+function renderStoredHtml(
+  json: unknown,
+  registry: Registry,
+  options?: { allowLocalUrls?: boolean },
+): string | null;
+
+function renderStoredEditorHtml(
+  json: unknown,
+  registry: Registry,
+  options?: { allowLocalUrls?: boolean },
+): string | null;
+
+function renderHtml(doc: NabiDoc, options: HtmlOptions): string;
+function renderEditorHtml(doc: NabiDoc, options: HtmlOptions): string;
+
+function safeUrl(raw: string | undefined, allowLocal?: boolean): string | null;
+function parseNodes(html: string): ParseNode[];
 ```
 
-`silentAsk: Ask` - an `Ask` implementation that always answers `false`/does nothing; equivalent
-to what a host gets by not filling `ask` at all. **`choose` is the one that differs: it always
-answers `0`, the first option.** `confirm`'s "no" protects unsaved work, but answering "cancel"
-to a choose would make a paste vanish altogether - and the first candidate is always the most
-likely reading, so with nobody to ask that is the right answer.
+Toolbar HTML:
 
-`isElement(node)`, `isText(node)` - type guards on a `NabiNode`.
+- `toolbarSlots(registry, translator, order?)`;
+- `renderToolbarHtml({ registry, locale?, translator?, groups? })`;
+- `renderViewToolsHtml({ locale?, translator? })`.
 
-`BR`, `P` - the two reserved `w` values (`'br'`, `'p'`).
+Style:
 
-Types: `Nabi`, `NabiChange`, `NabiOptions`, `Toast`, `ToastLevel`, `Command`, `CommandArgs`,
-`CommandHand` (`'keyboard' | 'pointer'`, third argument to `applyCommand`), `CommandOutcome`,
-`Selection`, `EditEnv`, `Position`, `Attrs`, `AttrValue`, `ElementNode`, `NabiDoc`, `NabiNode`.
+- `CORE_CSS`;
+- `collectSheets({ wings }, core?)`;
+- `injectSheets(document, sheets)`;
+- `sheetKey(text)`.
 
-### `Nabi` instance methods (referenced throughout the docs, not a separate export)
+## Wings and factories
 
-| Method | Signature |
-|---|---|
-| `getHtml()` | `(): string` |
-| `getJson()` | `(): NabiDoc` |
-| `getEditorHtml()` | `(): string` - carries `data-key`, not for storage |
-| `setJson(json)` | `(json: unknown): boolean` - a blank value (`null`, `undefined`, `''`, `[]`) loads the empty document instead of being rejected |
-| `setHtml(html)` | `(html: string): boolean` - needs `parseHtml` in options, except for a blank value (same rule as `setJson`) |
+Catalog exports:
 
-Both setters never throw. Slightly-broken input is corrected while being read (empty table
-cells, non-row table children, overflowing merges; dangerous URLs are filtered in the same
-step). Input that cannot be read at all answers `false`, and input that throws mid-read also
-answers `false` with a `console.error` report - the editor keeps its current document either
-way.
-| `applyCommand(name, args?, by?)` | `(name: string, args?: Record<string, unknown>, by?: CommandHand): boolean` |
-| `onChange(fn)` | `(fn: (change: NabiChange) => void) => () => void` |
-| `isChanged()` | `(): boolean` |
-| `$markSaved(savedDoc)` | `(savedDoc: NabiDoc): void` - **only a `.nabi` save moves the baseline**; `.nhtml` and `.md` are copies, so the save wing does not call this for them |
-| `sessionId` | `string` - `<unix-time>-<nonce>`, set once |
-| `$toast(level, message, ms?)` | `(level: ToastLevel, message: string, ms?: number): void` |
-| `$ask` | Same shape as the `ask` option - what a wing calls |
+- marks: `boldWing`, `italicWing`, `underlineWing`, `strikeWing`, `superscriptWing`, `subscriptWing`, `simpleMarkWings`;
+- value marks: `typefaceWing`, `fontSizeWing`, `textColorWing`, `highlightWing`, `valueMarkWings`, `makeTypefaceWing`, `makeFontSizeWing`, `makeTextColorWing`, `makeHighlightWing`, and `TYPEFACES`, `FONT_SIZES`, `TEXT_COLORS`, `HIGHLIGHT_COLORS`;
+- inline/block: `linkWing`, `headingWing`, `alignWing`, `dropCapWing`, `paragraphAttrWings`, `bulletListWing`, `orderedListWing`, `taskListWing`, `listWings`, `quoteWing`, `detailsWing`, `codeWing`, `dividerWing`, `tableWings`;
+- media/tools: `imageWing`, `youtubeWing`, `uploadWing`, `saveFileWing`, `openFileWing`, `localHistoryWing`, `diffWing`, `clearFormatWing`;
+- groups: `defaultWings`, `extraWings`, `fileWings`;
+- picker: `wings`, `wingNames`.
 
-## Locale
+Factories and helpers:
+
+- `simpleMark(spec: SimpleMarkSpec)`;
+- `valueMark(spec: ValueMarkSpec)`;
+- `boxObject(spec: BoxObjectSpec)`;
+- `listFamily(spec: ListFamilySpec)`;
+- `makeImageWing({ allowLocalUrls? })`;
+- `makeUploadWing({ allowLocalUrls? })`;
+- `makeCodeAttach({ highlight?, version? })`;
+- `insertLump`, `removeLump`, `toggleWrap`, `topNodeAt`.
+
+Other wing-related runtime exports include `imageAttach`, `BROKEN_ATTR`, `IMAGE_WIDTHS`, `YOUTUBE_WIDTHS`, `CLEARED_MARKS`, and `CLEARED_ATTRS`.
+
+## Code token helpers
+
+- `tokenize(code, language?)`;
+- `dialectOf(language)`;
+- `tokensFor(source, language, highlight?)`;
+- `usableTokens(answer, source)`;
+- `applyTokens(element, tokens, { filler? })`;
+- `codeSourceOf(element)`;
+- `CODE_TOKEN_ATTR`, `CODE_TOKEN_TYPES`;
+- `codeAttach`, `makeCodeAttach`.
 
 ```ts
-DICTIONARY: Dictionary
-LOCALES: readonly string[]        // every supported locale code
-RTL_LOCALES: readonly string[]    // subset of LOCALES that read right-to-left (currently ar, ur)
-localeDirection(code: string): 'ltr' | 'rtl'
-localeOf(code: string): LocaleText
-makeTranslator(locale: string): Translator
-translate(locale: string, key: string): string
+interface CodeToken {
+  readonly text: string;
+  readonly type?: string;
+}
+
+type CodeHighlighter = (
+  code: string,
+  language: string | null,
+) => readonly CodeToken[] | null | undefined;
 ```
 
-Types: `Dictionary`, `LocaleText`, `Translator`.
+## Tree, command, and HTML types
 
-## `nabi-note/viewer` (separate entry, reader-side only)
+Root-exported types include:
 
-```ts
-attachViewer(root: HTMLElement, options: { locale?: string, highlight?: CodeHighlighter }): () => void
-attachTableSort(root: HTMLElement, options?: { locale?: string }): () => void
-```
+- tree: `AttrValue`, `Attrs`, `ElementNode`, `NabiNode`, `NabiDoc`;
+- selection: `Position`, `Selection`, `EditEnv`;
+- command: `Command`, `CommandArgs`, `CommandHand`, `CommandOutcome`;
+- editor: `Nabi`, `NabiOptions`, `NabiChange`, `Ask`, `ChooseOption`, `Toast`, `ToastLevel`;
+- HTML: `HtmlAttrs`, `HtmlBuilder`, `HtmlBuilders`, `HtmlContext`, `HtmlOptions`, `ParseNode`;
+- locale: `Dictionary`, `LocaleText`, `Translator`.
 
-Never mutates a document that will be saved - attach only to a read-only copy. See
-`llms/styling.md` (table sort) and `llms/quickstart-npm.md` (preview `onBody`).
+Tree values: `P`, `BR`, `isElement`, `isText`.
 
-## `nabi-note/nabi.css`
+## Wing declaration types
 
-Not a JS module - the bundled stylesheet (core plus every built-in wing). See
-`llms/styling.md`.
+Root-exported wing types include:
 
-## See also
+`Wing`, `WingPlace`, `StructureDecl`, `WingAction`, `WingButton`, `WingChoice`, `WingField`, `WingContext`, `ContextControl`, `InputRule`, `KeyIntent`, `KeyName`, `ArrowDir`, `OnKey`, `OwnerAt`, `Attach`, `AttachHost`, `Registry`, `RegisteredRule`, `WingName`, `WingUseOptions`, `WingsBuilder`, and the four factory spec types.
 
-- `llms/overview.md` - the four-layer model these functions build
-- `llms/wings.md` - every built-in wing this list references by name
-- `llms/custom-wing.md` - `boxObject`/`listFamily`/`simpleMark`/`valueMark` used in context
-- `llms/ssr.md` - the `nabi-note/ssr` subset of this list and pre-rendering
-- `llms/styling.md` - `collectSheets`/`injectSheets`/`CORE_CSS` used in context
+Additional wing-star types include `ValueWingOptions`, `ImageWingOptions`, `UploadFile`, `UploadItem`, `UploadLimits`, `UploadReject`, `CommitOptions`, `FileStore`, `NabiFileBody`, `NabiFileText`, `HistoryRecord`, `HistoryStorage`, `HistoryView`, `PaintOptions`, `ApplyOptions`, `CodeDialect`, `CodeHighlighter`, and `CodeToken`.
+
+## IO types
+
+Root-exported IO contracts:
+
+`ClipFile`, `PasteData`, `PasteCandidate`, `DocSource`, `IoFilter`, `MdContext`, `MdBuilder`, and `MdBuilders`.
+
+See `io-security.md` before implementing a custom filter.
+
+## Locale values
+
+- `LOCALES`: 14 documented locale codes.
+- `RTL_LOCALES`: `ar`, `ur`.
+- `DICTIONARY`.
+- `localeOf(raw)`: normalize a primary language tag; invalid input becomes `en`.
+- `localeDirection(code)`: `ltr|rtl`.
+- `translate(key, locale, dictionary?, vars?)`.
+- `makeTranslator(locale?, extraDictionary?)`.
+
+Translation fallback is requested primary language, then English, then the key. Unfilled `{name}` placeholders remain visible.
+
+## Complete root type-name index
+
+The root entry exports these public type names. Earlier sections and the topic documents own their semantics.
+
+- Assembly and wings: `Registry`, `RegisteredRule`, `Wing`, `WingPlace`, `StructureDecl`, `WingAction`, `WingButton`, `WingChoice`, `WingField`, `WingContext`, `ContextControl`, `InputRule`, `KeyIntent`, `KeyName`, `ArrowDir`, `OnKey`, `OwnerAt`, `Attach`, `AttachHost`, `WingName`, `WingUseOptions`, `WingsBuilder`.
+- Factory and built-in options: `SimpleMarkSpec`, `ValueMarkSpec`, `BoxObjectSpec`, `ListFamilySpec`, `ValueWingOptions`, `ImageWingOptions`, `CommitOptions`, `PaintOptions`, `ApplyOptions`.
+- Tree and editor: `AttrValue`, `Attrs`, `ElementNode`, `NabiNode`, `NabiDoc`, `Position`, `Selection`, `EditEnv`, `Command`, `CommandArgs`, `CommandHand`, `CommandOutcome`, `Nabi`, `NabiOptions`, `NabiChange`, `Ask`, `ChooseOption`, `Toast`, `ToastLevel`.
+- HTML and IO: `HtmlAttrs`, `HtmlBuilder`, `HtmlBuilders`, `HtmlContext`, `HtmlOptions`, `ParseNode`, `StoredHtmlOptions`, `ClipFile`, `PasteData`, `PasteCandidate`, `DocSource`, `IoFilter`, `MdContext`, `MdBuilder`, `MdBuilders`, `FileStore`, `NabiFileBody`, `NabiFileText`.
+- Surface and persistence mounts: `EditSurfacePort`, `Surface`, `SurfaceActions`, `SurfaceOptions`, `FileMount`, `FileMountOptions`, `SaveFormat`, `UploadMount`, `UploadOptions`, `UploadTask`, `Uploader`, `HistoryMount`, `HistoryMountOptions`, `HistoryRecord`, `HistoryStorage`, `HistoryView`.
+- UI: `Toolbar`, `ToolbarButton`, `ToolbarOptions`, `ContextGroupView`, `ContextToolbar`, `ContextToolbarOptions`, `HintOptions`, `Hints`, `PickedMark`, `PickedMarkOptions`, `Sticky`, `StickyOptions`, `ViewTools`, `ViewToolsOptions`, `PreviewOptions`, `LightboxOptions`, `Overlay`, `UploadView`, `UploadViewOptions`, `ChoosePanelOptions`, `HistoryPanelOptions`, `SavePanelOptions`, `Panel`, `PanelOptions`, `PromptField`, `PromptOptions`, `Settle`, `SettleOptions`, `ToolbarHtmlOptions`, `ToolbarSlot`.
+- Upload and code data: `UploadFile`, `UploadItem`, `UploadLimits`, `UploadReject`, `CodeDialect`, `CodeHighlighter`, `CodeToken`.
+- Locale: `Dictionary`, `LocaleText`, `Translator`.
+
+## Separate-entry type names
+
+- `nabi-note/ssr`: `Registry`, `StoredHtmlOptions`, `ToolbarHtmlOptions`, `ToolbarSlot`, `WingName`, `WingsBuilder`, `Wing`, `HtmlOptions`, `AttrValue`, `Attrs`, `ElementNode`, `NabiNode`, `NabiDoc`, `Translator`.
+- `nabi-note/viewer`: `ViewerOptions`, `TableSortOptions`, `SortDirection`, `SortState`, `CodePaintOptions`, `CodeHighlighter`, `CodeToken`.
+- `nabi-note/diff`: `CharRange`, `DiffEntry`, `DiffKind`, `DiffPaneBlock`, `DocDiff`, `DiffOptions`, `DiffMountOptions`, `DiffMount`, `DiffWingMountOptions`, `DiffWingMount`.

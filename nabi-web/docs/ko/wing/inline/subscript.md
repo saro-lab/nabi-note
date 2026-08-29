@@ -1,37 +1,18 @@
 ---
-title: 아래첨자 (Subscript)
+title: 아랫첨자
+description: 화학식처럼 글자를 아래에 작게 표시하는 wing입니다.
 ---
 
-# 아래첨자 (Subscript)
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-## 설명
+# 아랫첨자
 
-`subscriptWing`은 아래첨자 서식(`<sub>`)을 처리하는 인라인 마크 날개입니다. 화학식이나 주석 번호 등을 표기할 때 사용합니다.
-
-- HTML 입력 시 `<sub>` 태그를 인식하며, 출력 시에도 `<sub>`로 렌더링됩니다.
-- 툴바의 `script` 그룹에 위첨자 버튼과 함께 배치됩니다.
-- 텍스트를 선택한 상태에서 실행하면 토글 방식으로 동작합니다.
-
-## 사용 예시
-
-```ts
-import { createNabiWith, mountSurface, mountToolbar, subscriptWing } from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-const { nabi, registry } = createNabiWith([subscriptWing])
-
-mountSurface({ nabi, registry, root: surface })
-mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#toolbar')! })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-## 데모
+선택한 글자를 기준선 아래에 작게 표시합니다. 화학식이나 수식 표기에 사용할 수 있습니다.
 
 <WingDemo path="/wing/inline/subscript" />
 
-<script setup lang="ts">
-import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
-</script>
+```ts
+const selected = wings().use('sub').build()
+```

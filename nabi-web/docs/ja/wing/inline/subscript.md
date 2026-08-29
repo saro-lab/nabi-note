@@ -1,37 +1,14 @@
 ---
-title: 下付き文字
+title: Translation pending
+description: Korean documentation is being reviewed before translation.
 ---
 
-# 下付き文字
+<div class="translation-shell">
 
-## 説明
+# Translation pending
 
-`subscriptWing` は下付き書式(`<sub>`)を扱うインラインマーク翼です。化学式や注釈番号などを表記するときに使います。
+The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
 
-- HTML入力時に `<sub>` タグを認識し、出力時も `<sub>` としてレンダリングされます。
-- ツールバーの `script` グループに、上付き文字と並んで置かれます。
-- テキストを選んだ状態で押すとトグルで動きます。
+[Open the Korean canonical page](/ko/guide/features)
 
-## 使用例
-
-```ts
-import { createNabiWith, mountSurface, mountToolbar, subscriptWing } from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-const { nabi, registry } = createNabiWith([subscriptWing])
-
-mountSurface({ nabi, registry, root: surface })
-mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#toolbar')! })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-## デモ
-
-<WingDemo path="/wing/inline/subscript" />
-
-<script setup lang="ts">
-import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
-</script>
+</div>

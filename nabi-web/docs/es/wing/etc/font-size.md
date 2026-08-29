@@ -1,40 +1,14 @@
 ---
-title: Tamaño del texto
+title: Translation pending
+description: Korean documentation is being reviewed before translation.
 ---
 
-# Tamaño del texto
+<div class="translation-shell">
 
-## Descripción
+# Translation pending
 
-`fontSizeWing` (id `fs`) es un **wing de marca en línea basado en valores** que ajusta el tamaño del texto (se dibuja como `<span data-nabi-size="lg">`).
+The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
 
-Admite cuatro tamaños — `xs`, `sm`, `lg`, `xl` — y el tamaño predeterminado no es un quinto valor, sino **la ausencia misma del atributo**.
+[Open the Korean canonical page](/ko/guide/features)
 
-- Al pulsar el botón de la barra principal se aplica **`lg` (grande)** por defecto.
-- Con el cursor dentro de una marca de tamaño, la barra contextual dinámica muestra un control deslizante (`range`) para elegir entre Predeterminado, Muy pequeño, Pequeño, Grande y Muy grande. Al mover el control a Predeterminado se quita la marca.
-- Si se elige un tamaño solo con el cursor, sin texto seleccionado, se aplica a todo el párrafo.
-
-## Ejemplo de uso
-
-```ts
-import { createNabiWith, mountSurface, mountToolbar, mountContextToolbar, fontSizeWing } from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-const { nabi, registry } = createNabiWith([fontSizeWing])
-
-mountSurface({ nabi, registry, root: surface })
-mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#toolbar')! })
-mountContextToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#context')! })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-## Demo
-
-<WingDemo path="/wing/etc/font-size" />
-
-<script setup lang="ts">
-import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
-</script>
+</div>

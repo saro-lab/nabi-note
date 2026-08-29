@@ -1,39 +1,14 @@
 ---
-title: 斜体
+title: Translation pending
+description: Korean documentation is being reviewed before translation.
 ---
 
-# 斜体
+<div class="translation-shell">
 
-## 説明
+# Translation pending
 
-`italicWing` は斜体書式(`<i>`)を扱うインラインマーク翼です。強調や外来語など、文字の
-調子を変えたいときに使います。
+The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
 
-- 入力時は `<i>` と `<em>` の両方を認識し、出力時は標準の `<i>` タグに統一されます。
-- ヒントモード(Shift を2回連打してから `I`)とショートカット `Ctrl`/`⌘`+`I` に対応します。
-- テキストを選択した状態で実行するとトグル動作になります。
+[Open the Korean canonical page](/ko/guide/features)
 
-## 使用例
-
-```ts
-import { createNabiWith, mountSurface, mountToolbar, italicWing } from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-// 翼の一覧がグリフの知識・コマンド・組み立て器を一緒に作る — それが `registry` です
-const { nabi, registry } = createNabiWith([italicWing])
-
-mountSurface({ nabi, registry, root: surface })
-mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#toolbar')! })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-## デモ
-
-<WingDemo path="/wing/inline/italic" />
-
-<script setup lang="ts">
-import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
-</script>
+</div>

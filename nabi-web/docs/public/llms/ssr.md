@@ -1,142 +1,127 @@
 # SSR and hydration
 
-## The `nabi-note/ssr` entry point
+Use `nabi-note/ssr` when the process must not import browser surface or UI code.
 
-Everything needed to turn a stored NABI TREE into HTML on a server, and nothing else - no
-caret, no toolbar, no floating boxes. A boundary test enforces that this entry never imports
-`surface` or `ui` code, so a server bundle can never accidentally carry DOM-only code. Measured
-against the main entry (2026-08-19): 112 files / 18,453 lines vs. **74 files / 11,750 lines** -
-the 38 dropped files are all `ui` (24) and `surface` (13), code a server never calls.
+## SSR exports
 
-It works in the browser too - a read-only page (a comment list, say) that renders stored content
-without mounting an editor uses the exact same door.
+The entry exports:
+
+- `makeRegistry`, `renderStoredHtml`, `renderStoredEditorHtml`;
+- `renderToolbarHtml`, `renderViewToolsHtml`, `toolbarSlots`, `TOOLBAR_GROUPS`;
+- `defaultWings`, `extraWings`, `wingNames`, `wings`;
+- lower-level `renderHtml`, `renderEditorHtml`, and `safeUrl`;
+- NABI TREE types and `P`, `BR`, `isElement`, `isText`;
+- locale helpers needed by rendering.
+
+It does not export `createNabiWith`, `mountSurface`, UI mounts, viewer behavior, or diff UI.
+
+## Render stored content
 
 ```ts
 import {
-  makeRegistry, renderStoredHtml, renderStoredEditorHtml,
-  renderToolbarHtml, renderViewToolsHtml, toolbarSlots, TOOLBAR_GROUPS,
-  defaultWings, extraWings, wingNames, wings,
-  renderHtml, renderEditorHtml, safeUrl,
-  isElement, isText, BR, P,
-  LOCALES, RTL_LOCALES, localeDirection, localeOf, translate,
-} from 'nabi-note/ssr'
+  makeRegistry,
+  renderStoredHtml,
+  wings,
+} from 'nabi-note/ssr';
+
+const registry = makeRegistry(wings().allBasic().build());
+const html = renderStoredHtml(storedJson, registry);
+
+if (html === null) {
+  // Invalid document input.
+}
 ```
 
-Not here: `createNabiWith`, `mountSurface`, any `mount*`, `openPreview` - assembling an actual
-editor is screen work and lives in the main `nabi-note` entry.
+`renderStoredHtml()` accepts user JSON, validates and normalizes it, and returns published HTML or `null`. It is the detached equivalent of `nabi.getHtml()`.
 
-## Rendering a stored document with no editor
+`renderStoredEditorHtml()` returns hydratable editor HTML or `null`. It is the detached equivalent of `nabi.getEditorHtml()` and is not a storage format.
+
+The options type is `{ allowLocalUrls?: boolean }`. Keep local URLs disabled for durable published content unless the consuming environment can resolve them and the security tradeoff is intended.
+
+## Hydrate an editor
+
+Server:
 
 ```ts
-import { makeRegistry, defaultWings, renderStoredHtml, renderStoredEditorHtml } from 'nabi-note/ssr'
-
-// Once, at server startup - shared across however many stored documents you render
-const registry = makeRegistry(defaultWings)
-
-const saved = [{ w: 'p', ch: ['One comment line'] }]  // a NABI TREE read from a database
-
-renderStoredHtml(saved, registry)        // '<p>One comment line</p>'
-renderStoredEditorHtml(saved, registry)  // '<p data-key="n0">One comment line</p>'
+const initialEditorHtml = renderStoredEditorHtml(storedJson, registry);
 ```
 
-| | |
-|---|---|
-| `renderStoredHtml(json, registry, options?)` | The HTML you store/publish - identical to `getHtml()` |
-| `renderStoredEditorHtml(json, registry, options?)` | Editor HTML - identical to `getEditorHtml()` (carries `data-key` and display-only wrappers) |
-
-- **Neither touches the DOM** - both run as-is on a server.
-- **Not a NABI TREE means `null`** - the same rejection rule as `setJson()` (the whole document
-  must be an array of blocks). Neither throws - a value that throws mid-read also answers `null`,
-  reported through `console.error`.
-- **Byte-identical to what an editor produces** - both pass through the same normalize-then-build
-  steps as `getHtml()`/`getEditorHtml()`, so XSS filtering is exactly as strict on the reading
-  side as on the editing side.
-- `options` is just `{ allowLocalUrls }`, the same meaning as `createNabiWith`'s option of the
-  same name.
-
-## Hydrating a server-rendered editor
-
-The same stored document always gets the same `data-key`s, because they come from a deterministic
-id assignment. That means a server can pre-render the editor's own markup and the browser can
-adopt it instead of redrawing:
+Browser:
 
 ```ts
-mountSurface({ nabi, registry, root: surface, hydrate: true })
+import {
+  createNabiWith,
+  mountSurface,
+  parseNodes,
+  wings,
+} from 'nabi-note';
+
+const selected = wings().allBasic();
+const { nabi, registry } = createNabiWith(selected, {
+  doc: storedJson,
+  parseHtml: parseNodes,
+});
+
+const surface = mountSurface({
+  nabi,
+  registry,
+  root: content,
+  hydrate: true,
+});
 ```
 
-A mismatch redraws just that spot, so the only requirement is that server and client use the
-same wing list. This is exactly what this project's own homepage does: the demo document is
-rendered with `renderStoredEditorHtml` at build time and embedded in the page; the editor wakes
-up on top of it with `hydrate`, so text is already legible before the editor's JavaScript has
-even arrived.
+Requirements:
 
-## Pre-rendering the toolbar
+- The server and browser use the same ordered wing declarations and options that affect HTML.
+- Both start from the same normalized document.
+- The server output is inserted unchanged as the content root's direct children.
+- The root itself does not include `contenteditable`; the browser mount owns it.
+- The matching CSS is present before first paint.
 
-The button row does not look at the document - only at the registered wings, the locale, and a
-fixed group order - so its output is a constant. Render it once at server startup and reuse the
-string for every request:
+Internal IDs are deterministic for the same normalized input. Hydration adopts server DOM when the direct child `data-key` sequence matches the current document. If it does not match, the surface replaces the content with fresh editor HTML. Hydration is an optimization, not a way to preserve arbitrary host DOM.
+
+## Pre-render toolbar markup
 
 ```ts
-import { makeRegistry, defaultWings, renderToolbarHtml } from 'nabi-note/ssr'
+import {
+  makeRegistry,
+  renderToolbarHtml,
+  renderViewToolsHtml,
+  wings,
+} from 'nabi-note/ssr';
 
-const registry = makeRegistry(defaultWings)
-const toolbarHtml = renderToolbarHtml({ registry, locale: 'en' })
-// '<div class="nabi-group" data-group="font">...</div>'
+const registry = makeRegistry(wings().allBasic().build());
+
+const toolbarHtml = renderToolbarHtml({
+  registry,
+  locale: 'en',
+});
+
+const viewToolsHtml = renderViewToolsHtml({ locale: 'en' });
 ```
 
-Send that string inside the toolbar container. In the browser, `mountToolbar` calls **the same
-function** - if a matching row is already standing, it only wires up behavior instead of
-redrawing:
+In the browser, mount the matching UI on those roots. `mountToolbar()` compares button names and localized labels. If the structure matches, it wires the existing buttons. If not, it removes only direct pre-rendered wing groups and renders the correct structure.
 
-```ts
-mountToolbar({ nabi, registry, surface, root: toolbar })
+The matching inputs are:
+
+- the registry and wing order;
+- locale or translator;
+- toolbar group order.
+
+Pre-rendering avoids an empty toolbar before JavaScript, but the browser remains authoritative.
+
+## Lower-level rendering
+
+`renderHtml(doc, options)` and `renderEditorHtml(doc, options)` expect an already normalized internal `NabiDoc` and a matching schema environment/builders. Most hosts should use the stored renderers, which validate unknown input first.
+
+## CSS on SSR pages
+
+Link the built package CSS:
+
+```html
+<link rel="stylesheet" href="/assets/nabi.css">
 ```
 
-Rules to keep this safe:
+Runtime `injectSheets()` requires a `Document` and is not the server path. If a build system extracts CSS, use `nabi-note/nabi.css` as the source.
 
-- **Put `class="nabi-toolbar-row"` on the container in the pre-rendered markup itself.** Without
-  it, the core adds the class on mount, and the margin that arrives with it shifts the button row
-  sideways once. Pre-declare it and the core leaves it alone (it only ever removes what it itself
-  added).
-- **Never breaks** - if the standing row does not match the current wing list, it is redrawn on
-  the spot. The only cost is losing the pre-rendered value; the screen is always correct.
-- **The pre-rendered row is in a neutral state** - nothing pressed, nothing hidden. Pressed state
-  (`aria-pressed`) and caret-driven hiding are decided by the caret, which the server does not
-  know about. If your layout hides buttons based on caret position, expect a few to disappear and
-  the row to reflow right after mount.
-- **Only send this on pages that mount an editor.** A read-only page has no toolbar and no reason
-  to receive this markup.
-
-The preview/fullscreen pair works the same way - those two buttons are chrome, not wings, so they
-are not part of the toolbar markup above and render separately into whatever container
-`mountViewTools` will use:
-
-```ts
-import { renderViewToolsHtml } from 'nabi-note/ssr'
-
-renderViewToolsHtml({ locale: 'en' })
-// '<span class="nabi-tools">...</span>'
-```
-
-## Lower-level: rendering an already-parsed tree
-
-`renderHtml`/`renderEditorHtml` sit one step below `renderStoredHtml`/`renderStoredEditorHtml` -
-for code that already holds the internal tree (tests, custom assembly) rather than raw external
-JSON. Prefer the `renderStored*` pair for anything that receives untrusted/external input, since
-that pair also normalizes and validates it. All four renderers preserve runs of two or more ASCII
-spaces in text with alternating `&nbsp;` and plain spaces. They also protect the last space at a
-text-container boundary with `&nbsp;`. Attribute values are not rewritten.
-
-Editor HTML has screen-only structure in addition to `data-key`. A drop-cap paragraph wraps its
-first grapheme in `[data-nabi-dropcap-letter]`, so the live editor can paint the same drop cap with
-a real element instead of the caret-unsafe `::first-letter` pseudo-element. `renderHtml` never emits
-that span, and clipboard output removes it. Do not store editor HTML.
-
-## See also
-
-- `llms/overview.md` - the four-layer runtime model and why the registry/stylesheet layers are
-  cheap to share across many rendered documents
-- `llms/quickstart-npm.md` - `mountSurface({ hydrate: true })` in the context of a full assembly
-- `llms/quickstart-cdn.md` - the same `renderStoredHtml` call under a CDN script tag
-- `llms/styling.md` - loading the stylesheet on a server-rendered page (must be the file/import
-  path, not runtime injection, or the page flashes unstyled)
+Published viewer behavior is separate. After hydration or on a read-only page, import `nabi-note/viewer` only when sorting or code paint is required.

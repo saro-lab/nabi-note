@@ -1,72 +1,14 @@
 ---
-title: مسح التنسيق
+title: Translation pending
+description: Korean documentation is being reviewed before translation.
 ---
 
-# مسح التنسيق
+<div class="translation-shell">
 
-## الوصف
+# Translation pending
 
-`clearFormatWing` **ثابت جاهز.** يكفي وضعه في المصفوفة — لا خيارات تُمرَّر.
+The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
 
-بما أن `place: 'tool'` فهو لا يُقيم عقدته الخاصة في المستند. كل ما فيه أمر واحد
-(`clearFormat`) وزر واحد في شريط الأدوات.
+[Open the Korean canonical page](/ko/guide/features)
 
-- **القائمة التي يمسحها مثبَّتة في النواة.** إحدى عشرة علامة سطرية (`b`·`i`·`u`·
-  `s`·`sub`·`sup`·`hl`·`tc`·`fs`·`tf`·`a`) وثلاث خصائص فقرة (`h` العنوان ·
-  `a` المحاذاة · `dc` الحرف الاستهلالي). لا حاجة للمضيف لإدارة هذه القائمة، وعلامات
-  أي جناح تصنعه بنفسك **لا تُمسَح من هنا.**
-- **الضغط عليه بعد تحديد نطاق** ينزع دفعة واحدة علامات ذلك المقطع وخصائص الفقرات
-  التي يطالها.
-- **مع المؤشر وحده ينزع طبقة واحدة في كل ضغطة** — من **أعمق علامة** في مكان
-  المؤشر، بمقدار امتداد تلك العلامة. فإن لم تبقَ علامة يُنزَع منها ينتقل عندها
-  إلى خصائص الفقرة.
-- **لا يُنزَع رابط المرفق** — الرابط (`a`) الذي يحمل الخاصية `file` محصَّن في كل
-  مكان. لأن تجريد غلافه يحوّل المرفق إلى نص عادي ميت.
-- **تبقى محاذاة الفقرة الحاضنة لجسم كما هي.** في الفقرة الحاضنة لصورة أو جدول
-  لا تُمسَح المحاذاة (`a`) وحدها — فذلك يمنع أن تقفز الصورة إلى اليسار أثناء مسح
-  التنسيق.
-- إن لم يكن هناك ما يُمسَح يجيب الأمر بـ`null`. لا تتراكم نقطة تراجع.
-
-## <kbd>Esc</kbd> مرتين
-
-بجانب زر شريط الأدوات هناك **طريق واحد عبر لوحة المفاتيح** — الضغط على
-<kbd>Esc</kbd> مرتين متتاليتين. لا تلميح بحرف واحد ولا مسرِّع `⌘` يقدر على حمل
-هذه الإيماءة، فذهبت إلى تصريح الضغط المزدوج (`doubleKeys`).
-
-- **يفعل تمامًا ما يفعله الضغط على الزر.** مع نطاق محدَّد يُمسَح ذلك المقطع؛
-  **ومع المؤشر وحده** طبقة واحدة في ذلك الموضع — الأمر يعرف مسبقًا ما يُمسَح،
-  فلا يتفرّع الجانب الخاص بالمفتاح على حالة المؤشر.
-- **يُفعَّل عند الضغطة الثانية بالضبط.** أربع ضغطات لا تزال تفعيلًا واحدًا، وإن
-  مرّت أكثر من 350ms بين ضغطتين تبدأ العدّة من جديد. الضغطات المتكررة من إبقاء
-  المفتاح مضغوطًا (`repeat`) وضغطات أثناء تركيب الحروف (IME) لا تُحسَب.
-- **أولويته الأدنى.** يأتي دوره فقط بعد أن يمر كل عمل آخر كان لـ<kbd>Esc</kbd>
-  (إلغاء حجز، الخروج من علامة) — اضغط <kbd>Esc</kbd> في منتصف تظليل فتحجز
-  الضغطة الأولى الخروج من العلامة، وتصل الثانية رغم ذلك إلى مسح التنسيق.
-- **خمسة أماكن فقط لا يعمل فيها** — لوحة مفتوحة، غطاء، ملء الشاشة، شارات
-  التلميح، وقفل الرفع.
-- تلميح الزر يقول ذلك — **"مسح التنسيق (Esc Esc)"**، بنفس نمط شارات Shift.
-
-## مثال الاستخدام
-
-```ts
-import { createNabiWith, mountSurface, mountToolbar, clearFormatWing } from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-// قائمة الأجنحة تبني معًا معرفة الأصناف والأوامر والمُجمِّع — وهذا هو `registry`
-const { nabi, registry } = createNabiWith([clearFormatWing])
-
-mountSurface({ nabi, registry, root: surface })
-mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#toolbar')! })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-## عرض توضيحي
-
-<WingDemo path="/wing/etc/clear-format" />
-
-<script setup lang="ts">
-import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
-</script>
+</div>

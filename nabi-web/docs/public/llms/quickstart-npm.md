@@ -1,18 +1,19 @@
-# Quickstart - npm
+# npm quickstart
+
+## Install
 
 ```sh
-npm i nabi-note
+npm install nabi-note
 ```
 
-## Minimal setup
+NABI NOTE declares zero runtime dependencies. The package declares Node.js 20 or newer and a browser baseline of Chrome/Edge 120, Firefox 120, and Safari 17.
+
+## Minimal editor
 
 ```html
-<div id="app" class="nabi">
-  <div id="chrome" class="nabi-toolbar">
-    <div id="toolbar"></div>
-    <div id="context"></div>
-  </div>
-  <div id="editor" class="nabi-content" contenteditable="true"></div>
+<div id="editor" class="nabi">
+  <div id="toolbar" class="nabi-toolbar"></div>
+  <div id="content" class="nabi-content"></div>
 </div>
 ```
 
@@ -21,330 +22,182 @@ import {
   createNabiWith,
   mountSurface,
   mountToolbar,
+  parseNodes,
+  wings,
+} from 'nabi-note';
+import 'nabi-note/nabi.css';
+
+const root = document.querySelector<HTMLElement>('#editor')!;
+const content = document.querySelector<HTMLElement>('#content')!;
+const toolbarRoot = document.querySelector<HTMLElement>('#toolbar')!;
+
+const { nabi, registry } = createNabiWith(wings().allBasic(), {
+  parseHtml: parseNodes,
+  locale: 'en',
+});
+
+const surface = mountSurface({ nabi, registry, root: content, locale: 'en' });
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  locale: 'en',
+});
+
+// Later:
+// toolbar.unmount();
+// surface.unmount();
+```
+
+Do not set `contenteditable` yourself. `mountSurface()` sets it and adds `.nabi-editing`. The host supplies `.nabi`, `.nabi-toolbar`, and `.nabi-content` placement classes.
+
+`parseHtml` is required for nonblank `setHtml()`. `parseNodes` is the browser adapter. It uses `DOMParser`.
+
+## Choosing wings
+
+```ts
+import { boldWing, createNabiWith, imageWing, wings } from 'nabi-note';
+
+createNabiWith([boldWing, imageWing]);
+createNabiWith(wings().all());
+createNabiWith(wings().allBasic().use('save').use('open'));
+createNabiWith(wings().all().drop('upload').use('fs', { values: ['sm', 'lg'] }));
+```
+
+- `all()` includes all 30 official wings.
+- `allBasic()` includes 26 and omits `upload`, `save`, `open`, and `diff`, which need host wiring.
+- A direct array is the tree-shakable route for a small set.
+- `use('upload')` pulls its first available dependency, `img`, if neither `img` nor `a` is present.
+- `drop()` refuses to break a dependency and never cascades.
+- The builder validates unknown names, unknown option keys, option shapes, and custom names immediately.
+
+See `wings.md` for the catalog.
+
+## Read and write
+
+```ts
+const json = nabi.getJson();
+const html = nabi.getHtml();
+
+nabi.setJson(json);
+nabi.setHtml(html);
+
+const stop = nabi.onChange((change) => {
+  if (change.doc) console.log(nabi.getJson());
+});
+stop();
+```
+
+Blank `null`, `undefined`, whitespace, or an empty array loads a valid empty document. Invalid nonblank input returns `false` and leaves the current document unchanged. Successful `setJson()` and `setHtml()` establish a clean saved baseline and can be undone.
+
+Store JSON or published HTML. Never store `getEditorHtml()`.
+
+## Recommended UI composition
+
+```ts
+import {
   mountContextToolbar,
   mountHints,
-  mountViewTools,
+  mountPickedMark,
   mountSticky,
-  watchSettle,
-  parseNodes,
-  boldWing,
-  italicWing,
-} from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const app = document.querySelector<HTMLElement>('#app')!
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-// The wing array builds the type knowledge, commands, and assembler together - that bundle is `registry`.
-const { nabi, registry } = createNabiWith([boldWing, italicWing], {
-  parseHtml: parseNodes, // required for setHtml() - see "Writing documents" below
-})
-
-mountSurface({ nabi, registry, root: surface })
-
-const settle = watchSettle(document, { surface })
-const shared = { nabi, registry, surface, settle, locale: 'en' }
-
-const toolbar = mountToolbar({ ...shared, root: document.querySelector<HTMLElement>('#toolbar')! })
-const context = mountContextToolbar({ ...shared, root: document.querySelector<HTMLElement>('#context')! })
-
-mountHints({ toolbar, context, root: document.querySelector<HTMLElement>('#chrome')!, surface })
-mountViewTools({ nabi, surface, root: app, container: document.querySelector<HTMLElement>('#toolbar')!, locale: 'en' })
-mountSticky({ root: app, surface })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-The host only builds the container elements; layout classes (`.nabi-toolbar-row`, `.nabi-context`,
-etc.) and the floating tools box are attached by the mounts themselves. Only three classes matter
-on the host markup:
-
-- `.nabi` - holds the color/shape CSS tokens and is the box fullscreen pins; toolbar and editor
-  area must both live inside it.
-- `.nabi-toolbar` - wraps the toolbar row and context row into one sticky unit (if they stick
-  separately, the context row popping in/out shifts the page).
-- `.nabi-content[contenteditable]` - the editable area itself.
-
-The stylesheet is not injected automatically - `import 'nabi-note/nabi.css'` (bundler) or
-`injectSheets(document, collectSheets(registry))` (only the registered wings' sheets). A page
-that server-renders the document should use the file/import path, not injection - injection only
-attaches once the editor's JavaScript has arrived, so the document would flash unstyled first.
-See `llms/styling.md`.
-
-## Locale and text direction
-
-`locale: 'ar'` or `'ur'` on `mountSurface`/`mountToolbar` sets `dir="rtl"` on that mount's root -
-even if the page's own `<html>` says nothing about direction. Omit `locale` and direction is left
-alone entirely (a host already controlling direction is never overridden). `localeDirection(code)`
-answers `'ltr' | 'rtl'` for a given code; `RTL_LOCALES` lists which of the codes are RTL.
-
-```ts
-mountSurface({ nabi, registry, root: surface, locale: 'ar' })  // edit area mirrors to RTL
-mountToolbar({ nabi, registry, surface, root: toolbarEl, locale: 'ar' })  // toolbar mirrors too
-```
-
-Passing `locale` to `mountToolbar` also binds it to the editor (`nabi.$bindLocale`), so core
-messages (toast text, etc.) speak the same language even without a UI string change elsewhere.
-Without a toolbar, pass `locale` directly to `createNabiWith`'s options instead.
-
-### Placeholder
-
-An empty editor shows a dimmed hint on its first line while it is not focused. The hint disappears
-as soon as the editing surface receives focus. This lets Android IMEs attach to a real empty text
-slot without generated placeholder content interfering with the first composed character. The
-word comes from the core dictionary in the mount's language, so nothing has to be wired for it to
-appear. It sits at the line start for the text direction (left in LTR, right in RTL) and does not
-follow the line's own alignment.
-
-```ts
-mountSurface({ nabi, registry, root: surface, placeholder: 'Write your notes here' })
-mountSurface({ nabi, registry, root: surface, placeholder: 'First line\nSecond line' })
-mountSurface({ nabi, registry, root: surface, placeholder: '' })  // no hint at all
-```
-
-A newline (`\n`) in the option becomes a line break. The hint is positioned out of the flow so
-that it never pushes the caret. The editing surface already carries a minimum height of
-`12.5rem`, raised or lowered through `--nabi-content-min-height`; only `.nabi-editing` gets it,
-since a published or previewed `.nabi-content` is as tall as its text.
-
-The stylesheet reads the word from the `--nabi-placeholder` custom property on the editing root
-and draws it with
-`.nabi-content.nabi-editing:not(:focus):has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before`,
-so its color or style can be restyled from the host CSS. Note where that `::before` sits: **the
-hint is a separate layer on the editing root, not something inside the first block**, so a
-document's own formatting - heading level, alignment, drop cap - never reaches it. Its color is
-`--nabi-placeholder-color` (see `llms/styling.md`).
-
-### Form fields on touch devices
-
-On a coarse pointer (or under 40rem wide) the core's own input boxes (`.nabi-input`: link URL,
-save name, prompt) take `font-size: var(--nabi-touch-font-size, 16px)`. **iOS Safari zooms the
-whole page when the caret enters a form field smaller than 16px**, and once the page is zoomed
-every rect the editor measures is off, which also throws off the mobile keyboard correction.
-
-The fix here is to grow the text, not to forbid zooming: **do not set `user-scalable=no` or
-`maximum-scale=1`** on the page's viewport meta. Beyond taking away a reader's right to zoom, it
-makes the core's floor value meaningless. Mouse screens are not changed by one pixel.
-
-## Mounts
-
-| Mount | Required | Does |
-|---|---|---|
-| `createNabiWith(wings, options?)` | yes | Returns `{ nabi, registry }`. No DOM needed. Accepts a plain wing array or the picker builder (`wings()`, see `llms/quickstart-cdn.md`) |
-| `mountSurface({ nabi, registry, root })` | yes | Wires caret/IME/input to the document tree; it keeps the live DOM authoritative and emits no tree change at composition start, so do not replace the root or its active text nodes directly mid-composition; also attaches every registered wing's `attach` |
-| `mountToolbar({ nabi, registry, root, surface?, locale?, file? })` | no | Main toolbar. Without it, editing still works via `nabi.applyCommand()`. `surface` is also **the ground the accelerators are heard on** - two editors on one page must both be given it, or they eat each other's Cmd+S. `file` takes the `FileMount` and stands the save panel up with no further wiring |
-| `mountContextToolbar({ nabi, registry, root, surface? })` | no | Caret-position context row (table row/column, code language, link address, etc.) |
-| `mountHints({ toolbar, context?, root, surface? })` | no | Shortcut badges shown on a fast double-tap of Shift |
-| `mountViewTools({ nabi, surface, root, container, onBody? })` | no | Preview and fullscreen buttons. `root` is the `.nabi` box fullscreen pins; `onBody` attaches viewer-side JS to the preview body (see below) |
-| `mountSticky({ root, surface, nabi? })` | no | Undoes the toolbar's sticky offset by however much a mobile keyboard has pushed the viewport. Pass `nabi` and it also aims by itself after an edit, pushing the caret out from under the toolbar; leave it out and behavior is unchanged. See `llms/api-reference.md` for the full mobile-keyboard rules |
-| `mountPickedMark({ nabi, surface })` | no | Selected-image/video highlight (browsers do not draw this on their own) |
-| `mountFile({ nabi, registry, store, parse?, name? })` | for `save`/`open` wings, or any host that wants the door | `registry` is **required**. Handles **three** save formats (`.nabi`, `.nhtml`, `.md`) and **four** open ones (those three plus `.html`). `parse` is optional in a browser - it falls back to `parseNodes` - and required only headless. Returns a `FileMount`, **the canonical programmatic door**: `save(name?)`, `saveAs(id, name?)`, `formats()`, `await open()` |
-| `mountLocalHistory({ nabi, storage })` | only with `localHistory` wing | Periodic snapshot to the browser. Still mount it when `storage` is `null` (e.g. blocked on `file://`) so the button can toast why it is disabled |
-| `mountUpload({ ... })` + `mountUploadView({ ... })` | only with `upload` wing | Upload progress for drop/paste/file-picker, and its display. **A paste carrying any text at all (`text/html` or `text/plain`) never reaches `fileSink`** - to paste only the image, copy only the image (a spreadsheet is where this bites) |
-
-Image selection highlighting, checkbox toggling, table-cell drag, and code coloring need no
-separate mount - every one of those is a wing's `attach`, wired in automatically by
-`mountSurface`. Code coloring only needs a highlighter plugged in (`makeCodeAttach`, see
-`llms/wings.md`).
-
-Swapping which wings are registered means unmounting everything (`unmount()`) and building fresh
-- markup owned by a dropped wing falls back to plain text at that point.
-
-## Reading documents
-
-```ts
-nabi.getHtml()        // Output HTML - what you store or publish
-nabi.getJson()        // NABI TREE (JSON)
-nabi.getEditorHtml()  // Current editor-screen HTML (data-key and display-only wrappers) - not for storage
-```
-
-Store one of the first two. `getJson()` returns an array of blocks with no wrapping root node:
-
-```json
-[
-  {"w":"p","a":{"h":2},"ch":["Title"]},
-  {"w":"p","ch":["Text ",{"w":"b","ch":["bold"]}," and ",
-    {"w":"a","a":{"href":"https://nabi.saro.me/"},"ch":["a link"]}]}
-]
-```
-
-Reading rules (four, no more):
-
-- `w` is the id of the wing that draws the node. The only reserved ids are `p` (paragraph) and
-  `br` (line break); everything else is a registered wing's id. A heading is not its own wing -
-  it is a paragraph attribute (`{"w":"p","a":{"h":2}}`).
-- A string is text; an object is a wing node. There is no separate "kind" field.
-- `a` is the wing's own value payload (a link's href, a highlight's color, a heading's level). No
-  value, no `a` key.
-- Anything occupying a paragraph's slot (tables, lists, images) is wrapped in one paragraph node
-  (see `ul` above) - that paragraph carries alignment and gives the caret a place to sit before
-  and after the object. It emits as `<div data-nabi-p>` because `<p>` cannot legally contain a
-  table or list.
-
-The live in-memory tree also carries an internal `_id` per node (a caret address) that is
-stripped on the way out; feed the exported JSON straight back into `setJson()`.
-
-## Writing documents
-
-```ts
-createNabiWith(wings, { doc })                  // start from an existing NABI TREE
-nabi.setJson(json)                              // swap the whole document for this tree
-nabi.setHtml(html)                              // swap the whole document for this HTML string
-nabi.applyCommand('setHeading', { value: 2 })   // an edit command (the same door wings use)
-```
-
-All four return a `boolean` and never throw; on failure the document is untouched.
-
-| Returns `false` when |
-|---|
-| `setJson` - value is not a valid NABI TREE |
-| `setHtml` - no `parseHtml` adapter was given (below), or editing is locked |
-| `applyCommand` - no such command, or **nothing would change** |
-
-**The empty document has exactly one shape: `[{"w":"p","ch":[]}]`.** Deleting everything (select
-all, then Backspace) leaves that, not a paragraph that keeps the first block's heading or
-alignment - so a wiped editor always starts plain. Emptying just one paragraph out of several
-keeps that paragraph's own attributes, since the caret stays there to rewrite the line.
-
-**A blank value is not a format error - it is the empty document.** `null`, `undefined`, an
-empty or whitespace-only string, and an empty array all load the blank editor and return
-`true`, on both `setJson` and `setHtml`, so clearing the editor always succeeds. A blank value
-needs no `parseHtml` adapter either: there is nothing to read. Values of the wrong shape are
-still rejected - blank and malformed are different things.
-
-That last row is a rule: applying `setHeading` to a paragraph that is already heading level 2
-returns `false` and leaves no undo point - a no-op edit is silent.
-
-`applyCommand`'s third argument is the calling hand: `applyCommand(name, args?, by?)`, where `by`
-is `'keyboard' | 'pointer'` (type `CommandHand`), defaulting to keyboard. It matters for a mark
-command with a collapsed caret: keyboard queues the mark for the next typed character; pointer
-returns `false` and toasts "nothing to apply to" instead. Building custom UI that calls commands
-from a click handler should pass `'pointer'`.
-
-`setHtml` needs a browser adapter, since the core does not know the DOM:
-
-```ts
-import { createNabiWith, parseNodes } from 'nabi-note'
-
-const { nabi } = createNabiWith(wings, { parseHtml: parseNodes })
-```
-
-`setJson` needs no adapter - a stored JSON tree can be fed in directly even on a server
-(Node.js), and `getHtml()` needs no DOM either, so reading JSON and emitting HTML server-side
-works out of the box (see `llms/ssr.md`).
-
-## Notifications (toast)
-
-Upload errors, local-history messages, "nothing to apply to" - all of it goes through one path.
-The default container is built into the core; nothing needs to be wired for it to appear (pinned
-below the toolbar once one is mounted).
-
-- Three levels: `'info' | 'warn' | 'error'` - how alarmed the reader should be, not
-  success/failure.
-- Default 1s lifetime (fades from the last 0.5s), dismissible by click. Up to 3 shown at once by
-  default; over that, the one with the least time left is dropped first.
-
-```ts
-const { nabi } = createNabiWith(wings, {
-  toastMs: 2000,   // lifetime, default 1000ms (a caller can also override per call)
-  toastMax: 5,     // concurrent cap, default 3
-  // A host with its own notification system replaces the display only - the core's own
-  // container is never drawn:
-  // toast: (level, message, ms) => user_callback(level, message),
-})
-```
-
-Wings speak through the same door: `nabi.$toast(level, message, ms?)`.
-
-## Asking the user
-
-```ts
-const { nabi } = createNabiWith(wings, {
-  ask: {
-    message: (text) => window.alert(text),
-    confirm: (text) => window.confirm(text),
-  },
-})
-```
-
-| Slot | Shape |
-|---|---|
-| `message` | `(text: string) => void` - one statement, no answer expected |
-| `confirm` | `(text: string) => boolean \| Promise<boolean>` - sync or async |
-| `choose` | `(question: string, options: readonly ChooseOption[]) => number \| Promise<number>` - one of several. The answer is a **position index**; `-1` and out-of-range mean cancel. `ChooseOption` is `{ label, icon? }` |
-
-`choose` is what the paste-candidate panel asks through, and **it usually needs no wiring**:
-`mountToolbar` binds the core's own panel to the editor. Unfilled and unbound, the answer is
-`0` - the first candidate, which is always the most likely reading (see `silentAsk` in
-`llms/api-reference.md`).
-
-The core never reaches for the browser's own dialogs automatically - a host with its own dialog
-system should not have a native gray box interrupt it, and plugin hosts (IntelliJ, VS Code) have
-no `window.confirm` at all. Fill only what you need: an unfilled `message` falls back to a core
-info toast; an unfilled `confirm` answers `false`. A confirm with no host answer means "no" -
-canceling, pressing Escape, or closing the window all mean the same thing, and this is the gate
-for prompts like "discard unsaved changes and open anyway?" - never default that to "yes" just
-because nobody answered. This is per-editor, not global, so two editors on one page can ask
-differently. Wings receive the same door as `nabi.$ask`.
-
-## Editor identity and change tracking
-
-```ts
-nabi.sessionId   // '1755245678901-1x9k3af' - <unix time>-<nonce>, one per instance
-nabi.isChanged() // has the document moved since the last baseline
-```
-
-`sessionId` is created once and never changes - useful as a tag for drafts, logs, or autosave
-keys. Three things redraw the `isChanged()` baseline: loading a whole document
-(`createNabiWith({ doc })`, `setJson()`, `setHtml()`), and reporting a completed save:
-
-```ts
-nabi.$markSaved(savedDoc)   // after a save succeeds - pass the tree that was actually saved
-```
-
-Pass the tree **as of the moment the save started**, not the current tree - characters typed
-while the save was in flight must still count as "changed". Saving to `.nabi` makes
-`isChanged()` false, because that is the original. **Only `.nabi` moves the baseline** -
-`.nhtml` and `.md` are copies, and treating one of them as "saved" would let the window close
-without asking and take the real work with it. Undoing back to the saved state also returns to
-`false` - NABI TREE is immutable and replaced wholesale on every edit, so sameness is known
-immediately, with no diffing or hashing.
-
-```ts
-window.addEventListener('beforeunload', (e) => {
-  if (nabi.isChanged()) e.preventDefault()
-})
-```
-
-## Rendering a preview
-
-A preview is static HTML built from `getHtml()`, so reader-side JavaScript (table sort, code
-color) does not attach on its own. `nabi-note/viewer`'s `attachViewer` wires all of that in one
-call; in a preview it goes through the `onBody` hook:
-
-```ts
-import { attachViewer } from 'nabi-note/viewer'
-
-mountViewTools({
+  mountViewTools,
+} from 'nabi-note';
+import { attachViewer } from 'nabi-note/viewer';
+
+const contextRoot = document.createElement('div');
+toolbarRoot.append(contextRoot);
+
+const context = mountContextToolbar({
+  nabi, registry, root: contextRoot, surface: content, locale: 'en',
+});
+const hints = mountHints({ toolbar, context, root, surface: content });
+const picked = mountPickedMark({ nabi, surface: content });
+const sticky = mountSticky({ root: toolbarRoot, surface: content, nabi });
+const view = mountViewTools({
   nabi,
-  surface,
-  root: app,
-  container: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  root,
+  container: toolbarRoot,
   locale: 'en',
   onBody: (body) => attachViewer(body, { locale: 'en' }),
-})
+});
 ```
 
-Call the same `attachViewer(el, { locale })` on a published page too, so the preview and the
-published result look and behave identically. The built-in code tokenizer needs no dependency; a
-host using something like Shiki passes `{ locale, highlight }` to both `attachViewer` and
-`makeCodeAttach({ highlight })` so editing and reading colorize the same way.
+Pass `surface` to toolbar-like mounts. It scopes keyboard accelerators and focus restoration, which is required when multiple editors share a page.
 
-## See also
+## Files
 
-- `llms/quickstart-cdn.md` - the same assembly with no build step
-- `llms/wings.md` - every built-in wing
-- `llms/custom-wing.md` - building your own
-- `llms/api-reference.md` - full function signatures
-- `llms/ssr.md` - rendering documents with no editor mounted
-- `llms/styling.md` - CSS variables and stylesheet loading
+The built-in file filters save `.nabi`, `.nhtml`, and `.md`. They open those formats plus ordinary `.html`.
+
+```ts
+import {
+  browserFileStore,
+  mountFile,
+  openSavePanel,
+  parseNodes,
+} from 'nabi-note';
+
+const file = mountFile({
+  nabi,
+  registry,
+  store: browserFileStore(document),
+  parse: parseNodes,
+  locale: 'en',
+});
+
+file.save();
+file.saveAs('markdown', 'draft');
+await file.open();
+openSavePanel({ file, surface: content, locale: 'en' });
+```
+
+Only a `.nabi` save moves the saved baseline. `.nhtml` and `.md` are exports. Markdown is marked lossy and falls back to embedded HTML for registered nodes without Markdown syntax.
+
+## Upload wiring
+
+```ts
+import { mountUpload, mountUploadView } from 'nabi-note';
+
+const uploadView = mountUploadView({ nabi, surface: content });
+const upload = mountUpload({
+  nabi,
+  uploader: async ({ file, onProgress, signal }) => {
+    const uri = await sendToServer(file, { onProgress, signal });
+    return { uri };
+  },
+  onStart: uploadView.start,
+  onProgress: uploadView.progress,
+  onSettle: uploadView.settle,
+  onDone: () => uploadView.done(),
+});
+```
+
+The uploader return URI is validated when committed. If local `blob:` or `data:image/...` URIs are required, enable the document import, image wing, and upload wing boundaries separately. See `io-security.md`.
+
+## Local history
+
+```ts
+import { browserHistoryStorage, mountLocalHistory } from 'nabi-note';
+
+const history = mountLocalHistory({
+  nabi,
+  storage: browserHistoryStorage(window),
+});
+```
+
+Defaults: key `nabi-note.history`, limit 20, and at most one automatic snapshot per 3000 ms. Pass `storage: null` when storage is unavailable so UI can report the blocked state.
+
+## Locale
+
+Set the same locale on editor assembly and mounts. Default is `en`. Supported dictionary codes are `ko`, `en`, `ja`, `zh`, `de`, `fr`, `es`, `pt`, `ru`, `ar`, `hi`, `bn`, `ur`, and `id`; `ar` and `ur` are RTL.
+
+## Cleanup
+
+Unmount in reverse ownership order. Every observer, UI mount, surface, upload, file, and history mount owns listeners or registrations.
+
+## More
+
+- Exact signatures: `api-reference.md`
+- IO and URL rules: `io-security.md`
+- SSR and hydration: `ssr.md`

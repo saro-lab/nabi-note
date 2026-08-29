@@ -1,14 +1,10 @@
 import type { MessageKey } from '../locales/index.ts'
 
-// `path` carries no locale prefix — the locale is prepended at render time
-// `path` 에는 로케일 접두사가 없다 — 그릴 때 붙인다
 export interface NavItem {
   readonly path: string
   readonly key: MessageKey
 }
 
-// Wings needed one more level: flattened, twenty rows run together and the grouping disappears
-// 날개에서 한 겹이 더 필요해졌다 — 한 겹으로 눌러 담으면 무엇이 무엇의 갈래인지 안 보인다
 export interface NavBranch {
   readonly key: MessageKey
   readonly items: readonly NavItem[]
@@ -25,24 +21,30 @@ export function isLink(entry: NavEntry): entry is NavItem {
   return 'path' in entry
 }
 
-// The left menu — adding a document means adding a line here
-// 왼쪽 메뉴 — 문서를 늘리면 여기에 추가한다
+// Reader tasks are the primary structure. Detailed wing pages keep their stable URLs, but the
+// guide is the canonical path through an editor lifecycle.
 export const NAV: readonly NavGroup[] = [
   {
-    key: 'menu_intro',
+    key: 'menu_start',
     entries: [
-      { path: '/intro', key: 'menu_intro_index' },
-      // 쓰는 법은 두 갈래다 — npm 으로 무는 길과 <script> 한 줄로 무는 길
-      // Two ways to use it: through npm, or through one <script> tag
-      { path: '/intro/usage', key: 'menu_intro_usage' },
-      { path: '/intro/ssr', key: 'menu_intro_ssr' },
-      { path: '/intro/cdn', key: 'menu_intro_cdn' },
+      { path: '/guide/getting-started', key: 'menu_getting_started' },
+      { path: '/guide/assemble', key: 'menu_assemble' },
+      { path: '/guide/cdn', key: 'menu_cdn' },
       { path: '/intro/vibe-coding', key: 'menu_intro_vibe_coding' },
     ],
   },
   {
-    key: 'menu_wing',
+    key: 'menu_concepts',
     entries: [
+      { path: '/guide/document', key: 'menu_document' },
+      { path: '/guide/input', key: 'menu_input' },
+      { path: '/guide/storage', key: 'menu_storage' },
+    ],
+  },
+  {
+    key: 'menu_features',
+    entries: [
+      { path: '/guide/features', key: 'menu_feature_catalog' },
       {
         key: 'menu_inline',
         items: [
@@ -53,8 +55,6 @@ export const NAV: readonly NavGroup[] = [
           { path: '/wing/inline/superscript', key: 'menu_inline_superscript' },
           { path: '/wing/inline/subscript', key: 'menu_inline_subscript' },
           { path: '/wing/inline/link', key: 'menu_inline_link' },
-          // The two marks that carry a value — you pick a color rather than toggle
-          // 값을 가진 마크 둘 — 켜고 끄는 것이 아니라 색을 고른다
           { path: '/wing/inline/highlight', key: 'menu_inline_highlight' },
           { path: '/wing/inline/text-color', key: 'menu_inline_text_color' },
         ],
@@ -76,8 +76,6 @@ export const NAV: readonly NavGroup[] = [
         ],
       },
       {
-        // Neither inline nor block: attributes that change no tag, the eraser, and upload
-        // 인라인도 블록도 아닌 것들 — 태그를 안 바꾸는 속성, 마크를 벗기는 지우개, 업로드
         key: 'menu_etc',
         items: [
           { path: '/wing/etc/align', key: 'menu_etc_align' },
@@ -88,30 +86,20 @@ export const NAV: readonly NavGroup[] = [
           { path: '/wing/etc/upload', key: 'menu_etc_upload' },
         ],
       },
-      {
-        // Split by which slot you fill; the first row (`/wing/custom`) is the getting-started page
-        // 채우는 칸별로 나눈다 — 첫 줄(`/wing/custom`)이 시작하기 페이지다
-        key: 'menu_wing_custom',
-        items: [
-          { path: '/wing/custom', key: 'menu_custom_start' },
-          { path: '/wing/custom/inline', key: 'menu_custom_inline' },
-          { path: '/wing/custom/block', key: 'menu_custom_block' },
-          { path: '/wing/custom/input', key: 'menu_custom_input' },
-          { path: '/wing/custom/ui', key: 'menu_custom_ui' },
-        ],
-      },
+      { path: '/guide/style', key: 'menu_style_guide' },
+      { path: '/guide/rendering', key: 'menu_rendering' },
     ],
   },
   {
-    // Wings are what you can use; this group is how it looks
-    // 날개가 무엇을 쓸 수 있나라면 이쪽은 어떻게 보이나다
-    key: 'menu_style',
-    entries: [{ path: '/style/custom', key: 'menu_style_custom' }],
+    key: 'menu_extend',
+    entries: [{ path: '/guide/extend', key: 'menu_extend_guide' }],
+  },
+  {
+    key: 'menu_reference',
+    entries: [{ path: '/reference/api', key: 'menu_api' }],
   },
 ]
 
-// Drives prev/next navigation, so the order must match what the menu shows
-// 이전/다음 문서 이동용 — 메뉴에 보이는 순서 그대로 편다
 export const NAV_FLAT: readonly NavItem[] = NAV.flatMap((group) =>
   group.entries.flatMap((entry) => (isLink(entry) ? [entry] : entry.items)),
 )

@@ -1,38 +1,14 @@
 ---
-title: 下線
+title: Translation pending
+description: Korean documentation is being reviewed before translation.
 ---
 
-# 下線
+<div class="translation-shell">
 
-## 説明
+# Translation pending
 
-`underlineWing` は下線書式(`<u>`)を扱うインラインマーク翼です。
+The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
 
-- HTML入力時は `<u>` タグを認識し、HTML出力時も標準の `<u>` タグに変換されます。
-- ヒントモード(Shift を2回連打してから `U`)と加速キー(`Ctrl`/`⌘`+`U`)に対応しています。
-- テキストを選択した状態で実行するとトグルとして動作します。
-- 下線とリンク(`<a>`)は見た目が似ることがありますが、独立した別の翼として動作し、同じテキストに下線とリンクを同時に適用できます。
+[Open the Korean canonical page](/ko/guide/features)
 
-## 使用例
-
-```ts
-import { createNabiWith, mountSurface, mountToolbar, underlineWing } from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-const { nabi, registry } = createNabiWith([underlineWing])
-
-mountSurface({ nabi, registry, root: surface })
-mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#toolbar')! })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-## デモ
-
-<WingDemo path="/wing/inline/underline" />
-
-<script setup lang="ts">
-import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
-</script>
+</div>

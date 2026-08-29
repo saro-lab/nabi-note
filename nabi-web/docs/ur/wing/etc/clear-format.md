@@ -1,73 +1,14 @@
 ---
-title: فارمیٹنگ صاف کرنا
+title: Translation pending
+description: Korean documentation is being reviewed before translation.
 ---
 
-# فارمیٹنگ صاف کرنا
+<div class="translation-shell">
 
-## تفصیل
+# Translation pending
 
-`clearFormatWing` ایک **مکمل بنا ہوا کانسٹنٹ** ہے۔ صف میں رکھ دینا کافی ہے — کوئی
-آپشن نہیں دیا جاتا۔
+The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
 
-`place: 'tool'` ہے، اس لیے یہ دستاویز میں اپنا node کھڑا نہیں کرتی۔ صرف ایک
-command (`clearFormat`) اور ایک ٹول بار بٹن ہی سب کچھ ہے۔
+[Open the Korean canonical page](/ko/guide/features)
 
-- **مٹانے کی فہرست کور میں طے شدہ ہے۔** گیارہ inline mark (`b`·`i`·`u`·`s`·
-  `sub`·`sup`·`hl`·`tc`·`fs`·`tf`·`a`) اور تین پیراگراف کی خاصیات (`h` سرخی ·
-  `a` سیدھ · `dc` ڈراپ کیپ)۔ میزبان کو یہ فہرست سنبھالنے کی ضرورت نہیں، اور
-  خود بنائی wing کے mark **یہاں سے نہیں مٹتے۔**
-- **حد منتخب کر کے دبائیں تو** اس حصے کے mark اور اس میں آنے والے پیراگراف کی
-  خاصیات ایک ساتھ اتر جاتی ہیں۔
-- **صرف کیریٹ ہو تو ایک ایک تہہ اتارتی ہے** — کیریٹ کی جگہ سے **سب سے اندر کے
-  mark** سے شروع، اسی مقدار میں جتنا وہ mark آگے چلتا ہے۔ اترنے کو کوئی mark نہ
-  ہو تو تب پیراگراف کی خاصیت اتارتی ہے۔
-- **attachment لنک نہیں اترتا** — `file` خاصیت رکھنے والا لنک (`a`) ہر جگہ
-  محفوظ ہے۔ اس کا خول اتاریں تو attachment مرا ہوا سادہ متن بن جاتا ہے۔
-- **جسم رکھنے والے پیراگراف کی سیدھ رہتی ہے۔** تصویر یا جدول تھامنے والے
-  wrapper پیراگراف پر صرف سیدھ (`a`) نہیں اترتی — اس سے فارمیٹ مٹاتے ہوئے
-  تصویر بائیں طرف چھلانگ لگانے سے بچ جاتی ہے۔
-- اترنے کو کچھ نہ ہو تو command `null` جواب دیتا ہے۔ undo کا نکتہ نہیں جمتا۔
-
-## <kbd>Esc</kbd> دو بار
-
-ٹول بار بٹن کے علاوہ کی بورڈ سے آنے کا **ایک ہی راستہ** ہے — <kbd>Esc</kbd> کو لگاتار **دو بار**
-دبانا۔ نہ ایک حرف کا hint اور نہ `⌘` accelerator اس اشارے کو تھام سکتا تھا، اس لیے یہ ڈبل ٹیپ
-کے اعلان (`doubleKeys`) کے حوالے کیا گیا۔
-
-- **بٹن دبانے جیسا ہی کام کرتا ہے۔** حد منتخب ہو تو وہ حصہ، **صرف کیریٹ ہو تو** اسی جگہ ایک
-  تہہ — command کو پہلے سے معلوم ہے کیا اتارنا ہے، اس لیے کلید کی طرف کیریٹ کی حالت پر شاخ نہیں
-  بناتی۔
-- **دوسری دبائی پر ہی چلتا ہے، ٹھیک۔** چار بار دبائیں تب بھی ایک ہی بار چلتا ہے، اور دو دبائیوں
-  کے بیچ 350ms سے زیادہ گزرے تو گنتی نئے سرے سے شروع ہوتی ہے۔ کلید دبائے رکھنے سے آنے والی
-  تکرار (`repeat`) اور IME حروف جوڑنے کے دوران کی دبائی نہیں گنی جاتی۔
-- **ترجیح سب سے کم ہے۔** <kbd>Esc</kbd> کا ہر دوسرا کام (reservation واپس لینا، mark سے باہر
-  نکلنا) پہلے گزر جانے کے بعد ہی اس کی باری آتی ہے — ہائی لائٹ کے بیچ <kbd>Esc</kbd> دبائیں تو
-  پہلی دبائی mark escape لگاتی ہے، اور دوسری پھر بھی فارمیٹنگ صاف کرنے تک پہنچتی ہے۔
-- **صرف پانچ جگہیں ایسی ہیں جہاں یہ نہیں چلتا** — کھلا panel، scrim، مکمل سکرین، hint بیج، اور
-  اپ لوڈ لاک۔
-- بٹن کا tooltip یہی بتاتا ہے — **"فارمیٹنگ صاف کریں (Esc Esc)"**، Shift بیج جیسا ہی نمونہ۔
-
-## استعمال کی مثال
-
-```ts
-import { createNabiWith, mountSurface, mountToolbar, clearFormatWing } from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-// wing کی فہرست ایک ساتھ اصناف کی معرفت، command اور جوڑنے والا بناتی ہے — یہی `registry` ہے
-const { nabi, registry } = createNabiWith([clearFormatWing])
-
-mountSurface({ nabi, registry, root: surface })
-mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#toolbar')! })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-## ڈیمو
-
-<WingDemo path="/wing/etc/clear-format" />
-
-<script setup lang="ts">
-import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
-</script>
+</div>

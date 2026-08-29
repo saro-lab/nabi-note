@@ -2,13 +2,44 @@
 // 자기 wing 하나만 켜면 실감이 안 나고, 전부 켜면 그 페이지의 주제가 흐려진다
 // So: self + the immediate menu neighbours, within the same branch only
 // 그래서 자기 자신 + 같은 묶음의 앞뒤 이웃만 켠다 — 인라인 페이지에 표가 딸려 오지 않는다
-import { NAV, isLink, type NavItem } from './nav.ts'
+import type { NavItem } from './nav.ts'
 
-// Neighbours are looked up only inside these branches (inline / block / etc)
-// 이웃은 이 묶음 안에서만 찾는다
-const BRANCHES: readonly (readonly NavItem[])[] = NAV.flatMap((group) =>
-  group.entries.flatMap((entry) => (isLink(entry) ? [] : [entry.items])),
-)
+// The documentation navigation follows reader tasks. Interactive legacy pages still need nearby
+// wings from their own family, so this index stays explicit rather than borrowing the sidebar.
+const BRANCHES: readonly (readonly NavItem[])[] = [
+  [
+    { path: '/wing/inline/bold', key: 'menu_inline_bold' },
+    { path: '/wing/inline/italic', key: 'menu_inline_italic' },
+    { path: '/wing/inline/underline', key: 'menu_inline_underline' },
+    { path: '/wing/inline/strikethrough', key: 'menu_inline_strikethrough' },
+    { path: '/wing/inline/superscript', key: 'menu_inline_superscript' },
+    { path: '/wing/inline/subscript', key: 'menu_inline_subscript' },
+    { path: '/wing/inline/link', key: 'menu_inline_link' },
+    { path: '/wing/inline/highlight', key: 'menu_inline_highlight' },
+    { path: '/wing/inline/text-color', key: 'menu_inline_text_color' },
+  ],
+  [
+    { path: '/wing/block/heading', key: 'menu_block_heading' },
+    { path: '/wing/block/bullet-list', key: 'menu_block_bullet_list' },
+    { path: '/wing/block/ordered-list', key: 'menu_block_ordered_list' },
+    { path: '/wing/block/task-list', key: 'menu_block_task_list' },
+    { path: '/wing/block/table', key: 'menu_block_table' },
+    { path: '/wing/block/image', key: 'menu_block_image' },
+    { path: '/wing/block/youtube', key: 'menu_block_youtube' },
+    { path: '/wing/block/code', key: 'menu_block_code' },
+    { path: '/wing/block/details', key: 'menu_block_details' },
+    { path: '/wing/block/quote', key: 'menu_block_quote' },
+    { path: '/wing/block/divider', key: 'menu_block_divider' },
+  ],
+  [
+    { path: '/wing/etc/align', key: 'menu_etc_align' },
+    { path: '/wing/etc/dropcap', key: 'menu_etc_dropcap' },
+    { path: '/wing/etc/typeface', key: 'menu_etc_typeface' },
+    { path: '/wing/etc/font-size', key: 'menu_etc_font_size' },
+    { path: '/wing/etc/clear-format', key: 'menu_etc_clear_format' },
+    { path: '/wing/etc/upload', key: 'menu_etc_upload' },
+  ],
+]
 
 // The demo toggles wings by id, not by path — ids match the new nabi-note wing constants
 // (e.g. `boldWing.id === 'b'`), not old's namespaced `text-bold`/`block-*`/`attr-*` scheme.

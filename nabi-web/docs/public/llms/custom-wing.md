@@ -1,203 +1,168 @@
-# Building a custom wing
+# Custom wing contract
 
-A wing is one plain object. No subclassing, no separate registration step - putting it in the
-array passed to `createNabiWith` **is** registering it. Built-in wings (bold, table, upload) are
-built from the same 31 slots documented here - there is no shortcut path only the core gets to
-use.
+A wing is a declarative module. It may add a document word, pure commands, HTML/Markdown mapping, import logic, UI declarations, input rules, and one DOM attachment. The registry validates the declaration before an editor is created.
 
-## The shortest wing
+## Small factories
 
-An inline mark the editor understands as `<kbd>`:
+Use the narrowest factory when possible:
 
 ```ts
-import { createNabiWith, mountSurface, simpleMark, type Wing } from 'nabi-note'
-import 'nabi-note/nabi.css'
+const exStrong = simpleMark({
+  w: 'exStrong',
+  toHtml: (_node, children, ctx) => ctx.element('strong', children()),
+});
 
-const kbdWing: Wing = {
-  ...simpleMark({
-    w: 'kbd',                                                       // this wing's name - becomes `w` in storage
-    toHtml: (_node, children, ctx) => ctx.element('kbd', children()),  // outgoing shape
-  }),
-  // claim ownership of incoming <kbd> tags
-  claim: (el, inner) => (el.tag === 'kbd' ? [{ w: 'kbd', ch: inner(false) }] : null),
-}
+const exTone = valueMark({
+  w: 'exTone',
+  key: 'v',
+  values: ['quiet', 'loud'],
+  toHtml: (node, children, ctx) =>
+    ctx.element('span', children(), { 'data-ex-tone': String(node.a?.v ?? '') }),
+});
 
-const surface = document.querySelector<HTMLElement>('#editor')!
-const { nabi, registry } = createNabiWith([kbdWing])
-mountSurface({ nabi, registry, root: surface })
+const exRule = boxObject({
+  w: 'exRule',
+  toHtml: (_node, _children, ctx) => ctx.element('hr', ''),
+});
+
+const exList = listFamily({
+  w: 'exList',
+  item: 'exItem',
+  toHtml: (_node, children, ctx) => ctx.element('ul', children()),
+  itemHtml: (_node, children, ctx) => ctx.element('li', children()),
+});
 ```
 
-`<kbd>` now survives paste, `setHtml()`, save, and reload.
+The factory signatures are listed in `api-reference.md`. They return complete `Wing` values.
 
-```
-Registered:      <p>Press: <kbd>Ctrl</kbd>+<kbd>S</kbd></p>   ->  unchanged
-Not registered:  <p>Press: <kbd>Ctrl</kbd></p>                ->  <p>Press: Ctrl</p>
-```
+## Full shape
 
-`toHtml` and `claim` face opposite directions - outgoing and incoming. Skip `claim` and the wing
-still draws, but a save-then-reload strips the tag right back off, since nothing claims it coming
-back in.
-
-`simpleMark` is the shortcut for a mark with no attribute. A mark that carries a value uses
-`valueMark`; an object uses `boxObject`; a list family uses `listFamily`. Anything else is a
-hand-written `Wing` object.
-
-## Wings are constants
-
-Most built-in wings are already-finished constants - `boldWing`, `headingWing` - just put in an
-array. Only two need an options factory:
+Required fields are `w` and `place`. A node-producing `mark|void|container` wing also needs `toHtml`. A container needs `holds`.
 
 ```ts
-makeImageWing({ allowLocalUrls: true })
-makeUploadWing({ allowLocalUrls: true })
-```
+interface Wing {
+  readonly w: string;
+  readonly place: 'mark' | 'void' | 'container' | 'attr' | 'tool';
 
-To change only how a wing attaches to the DOM (not its whole contract), spread the constant:
+  readonly basic?: boolean;
+  readonly holds?: 'blocks' | 'inline';
+  readonly singleParagraph?: boolean;
+  readonly boolAttrs?: readonly string[];
+  readonly parts?: Readonly<Record<string, StructureDecl>>;
+  readonly allows?: readonly string[];
+  readonly noAlign?: boolean;
+  readonly requiresAnyOf?: readonly string[];
 
-```ts
-const wing = { ...codeWing, attach: makeCodeAttach({ highlight: myHighlighter }) }
-```
+  readonly attrKey?: string;
+  readonly attrValues?: readonly (string | number)[];
+  readonly currentValue?: (node: ElementNode) => string | undefined;
 
-## Registration and order
+  readonly commands?: Readonly<Record<string, Command>>;
+  readonly onKey?: OnKey;
+  readonly escapeKeys?: readonly string[];
+  readonly doubleKeys?: Readonly<Record<string, string>>;
+  readonly inputRules?: readonly InputRule[];
+  readonly attach?: Attach;
 
-```ts
-const { nabi, registry } = createNabiWith([boldWing, italicWing, kbdWing])
-```
+  readonly toHtml?: HtmlBuilder;
+  readonly partHtml?: Readonly<Record<string, HtmlBuilder>>;
+  readonly toMd?: MdBuilder;
+  readonly partMd?: MdBuilders;
+  readonly claim?: (
+    el: ParseElement,
+    inner: (block: boolean) => NabiNode[],
+  ) => NabiNode[] | null;
+  readonly ioFilter?: IoFilter;
+  readonly repair?: (node: ElementNode) => ElementNode | null;
+  readonly partRepair?: Readonly<Record<string, (node: ElementNode) => ElementNode>>;
 
-**Array order is scan order.** When deciding who owns a piece of markup (`claim`), the core asks
-in this order and the first wing to answer wins. If nobody claims it, the markup is stripped back
-to plain text.
-
-In the toolbar, button groups come first (fixed order); within one group, wings sit in this same
-array order.
-
-### A broken contract throws at registration, not later
-
-| Trips on | Example |
-|---|---|
-| Using a reserved word as the name | `w: 'p'` or `w: 'br'` |
-| Registering the same name twice | `boldWing` twice |
-| A node-producing wing with no `toHtml` | `place: 'mark'` but no way to draw it |
-| A command name that breaks the convention | must be verb + object, camelCase (`insertTable`) |
-| A missing dependency | upload requires `img` or `a` to also be registered (`requiresAnyOf`) |
-
-## Commands are pure functions
-
-Every path that changes the document goes through exactly one command. A command knows nothing
-about the DOM or the screen.
-
-```ts
-import { boxObject, insertLump, type Command, type Wing } from 'nabi-note'
-
-const insertStamp: Command = (doc, sel, args, env) => {
-  // args comes from outside - validate it
-  if (typeof args['text'] !== 'string') return null
-  const stamp = { w: 'stamp', a: { t: args['text'] }, ch: [] }
-  const r = insertLump(doc, sel.focus, stamp, env)
-  return { doc: r.doc, selection: { anchor: r.caret, focus: r.caret } }
-}
-
-export const stampWing: Wing = {
-  ...boxObject({
-    w: 'stamp',
-    attrs: { t: (v) => (typeof v === 'string' ? v : null) },
-    toHtml: (node, _children, ctx) =>
-      ctx.element('span', ctx.escape(String(node.a?.['t'] ?? '')), { 'data-nabi-stamp': '' }),
-  }),
-  commands: { insertStamp },
-  button: {
-    group: 'insert',
-    label: { en: 'Stamp' },
-    action: { kind: 'command', command: 'insertStamp', args: { text: 'confirmed' } },
-  },
+  readonly button?: WingButton;
+  readonly buttons?: readonly WingButton[];
+  readonly context?: WingContext;
+  readonly styles?: string;
 }
 ```
 
-| Argument | What it is |
-|---|---|
-| `doc` | The current document (an array of blocks). **Return a new one, do not mutate** |
-| `sel` | Current selection |
-| `args` | Whatever a button or context row passed. **Comes from outside - validate it** |
-| `env` | Type knowledge - what holds what, what is an object node |
+## Structure rules
 
-Return `{ doc, selection }` or **`null`**. Return `null` when nothing changes, so
-`applyCommand` returns `false` and no undo point is pushed. The returned document is passed
-through `cocoon` once more for cleanup, so no command can leave a rule-breaking document behind.
+- `mark`: inline wrapper around text/content.
+- `void`: block object with no children.
+- `container`: block object; declare `holds: 'blocks'|'inline'`.
+- `attr`: changes a paragraph attribute; current core keys are only `h`, `a`, and `dc`.
+- `tool`: creates no document node.
+- `parts` belongs only to a container. Every part needs a matching `partHtml`.
+- `singleParagraph` makes Enter insert a line rather than split structure.
+- `boolAttrs` retain numeric `1` only.
+- `allows` names the only child types. Disallowed wrappers are peeled while recoverable text remains.
+- `noAlign` is valid only on `void` or `container` objects.
+- `requiresAnyOf` requires at least one named wing at registration.
 
-Callers always use the name:
+Names become durable document vocabulary. Custom names passed through `wings().use(customWing)` must match `ex[A-Z0-9]...`, for example `exNote`. This prevents a future official word from reinterpreting stored content. Apply the same namespace discipline to custom part and attribute names.
+
+## Pure commands
 
 ```ts
-nabi.applyCommand('insertStamp', { text: 'confirmed' })   // boolean
+const setFlag: Command = (doc, selection, args, env) => {
+  if (args.enabled !== true && args.enabled !== false) return null;
+  return {
+    doc: nextDoc,
+    selection: nextSelection,
+  };
+};
 ```
 
-## Every slot (31 total, 2 required: `w`, `place`)
+- Inputs are readonly and may be shared.
+- `args` is untrusted.
+- Return `null` for no valid change.
+- Returned selection must exist in the returned document.
+- Use document helpers such as `insertLump`, `removeLump`, `toggleWrap`, and `topNodeAt`.
+- Do not access the DOM from a command.
+- Command names must be lower camel case with at least a verb and object, such as `insertNote`.
+- Two wings may not own the same command.
 
-### What it is
+## HTML and import
 
-| Slot | Meaning |
-|---|---|
-| `w` | This wing's name - becomes `w` in storage. Reserved words (`p`, `br`) are not allowed |
-| `place` | `'mark'` on text, `'void'` an object with no content, `'container'` an object holding text, `'attr'` a paragraph attribute, `'tool'` leaves no trace in the document |
-| `basic` | Does it run with no host wiring at all - the gate `wings().allBasic()` passes through. Omitted means `false` ("what we do not know, we do not include"). The built-ins that answer `false` are `upload`, `save`, `open`, each of which needs something from the host. **A custom wing is judged the same way**: declare it and `allBasic()` would take it, though the catalog is only official wings, so anything arriving via `.use(object)` is unaffected either way |
-| `holds` | How it holds its content - `'blocks'` or `'inline'` |
-| `singleParagraph` | Content is fixed to exactly one paragraph (a table cell) |
-| `boolAttrs` | Names of boolean attributes whose only value is `1` |
-| `allows` | Which wing names may appear inside. Omitted means all |
-| `noAlign` | Object-only. A wrapper paragraph carrying this object **takes no alignment**: the toolbar hides the alignment buttons, the command refuses as a no-op, and a value already baked in is swept away by the repair pass. The code box is the first user - `pre` inherits `text-align`, so aligning it does not move the box, it shifts the code inside. Declaring it on a mark, a tool, or a paragraph attribute **fails registration** |
-| `requiresAnyOf` | At least one of these must also be registered |
-| `parts` | Button-less structure carried alongside (a table's rows/cells, a details' summary) |
+Use `HtmlContext.element`, `wrap`, `escape`, `url`, and `src`. They enforce tag/attribute grammar, escaping, editor keys, fillers, and URL policy.
 
-### Value
+`claim(el, inner)` receives the parsed element and may return imported nodes. Return `null` when the element is not yours. Claims run in wing order; the first non-null answer wins. Validate every claimed attribute.
 
-| Slot | Meaning |
-|---|---|
-| `attrKey` / `attrValues` | The attribute name and allowed values for a paragraph-attribute wing |
-| `currentValue` | Is it active right now - the toolbar/context row paints its button from this |
+`repair` also runs on JSON input and after commands. Return a corrected node, or `null` to reject it. A rejected mark is peeled so text remains; a rejected block object is removed.
 
-### In and out
+When `toMd` is absent, Markdown export falls back to the wing's generated HTML. This is preferred to losing unsupported content.
 
-| Slot | Meaning |
-|---|---|
-| `toHtml` / `partHtml` | Outgoing shape |
-| `toMd` | Outgoing Markdown. **Optional - without it the node falls back to `toHtml`** on a `.md` save, which is exactly what "Markdown with HTML mixed in" is. Underline, YouTube and details have no Markdown spelling, so mixing beats losing |
-| `partMd` | The same for this wing's structural parts |
-| `claim` | Decides who owns this tag on the way in |
-| `ioFilter` | One IO filter this wing brings along - its own format's paste, save and open (the table wing's TSV is the model). **A filter is not a wing**: a host filter registered through `ioFilters` stands ahead of it, and a duplicate `id` fails registration. See `llms/api-reference.md` |
-| `repair` / `partRepair` | Cleans up this node on JSON entry. Returning `null` strips the whole node |
+## Input and DOM attachment
 
-### Hands and keys
+`inputRules` declare `space` or `enter` triggers and return a command name plus args. Registered rules are the only autoformat rules.
 
-| Slot | Meaning |
-|---|---|
-| `commands` | The commands this wing adds |
-| `onKey` | Intercepts a key first when the caret is inside this wing's node |
-| `escapeKeys` | Keys that make the next typed character break out of this mark |
-| `doubleKeys` | `{ key: command }` - tapping that key **twice within 350ms** runs that command. Named like `escapeKeys` but meaning something else entirely: that one is "shed the mark and keep typing", this one is "one gesture, one command". Priority is **the lowest** - it is heard only after every other branch for that key has passed, and it is not even counted while something is floating above or the document is locked. Registration checks both key collisions and that the command actually exists. `clearFormat`'s `{ Escape: 'clearFormat' }` is the built-in user |
-| `inputRules` | Autoformatting triggered by typed characters alone |
-| `attach` | DOM-level behavior - table cell drag, code coloring |
+`onKey` runs when the selection is owned by the wing. Return a command outcome or `null`.
 
-### Appearance
+`attach(host)` is the only wing-level DOM lifecycle hook. It receives the surface root, editor, and `pathOfKey()`; return a detach function. Use it for behavior that cannot be expressed as a pure command, such as table drag selection or code paint. Avoid changing composing DOM.
 
-| Slot | Meaning |
-|---|---|
-| `button` / `buttons` | One or more toolbar buttons |
-| `context` | Context-row declaration |
-| `styles` | CSS this wing carries |
+## UI declaration
 
-## Naming `w`
+`button` or `buttons` declares toolbar controls. Actions are:
 
-`w` is the string repeated on every node in storage - shorter is better, which is why built-in
-wings use `b`, `hl`, `tf`. A name collision fails registration, so a custom wing should use a name
-a touch longer but guaranteed not to collide.
+- `command`, `mark`, `menu`, `grid`, `prompt`, `file`, or `host`.
 
-It does not need to match an HTML tag name - the outgoing tag is whatever `toHtml` decides.
+`context.controls` may declare button, toggle, select, range, text, prompt, or lightbox controls. Generic UI reads these declarations; application code should not duplicate their argument rules.
 
-**Renaming later breaks every already-saved document**, since `w` in storage is the name. If a
-rename is unavoidable, keep accepting the old name through `claim` during a migration window.
+A one-character shortcut must be `A-Z` or `0-9`. An accelerator must be `mod+<lowercase letter>`. Both must be unique. A `doubleKeys` key must be unique and point to an existing command.
 
-## See also
+Set `basic: true` only when the official wing runs without host wiring. `allBasic()` uses this flag while scanning the official catalog; custom wings enter through `use(customWing)` and are not auto-discovered.
 
-- `llms/wings.md` - the 29 built-in wings, for comparison
-- `llms/api-reference.md` - `simpleMark`/`valueMark`/`boxObject`/`listFamily` signatures,
-  `insertLump`/`removeLump`/`toggleWrap`/`topNodeAt`
-- `llms/overview.md` - `soul`/`flutter`/`outputHtml`, and why a command never sees the DOM
+## Registry output and failures
+
+`makeRegistry()` derives:
+
+- schema/edit environment;
+- HTML and Markdown builder maps;
+- commands;
+- import claims;
+- input rules and attachments;
+- escape and double-key maps;
+- ordered IO filters;
+- `ownerOf(type)` and `wingOf(name)`.
+
+Registration throws for reserved/duplicate names, missing builders, invalid container/part declarations, invalid paragraph attributes, dependency failures, unknown `allows` types, duplicate command/shortcut/accelerator/filter/double-key claims, and double keys pointing to missing commands.
+
+Failing at registration is intentional. Do not catch and continue with a partial registry.

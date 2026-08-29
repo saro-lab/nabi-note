@@ -1,37 +1,14 @@
 ---
-title: Itálico
+title: Translation pending
+description: Korean documentation is being reviewed before translation.
 ---
 
-# Itálico
+<div class="translation-shell">
 
-## Descrição
+# Translation pending
 
-O `italicWing` é o wing de marca em linha que trata a formatação em itálico (`<i>`). Use-o para destacar o tom do texto — ênfase, uma palavra estrangeira, e assim por diante.
+The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
 
-- Na entrada, reconhece tanto `<i>` quanto `<em>`; na saída, sempre produz a tag padrão `<i>`.
-- Compatível com o modo de dicas (Shift duas vezes, depois `I`) e o atalho `Ctrl`/`⌘`+`I`.
-- Aplicado com o texto selecionado, funciona como alternância.
+[Open the Korean canonical page](/ko/guide/features)
 
-## Exemplo de uso
-
-```ts
-import { createNabiWith, mountSurface, mountToolbar, italicWing } from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-const { nabi, registry } = createNabiWith([italicWing])
-
-mountSurface({ nabi, registry, root: surface })
-mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#toolbar')! })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-## Demo
-
-<WingDemo path="/wing/inline/italic" />
-
-<script setup lang="ts">
-import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
-</script>
+</div>

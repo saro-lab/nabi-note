@@ -1,50 +1,14 @@
 ---
-title: 区切り線
+title: Translation pending
+description: Korean documentation is being reviewed before translation.
 ---
 
-# 区切り線
+<div class="translation-shell">
 
-## 説明
+# Translation pending
 
-`dividerWing`(識別子 `hr`)は横の区切り線(`<hr>`)を処理します。`place: 'void'` オブジェクト
-のため内部にテキストは入らず、区切り線の直前や直後で Backspace または Delete を押すと
-区切り線ブロック全体が削除されます。
+The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
 
-ボタンをクリックすると区切り線が**専用のラッパー段落(`<div data-nabi-p>`)に包まれて**
-挿入されます。キャレットは区切り線の直後に置かれます。
+[Open the Korean canonical page](/ko/guide/features)
 
-挿入位置はキャレットが置かれていた段落の状態によって変わります:
-
-| キャレットの位置 | 挿入動作 |
-|---|---|
-| 文字のある段落 | その段落の**後ろに**新しい区切り線を挿入 |
-| 空の段落 | その空の段落を**区切り線に置き換える**(不要な空行を防ぐ) |
-
-空の段落を置き換える際、その段落に設定されていたテキスト揃えはそのまま維持されます。
-
-空行でハイフンを3つ以上入力してEnterキーを押すと(`---` + Enter)区切り線に自動変換されます。
-
-## 使用例
-
-```ts
-import { createNabiWith, mountSurface, mountToolbar, dividerWing } from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-// 翼の一覧がグリフの知識・コマンド・組み立て器を一緒に作る — それが `registry` です
-const { nabi, registry } = createNabiWith([dividerWing])
-
-mountSurface({ nabi, registry, root: surface })
-mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#toolbar')! })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-## デモ
-
-<WingDemo path="/wing/block/divider" />
-
-<script setup lang="ts">
-import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
-</script>
+</div>

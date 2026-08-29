@@ -1,38 +1,14 @@
 ---
-title: Tiefgestellt
+title: Translation pending
+description: Korean documentation is being reviewed before translation.
 ---
 
-# Tiefgestellt
+<div class="translation-shell">
 
-## Beschreibung
+# Translation pending
 
-`subscriptWing` ist ein Inline-Mark-Flügel, der die Formatierung als tiefgestellt (`<sub>`)
-übernimmt. Nützlich für chemische Formeln, Fußnotenzahlen und Ähnliches.
+The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
 
-- Erkennt beim Import das Tag `<sub>` und gibt beim Export dasselbe Tag wieder aus.
-- Sitzt in der Werkzeugleisten-Gruppe `script`, direkt neben Hochgestellt.
-- Bei ausgewähltem Text wirkt ein Druck auf die Taste als Umschalter.
+[Open the Korean canonical page](/ko/guide/features)
 
-## Anwendungsbeispiel
-
-```ts
-import { createNabiWith, mountSurface, mountToolbar, subscriptWing } from 'nabi-note'
-import 'nabi-note/nabi.css'
-
-const surface = document.querySelector<HTMLElement>('#editor')!
-
-const { nabi, registry } = createNabiWith([subscriptWing])
-
-mountSurface({ nabi, registry, root: surface })
-mountToolbar({ nabi, registry, surface, root: document.querySelector<HTMLElement>('#toolbar')! })
-
-// nabi.onChange(() => user_callback(nabi.getHtml()))
-```
-
-## Demo
-
-<WingDemo path="/wing/inline/subscript" />
-
-<script setup lang="ts">
-import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
-</script>
+</div>
