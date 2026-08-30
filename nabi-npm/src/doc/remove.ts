@@ -1,5 +1,6 @@
 // 삭제 — 한 줄 규칙: 백스페이스는 캐럿 앞의 한 덩어리를, Delete 는 뒤의 한 덩어리를 지운다.
-// 글자·라인은 한 칸, 물건(래퍼문단)은 통째, 문단끼리 만나면 병합(속성은 윗 속성).
+// 글자·라인은 한 칸, 물건(래퍼문단)은 통째, 글 있는 문단끼리 만나면 병합(속성은 윗 속성).
+// 다만 문단 첫머리의 Backspace 앞에 빈 문단이 있으면 그 빈 문단만 걷고 현재 문단은 그대로 둔다.
 // 방향 규칙은 래퍼문단 안까지 관통한다 — 오프셋 0/1 에서는 경계 너머 이웃에 작용한다.
 // 2단계(선택 후 삭제)는 없다 — 즉시 삭제, 안전망은 undo 한 걸음이다.
 import { P, isElement, isWrapper, type ElementNode, type NabiDoc, type NabiNode } from '../schema/index.js';
@@ -262,7 +263,8 @@ export function deleteBackward(doc: NabiDoc, pos: Position, env: EditEnv): EditR
     return removeSlot(doc, pos.path, holder, pos.offset - step, pos.offset, pos.offset - step, env);
   }
 
-  // 문단 첫머리 — 앞이 문단이면 병합, 래퍼문단이면 통째 삭제, 없으면 없음.
+  // 문단 첫머리 — 앞이 글 있는 문단이면 병합, 빈 문단이면 그것만 삭제한다.
+  // 래퍼문단이면 통째 삭제하고, 앞이 없으면 아무 일도 없다.
   const prev = siblings[index - 1];
   if (prev === undefined || !isElement(prev)) return unchanged(doc, pos);
   if (isWrapper(prev, env)) {
@@ -275,6 +277,10 @@ export function deleteBackward(doc: NabiDoc, pos: Position, env: EditEnv): EditR
     return { doc: next, caret: { path: [...parentPath, index - 1], offset: 0 } };
   }
   if (prev.w === P && holder.w === P) {
+    if (prev.ch.length === 0) {
+      const next = spliceSiblings(doc, parentPath, index - 1, 1, []);
+      return { doc: next, caret: { path: [...parentPath, index - 1], offset: 0 } };
+    }
     return mergeParagraphs(doc, parentPath, index - 1, prev, holder, env);
   }
   // 앞이 문단이 아닌 홀더(접기 제목 등) — 경계는 병합의 자리가 아니다.

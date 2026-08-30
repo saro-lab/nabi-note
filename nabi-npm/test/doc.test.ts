@@ -169,10 +169,21 @@ function checked(name: string, result: EditResult): EditResult {
   eq('Del: 캐럿 제자리', r4.caret, at([0], 0));
 }
 {
-  // 문단 첫머리 — 앞이 문단이면 병합 (속성은 윗 속성, 빈 문단도 같은 규칙).
+  // 문단 첫머리 — 글 있는 앞 문단이면 병합하고, 빈 앞 문단이면 그것만 걷는다.
   const r = checked('BS: 병합', deleteBackward([p(['ab'], { h: 1 }), p(['cd'], { a: 'c' })], at([1], 0), ENV));
   eq('BS: 병합 — 윗 속성', r.doc, [p(['abcd'], { h: 1 })]);
   eq('BS: 병합 — 이음매 캐럿', r.caret, at([0], 2));
+
+  const heading = checked('BS: 빈 앞 문단 뒤 제목', deleteBackward([p([]), p(['제목'], { h: 1 })], at([1], 0), ENV));
+  eq('BS: 빈 앞 문단만 사라지고 제목 속성 유지', heading.doc, [p(['제목'], { h: 1 })]);
+  eq('BS: 제목 첫머리에 캐럿 유지', heading.caret, at([0], 0));
+
+  const styledEmpty = checked(
+    'BS: 속성 있는 빈 앞 문단 뒤 제목',
+    deleteBackward([p([], { a: 'c' }), p(['제목'], { h: 1 })], at([1], 0), ENV),
+  );
+  eq('BS: 빈 앞 문단 속성도 제목에 옮지 않는다', styledEmpty.doc, [p(['제목'], { h: 1 })]);
+  eq('BS: 속성 있는 빈 앞 문단 뒤 캐럿', styledEmpty.caret, at([0], 0));
 
   const r2 = checked('BS: 빈 문단', deleteBackward([p(['ab']), p([])], at([1], 0), ENV));
   eq('BS: 빈 문단은 병합으로 사라진다', r2.doc, [p(['ab'])]);

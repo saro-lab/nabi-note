@@ -136,6 +136,8 @@ Each active surface owns one root. Active mount roots must not be the same node 
 
 `SurfaceActions`: `enter`, `shiftEnter`, `tab`, `backspace`, `deleteForward`, `arrow`, `selectAll`, `escapeKey`, `breakDouble`, `afterSpace`, and `dropcapBelow`.
 
+At the start of a paragraph, `backspace` merges with a non-empty previous paragraph and keeps the previous paragraph attributes. If the previous paragraph is empty, it removes only that empty paragraph and preserves the current paragraph and its attributes.
+
 `EditSurfacePort`: `focus`, `readCaret`, `writeCaret`, `onInput`, and `caretRect`.
 
 ## File, upload, and history mounts

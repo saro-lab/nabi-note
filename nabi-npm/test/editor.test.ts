@@ -47,6 +47,19 @@ function watch(nabi: Nabi): NabiChange[] {
       .every((node) => typeof node._id === 'string'),
   );
 }
+{
+  const nabi = createNabi({ env: ENV, doc: [p(['글'])] });
+  nabi.select(caretAt(at([0], 1)));
+  nabi.applyCommand('splitParagraph');
+  nabi.applyCommand('splitParagraph');
+  nabi.applyCommand('splitParagraph');
+  eq('엔터 연타 — 누른 수만큼 빈 문단이 남는다', nabi.getJson(), [
+    { w: 'p', ch: ['글'] },
+    { w: 'p', ch: [] },
+    { w: 'p', ch: [] },
+    { w: 'p', ch: [] },
+  ]);
+}
 
 // --- insertText 와 신호 -----------------------------------------------------------------------
 {

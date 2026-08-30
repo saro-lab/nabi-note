@@ -716,7 +716,20 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     ok('CSS: 코어는 그 토큰을 정의하지 않는다', !/--nabi-content-min-height:\s/.test(CORE_CSS));
     // 발행 문서는 글 길이대로지만, 모달 미리보기 카드는 빈 문서도 읽는 화면의 절반은 차지한다.
     ok('CSS: 발행 문서 본문에는 최소 높이가 없다', !/(^|\n)\.nabi-content \{[^}]*min-block-size/.test(CORE_CSS));
-    ok('CSS: 미리보기 카드의 최소 높이는 화면의 절반이다', CORE_CSS.includes('.nabi-preview { min-block-size: min(50dvh, 100%); }'));
+    ok(
+      'CSS: 미리보기 카드의 최소 높이는 화면의 절반이다',
+      CORE_CSS.includes('.nabi-preview { min-block-size: min(50dvh, 100%); }'),
+    );
+  }
+
+  // 발행 HTML 의 빈 문단은 편집기 받침 br 이 없다. 줄 높이를 따로 세우지 않으면 엔터를 여러 번
+  // 눌러 보존된 빈 문단들이 미리보기와 발행 화면에서 높이 0으로 겹친다.
+  {
+    const mark = '.nabi-content :is(p, h1, h2, h3, h4, h5, h6):empty { min-block-size:';
+    ok('CSS: 발행 빈 문단마다 한 줄 높이가 선다', CORE_CSS.includes(mark));
+    const rule = CORE_CSS.slice(CORE_CSS.indexOf(mark));
+    const body = rule.slice(0, rule.indexOf('}'));
+    ok('CSS: 빈 문단 높이는 그 문단의 줄 높이를 따른다', /min-block-size:\s*1lh/.test(body));
   }
 
   // 빈 편집기의 안내글 — **모양은 시트가, 말은 변수가.** 겨눔이 "받침 br 하나만 든 글 문단

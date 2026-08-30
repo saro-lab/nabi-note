@@ -30,12 +30,12 @@
   /* 흘림만은 Noto 가 답을 주지 않는다 — 언어마다 손글씨 얼굴이 따로라 낱개로 골랐다.
      벵골어처럼 손글씨 글꼴이 없는 문자는 여기서 안 걸리고 브라우저 기본 글꼴로 떨어진다 */
   /* Only cursive has no Noto answer — handwriting is per-language, so these are picked one by one */
-  /* 언어마다 손글씨 얼굴이 하나씩이다 — 라틴 Caveat · 한국어 Gaegu(주인이 고른 얼굴,
-     2026-08-14) · 일본어 Yomogi · 중국어 Zhi Mang Xing · 데바나가리 Kalam ·
+  /* 언어마다 손글씨 얼굴이 하나씩이다 — 라틴 Caveat · 한국어 Nanum Pen Script ·
+     일본어 Yomogi · 중국어 Zhi Mang Xing · 데바나가리 Kalam ·
      아랍/우르두 Noto Nastaliq Urdu(나스탈리크 자체가 흘림이다) */
-  /* One handwriting face per script; Korean is Gaegu */
+  /* One handwriting face per script; Korean is Nanum Pen Script */
   --nabi-font-cursive:
-    'Caveat', 'Gaegu', 'Yomogi', 'Zhi Mang Xing', 'Kalam', 'Noto Nastaliq Urdu', 'Segoe Script',
+    'Caveat', 'Nanum Pen Script', 'Yomogi', 'Zhi Mang Xing', 'Kalam', 'Noto Nastaliq Urdu', 'Segoe Script',
     'Snell Roundhand', cursive;
 }
 

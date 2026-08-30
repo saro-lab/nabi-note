@@ -13,7 +13,7 @@
 const EDITOR_FONTS = [
   // cursive — 갈래 중 유일하게 Noto 가 답을 주지 않는다. 언어마다 손글씨 얼굴이 따로다
   'Caveat:wght@400..700', // 라틴
-  'Gaegu', // 한국어 — 주인이 고른 얼굴 (2026-08-14). 나눔손글씨 펜보다 획이 굵어 작게 써도 버틴다
+  'Nanum+Pen+Script', // 한국어
   'Yomogi', // 일본어
   'Zhi+Mang+Xing', // 중국어
   'Kalam:wght@400;700', // 데바나가리
