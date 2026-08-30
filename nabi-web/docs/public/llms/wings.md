@@ -21,6 +21,9 @@ The official catalog has 30 wings in a stable order. `defaultWings` and `wings()
 Value factories are `makeTypefaceWing`, `makeFontSizeWing`, `makeTextColorWing`, and `makeHighlightWing`, each with `{ values }`.
 
 With a collapsed caret, font size and typeface target the paragraph's current text. Color/highlight target the current mark span or arm future text. A selected range always remains the target.
+The main toolbar color and highlight buttons remove an existing effect regardless of its current value; otherwise, they keep their existing default-value action. Context swatches still replace a different value and remove the same value.
+Like other mark buttons, a pointer click with a collapsed caret and no current mark reports that no text is selected instead of arming future text.
+After the user taps Shift twice, C arms the first text color and H arms the first highlight color for the next typed text. ArrowUp arms superscript and ArrowDown arms subscript through the same keyboard-only path. The `shortcut` field accepts one uppercase Latin letter, one digit, or the built-in up/down arrow key labels; duplicate shortcuts are rejected.
 
 ## Paragraph attributes
 

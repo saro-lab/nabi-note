@@ -172,7 +172,8 @@ function setValueCommand(w: string, key: string, values: readonly string[], scop
     }
 
     const [start, end] = ordered(aimed);
-    const strip = valueOver(doc, start, end, w, key, env) === value;
+    const current = valueOver(doc, start, end, w, key, env);
+    const strip = args['toggleCurrent'] === true && isCollapsed(sel) ? current !== undefined : current === value;
     const a: Attrs | null = strip ? null : { [key]: value };
     const r = setMark(doc, { anchor: start, focus: end }, w, a, env);
     // 넓혀서 겨눴으면 캐럿은 있던 자리에 그대로 둔다 — 한 번 바꿨다고 낱말·문단이 통째로 긁힌
@@ -210,9 +211,9 @@ function rejectUnknown(tag: string, attr: string, values: readonly string[]): No
 }
 
 // 툴바 단추는 **판을 안 띄운다.** 값 고르기는 상황 줄의 일이다 (규칙: 컨텍스트 툴바로
-// 통일) — 단추는 쓸 만한 기본값 하나를 바로 걸고, 같은 값이 다시 오면 벗는다(커맨드의 토글
-// 규칙 그대로다). 여기서 차림표를 열면 값을 고르는 자리가 둘이 되고, 그 둘이 서로 다른 모양으로
-// 같은 말을 한다.
+// 통일) — 단추는 쓸 만한 기본값 하나를 바로 걸되, 접힌 캐럿에 이미 값이 있으면 무슨 값이든
+// 벗긴다. 여기서 차림표를 열면 값을 고르는 자리가 둘이 되고, 그 둘이 서로 다른 모양으로 같은
+// 말을 한다.
 // --- 버튼 선언 (12) ------------------------------------------------------------------------------
 // 아이콘 속은 old 번역이고, 고를 값은 위의 목록 그대로다 — 목록이 두 곳에 살면 곧 갈린다.
 
@@ -708,7 +709,7 @@ export function makeHighlightWing(options: ValueWingOptions = {}): Wing {
         shortcut: 'H',
         svg: HIGHLIGHT_ICON,
         label: HIGHLIGHT_NAME,
-        action: { kind: 'command', command: 'setHighlight', args: { c: first } },
+        action: { kind: 'command', command: 'setHighlight', args: { c: first, toggleCurrent: true } },
       },
       // 형광펜과 글자색이 시트 하나를 나눠 쓴다 — 같은 글이라 문서에는 한 번만 실린다.
       styles: COLOR_CSS,
@@ -750,7 +751,7 @@ export function makeTextColorWing(options: ValueWingOptions = {}): Wing {
         shortcut: 'C',
         svg: TEXT_COLOR_ICON,
         label: TEXT_COLOR_NAME,
-        action: { kind: 'command', command: 'setTextColor', args: { c: first } },
+        action: { kind: 'command', command: 'setTextColor', args: { c: first, toggleCurrent: true } },
       },
       styles: COLOR_CSS,
     }),

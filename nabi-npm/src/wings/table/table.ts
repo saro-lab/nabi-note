@@ -651,7 +651,10 @@ function arrowStep(
   // 위·아래 — 같은 열의 이웃 줄. 병합 칸은 자기가 덮은 줄 전체가 자기 자리라, 아래로는 덮은
   // 만큼 건너뛰어야 제 아래 줄에 닿는다.
   const row = dir === 'up' ? ctx.cell.row - 1 : ctx.cell.row + ctx.cell.rowSpan;
-  if (row < 0 || row >= ctx.grid.rows) return null; // 표의 첫(끝) 줄 — 표 밖은 코어의 걸음
+  if (row < 0 || row >= ctx.grid.rows) {
+    const wrapperPath = ctx.tablePath.slice(0, -1);
+    return { doc, selection: caretAt({ path: wrapperPath, offset: dir === 'up' ? 0 : 1 }) };
+  }
   const next = cellCovering(ctx.grid, row, ctx.cell.column);
   if (!next) return null;
   return { doc, selection: caretAt(caretInCell(ctx.tablePath, next)) };

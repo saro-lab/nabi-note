@@ -180,6 +180,7 @@ export const subscriptWing: Wing = {
     clearable: true,
     button: {
       group: 'script',
+      shortcut: '↓',
       svg: ICONS.sub,
       label: {
         ko: '아랫첨자',
@@ -210,6 +211,7 @@ export const superscriptWing: Wing = {
     clearable: true,
     button: {
       group: 'script',
+      shortcut: '↑',
       svg: ICONS.sup,
       label: {
         ko: '윗첨자',

@@ -59,14 +59,18 @@ export function mountHints(options: HintOptions): Hints {
     let refocus = false;
 
     // 힌트 글자 → 그 버튼. 툴바가 돌려준 공식 목록에서만 짓는다.
-    const byCode = new Map<string, () => void>();
+    const byCode = new Map<string, Toolbar['buttons'][number]>();
     for (const button of options.toolbar.buttons) {
       if (!button.shortcut) continue;
-      const code = /[0-9]/.test(button.shortcut) ? `Digit${button.shortcut}` : `Key${button.shortcut}`;
-      byCode.set(code, () => {
-        if (button.el.hidden) return; // 안 보이는 버튼은 눌리지 않는다
-        button.press();
-      });
+      const code =
+        button.shortcut === '↑'
+          ? 'ArrowUp'
+          : button.shortcut === '↓'
+            ? 'ArrowDown'
+            : /[0-9]/.test(button.shortcut)
+              ? `Digit${button.shortcut}`
+              : `Key${button.shortcut}`;
+      byCode.set(code, button);
     }
 
     const navButtons = (): readonly HTMLButtonElement[] => options.context?.buttons() ?? [];
@@ -190,6 +194,15 @@ export function mountHints(options: HintOptions): Hints {
         return;
       }
 
+      const hinted = byCode.get(key.code);
+      if (hinted && !hinted.el.hidden && !key.metaKey && !key.ctrlKey && !key.altKey) {
+        // 조합이 시작되기 전에 막는다 — 이 키는 글자가 아니라 몸짓이다.
+        event.preventDefault();
+        hide();
+        hinted.press();
+        return;
+      }
+
       // 상황 줄 걸음 — 공식 목록 위를 걷는다.
       if (key.key === 'Tab' || key.key === 'ArrowRight' || key.key === 'ArrowLeft') {
         const back = key.key === 'ArrowLeft' || (key.key === 'Tab' && key.shiftKey);
@@ -210,14 +223,6 @@ export function mountHints(options: HintOptions): Hints {
         return;
       }
 
-      const press = byCode.get(key.code);
-      if (press && !key.metaKey && !key.ctrlKey && !key.altKey) {
-        // 조합이 시작되기 전에 막는다 — 이 키는 글자가 아니라 몸짓이다.
-        event.preventDefault();
-        hide();
-        press();
-        return;
-      }
       hide();
     };
 

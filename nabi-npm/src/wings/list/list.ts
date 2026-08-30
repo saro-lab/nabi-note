@@ -766,7 +766,6 @@ function listWing(
   rules: readonly InputRule[],
   icon: string,
   label: LocaleText,
-  shortcut?: string,
   itemDecl?: { boolAttrs: string[] },
   extra?: Partial<Wing>,
 ): Wing {
@@ -781,7 +780,6 @@ function listWing(
         group: 'list',
         svg: icon,
         label,
-        ...(shortcut ? { shortcut } : {}),
         action: { kind: 'command', command },
       },
       styles: LIST_CSS,
@@ -800,7 +798,6 @@ export const bulletListWing: Wing = listWing(
   [{ trigger: 'space', pattern: /^-$/, run: () => ({ name: 'toggleBulletList' }) }],
   BULLET_ICON,
   BULLET_NAME,
-  'L',
 );
 
 export const orderedListWing: Wing = listWing(
@@ -810,7 +807,6 @@ export const orderedListWing: Wing = listWing(
   [{ trigger: 'space', pattern: /^\d{1,9}\.$/, run: () => ({ name: 'toggleOrderedList' }) }],
   ORDERED_ICON,
   ORDERED_NAME,
-  'N',
 );
 
 export const taskListWing: Wing = listWing(
@@ -828,7 +824,6 @@ export const taskListWing: Wing = listWing(
   ],
   TASK_ICON,
   TASK_NAME,
-  'K',
   { boolAttrs: ['ck'] },
   {
     commands: { toggleTaskList: toggleList(TASK), toggleCheck: toggleCheck(TASK) },

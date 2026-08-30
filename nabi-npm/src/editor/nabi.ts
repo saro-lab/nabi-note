@@ -345,6 +345,18 @@ export function createNabi(options: NabiCoreOptions): Nabi {
         return invalidCommand(name, 'invalid result');
       }
 
+      // 예약 답은 현재 문서와 캐럿을 그대로 둔다는 계약이므로 cocoon 전에 끝낸다. 복잡한 문서의
+      // repair가 같은 내용을 새 객체로 다시 만들 수 있는데, 예약은 문서를 적용하지 않으므로 그
+      // 재조립을 상태 변화로 오해할 이유가 없다. 받은 답 자체가 현 상태를 그대로 가리키는지만 본다.
+      if (result.arm && isCollapsed(selection)) {
+        if (result.doc !== doc || !sameSelection(result.selection, selection))
+          return invalidCommand(name, 'armed result changed editor state');
+        if (by === 'pointer') return refuseArm();
+        armed.arm(result.arm);
+        pendingArmed = takeArmedFlag();
+        return true;
+      }
+
       // 매 커맨드 cocoon — 어떤 커맨드도 불변식을 깬 문서를 남길 수 없다.
       let cocooned: NabiDoc;
       try {
@@ -356,16 +368,6 @@ export function createNabi(options: NabiCoreOptions): Nabi {
       const normalized = normalizeSelection(cocooned, result.selection, env);
       if (!normalized) return invalidCommand(name, 'selection does not exist in result document');
       const nextSel = frozenSelection(normalized);
-
-      // 커맨드가 예약을 답했다 — 문서는 그대로 두고 예약 상태만 만든다 (wing 값 마크의 접힌 캐럿).
-      if (result.arm && isCollapsed(selection)) {
-        if (cocooned !== doc || !sameSelection(nextSel, selection))
-          return invalidCommand(name, 'armed result changed editor state');
-        if (by === 'pointer') return refuseArm();
-        armed.arm(result.arm);
-        pendingArmed = takeArmedFlag();
-        return true;
-      }
 
       const treeChanged = cocooned !== doc;
       const selChanged = !sameSelection(nextSel, selection);

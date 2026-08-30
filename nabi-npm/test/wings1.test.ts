@@ -19,7 +19,9 @@ import {
   defaultWings,
   detailsWing,
   headingWing,
+  highlightWing,
   linkWing,
+  textColorWing,
 } from '../src/wings/index.js';
 import { attachFileLink } from '../src/wings/link/attach.js';
 import { reachAt, visibleAt } from '../src/ui/visible.js';
@@ -392,6 +394,46 @@ for (const fam of FAMILIES) {
     [HIGHLIGHT_COLORS.length, TEXT_COLORS.length, FONT_SIZES, TYPEFACES],
     [6, 5, ['xs', 'sm', 'lg', 'xl'], ['sans', 'serif', 'mono', 'cursive']],
   );
+}
+{
+  const buttonAction = (wing: Wing): Extract<NonNullable<Wing['button']>['action'], { kind: 'command' }> => {
+    const action = wing.button?.action;
+    if (action?.kind !== 'command') throw new Error(`${wing.w} 버튼이 command가 아니다`);
+    return action;
+  };
+  const textColor = buttonAction(textColorWing);
+  const highlight = buttonAction(highlightWing);
+
+  const colored = make([p([el('tc', ['호박'], { c: 'amber' })])]);
+  colored.select(caretAt(at([0], 1)));
+  ok('상단 글자색 버튼 — 호박색 안에서는 현재 효과를 벗긴다', colored.applyCommand(textColor.command, textColor.args));
+  eq('상단 글자색 버튼 — 첫 색으로 바꾸지 않고 맨몸 글자가 된다', colored.getJson(), [p(['호박'])]);
+
+  const marked = make([p([el('hl', ['주황'], { c: 'orange' })])]);
+  marked.select(caretAt(at([0], 1)));
+  ok('상단 형광펜 버튼 — 주황색 안에서는 현재 효과를 벗긴다', marked.applyCommand(highlight.command, highlight.args));
+  eq('상단 형광펜 버튼 — 첫 색으로 바꾸지 않고 맨몸 글자가 된다', marked.getJson(), [p(['주황'])]);
+
+  const plain = make([p(['글'])]);
+  plain.select(caretAt(at([0], 1)));
+  ok('상단 글자색 버튼 — 효과가 없으면 기본색을 예약한다', plain.applyCommand(textColor.command, textColor.args));
+  plain.applyCommand('insertText', { text: '자' });
+  eq('상단 글자색 버튼 — 새 글자에는 첫 색이 걸린다', plain.getJson(), [p(['글', el('tc', ['자'], { c: 'green' })])]);
+
+  const choice = make([p([el('tc', ['호박'], { c: 'amber' })])]);
+  choice.select(caretAt(at([0], 1)));
+  ok('상황 줄과 같은 일반 색 선택 — 다른 색으로 교체한다', choice.applyCommand('setTextColor', { c: 'green' }));
+  eq('일반 색 선택은 상단 버튼의 해제 뜻을 물려받지 않는다', choice.getJson(), [
+    p([el('tc', ['호박'], { c: 'green' })]),
+  ]);
+
+  const selected = make([p([el('tc', ['호박'], { c: 'amber' })])]);
+  selected.select(range(at([0], 0), at([0], 2)));
+  ok(
+    '상단 글자색 버튼 — 선택 범위의 기존 값 교체 규칙은 유지한다',
+    selected.applyCommand(textColor.command, textColor.args),
+  );
+  eq('선택 범위는 버튼 기본색으로 바뀐다', selected.getJson(), [p([el('tc', ['호박'], { c: 'green' })])]);
 }
 {
   // 값 마크의 부른 손 (084 ⑨) — `result.arm` 을 답하는 커맨드도 문 앞에서 같은 규칙을 받는다.

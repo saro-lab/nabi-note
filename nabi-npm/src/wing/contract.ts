@@ -162,7 +162,7 @@ export interface WingButton {
   readonly svg?: string;
   // 다국어 이름 — aria-label 과 툴팁이 된다. 없으면 ui 가 사전의 `wing.<w>` 를 본다.
   readonly label?: LocaleText;
-  // 힌트 모드(Shift 연타)의 한 글자 — 라틴 대문자·숫자 하나, 겹치면 등록이 죽는다.
+  // 힌트 모드(Shift 연타)의 키 — 라틴 대문자·숫자 하나 또는 위·아래 방향키, 겹치면 등록이 죽는다.
   readonly shortcut?: string;
   // 가속키 — `mod+<소문자>` 하나, 겹치면 등록이 죽는다.
   readonly accelerator?: string;

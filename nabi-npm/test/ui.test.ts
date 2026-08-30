@@ -2152,6 +2152,7 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
       },
       focus: () => fire(surfaceListeners, 'focus'),
       blur: () => fire(surfaceListeners, 'blur'),
+      touch: () => fire(winListeners, 'pointerdown'),
       // **사람이** 굴린다 — 우리가 안 민 자리에서, **뷰포트가 조용해진 뒤에** 온 스크롤이다.
       // 조용해지기를 실제로 기다린다(`VIEW_QUIET`): 015 3차부터 그것이 "사람"의 정의라,
       // 기다리지 않고 굴리면 그것은 사람이 아니라 **브라우저**를 흉내 낸 것이 된다.
@@ -2235,6 +2236,23 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
       w.frame();
     }
     eq('키보드가 선 채 타이핑을 여러 번 — 우리가 민 총량 0 (야금야금이 멎었다)', w.moved, 0);
+  }
+
+  // 키보드가 움직였다고 보는 짧은 창 안에서도 손이 닿으면 화면은 곧바로 사람에게 넘어간다.
+  // 예전에는 이때의 스크롤을 브라우저 것으로 오인해, 기다리던 보정이 화면을 캐럿으로 되끌었다.
+  {
+    const w = makeWorld({ innerHeight: 812, bar: 188, caretDoc: 500, caretHeight: 19, scrollY: 0 });
+    w.focus();
+    w.keyboard(435);
+    w.resetMoved();
+    w.touch();
+    w.browserScroll(w.scrollY + 400);
+    const parked = w.scrollY;
+    w.frame();
+    w.quiet();
+    w.frame();
+    eq('키보드 직후 손가락 스크롤 — 예약된 보정이 화면을 되끌지 않는다', w.moved, 0);
+    eq('키보드 직후 손가락 스크롤 — 화면은 사람이 둔 자리에 남는다', w.scrollY, parked);
   }
 
   // --- 규칙 1. 사람이 굴리면 푼다 — 예외 없다 ----------------------------------------------------

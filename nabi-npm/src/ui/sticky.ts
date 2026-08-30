@@ -185,6 +185,10 @@ export function mountSticky(options: StickyOptions): Sticky {
   let viewHeight = -1; // 그때 본 키. 이것이 안 달라지면 뷰포트가 "움직인" 것이 아니다
   // 브라우저가 화면을 옮기는 중인가 (015 3차). 참이면 지금 온 스크롤은 사람 것이 아니다.
   const viewMoving = (): boolean => Date.now() - viewAt < VIEW_QUIET;
+  const takeOver = (): void => {
+    userAt = Date.now();
+    armed = false;
+  };
   const onScroll = (): void => {
     if (view && mine >= 0 && Math.abs(view.scrollY - mine) <= 1) return; // 방금 우리가 민 그 자리
     // **뷰포트의 키가 방금 달라졌으면 브라우저가 민 것이다** (015 3차 + 020 규칙 B, 위
@@ -192,7 +196,6 @@ export function mountSticky(options: StickyOptions): Sticky {
     // 걸러진다 — 그것을 사람으로 세면 정작 우리가 맞춰야 할 그 순간에 세션이 꺼진다.
     // 키가 그대로인 채 온 스크롤은 **언제나 사람의 것이다.**
     if (viewMoving()) return;
-    userAt = Date.now();
     // **사람이 굴리면 푼다** (015 규칙 1). 이 겨눔 세션의 아래 변·제자리 보정은 여기서 끝나고,
     // 기다리던 가라앉음 걸음도 이 표식 하나로 함께 취소된다(`afterQuiet` 이 이것을 본다).
     //
@@ -201,7 +204,7 @@ export function mountSticky(options: StickyOptions): Sticky {
     // 올렸는데 갑자기 글쓰기 창으로 돌아오면 그게 버그지."* 사람이 굴려 떠난 뒤에는 캐럿이
     // 보이든 말든 우리 일이 아니다. 캐럿을 다시 봐야 하는 순간은 **사람이 돌아올 때**이고,
     // 돌아오는 길은 탭(새 겨눔)이거나 타이핑(편집)이라 둘 다 아래 `armed` 를 다시 세운다.
-    armed = false;
+    takeOver();
   };
   const scrolling = (): boolean => Date.now() - userAt < USER_QUIET;
 
@@ -596,6 +599,9 @@ export function mountSticky(options: StickyOptions): Sticky {
     follow();
     view?.visualViewport?.addEventListener('resize', follow);
     view?.visualViewport?.addEventListener('scroll', follow);
+    // 스크롤 사건만으로는 키보드가 움직인 것과 사람의 손을 가를 수 없는 짧은 틈이 있다. 화면에
+    // 손이 닿은 것은 브라우저가 대신 만들 수 없는 사용자 의도라, 그 순간 기다리던 보정을 끝낸다.
+    view?.addEventListener('pointerdown', takeOver, { passive: true });
     // 손이 굴리는 것을 듣는다 — 겨눔을 쥔 동안만 걸고 뗄 때 함께 뗀다(전역에 안 남긴다).
     view?.addEventListener('scroll', onScroll, { passive: true });
     // 툴바가 자라는 것도 듣는다. 없는 브라우저면 그냥 안 듣는다 — 나머지는 그대로 돈다.
@@ -617,6 +623,7 @@ export function mountSticky(options: StickyOptions): Sticky {
     frame = 0;
     view?.visualViewport?.removeEventListener('resize', follow);
     view?.visualViewport?.removeEventListener('scroll', follow);
+    view?.removeEventListener('pointerdown', takeOver);
     view?.removeEventListener('scroll', onScroll);
     // 관찰자는 반드시 걷는다 — 겨눔이 빠진 뒤에도 살아 있으면 남의 화면을 밀게 된다.
     watcher?.disconnect();

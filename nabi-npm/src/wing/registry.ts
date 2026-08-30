@@ -20,7 +20,7 @@ import { erectsNode, type Attach, type InputRule, type StructureDecl, type Wing 
 // 커맨드 이름 규칙 — 동사+목적어 카멜. 낱말 하나(`merge`)나 대문자 시작은 죽는다.
 const COMMAND_NAME = /^[a-z][a-z0-9]*([A-Z][A-Za-z0-9]*)+$/;
 // 힌트 단축키 — 라틴 대문자·숫자 한 글자. 가속키 — mod+소문자 하나.
-const SHORTCUT = /^[A-Z0-9]$/;
+const SHORTCUT = /^(?:[A-Z0-9]|↑|↓)$/;
 const ACCELERATOR = /^mod\+[a-z]$/;
 const EXTENSION_NAME = /^ex[A-Z0-9][A-Za-z0-9]*$/;
 const OFFICIAL_WINGS = new Set([
@@ -268,7 +268,8 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     for (const button of [wing.button, ...(wing.buttons ?? [])]) {
       const shortcut = button?.shortcut;
       if (shortcut !== undefined) {
-        if (!SHORTCUT.test(shortcut)) fail(`"${wing.w}" 의 단축키 "${shortcut}" 는 라틴 대문자·숫자 한 글자여야 한다`);
+        if (!SHORTCUT.test(shortcut))
+          fail(`"${wing.w}" 의 단축키 "${shortcut}" 는 라틴 대문자·숫자 한 글자 또는 ↑·↓여야 한다`);
         const taken = shortcuts.get(shortcut);
         if (taken) fail(`단축키 "${shortcut}" 를 "${taken}" 와 "${wing.w}" 가 같이 주장한다`);
         shortcuts.set(shortcut, wing.w);

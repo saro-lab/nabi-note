@@ -623,13 +623,13 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   eq('마지막 칸의 tab — 캐럿은 새 행 첫 칸', grown?.selection.focus.path, [0, 0, 2, 0, 0]);
 
   // 화살표는 **격자를 따라** 걷는다 — 화면 좌표를 따르는 브라우저 걸음은 칸 폭이 다르면 옆
-  // 열로 샌다. 칸 안에 갈 자리가 남았거나 격자 밖으로 나가는 걸음만 pass 다.
+  // 열로 샌다. 칸 안에 갈 자리가 남았으면 pass, 격자 밖으로 나가면 표 경계로 보낸다.
   // (Shift+방향키는 mount 가 아예 안 보낸다 — 범위 걸음은 브라우저의 것이다.)
   const arrow = (dir: 'left' | 'right' | 'up' | 'down', sel: Selection) =>
     routeKey({ key: 'arrow', dir }, doc, sel, env, registry);
 
   eq('a1 처음에서 ← 는 pass — 표 밖으로 나가는 걸음은 코어의 것', arrow('left', a1), null);
-  eq('a1 처음에서 ↑ 도 pass — 표 위로 나간다', arrow('up', a1), null);
+  eq('a1 처음에서 ↑ 는 표 앞에 선다', arrow('up', a1)?.selection.focus, { path: [0], offset: 0 });
   eq('a1 끝에서 → 는 옆 칸의 처음', arrow('right', caretAt(at([0, 0, 0, 0, 0], 1)))?.selection.focus, {
     path: [0, 0, 0, 1, 0],
     offset: 0,
@@ -643,7 +643,14 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
     path: [0, 0, 0, 0, 0],
     offset: 0,
   });
-  eq('마지막 줄에서 ↓ 는 pass — 표 아래로 나간다', arrow('down', caretAt(at([0, 0, 1, 1, 0], 0))), null);
+  eq(
+    '마지막 줄 첫 칸에서 ↓ 는 옆 칸이 아니라 표 뒤에 선다',
+    arrow('down', caretAt(at([0, 0, 1, 0, 0], 0)))?.selection.focus,
+    {
+      path: [0],
+      offset: 1,
+    },
+  );
   eq('칸 안에 갈 자리가 남았으면 pass — 글자 걸음이다', arrow('right', caretAt(at([0, 0, 0, 0, 0], 0))), null);
   eq(
     'backspace·delete·enter pass',
