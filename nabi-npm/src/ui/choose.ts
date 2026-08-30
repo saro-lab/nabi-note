@@ -50,13 +50,13 @@ export function openChoosePanel(options: ChoosePanelOptions): Promise<number> {
       tabindex: '-1',
       role: 'dialog',
       'aria-modal': 'true',
+      'aria-label': options.question,
       dir: direction,
     });
     const title = make(owner, 'div', 'nabi-choose-title');
     title.textContent = options.question;
 
-    // Escape·바깥 클릭으로 닫히면 취소다 — 덮개가 그 길을 이미 들고 있어 여기서 지을 것이 없다.
-    const scrim = openScrim(owner, { card, restore: options.surface, onClose: () => answer(-1) });
+    let scrim: ReturnType<typeof openScrim> | null = null;
 
     const grid = makeGrid(owner, {
       prefix: 'nabi-choose',
@@ -67,7 +67,7 @@ export function openChoosePanel(options: ChoosePanelOptions): Promise<number> {
       })),
       onPick: (at) => {
         answer(at);
-        scrim.close();
+        scrim?.close();
       },
     });
     card.append(title, grid.list);
@@ -77,6 +77,8 @@ export function openChoosePanel(options: ChoosePanelOptions): Promise<number> {
       grid.key(event);
     });
 
+    // Escape·바깥 클릭으로 닫히면 취소다 — 덮개가 그 길을 이미 들고 있어 여기서 지을 것이 없다.
+    scrim = openScrim(owner, { card, restore: options.surface, onClose: () => answer(-1) });
     card.focus({ preventScroll: true });
   });
 }

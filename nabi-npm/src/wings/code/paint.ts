@@ -103,7 +103,7 @@ export interface PaintOptions {
 }
 
 export function makeCodeAttach(options: PaintOptions = {}): Attach {
-  return ({ root, nabi, pathOfKey }) => {
+  return ({ root, nabi, doc, pathOfKey }) => {
     const view = root.ownerDocument.defaultView;
     let frame = 0;
     let composing = false;
@@ -112,7 +112,7 @@ export function makeCodeAttach(options: PaintOptions = {}): Attach {
     const sweep = (): void => {
       frame = 0;
       if (composing) return;
-      for (const box of codeBoxes(nabi.$doc())) {
+      for (const box of codeBoxes(doc())) {
         if (typeof box._id !== 'string') continue;
         const el = root.querySelector(`[data-key="${box._id.replace(/["\\]/g, '\\$&')}"]`);
         if (!el) continue;
@@ -129,10 +129,7 @@ export function makeCodeAttach(options: PaintOptions = {}): Attach {
         // 이 상자 안에 캐럿이 있으면 칠한 뒤 그 자리에 도로 세운다 — 자리는 트리에서 읽는다.
         const sel = nabi.getSelection();
         const path = pathOfKey(box._id);
-        const inBox =
-          path !== null &&
-          samePath(sel.focus.path, path) &&
-          samePath(sel.anchor.path, path);
+        const inBox = path !== null && samePath(sel.focus.path, path) && samePath(sel.anchor.path, path);
         applyTokens(el, tokens);
         if (inBox) restoreCaretIn(el, { start: sel.anchor.offset, end: sel.focus.offset });
         painted.set(el, signature);

@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Negrita
+description: Muestra el texto seleccionado en negrita.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Negrita
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Pone en negrita el texto seleccionado. Aplicarlo otra vez sobre el mismo rango quita el formato. La marca se conserva con el texto en los documentos guardados.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/bold" />
 
-</div>
+```ts
+const selected = wings().use('b').build()
+```

@@ -18,8 +18,19 @@ import { makeTranslator, type Translator } from '../locale/index.js';
 // 줄의 차례는 워드·구글 문서의 관례를 따른다: 글꼴·크기 → 제목 → 강조 → 첨자 → 색 → 링크 →
 // 정렬 → 목록 → 짜임새 → 매체 → 그릇 → 서식 지우기 → 파일.
 export const TOOLBAR_GROUPS: readonly string[] = [
-  'font', 'heading', 'emphasis', 'script', 'color', 'link',
-  'align', 'list', 'structure', 'media', 'container', 'clear', 'file',
+  'font',
+  'heading',
+  'emphasis',
+  'script',
+  'color',
+  'link',
+  'align',
+  'list',
+  'structure',
+  'media',
+  'container',
+  'clear',
+  'file',
 ];
 
 // 아이콘 한 장 — path 몇 개를 감싸는 껍데기다. **글자를 돌려줄 뿐 DOM 을 안 만진다.**
@@ -81,10 +92,11 @@ export function toolbarSlots(
         name: decl.name === undefined ? wing.w : `${wing.w}:${decl.name}`,
         group: decl.group,
         label,
-        tip:
-          decl.shortcut ? t.t('hintTail', { label, key: decl.shortcut })
-          : twice ? t.t('twiceTail', { label, key: twice })
-          : label,
+        tip: decl.shortcut
+          ? t.t('hintTail', { label, key: decl.shortcut })
+          : twice
+            ? t.t('twiceTail', { label, key: twice })
+            : label,
       });
     }
   }
@@ -100,9 +112,7 @@ const esc = (value: string): string =>
 function buttonHtml(slot: ToolbarSlot): string {
   const { wing, decl } = slot;
   const classes = decl.svg ? 'nabi-btn' : 'nabi-btn nabi-word';
-  const inner = decl.svg
-    ? iconSvg(decl.svg, wing.place === 'mark' ? 1.6 : 1.4)
-    : esc(slot.label);
+  const inner = decl.svg ? iconSvg(decl.svg, wing.place === 'mark' ? 1.6 : 1.4) : esc(slot.label);
   return (
     `<button class="${classes}" type="button" data-name="${esc(slot.name)}"` +
     ` aria-label="${esc(slot.label)}" data-nabi-tip="${esc(slot.tip)}" data-wing="${esc(wing.w)}"` +
@@ -146,10 +156,8 @@ export function renderToolbarHtml(options: ToolbarHtmlOptions): string {
 // 096 이 툴바를 미리 그려도 이 둘만 늦게 떴다. 같은 값이 상수이므로 같은 길로 낸다.
 export const PREVIEW_ICON =
   '<path d="M1.5 8s2.5-4 6.5-4 6.5 4 6.5 4-2.5 4-6.5 4-6.5-4-6.5-4Z"/><circle cx="8" cy="8" r="1.75"/>';
-export const FULLSCREEN_ENTER_ICON =
-  '<path d="M6 2.75H2.75V6M10 2.75h3.25V6M6 13.25H2.75V10M10 13.25h3.25V10"/>';
-export const FULLSCREEN_EXIT_ICON =
-  '<path d="M2.75 6H6V2.75M13.25 6H10V2.75M2.75 10H6v3.25M13.25 10H10v3.25"/>';
+export const FULLSCREEN_ENTER_ICON = '<path d="M6 2.75H2.75V6M10 2.75h3.25V6M6 13.25H2.75V10M10 13.25h3.25V10"/>';
+export const FULLSCREEN_EXIT_ICON = '<path d="M2.75 6H6V2.75M13.25 6H10V2.75M2.75 10H6v3.25M13.25 10H10v3.25"/>';
 
 // 미리 그리는 것은 **처음 상태**다 — 전체화면은 언제나 꺼진 채로 뜬다(들어가기 아이콘).
 // mount 뒤 `paint()` 가 실제 상태로 다시 칠하므로 어긋날 자리가 없다.

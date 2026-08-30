@@ -3,23 +3,9 @@
 // 문단 속성: h·a 는 이어지고, dc(드롭캡)는 첫 글자를 가진 쪽만 갖는다.
 // 래퍼문단: 0 이면 위에, 1 이면 아래에 빈 문단이 서고 캐럿이 거기 간다 (옛 060 이 규칙이 된 자리).
 // 인라인 홀더(summary·code)와 문단 하나 고정 컨테이너(표의 칸) 속: 분할 대신 라인.
-import {
-  P,
-  isWrapper,
-  type Attrs,
-  type AttrValue,
-  type ElementNode,
-  type NabiDoc,
-} from '../schema/index.js';
+import { P, isWrapper, type Attrs, type AttrValue, type ElementNode, type NabiDoc } from '../schema/index.js';
 import { insertLine } from './insert.js';
-import {
-  nodeAt,
-  replaceAt,
-  terminalOf,
-  type EditEnv,
-  type EditResult,
-  type Position,
-} from './position.js';
+import { nodeAt, replaceAt, terminalOf, type EditEnv, type EditResult, type Position } from './position.js';
 import { fromRuns, holderRuns, sliceRuns } from './runs-edit.js';
 
 // 분할 양쪽의 속성 — 셋이 서로 다른 규칙을 쓴다.

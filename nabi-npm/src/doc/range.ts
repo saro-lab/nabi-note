@@ -3,14 +3,7 @@
 // 부분만 걸린 컨테이너는 속만 비운다 — 구조(행·칸·항목)는 지킨다.
 // 문단은 안 없앤다 — 경계의 문단은 잘려도 남는다 (빈 문단이 될 수 있다).
 // 양 끝이 같은 부모의 글 문단으로 남으면 병합한다 (속성은 윗 속성).
-import {
-  P,
-  isElement,
-  isWrapper,
-  type ElementNode,
-  type NabiDoc,
-  type NabiNode,
-} from '../schema/index.js';
+import { P, isElement, isWrapper, type ElementNode, type NabiDoc, type NabiNode } from '../schema/index.js';
 import {
   comparePositions,
   holderLength,
@@ -50,10 +43,7 @@ function freeScope(container: ElementNode, env: EditEnv): boolean {
 function trimmed(holder: ElementNode, from: number, to: number, env: EditEnv): ElementNode {
   const terminal = terminalOf(env);
   const runs = holderRuns(holder, terminal);
-  return withChildren(
-    holder,
-    fromRuns([...sliceRuns(runs, 0, from), ...sliceRuns(runs, to, Number.MAX_SAFE_INTEGER)]),
-  );
+  return withChildren(holder, fromRuns([...sliceRuns(runs, 0, from), ...sliceRuns(runs, to, Number.MAX_SAFE_INTEGER)]));
 }
 
 // 한 스코프를 자른다. sp/ep 는 이 스코프 기준의 남은 경로 조각이고, null 은 "그쪽 경계가
@@ -142,10 +132,14 @@ function mergeAt(nodes: NabiNode[], index: number, env: EditEnv): NabiNode[] {
   const head = nodes[index];
   const tail = nodes[index + 1];
   if (
-    head === undefined || tail === undefined ||
-    !isElement(head) || !isElement(tail) ||
-    head.w !== P || tail.w !== P ||
-    isWrapper(head, env) || isWrapper(tail, env)
+    head === undefined ||
+    tail === undefined ||
+    !isElement(head) ||
+    !isElement(tail) ||
+    head.w !== P ||
+    tail.w !== P ||
+    isWrapper(head, env) ||
+    isWrapper(tail, env)
   ) {
     return nodes;
   }
@@ -153,7 +147,6 @@ function mergeAt(nodes: NabiNode[], index: number, env: EditEnv): NabiNode[] {
   const merged = withChildren(head, fromRuns([...holderRuns(head, terminal), ...holderRuns(tail, terminal)]));
   return [...nodes.slice(0, index), merged, ...nodes.slice(index + 2)];
 }
-
 
 // --- 지운 뒤 두 끝이 만난다 (§11) ---------------------------------------------------------------
 //
@@ -289,8 +282,7 @@ export function deleteRange(doc: NabiDoc, range: DocRange, env: EditEnv): EditRe
 
   // 양 끝이 같은 부모의 글 문단이면 병합 — 경로가 같은 깊이·같은 부모일 때만이다.
   const sameParent =
-    start.path.length === end.path.length &&
-    start.path.slice(0, -1).every((v, i) => v === end.path[i]);
+    start.path.length === end.path.length && start.path.slice(0, -1).every((v, i) => v === end.path[i]);
   if (sameParent && start.path.length >= 1 && start.path[start.path.length - 1] !== end.path[end.path.length - 1]) {
     const parentPath = start.path.slice(0, -1);
     const index = start.path[start.path.length - 1] as number;
@@ -346,7 +338,7 @@ export function deleteRange(doc: NabiDoc, range: DocRange, env: EditEnv): EditRe
   }
   // 이 스코프에 홀더가 안 남았다 — 빈 문단을 세운다.
   const empty: ElementNode = { w: P, ch: [] };
-  const scope = parentPath.length === 0 ? next : nodeAt(next, parentPath)?.ch ?? [];
+  const scope = parentPath.length === 0 ? next : (nodeAt(next, parentPath)?.ch ?? []);
   const clamped = Math.min(index, scope.length);
   if (parentPath.length === 0) {
     const rebuilt = [...next.slice(0, clamped), empty, ...next.slice(clamped)];
@@ -354,11 +346,7 @@ export function deleteRange(doc: NabiDoc, range: DocRange, env: EditEnv): EditRe
   }
   const parent = nodeAt(next, parentPath);
   if (!parent) return { doc: next, caret: { path: [0], offset: 0 } };
-  const rebuiltParent = withChildren(parent, [
-    ...parent.ch.slice(0, clamped),
-    empty,
-    ...parent.ch.slice(clamped),
-  ]);
+  const rebuiltParent = withChildren(parent, [...parent.ch.slice(0, clamped), empty, ...parent.ch.slice(clamped)]);
   const rebuilt = replaceAt(next, parentPath, [rebuiltParent]) as ElementNode[];
   return { doc: rebuilt, caret: { path: [...parentPath, clamped], offset: 0 } };
 }

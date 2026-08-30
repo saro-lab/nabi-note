@@ -5,7 +5,7 @@
 import { P, isWrapper, runsOf, type ElementNode, type Terminal } from '../schema/index.js';
 import { nodeAt, sliceRuns, terminalOf } from '../doc/index.js';
 import { caretAt, isCollapsed } from '../caret/index.js';
-import type { Nabi } from '../editor/index.js';
+import { hostOf, type Nabi } from '../editor/index.js';
 import type { Registry } from '../wing/index.js';
 import { holderTextOf } from './text.js';
 
@@ -17,21 +17,15 @@ function wordStartOf(text: string, at: number): number {
 
 // 규칙이 만들 결과가 이미 서 있으면 다시 안 뜬다 — 맨 URL 로 만든 링크의 글자는 여전히
 // URL 패턴에 맞아, 이 검사가 없으면 그 끝의 엔터를 영영 가로챈다 (옛 판의 교훈).
-function alreadyMarked(
-  holder: ElementNode,
-  from: number,
-  to: number,
-  w: string,
-  terminal: Terminal,
-): boolean {
+function alreadyMarked(holder: ElementNode, from: number, to: number, w: string, terminal: Terminal): boolean {
   const runs = sliceRuns(runsOf(holder, terminal), from, to);
   const texts = runs.filter((run) => run.kind === 'text');
   return texts.length > 0 && texts.every((run) => run.marks.some((mark) => mark.w === w));
 }
 
 export function tryInputRule(nabi: Nabi, registry: Registry, trigger: 'space' | 'enter'): boolean {
-  const env = nabi.$env;
-  const doc = nabi.$doc();
+  const env = hostOf(nabi).env;
+  const doc = hostOf(nabi).doc();
   const sel = nabi.getSelection();
   if (!isCollapsed(sel)) return false;
   const focus = sel.focus;
@@ -54,7 +48,13 @@ export function tryInputRule(nabi: Nabi, registry: Registry, trigger: 'space' | 
     if (rule.trigger !== trigger) continue;
     const candidate = rule.scope === 'word' ? word : blockPrefix;
     if (candidate === '') continue;
-    const match = rule.pattern.exec(candidate);
+    rule.pattern.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    try {
+      match = rule.pattern.exec(candidate);
+    } finally {
+      rule.pattern.lastIndex = 0;
+    }
     if (!match) continue;
     const target = rule.run(match);
 

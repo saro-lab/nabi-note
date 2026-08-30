@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Маркированный список
+description: Создайте список без нумерации.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Маркированный список
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Создаёт список без нумерации. В пустом абзаце введите пробел после `-` или преобразуйте абзацы на панели инструментов. Выбранные абзацы можно объединить в список одним действием.
 
-[Open the Korean canonical page](/ko/guide/features)
+Внутри списка Tab увеличивает уровень отступа, а Shift+Tab уменьшает его. Enter создаёт следующий элемент; повторный Enter в пустом элементе завершает список.
 
-</div>
+<WingDemo path="/wing/block/bullet-list" />
+
+```ts
+const selected = wings().use('ul').build()
+```

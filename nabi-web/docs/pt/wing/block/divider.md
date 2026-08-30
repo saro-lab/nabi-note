@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Divisor
+description: Insere uma linha horizontal que separa o fluxo do documento.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Divisor
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Insere uma linha horizontal entre blocos. Digitar `---` em uma linha vazia e pressionar Enter também cria um divisor. É um bloco sem conteúdo de texto.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/block/divider" />
 
-</div>
+```ts
+const selected = wings().use('hr').build()
+```

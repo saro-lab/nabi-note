@@ -18,10 +18,26 @@ export type {
   WingField,
   WingPlace,
 } from './contract.js';
-export { createNabiWith, makeRegistry, nabiOptionsOf, renderStoredEditorHtml, renderStoredHtml } from './registry.js';
+export {
+  $createNabiWith,
+  createNabiWith,
+  makeRegistry,
+  nabiOptionsOf,
+  renderStoredEditorHtml,
+  renderStoredHtml,
+} from './registry.js';
 export type { RegisteredRule, Registry, RegistryExtra, StoredHtmlOptions } from './registry.js';
 export { keyOwnerAt, routeKey } from './owner.js';
 export type { KeyOwner } from './owner.js';
 export { boxObject, listFamily, simpleMark, valueMark } from './factories.js';
 export type { BoxObjectSpec, ListFamilySpec, SimpleMarkSpec, ValueMarkSpec } from './factories.js';
-export { LUMP_DEFAULT_ALIGN, LUMP_DEFAULT_WIDTH, insertLump, markSpanAt, removeLump, toggleWrap, topNodeAt, unwrapItem } from './ops.js';
+export {
+  LUMP_DEFAULT_ALIGN,
+  LUMP_DEFAULT_WIDTH,
+  insertLump,
+  markSpanAt,
+  removeLump,
+  toggleWrap,
+  topNodeAt,
+  unwrapItem,
+} from './ops.js';

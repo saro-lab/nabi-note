@@ -12,13 +12,23 @@ import { hi } from './hi.ts'
 import { bn } from './bn.ts'
 import { ur } from './ur.ts'
 import { id } from './id.ts'
+import { fa } from './fa.ts'
+import { mr } from './mr.ts'
+import { vi } from './vi.ts'
+import { te } from './te.ts'
+import { ha } from './ha.ts'
+import { tr } from './tr.ts'
+import { sw } from './sw.ts'
+import { ta } from './ta.ts'
+import { th } from './th.ts'
+import { it } from './it.ts'
 import { DEFAULT_LOCALE, localeCodes, type LocaleCode } from './codes.ts'
 
 // 언어를 늘리는 자리는 둘이다 — `codes.ts` 의 목록과 여기의 사전. 언어 이름(`localeNames`)과
 // VitePress 로케일은 그 둘에서 따라온다. `satisfies` 가 둘을 맞춰 보므로 한쪽에만 적으면
 // 타입 검사에서 걸린다. 목록을 떼어 둔 까닭은 `codes.ts` 에 적어 두었다.
 // Two places to add a language: the list in `codes.ts` and this map. `satisfies` keeps them in step.
-export const messages = { en, ko, ja, zh, de, fr, es, pt, ru, ar, hi, bn, ur, id } satisfies Record<
+export const messages = { en, ko, ja, zh, de, fr, es, pt, ru, ar, hi, bn, ur, id, fa, mr, vi, te, ha, tr, sw, ta, th, it } satisfies Record<
   LocaleCode,
   unknown
 >

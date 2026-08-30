@@ -2,18 +2,35 @@
 // 자기 속의 복구는 자기가 안다: 제목은 언제나 하나이고 맨 앞이며, 속은 비지 않는다
 // (캐럿이 설 자리가 없는 접기는 못 만든다). 남는 제목은 지우지 않고 문단으로 내려온다.
 import { P, isElement, isWrapper, type ElementNode, type NabiNode } from '../../schema/index.js';
+import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import { DEFAULT_BUILDERS } from '../../html/index.js';
 import { caretAt, ordered } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
 import { replaceAt } from '../../doc/index.js';
-import { topNodeAt, type Wing } from '../../wing/index.js';
+import { blockOwnerAt } from '../../wing/ops.js';
+import { type Wing } from '../../wing/index.js';
 import type { LocaleText } from '../../locale/index.js';
 import { attachDetailsOpen } from './attach.js';
 
 const SUMMARY = 'summary';
 
 // 이름들 — old 사전 이식(14 로케일).
-const DETAILS_NAME: LocaleText = { ko: '접기', en: 'Details', ja: '折りたたみ', zh: '折叠块', de: 'Klappbox', fr: 'Bloc dépliant', es: 'Bloque plegable', pt: 'Bloco recolhível', ru: 'Спойлер', ar: 'كتلة قابلة للطي', hi: 'फ़ोल्ड ब्लॉक', bn: 'ভাঁজযোগ্য ব্লক', ur: 'قابلِ تہہ بلاک', id: 'Blok lipat' };
+const DETAILS_NAME: LocaleText = {
+  ko: '접기',
+  en: 'Details',
+  ja: '折りたたみ',
+  zh: '折叠块',
+  de: 'Klappbox',
+  fr: 'Bloc dépliant',
+  es: 'Bloque plegable',
+  pt: 'Bloco recolhível',
+  ru: 'Спойлер',
+  ar: 'كتلة قابلة للطي',
+  hi: 'फ़ोल्ड ब्लॉक',
+  bn: 'ভাঁজযোগ্য ব্লক',
+  ur: 'قابلِ تہہ بلاک',
+  id: 'Blok lipat',
+};
 
 const DETAILS_ICON =
   '<g transform="translate(8 8) scale(1.0185) translate(-8 -8)" stroke-width="1.375">' +
@@ -38,14 +55,14 @@ function repairDetails(node: ElementNode): ElementNode {
     body.push(child);
   }
   if (body.length === 0) body.push({ w: P, ch: [] }); // 캐럿의 집 하나는 늘 있다
-  const ch: NabiNode[] = [head ?? { w: SUMMARY, ch: [] },...body];
+  const ch: NabiNode[] = [head ?? { w: SUMMARY, ch: [] }, ...body];
   const same = ch.length === node.ch.length && ch.every((child, i) => child === node.ch[i]);
   if (same) return node;
   return {
     w: node.w,
-...(node.a ? { a: node.a } : {}),
+    ...(node.a ? { a: node.a } : {}),
     ch,
-...(node._id !== undefined ? { _id: node._id } : {}),
+    ...(node._id !== undefined ? { _id: node._id } : {}),
   };
 }
 
@@ -73,12 +90,12 @@ const toggleDetails: Command = (doc, sel, _args, env) => {
       }
     }
     const freed = blocks.length > 0 ? blocks : [{ w: P, ch: [] } as ElementNode];
-    const next = [...doc.slice(0, a),...freed,...doc.slice(b + 1)];
+    const next = [...doc.slice(0, a), ...freed, ...doc.slice(b + 1)];
     return { doc: next, selection: caretAt({ path: [a], offset: 0 }) };
   }
 
-  const box: ElementNode = { w: 'details', a: { o: 1 }, ch: [{ w: SUMMARY, ch: [] },...covered] };
-  const next = [...doc.slice(0, a), { w: P, ch: [box] } as ElementNode,...doc.slice(b + 1)];
+  const box: ElementNode = { w: 'details', a: { o: 1 }, ch: [{ w: SUMMARY, ch: [] }, ...covered] };
+  const next = [...doc.slice(0, a), { w: P, ch: [box] } as ElementNode, ...doc.slice(b + 1)];
   // 캐럿은 제목으로 — 새 접기에서 제일 먼저 쓰는 것이 제목이다.
   return { doc: next, selection: caretAt({ path: [a, 0, 0], offset: 0 }) };
 };
@@ -90,23 +107,23 @@ const toggleDetails: Command = (doc, sel, _args, env) => {
 // 각자 자기 상태를 말하려면 "정하기"가 있어야 한다(토글 하나면 지금 어느 쪽인지 단추가 못 말한다).
 const setDetailsOpen: Command = (doc, sel, args) => {
   const [start] = ordered(sel);
-  const top = topNodeAt(doc, start.path);
-  const box = top?.ch[0];
-  if (!top || box === undefined || !isElement(box) || box.w !== 'details') return null;
+  const owner = blockOwnerAt(doc, start.path, 'details');
+  const box = owner?.node;
+  if (!owner || !box) return null;
   const raw = args['open'];
   const now = box.a?.['o'] === 1;
   const want = raw === undefined ? !now : raw === 1 || raw === '1' || raw === true;
   if (want === now) return null; // 같은 값 — 무변화 침묵
-  const a = {...(box.a ?? {}) };
+  const a = { ...(box.a ?? {}) };
   if (!want) delete a['o'];
   else a['o'] = 1;
   const next: ElementNode = {
     w: 'details',
-...(Object.keys(a).length > 0 ? { a } : {}),
+    ...(Object.keys(a).length > 0 ? { a } : {}),
     ch: box.ch,
-...(box._id !== undefined ? { _id: box._id } : {}),
+    ...(box._id !== undefined ? { _id: box._id } : {}),
   };
-  return { doc: replaceAt(doc, [start.path[0] as number, 0], [next]), selection: sel };
+  return { doc: replaceAt(doc, owner.path, [next]), selection: sel };
 };
 
 export const detailsWing: Wing = {
@@ -137,3 +154,5 @@ export const detailsWing: Wing = {
   // 하는 자리가 됐다.
   styles: DETAILS_CSS,
 };
+
+$markBuiltinAttrOwner(detailsWing, ['details', 'summary']);

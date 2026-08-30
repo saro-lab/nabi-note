@@ -1,14 +1,24 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: CDN ব্যবহার
+description: বিল্ড টুল ছাড়া ব্রাউজারের জন্য NABI NOTE যুক্ত করার উদাহরণ।
 ---
 
-<div class="translation-shell">
+<script setup>
+import CdnDemo from '../../.vitepress/ui/CdnDemo.vue'
+</script>
 
-# Translation pending
+# CDN ব্যবহার
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This route is reserved so navigation and language links do not lead to a missing page.
+যে স্থির পৃষ্ঠায় প্যাকেজ ইনস্টল করা কঠিন, সেখানে CDN থেকে NABI NOTE-এর ব্রাউজার বান্ডল ও CSS লোড করতে পারেন। নিচের উদাহরণটি বিল্ডের সময় স্বয়ংক্রিয়ভাবে প্যাকেজ সংস্করণ পড়ে ঠিকানা তৈরি করে এবং গ্লোবাল অবজেক্ট `NabiNote` দিয়ে এডিটর তৈরি করে।
 
-[Open the Korean canonical page](/ko/guide/cdn)
+<CdnDemo />
 
-</div>
+## NABI NOTE-এ খেয়াল রাখার বিষয়
+
+- প্রকাশের কোডে CSS ও ব্রাউজার JavaScript-এর জন্য একই নির্দিষ্ট সংস্করণ ব্যবহার করুন। `latest`-এর মতো সংস্করণহীন ঠিকানা নতুন সংস্করণ প্রকাশের দিন আচরণ বদলে দিতে পারে।
+- ব্রাউজার বান্ডল মূল API-কে `window.NabiNote` হিসেবে দেয়। `nabi-note/ssr`, `nabi-note/viewer`, ও `nabi-note/diff`-এর জন্য আলাদা গ্লোবাল বান্ডল নেই।
+- উদাহরণের ফাইল সংরক্ষণ ও স্থানীয় ইতিহাস ব্যবহারকারীর ব্রাউজারেই চলে। সার্ভার সংরক্ষণ বা অ্যাকাউন্ট সিঙ্ক দরকার হলে `getJson()`-এর ফল আপনার অ্যাপ্লিকেশন API-তে পাঠান।
+- আপলোড যোগ করার সময় শুধু `upload` wing নয়, প্রকৃত পাঠানোর ফাংশন এবং প্রয়োজনীয় image বা link wing-ও যুক্ত করুন। ফাইল যাচাই আপলোড সার্ভারের দায়িত্ব।
+- ব্রাউজার বান্ডলে HTML parser অন্তর্ভুক্ত থাকে। ফলে `setHtml()`, HTML ফাইল খোলা বা HTML পেস্ট করার জন্য আলাদা parser অপশন বা ব্যক্তিগত API লাগে না।
+
+CDN কেবল লোড করার পদ্ধতিতে আলাদা। সংরক্ষণের ফরম্যাট ও ইনপুট যাচাই npm-এ ইনস্টল করার মতোই, তাই [মৌলিক ব্যবহার](/bn/guide/getting-started)-ও দেখুন।

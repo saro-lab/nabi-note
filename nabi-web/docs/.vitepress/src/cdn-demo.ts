@@ -10,7 +10,7 @@ export const CDN_DEMO_FILE = 'demo.html'
 
 // 오른쪽에서 왼쪽으로 읽는 쪽은 예제 파일도 그렇게 서야 한다 — 문서의 `dir` 이 아니라
 // 내려받은 파일 제 몸의 문제다(그 파일은 이 사이트 밖에서 혼자 열린다).
-const RTL: readonly string[] = ['ar', 'ur']
+const RTL: readonly string[] = ['ar', 'ur', 'fa']
 
 // 주석은 여러 줄일 수 있다 — 언어마다 문장이 접히는 자리가 달라서다(독일어는 넉 줄, 한국어는 석 줄).
 // 줄마다 `//` 를 새로 단다.
@@ -66,7 +66,6 @@ ${note(lang, 'cdn_code_faces')}
   var wings = N.wings().allBasic().use('save').use('open').use('tf', { values: ['sans', 'serif'] })
 
   var made = N.createNabiWith(wings, {
-    parseHtml: N.parseNodes,
     locale: '${lang}',
     ask: {
       message: function (text) { window.alert(text) },
@@ -85,7 +84,7 @@ ${note(lang, 'cdn_code_faces')}
   var history = N.mountLocalHistory({ nabi: nabi, storage: N.browserHistoryStorage(window) })
   var file = N.mountFile({
     nabi: nabi, registry: registry, store: N.browserFileStore(document),
-    parse: N.parseNodes, name: function () { return 'note' }, locale: '${lang}'
+    name: function () { return 'note' }, locale: '${lang}'
   })
 
   var toolbar = N.mountToolbar(Object.assign({}, shared, {
@@ -96,7 +95,7 @@ ${note(lang, 'cdn_code_faces')}
       N.openHistoryPanel({
         history: history, surface: surface, locale: '${lang}', sessionId: history.sessionId,
         render: function (record) {
-          return N.renderHtml(JSON.parse(record.body), { env: nabi.$env, builders: registry.builders })
+          return N.renderStoredHtml(JSON.parse(record.body), registry) || ''
         }
       })
     }

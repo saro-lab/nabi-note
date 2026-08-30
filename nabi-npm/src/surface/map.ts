@@ -3,8 +3,10 @@
 import { isElement, isWrapper, type NabiDoc, type NabiNode, type SchemaEnv } from '../schema/index.js';
 import { holderLength, holders, isHolder, nodeAt, type Position } from '../doc/index.js';
 
-// IME 가 빈 문단에서 조합을 시작할 자리 — DOM 에만 살고 트리에는 없다(사상이 걷어 센다).
+// IME 가 빈 문단에서 조합을 시작할 자리 — DOM 에만 살고 트리에는 없다.
 export const ZERO_WIDTH = '​';
+
+export type CaretSlot = (node: Text) => boolean;
 
 export interface DomPoint {
   readonly node: Node;
@@ -14,8 +16,14 @@ export interface DomPoint {
 const TEXT_NODE = 3;
 const ELEMENT_NODE = 1;
 
-function logicalLength(text: string): number {
-  return text.split(ZERO_WIDTH).join('').length;
+function projectedText(node: Text, caretSlot?: CaretSlot): string {
+  const raw = node.data;
+  const owned = caretSlot?.(node) === true && raw.startsWith(ZERO_WIDTH) ? raw.slice(1) : raw;
+  return owned.replace(/\r\n?/g, '\n');
+}
+
+function logicalLength(node: Text, caretSlot?: CaretSlot): number {
+  return projectedText(node, caretSlot).length;
 }
 
 // 속성 선택자용 — _id 는 안전 문자만 갖지만(schema), 방어로 따옴표·역슬래시를 이스케이프한다.
@@ -68,8 +76,14 @@ const isBr = (node: Node): boolean =>
 const isSealed = (node: Node): boolean =>
   node.nodeType === ELEMENT_NODE && (node as Element).getAttribute('contenteditable') === 'false';
 
-// 홀더 el 속의 논리 오프셋 → DOM 점. 글자(제로폭 제외) = 한 칸, <br> = 한 칸.
-export function toDomPoint(root: Element, doc: NabiDoc, env: SchemaEnv, pos: Position): DomPoint | null {
+// 홀더 el 속의 논리 오프셋 → DOM 점. mount 소유 slot 외의 글자와 <br> = 한 칸.
+export function toDomPoint(
+  root: Element,
+  doc: NabiDoc,
+  env: SchemaEnv,
+  pos: Position,
+  caretSlot?: CaretSlot,
+): DomPoint | null {
   const holder = nodeAt(doc, pos.path);
   if (!holder || typeof holder._id !== 'string') return null;
   const el = holderElOf(root, holder._id);
@@ -84,12 +98,14 @@ export function toDomPoint(root: Element, doc: NabiDoc, env: SchemaEnv, pos: Pos
   let last: DomPoint = { node: el, offset: 0 };
   const walk = (node: Node): DomPoint | null => {
     if (node.nodeType === TEXT_NODE) {
-      const text = node.textContent ?? '';
-      for (let i = 0; i < text.length; i += 1) {
-        if (text[i] === ZERO_WIDTH) continue;
+      const text = (node as Text).data;
+      let i = caretSlot?.(node as Text) === true && text.startsWith(ZERO_WIDTH) ? 1 : 0;
+      if (i > 0) last = { node, offset: i };
+      while (i < text.length) {
         if (remain === 0) return { node, offset: i };
         remain -= 1;
-        last = { node, offset: i + 1 };
+        i += text[i] === '\r' && text[i + 1] === '\n' ? 2 : 1;
+        last = { node, offset: i };
       }
       return null;
     }
@@ -119,7 +135,7 @@ export function toDomPoint(root: Element, doc: NabiDoc, env: SchemaEnv, pos: Pos
       const parent = node.parentNode;
       if (!parent) return null;
       const index = Array.prototype.indexOf.call(parent.childNodes, node);
-      const size = countAll(node);
+      const size = countAll(node, caretSlot);
       if (remain < size) return { node: parent, offset: index };
       remain -= size;
       last = { node: parent, offset: index + 1 };
@@ -139,11 +155,11 @@ export function toDomPoint(root: Element, doc: NabiDoc, env: SchemaEnv, pos: Pos
 }
 
 // 서브트리의 논리 칸 수 — fromDomPoint 의 세기용.
-function countAll(node: Node): number {
-  if (node.nodeType === TEXT_NODE) return logicalLength(node.textContent ?? '');
+function countAll(node: Node, caretSlot?: CaretSlot): number {
+  if (node.nodeType === TEXT_NODE) return logicalLength(node as Text, caretSlot);
   if (isBr(node)) return 1;
   let total = 0;
-  for (const child of Array.from(node.childNodes)) total += countAll(child);
+  for (const child of Array.from(node.childNodes)) total += countAll(child, caretSlot);
   return total;
 }
 
@@ -159,6 +175,7 @@ export function fromDomPoint(
   env: SchemaEnv,
   node: Node,
   offset: number,
+  caretSlot?: CaretSlot,
 ): MappedPoint | null {
   if (!root.contains(node)) return null;
 
@@ -232,17 +249,19 @@ export function fromDomPoint(
   const walk = (cur: Node): boolean => {
     if (cur === node) {
       if (cur.nodeType === TEXT_NODE) {
-        const text = cur.textContent ?? '';
-        found = acc + logicalLength(text.slice(0, offset));
+        const text = cur as Text;
+        let prefix = text.data.slice(0, offset);
+        if (caretSlot?.(text) === true && prefix.startsWith(ZERO_WIDTH)) prefix = prefix.slice(1);
+        found = acc + prefix.replace(/\r\n?/g, '\n').length;
         return true;
       }
       const kids = Array.from(cur.childNodes);
-      for (let i = 0; i < Math.min(offset, kids.length); i += 1) acc += countAll(kids[i] as Node);
+      for (let i = 0; i < Math.min(offset, kids.length); i += 1) acc += countAll(kids[i] as Node, caretSlot);
       found = acc;
       return true;
     }
     if (cur.nodeType === TEXT_NODE) {
-      acc += logicalLength(cur.textContent ?? '');
+      acc += logicalLength(cur as Text, caretSlot);
       return false;
     }
     if (isBr(cur)) {
@@ -260,24 +279,17 @@ export function fromDomPoint(
   return { pos: { path, offset: clamped }, corrected: corrected || clamped !== found };
 }
 
-// 브라우저가 **줄 끝의 공백을 NBSP 로 바꿔 넣는다.** contenteditable 에서 맨 끝에 스페이스를
-// 치면 U+0020 이 아니라 U+00A0 이 들어간다 — 안 그러면 그 공백이 화면에서 접혀 사라지기 때문에
-// 브라우저 나름의 그리기 사정이다.
-//
-// 그것은 **화면의 사정이지 사람이 친 글자가 아니다.** 그대로 트리에 넣으면 저장값에 NBSP 가
-// 박히고, 무엇보다 "스페이스를 쳤다"를 아무도 못 알아본다 — `# ` 오토포맷이 안 뜨던 자리가
-// 정확히 여기다(친 것은 스페이스인데 트리에 온 것은 NBSP 라 `' '` 비교가 늘 어긋났다).
-//
-// 붙여넣기는 이 길로 안 온다(`insertFromPaste` 는 앞에서 막힌다) — 그러니 여기서 되돌려도
-// 사람이 일부러 넣은 NBSP 를 뭉개지 않는다. 이 길은 **직접 친 글자**만 지난다.
-const NBSP = String.fromCharCode(0xa0);
-
-// 홀더 el 의 화면 글(제로폭 제외, <br> = '\n') — 되맞추기의 자다 (text.ts 의 홀더 글과 같은 모양).
-export function domTextOf(el: Element): string {
+// 홀더 el 의 화면 글(<br> = '\n') — 저장 문자인 NBSP·ZWSP는 그대로 읽는다.
+export function domTextOf(el: Element, caretSlot?: CaretSlot): string {
   let out = '';
+  let hasFiller = false;
   const walk = (node: Node): void => {
     if (node.nodeType === TEXT_NODE) {
-      out += (node.textContent ?? '').split(ZERO_WIDTH).join('').split(NBSP).join(' ');
+      out += projectedText(node as Text, caretSlot);
+      return;
+    }
+    if (isFiller(node)) {
+      hasFiller = true;
       return;
     }
     if (isBr(node)) {
@@ -288,5 +300,5 @@ export function domTextOf(el: Element): string {
   };
   walk(el);
   // 받침 규칙 — 혼자 선 br 하나는 빈 것이다 (render 의 FILLER 와 같은 한 줄 규칙).
-  return out === '\n' ? '' : out;
+  return out === '\n' && !hasFiller ? '' : out;
 }

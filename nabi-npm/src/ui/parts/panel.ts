@@ -75,6 +75,7 @@ const ROOM_VAR = '--nabi-panel-room';
 export interface Panel {
   readonly root: HTMLElement;
   close(): void;
+  reposition(): void;
 }
 
 export interface PanelOptions {
@@ -83,6 +84,8 @@ export interface PanelOptions {
   // 닫힌 뒤 포커스가 갈 자리 (편집 표면).
   readonly restore?: HTMLElement | null;
   readonly onClose?: () => void;
+  // A prompt keeps panel positioning but lets its caller supply the document modal layer.
+  readonly modal?: boolean;
 }
 
 export function openPanel(owner: Document, options: PanelOptions): Panel {
@@ -90,12 +93,14 @@ export function openPanel(owner: Document, options: PanelOptions): Panel {
   const root = make(owner, 'div', options.className ? `nabi-panel ${options.className}` : 'nabi-panel', {
     tabindex: '-1',
   });
+  const expandedBefore = anchor.getAttribute('aria-expanded');
 
   // 보이는 뷰포트 — 키보드가 올라오면 짧아지고 위로 밀리는 그 사각형이다. 없는 브라우저에서는
   // 시트의 기본값(창 한가운데)이 그대로 산다.
   const visual = owner.defaultView?.visualViewport ?? null;
 
   let closed = false;
+  let stopOutside = (): void => {};
   const close = (): void => {
     if (closed) return;
     closed = true;
@@ -104,14 +109,23 @@ export function openPanel(owner: Document, options: PanelOptions): Panel {
     visual?.removeEventListener('resize', follow);
     visual?.removeEventListener('scroll', follow);
     root.remove();
-    anchor.removeAttribute('aria-expanded');
+    if (anchor.getAttribute('aria-expanded') === 'true') {
+      if (expandedBefore === null) anchor.removeAttribute('aria-expanded');
+      else anchor.setAttribute('aria-expanded', expandedBefore);
+    }
     focusQuiet(options.restore ?? null);
     options.onClose?.();
   };
 
   const onKey = (event: Event): void => {
-    const key = (event as KeyboardEvent).key;
-    if (key !== 'Escape' && key !== 'Tab') return;
+    const target = event.target;
+    if (
+      target === null ||
+      typeof (target as Node).nodeType !== 'number' ||
+      (!root.contains(target as Node) && !anchor.contains(target as Node))
+    )
+      return;
+    if ((event as KeyboardEvent).key !== 'Escape') return;
     event.preventDefault();
     close();
   };
@@ -127,27 +141,50 @@ export function openPanel(owner: Document, options: PanelOptions): Panel {
     root.style.setProperty(ROOM_VAR, `${Math.round(visual.height * 0.9)}px`);
   };
 
-  (anchor.parentElement ?? owner.body).append(root);
-  anchor.setAttribute('aria-expanded', 'true');
-  follow();
-  place(owner, root, anchor);
-  // **채워진 뒤에 한 번 더 잰다.** 부르는 쪽은 판을 받아 간 다음에 속을 채운다
-  // (`panel.root.append(grid, readout)`) — 그래서 위의 한 번은 늘 **빈 상자**를 잰다.
-  // 그 크기로 민 값은 언제나 0 이었고, 네 변 보기가 사실상 안 돌았다 (실측: 잰 폭 14px,
-  // 실제 179px — 격자 판이 편집기를 뚫고 나가던 것이 이것이다).
-  // 마이크로태스크는 부르는 쪽의 동기 append **다음**이면서 **그림보다는 앞**이라, 판이 옮겨
-  // 가는 것이 눈에 안 보인다. `place` 는 제자리에서 다시 재고 다시 적으므로 두 번 불러도 같다.
-  queueMicrotask(() => {
-    if (!closed) place(owner, root, anchor);
-  });
+  try {
+    (anchor.parentElement ?? owner.body).append(root);
+    anchor.setAttribute('aria-expanded', 'true');
+    follow();
+    place(owner, root, anchor);
+    // **채워진 뒤에 한 번 더 잰다.** 부르는 쪽은 판을 받아 간 다음에 속을 채운다
+    // (`panel.root.append(grid, readout)`) — 그래서 위의 한 번은 늘 **빈 상자**를 잰다.
+    // 그 크기로 민 값은 언제나 0 이었고, 네 변 보기가 사실상 안 돌았다 (실측: 잰 폭 14px,
+    // 실제 179px — 격자 판이 편집기를 뚫고 나가던 것이 이것이다).
+    // 마이크로태스크는 부르는 쪽의 동기 append **다음**이면서 **그림보다는 앞**이라, 판이 옮겨
+    // 가는 것이 눈에 안 보인다. `place` 는 제자리에서 다시 재고 다시 적으므로 두 번 불러도 같다.
+    queueMicrotask(() => {
+      if (!closed && !options.modal) place(owner, root, anchor);
+    });
 
-  owner.addEventListener('keydown', onKey, true);
-  // 창을 돌리거나 키보드가 오르내리면 가운데도 옮겨 간다 — 큰 화면에서는 이 변수를 아무도
-  // 안 읽으므로 값만 갱신되고 화면은 가만있는다.
-  visual?.addEventListener('resize', follow);
-  visual?.addEventListener('scroll', follow);
-  const stopOutside = closeOnOutside(owner, () => [root, anchor], close);
-  return { root, close };
+    if (!options.modal) owner.addEventListener('keydown', onKey, true);
+    // 창을 돌리거나 키보드가 오르내리면 가운데도 옮겨 간다 — 큰 화면에서는 이 변수를 아무도
+    // 안 읽으므로 값만 갱신되고 화면은 가만있는다.
+    visual?.addEventListener('resize', follow);
+    visual?.addEventListener('scroll', follow);
+    if (!options.modal) stopOutside = closeOnOutside(owner, () => [root, anchor], close);
+    return { root, close, reposition: () => place(owner, root, anchor) };
+  } catch (error) {
+    try {
+      stopOutside();
+    } catch {}
+    try {
+      owner.removeEventListener('keydown', onKey, true);
+    } catch {}
+    try {
+      visual?.removeEventListener('resize', follow);
+    } catch {}
+    try {
+      visual?.removeEventListener('scroll', follow);
+    } catch {}
+    try {
+      root.remove();
+    } catch {}
+    if (anchor.getAttribute('aria-expanded') === 'true') {
+      if (expandedBefore === null) anchor.removeAttribute('aria-expanded');
+      else anchor.setAttribute('aria-expanded', expandedBefore);
+    }
+    throw error;
+  }
 }
 
 // 버튼 바로 아래 — 그러고 나서 네 변을 다 보고 뷰포트 안으로 밀어 넣는다.

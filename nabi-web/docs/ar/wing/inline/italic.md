@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: مائل
+description: اجعل النص المحدد مائلاً.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# مائل
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+يجعل النص المحدد مائلاً. تطبيقه مرة أخرى على النطاق نفسه يزيل التنسيق، وتبقى العلامة محفوظة في المستندات.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/italic" />
 
-</div>
+```ts
+const selected = wings().use('i').build()
+```

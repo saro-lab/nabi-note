@@ -32,7 +32,7 @@ export function make(
 // 포커스 되돌리기 — **화면을 던지지 않고**. 040 §6.1: `focus` 의 기본은 "그 요소로 스크롤"이고
 // 그 계산은 레이아웃 뷰포트라 키보드를 못 본다. 갓 열린 입력 칸은 이 길을 안 탄다(키보드 뒤로 숨는다).
 export function focusQuiet(el: HTMLElement | null | undefined): void {
-  el?.focus({ preventScroll: true });
+  if (el?.isConnected) el.focus({ preventScroll: true });
 }
 
 // 표식 하나를 켜고 끈다 — `hidden` 처럼 값이 없는 표식의 한 벌.

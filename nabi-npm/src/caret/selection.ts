@@ -3,10 +3,15 @@
 import { isWrapper, type NabiDoc, type SchemaEnv } from '../schema/index.js';
 import {
   comparePositions,
+  holderRuns,
+  isHolder,
   nodeAt,
   positionExists,
+  runGraphemeBoundaries,
+  terminalOf,
   type Position,
 } from '../doc/index.js';
+import { snapGraphemeOffset } from '../doc/grapheme.js';
 
 export interface Selection {
   readonly anchor: Position;
@@ -35,14 +40,38 @@ export function sameSelection(a: Selection | null, b: Selection | null): boolean
 
 // 문서 순서로 정렬한 [시작, 끝] — anchor 가 focus 뒤에 설 수 있다.
 export function ordered(sel: Selection): readonly [Position, Position] {
-  return comparePositions(sel.anchor, sel.focus) <= 0
-    ? [sel.anchor, sel.focus]
-    : [sel.focus, sel.anchor];
+  return comparePositions(sel.anchor, sel.focus) <= 0 ? [sel.anchor, sel.focus] : [sel.focus, sel.anchor];
 }
 
 // 두 자리 모두 문서에 실재하는가 — 공통 계약의 선택판.
 export function selectionExists(doc: NabiDoc, sel: Selection, env: SchemaEnv): boolean {
   return positionExists(doc, sel.anchor, env) && positionExists(doc, sel.focus, env);
+}
+
+function snapPosition(
+  doc: NabiDoc,
+  pos: Position,
+  env: SchemaEnv,
+  bias: 'backward' | 'forward' | 'nearest',
+): Position | null {
+  if (!positionExists(doc, pos, env)) return null;
+  const holder = nodeAt(doc, pos.path);
+  if (!holder || !isHolder(holder, env) || isWrapper(holder, env)) return pos;
+  const boundaries = runGraphemeBoundaries(holderRuns(holder, terminalOf(env)));
+  const offset = snapGraphemeOffset(boundaries, pos.offset, bias);
+  return offset === pos.offset ? pos : { path: pos.path, offset };
+}
+
+export function normalizeSelection(doc: NabiDoc, sel: Selection, env: SchemaEnv): Selection | null {
+  if (!selectionExists(doc, sel, env)) return null;
+  if (samePosition(sel.anchor, sel.focus)) {
+    const position = snapPosition(doc, sel.focus, env, 'nearest');
+    return position ? { anchor: position, focus: position } : null;
+  }
+  const forward = comparePositions(sel.anchor, sel.focus) <= 0;
+  const anchor = snapPosition(doc, sel.anchor, env, forward ? 'backward' : 'forward');
+  const focus = snapPosition(doc, sel.focus, env, forward ? 'forward' : 'backward');
+  return anchor && focus ? { anchor, focus } : null;
 }
 
 // 물건이 골라졌는가 — 같은 래퍼문단의 0~1 을 정확히 덮는 범위다. 별도 상태가 아니다.

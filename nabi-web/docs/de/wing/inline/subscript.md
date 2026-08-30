@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Tiefstellung
+description: Hebt den ausgewählten Text unter die Grundlinie.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Tiefstellung
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Hebt den ausgewählten Text unter die Grundlinie, für chemische Formeln und Indizes. Durch erneutes Anwenden wird das Formatierung entfernt.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/subscript" />
 
-</div>
+```ts
+const selected = wings().use('sub').build()
+```

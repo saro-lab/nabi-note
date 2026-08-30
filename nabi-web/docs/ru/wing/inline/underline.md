@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Подчёркивание
+description: Подчеркните выбранный текст.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Подчёркивание
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Подчёркивает выбранный текст. Повторное применение к тому же диапазону удаляет форматирование, а метка сохраняется в сохранённых документах.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/underline" />
 
-</div>
+```ts
+const selected = wings().use('u').build()
+```

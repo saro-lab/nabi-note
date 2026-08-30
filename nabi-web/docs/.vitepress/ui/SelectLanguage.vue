@@ -7,7 +7,7 @@
     <button
       type="button"
       class="hdr-btn g-link-hover gap-1 px-2 text-[0.9rem] font-medium"
-      aria-haspopup="menu"
+      aria-haspopup="dialog"
       :aria-expanded="open"
       @click="open = !open"
     >
@@ -27,17 +27,6 @@
       <span translate="no" class="@max-[32rem]:hidden!">{{ langName }}</span>
     </button>
 
-    <!-- Sized by its longest name, not by a number picked in advance: a fixed 11rem box left a
-         gutter of empty glass beside `한국어` and still had to be argued about for `Português`.
-         `max-content` lets the fourteen names decide the width together, and the row padding is the
-         only air that is actually spelled out.
-         No height cap and no scroller of its own: the page already scrolls, and a list that has to
-         be scrolled inside itself reads as a list that is missing languages. -->
-    <!-- 폭은 가장 긴 이름이 정한다 — 미리 고른 11rem 은 `한국어` 옆에 빈 유리를 남기면서도
-         `Português` 앞에서는 여전히 아슬아슬했다. `max-content` 는 이름 열넷이 함께 폭을 정하게
-         두고, 손으로 적어 넣는 여백은 줄의 좌우 안쪽 하나뿐이다.
-         높이를 자르지 않고 제 스크롤도 안 만든다 — 쪽이 이미 스크롤되고, 목록 안에서 또
-         굴려야 하는 것은 언어가 모자란 것으로 읽힌다. -->
     <!-- Hung on the button's own bottom edge (`top-full`), not at a measured height: `hdr-btn` grows
          to 2.75rem where the pointer is coarse, and a fixed `top` that cleared the 2rem desktop
          button slid up underneath the taller touch one. -->
@@ -53,10 +42,23 @@
     <div
       v-if="open"
       ref="panel"
-      role="menu"
+      role="dialog"
+      aria-label="language"
       :style="shift ? { transform: `translateX(${shift}px)` } : undefined"
-      class="lang-menu g-glass absolute top-full z-50 mt-1 w-max rounded-xl py-1.5 text-center"
+      class="lang-menu g-glass absolute top-full z-50 mt-1 w-[10rem] rounded-xl py-1.5 text-center"
     >
+      <input
+        ref="searchInput"
+        :value="query"
+        type="text"
+        class="lang-search mb-1.5 block w-full px-3 py-1.5 text-center text-[0.875rem]"
+        placeholder="language"
+        aria-label="language"
+        @compositionstart="composing = true"
+        @compositionend="onCompositionEnd"
+        @input="onInput"
+        @keydown="onSearchKeyDown"
+      />
       <!-- A row is a line of text plus a little air, the same measure the header's own buttons use;
            the finger-sized 2.75rem is asked for only where the pointer is coarse (see `<style>`),
            so a mouse gets a list it can read in one glance instead of one it has to travel. -->
@@ -64,13 +66,12 @@
            맞춘 2.75rem 은 포인터가 거친 곳에서만 부른다(아래 `<style>`). 마우스는 훑어 내려가는
            목록 대신 한눈에 담기는 목록을 받는다. -->
       <button
-        v-for="[code, name] in languages"
+        v-for="([code, name], index) in filteredLanguages"
         :key="code"
-        role="menuitem"
         type="button"
         translate="no"
-        class="lang-item flex w-full items-center justify-center px-6 py-1.5 text-[0.875rem] g-link-hover"
-        :class="code === lang ? 'font-semibold' : ''"
+        class="lang-item flex w-full items-center justify-center px-3 py-1.5 text-[0.875rem] g-link-hover"
+        :class="{ 'font-semibold lang-item-active': index === activeIndex }"
         @click="pick(code)"
       >
         {{ name }}
@@ -83,22 +84,30 @@
 import Icon from './Icon.vue'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useData } from 'vitepress'
-import { applyLanguage, languageList, languageRandom } from '../src/langs.ts'
+import { applyLanguage, languageList, languageMatches, languageRandom } from '../src/langs.ts'
 
 // `lang`, not `localeIndex` — the root locale reports `'root'`, which names no language
 // `localeIndex` 가 아니라 `lang` 을 본다 — 루트 로케일은 `'root'` 라 어느 언어도 가리키지 않는다
 const { lang } = useData()
 // Shuffled, and shuffled ONCE per page load — not per open, or the list would rearrange itself
-// under the hand that is reaching for it. Fourteen languages in a fixed order always put the same
+// under the hand that is reaching for it. Twenty-four languages in a fixed order always put the same
 // two on top; a language should not have to be first to be found.
 // 섞되 **페이지가 뜰 때 한 번만** 섞는다 — 열 때마다 섞으면 고르러 가는 손 밑에서 목록이 다시
-// 늘어선다. 열넷을 고정 순서로 두면 늘 같은 둘이 맨 위에 앉는다. 어떤 언어도 찾아지기 위해
+// 늘어선다. 스물네 언어를 고정 순서로 두면 늘 같은 둘이 맨 위에 앉는다. 어떤 언어도 찾아지기 위해
 // 첫 줄일 필요는 없다.
 const languages = languageRandom()
 const langName = computed(() => (languageList as Record<string, string>)[lang.value] ?? lang.value)
+const query = ref('')
+const activeIndex = ref(-1)
+const composing = ref(false)
+const filteredLanguages = computed(() => languages.filter(([code, name]) => code !== lang.value && languageMatches(code, name, query.value)))
+watch(query, () => {
+  activeIndex.value = filteredLanguages.value.length ? 0 : -1
+})
 
 const root = ref<HTMLElement | null>(null)
 const panel = ref<HTMLElement | null>(null)
+const searchInput = ref<HTMLInputElement | null>(null)
 const open = ref(false)
 
 // Whatever the inline edge leaves hanging outside, this pulls back in. The list is wider than the
@@ -134,6 +143,35 @@ function onKeyDown(event: Event): void {
   if ((event as KeyboardEvent).key === 'Escape') open.value = false
 }
 
+function onInput(event: Event): void {
+  query.value = (event.target as HTMLInputElement).value
+}
+
+function onCompositionEnd(event: CompositionEvent): void {
+  composing.value = false
+  query.value = (event.target as HTMLInputElement).value
+}
+
+function onSearchKeyDown(event: KeyboardEvent): void {
+  if (composing.value || event.isComposing) return
+
+  const direction = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0
+  if (!direction && event.key !== 'Enter') return
+
+  const items = filteredLanguages.value
+  if (!items.length) return
+
+  event.preventDefault()
+  if (event.key === 'Enter') {
+    if (activeIndex.value >= 0) pick(items[activeIndex.value][0])
+    return
+  }
+
+  activeIndex.value = activeIndex.value < 0
+    ? direction > 0 ? 0 : items.length - 1
+    : (activeIndex.value + direction + items.length) % items.length
+}
+
 // Listeners live only while open — a closed menu has no business listening on the document
 // 리스너는 열려 있는 동안에만 산다 — 닫힌 상자가 문서 이벤트를 듣고 있을 이유가 없다
 watch(open, async (value) => {
@@ -143,10 +181,13 @@ watch(open, async (value) => {
   window[method]('resize', clamp)
   if (!value) {
     shift.value = 0
+    query.value = ''
+    activeIndex.value = -1
     return
   }
   await nextTick()
   clamp()
+  searchInput.value?.focus()
 })
 
 onBeforeUnmount(() => {
@@ -164,11 +205,15 @@ function pick(code: string): void {
 <style scoped>
 /* 방향을 따라 뒤집히는 모서리 — LTR 이면 오른쪽, RTL 이면 왼쪽에 걸린다 */
 /* The edge that flips with the text direction: right in LTR, left in RTL */
-/* 폭은 이름이 정하되(`w-max`) 바닥은 두어, 짧은 이름만 있는 언어에서도 단추보다 좁아지지 않는다 */
-/* The width is the names' (`w-max`), with a floor so short names never make it narrower than the button */
 .lang-menu {
   inset-inline-end: 0;
-  min-width: 7rem;
+}
+
+.lang-search {
+  color: inherit;
+  background: color-mix(in srgb, var(--g-bg) 68%, transparent);
+  border: 0;
+  outline: none;
 }
 
 /* 머리줄은 제 안의 **모든** 것에 `line-height: 1` 을 건다(`theme/Layout.vue` 의 `.header-content *`)
@@ -181,6 +226,20 @@ function pick(code: string): void {
    20px). Three classes deep is what it takes to outrank that rule. */
 .lang-menu .lang-item {
   line-height: 1.25rem;
+  opacity: 0.9;
+}
+
+.lang-menu .lang-item:hover,
+.lang-menu .lang-item:focus-visible {
+  color: var(--g-accent);
+  font-weight: 600;
+  opacity: 1;
+}
+
+.lang-menu .lang-item-active {
+  color: var(--g-accent);
+  font-weight: 600;
+  opacity: 1;
 }
 
 /* 손가락은 커서가 아니다 — 거친 포인터에서만 줄을 손에 맞게 키운다(`.hdr-btn` 과 같은 값) */

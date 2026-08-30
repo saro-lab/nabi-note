@@ -15,6 +15,7 @@ export interface ClipFile {
 
 // 이벤트가 아니라 그 순간 떠 둔 값이다 — clipboardData 는 동기 구간 밖에서 죽는다.
 export interface PasteData {
+  readonly custom: string;
   readonly html: string;
   readonly plain: string;
   readonly files: readonly ClipFile[];
@@ -49,12 +50,65 @@ export interface IoFilter {
   readonly save?: {
     readonly extension: string;
     readonly write: (doc: DocSource) => string;
+    // 성공한 저장이 편집기의 clean baseline 이 되는 정본 형식인가.
+    readonly canonical: boolean;
     // 되돌아오지 못할 수 있다 — 저장 판이 "(손실저장)" 을 붙이는 근거다.
     readonly lossy?: boolean;
     readonly mime?: string;
   };
-  // 확장자가 맞는 필터가 읽는다. **제 것이 아니면 null** — 부르는 쪽이 다음 필터로 넘어간다.
-  readonly read?: (name: string, text: string) => unknown;
+  readonly read?: {
+    // 점을 포함한 확장자. 비교는 대소문자를 가리지 않는다.
+    readonly extensions: readonly string[];
+    readonly run: (name: string, text: string) => unknown;
+  };
+}
+
+export function $assertIoFilter(value: IoFilter): void {
+  const fail = (detail: string): never => {
+    throw new TypeError(`Invalid IO filter: ${detail}`);
+  };
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) fail('filter must be an object');
+  const filter = value as unknown as Record<string, unknown>;
+  if (typeof filter['id'] !== 'string' || filter['id'].trim() === '') fail('id must be a non-empty string');
+  if (filter['paste'] !== undefined && typeof filter['paste'] !== 'function')
+    fail(`"${filter['id']}" paste must be a function`);
+
+  const save = filter['save'];
+  if (save !== undefined) {
+    if (typeof save !== 'object' || save === null || Array.isArray(save))
+      fail(`"${filter['id']}" save must be an object`);
+    const spec = save as Record<string, unknown>;
+    if (typeof spec['extension'] !== 'string' || spec['extension'].length < 2 || !spec['extension'].startsWith('.')) {
+      fail(`"${filter['id']}" save extension must be a non-empty dot-prefixed string`);
+    }
+    if (typeof spec['write'] !== 'function') fail(`"${filter['id']}" save.write must be a function`);
+    if (typeof spec['canonical'] !== 'boolean') fail(`"${filter['id']}" save.canonical must be a boolean`);
+    if (spec['lossy'] !== undefined && typeof spec['lossy'] !== 'boolean')
+      fail(`"${filter['id']}" save.lossy must be a boolean`);
+    if (spec['mime'] !== undefined && (typeof spec['mime'] !== 'string' || spec['mime'] === '')) {
+      fail(`"${filter['id']}" save.mime must be a non-empty string`);
+    }
+  }
+
+  const read = filter['read'];
+  if (read !== undefined) {
+    if (typeof read !== 'object' || read === null || Array.isArray(read))
+      fail(`"${filter['id']}" read must be an object`);
+    const spec = read as Record<string, unknown>;
+    const extensions = spec['extensions'];
+    if (!Array.isArray(extensions) || extensions.length === 0)
+      fail(`"${filter['id']}" read.extensions must be a non-empty array`);
+    const seen = new Set<string>();
+    for (const extension of extensions as unknown[]) {
+      if (typeof extension !== 'string' || extension.length < 2 || !extension.startsWith('.')) {
+        fail(`"${filter['id']}" read extension must be a non-empty dot-prefixed string`);
+      }
+      const normalized = (extension as string).toLowerCase();
+      if (seen.has(normalized)) fail(`"${filter['id']}" read extensions must be unique case-insensitively`);
+      seen.add(normalized);
+    }
+    if (typeof spec['run'] !== 'function') fail(`"${filter['id']}" read.run must be a function`);
+  }
 }
 
 // --- md 조립 계약 -----------------------------------------------------------------------------

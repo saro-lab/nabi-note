@@ -62,7 +62,10 @@ export function applyTokens(el: Element, tokens: readonly CodeToken[], options: 
   }
   // 끝이 라인이면 화면 전용 받침을 하나 더 — 안 그러면 그 마지막 줄에 캐럿이 못 선다.
   // 표식이 달려 있어 사상의 셈에는 안 든다.
-  if (options.filler !== false && (fragment.lastChild?.nodeName === 'BR' || tokens.at(-1)?.text.endsWith('\n'))) {
+  if (
+    options.filler !== false &&
+    (fragment.childNodes.length === 0 || fragment.lastChild?.nodeName === 'BR' || tokens.at(-1)?.text.endsWith('\n'))
+  ) {
     const filler = owner.createElement('br');
     filler.setAttribute(FILLER_ATTR, '');
     fragment.append(filler);

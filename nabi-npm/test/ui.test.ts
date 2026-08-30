@@ -8,17 +8,18 @@
 // 뜨는 판 — 네 변 넘침 보정과 위로 뒤집기 (084 ②)
 // 첨부 물건 — 클릭 고르기·통째 넓히기·물건 표식(data-nabi-picked)·저장값 왕복
 import { $fromJson, type ElementNode } from '../src/schema/index.js';
+import { hostOf } from '../src/editor/index.js';
 import { caretAt, makeArmed, type Selection } from '../src/caret/index.js';
 import { attachFileLink } from '../src/wings/link/attach.js';
 import { tinyHtml } from './tiny-html.js';
 import { mountSticky } from '../src/ui/sticky.js';
-import { createNabiWith, makeRegistry, type Registry, type WingField } from '../src/wing/index.js';
+import { $createNabiWith, createNabiWith, makeRegistry, type Registry, type WingField } from '../src/wing/index.js';
 import { defaultWings, wings } from '../src/wings/index.js';
 import { toolbarSlots } from '../src/wing/toolbar-html.js';
 import { makeImageWing } from '../src/wings/img/img.js';
 import { safeUrl } from '../src/html/index.js';
 import { videoId, youtubeId } from '../src/html/url.js';
-import { DICTIONARY, LOCALES, localeOf, makeTranslator, translate } from '../src/locale/index.js';
+import { DICTIONARY, LOCALES, localeDirection, localeOf, makeTranslator, translate } from '../src/locale/index.js';
 import { HTML_LABEL, MARKDOWN_LABEL, NABI_LABEL, TEXT_LABEL } from '../src/io/index.js';
 import {
   BAND_MARGIN,
@@ -148,7 +149,21 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   eq('컨테이너: 코드의 눌림 값은 언어다', pressedOf(code, 'code'), { on: true, value: 'ts' });
 
   const open = press(
-    [{ w: 'p', ch: [{ w: 'details', a: { o: 1 }, ch: [{ w: 'summary', ch: ['제목'] }, { w: 'p', ch: [] }] }] }],
+    [
+      {
+        w: 'p',
+        ch: [
+          {
+            w: 'details',
+            a: { o: 1 },
+            ch: [
+              { w: 'summary', ch: ['제목'] },
+              { w: 'p', ch: [] },
+            ],
+          },
+        ],
+      },
+    ],
     at([0, 0, 0], 1),
   );
   eq('컨테이너: 접기의 눌림 값은 상태 토큰이다', pressedOf(open, 'details'), { on: true, value: 'open' });
@@ -159,7 +174,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
 
 {
   // 표 — currentValue 가 **상태 토큰 더미**를 답한다 (10 판단). 눌림은 "품는가"로 읽는다.
-  const cell = (a?: Record<string, unknown>): unknown => ({ w: 'td', ...(a ? { a } : {}), ch: [{ w: 'p', ch: ['x'] }] });
+  const cell = (a?: Record<string, unknown>): unknown => ({
+    w: 'td',
+    ...(a ? { a } : {}),
+    ch: [{ w: 'p', ch: ['x'] }],
+  });
   const table = (cells: unknown[]): unknown[] => [{ w: 'p', ch: [{ w: 'table', ch: [{ w: 'tr', ch: cells }] }] }];
 
   const plain = press(table([cell(), cell()]), at([0, 0, 0, 0, 0], 1));
@@ -185,7 +204,10 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   const onPlain = pressedOf(press(sorted([cell(), cell()]), at([0, 0, 0, 0, 0], 1)), 'table');
   ok('표: 정렬 표식은 표에 사는데 칸 속 캐럿에서 읽힌다', hasToken(onPlain.value, 'sort'));
   const onHeader = pressedOf(press(sorted([cell({ th: 1 }), cell()]), at([0, 0, 0, 0, 0], 1)), 'table');
-  ok('표: 칸의 토큰과 표의 토큰이 한 값에 함께 실린다', hasToken(onHeader.value, 'th') && hasToken(onHeader.value, 'sort'));
+  ok(
+    '표: 칸의 토큰과 표의 토큰이 한 값에 함께 실린다',
+    hasToken(onHeader.value, 'th') && hasToken(onHeader.value, 'sort'),
+  );
   ok('표: 정렬을 안 켠 표는 그 토큰이 없다', !hasToken(pressedOf(header, 'table').value, 'sort'));
 
   // 정렬 단추는 **토글**이다 — 표에 상태가 둘뿐이라 켜 놓은 것이 화면에 보여야 한다.
@@ -206,7 +228,18 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
           a: { o: 1 },
           ch: [
             { w: 'summary', ch: ['밖'] },
-            { w: 'p', ch: [{ w: 'details', ch: [{ w: 'summary', ch: ['안'] }, { w: 'p', ch: ['글'] }] }] },
+            {
+              w: 'p',
+              ch: [
+                {
+                  w: 'details',
+                  ch: [
+                    { w: 'summary', ch: ['안'] },
+                    { w: 'p', ch: ['글'] },
+                  ],
+                },
+              ],
+            },
           ],
         },
       ],
@@ -220,7 +253,9 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   const table = docOf([
     {
       w: 'p',
-      ch: [{ w: 'table', a: { sort: 1 }, ch: [{ w: 'tr', ch: [{ w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['x'] }] }] }] }],
+      ch: [
+        { w: 'table', a: { sort: 1 }, ch: [{ w: 'tr', ch: [{ w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['x'] }] }] }] },
+      ],
     },
   ]);
   const tableWing = registry.wingOf('table');
@@ -269,7 +304,20 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
 
   // 접기의 제목 — 인라인 홀더지만 wing 자신의 노드가 아니라 부품이다. 마크는 산다.
   const summary = reachOf(
-    [{ w: 'p', ch: [{ w: 'details', ch: [{ w: 'summary', ch: ['제목'] }, { w: 'p', ch: [] }] }] }],
+    [
+      {
+        w: 'p',
+        ch: [
+          {
+            w: 'details',
+            ch: [
+              { w: 'summary', ch: ['제목'] },
+              { w: 'p', ch: [] },
+            ],
+          },
+        ],
+      },
+    ],
     [0, 0, 0],
     1,
   );
@@ -297,8 +345,28 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     [0, 0, 0, 0, 0],
     1,
   );
-  ok('노출: allows 는 tr 만 받는다', !admits({ ...tableReach, blockParent: docOf([{ w: 'p', ch: [{ w: 'table', ch: [] }] }])!.at(0)!.ch[0] as ElementNode, blockParentWing: wingOf('table') }, 'hr'));
-  ok('노출: allows 가 tr 은 받는다', admits({ ...tableReach, blockParent: docOf([{ w: 'p', ch: [{ w: 'table', ch: [] }] }])!.at(0)!.ch[0] as ElementNode, blockParentWing: wingOf('table') }, 'tr'));
+  ok(
+    '노출: allows 는 tr 만 받는다',
+    !admits(
+      {
+        ...tableReach,
+        blockParent: docOf([{ w: 'p', ch: [{ w: 'table', ch: [] }] }])!.at(0)!.ch[0] as ElementNode,
+        blockParentWing: wingOf('table'),
+      },
+      'hr',
+    ),
+  );
+  ok(
+    '노출: allows 가 tr 은 받는다',
+    admits(
+      {
+        ...tableReach,
+        blockParent: docOf([{ w: 'p', ch: [{ w: 'table', ch: [] }] }])!.at(0)!.ch[0] as ElementNode,
+        blockParentWing: wingOf('table'),
+      },
+      'tr',
+    ),
+  );
   ok('노출: 뿌리는 무엇이든 받는다', admits({ ...plain }, 'table'));
 }
 
@@ -357,11 +425,21 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     const doc = docOf([
       {
         w: 'p',
-        ch: [{ w: 'table', a: { sort: 1 }, ch: [{ w: 'tr', ch: [{ w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['x'] }] }] }] }],
+        ch: [
+          {
+            w: 'table',
+            a: { sort: 1 },
+            ch: [{ w: 'tr', ch: [{ w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['x'] }] }] }],
+          },
+        ],
       },
     ]);
     const group = contextGroupsAt(doc!, at([0, 0, 0, 0, 0], 1), registry, env)[0];
-    eq('상황 줄: 표 그룹은 칸·행·표를 안에서 밖으로 든다', group?.nodes.map((node) => node.w), ['td', 'tr', 'table']);
+    eq(
+      '상황 줄: 표 그룹은 칸·행·표를 안에서 밖으로 든다',
+      group?.nodes.map((node) => node.w),
+      ['td', 'tr', 'table'],
+    );
     eq('상황 줄: 그 줄기가 답하는 값에 표의 토큰이 있다', stackValue(group?.nodes ?? [], group!.wing), 'th sort');
   }
 
@@ -375,7 +453,10 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
           ch: [
             {
               w: 'details',
-              ch: [{ w: 'summary', ch: [] }, { w: 'p', ch: [{ w: 'code', ch: ['x'] }] }],
+              ch: [
+                { w: 'summary', ch: [] },
+                { w: 'p', ch: [{ w: 'code', ch: ['x'] }] },
+              ],
             },
           ],
         },
@@ -390,14 +471,65 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
 
 {
   eq('locale: 요청한 말이 있으면 그것', translate('close', 'ko'), '닫기');
-  eq('locale: 없으면 en', translate('cancel', 'ru'), 'Cancel');
+  eq('locale: 러시아어 취소', translate('cancel', 'ru'), 'Отмена');
   eq('locale: en 에도 없으면 키 그 자체', translate('nope.no.such', 'ko'), 'nope.no.such');
   eq('locale: 나라 꼬리는 떼고 본다', translate('close', 'ko-KR'), '닫기');
   eq('locale: 대소문자·밑줄도 같은 말이다', translate('close', 'KO_kr'), '닫기');
   eq('locale: 모양이 아니면 en 으로', localeOf('!!'), 'en');
   eq('locale: 빈 값도 en 으로', localeOf(undefined), 'en');
+  eq('locale: regional and underscore tags normalize once', localeOf('EN_us'), 'en');
+  eq('locale: ar regional tag is RTL', localeDirection('ar-EG'), 'rtl');
+  eq('locale: ur regional tag is RTL', localeDirection('UR_pk'), 'rtl');
+  eq('locale: fa regional tag is RTL', localeDirection('fa-IR'), 'rtl');
   eq('locale: 자리표를 채운다', translate('gridSize', 'en', DICTIONARY, { rows: 3, cols: 4 }), '3 × 4');
   eq('locale: 못 채운 자리는 그대로 둔다', translate('gridSize', 'en', DICTIONARY, { rows: 3 }), '3 × {cols}');
+
+  const expectedLocales = [
+    'en',
+    'zh',
+    'hi',
+    'es',
+    'ar',
+    'fr',
+    'bn',
+    'pt',
+    'ru',
+    'id',
+    'ur',
+    'de',
+    'ja',
+    'fa',
+    'mr',
+    'vi',
+    'te',
+    'ha',
+    'tr',
+    'sw',
+    'ta',
+    'ko',
+    'th',
+    'it',
+  ];
+  eq('locale: 코어 로케일 순서', [...LOCALES], expectedLocales);
+  const tokenPattern = /\{[^{}]+\}/g;
+  const holes: string[] = [];
+  const invalid: string[] = [];
+  for (const [key, entry] of Object.entries(DICTIONARY)) {
+    const english = entry.en ?? '';
+    const englishTokens = (english.match(tokenPattern) ?? []).sort();
+    for (const locale of LOCALES) {
+      const value = entry[locale];
+      if (typeof value !== 'string' || value.trim() === '') {
+        holes.push(`${key}:${locale}`);
+        continue;
+      }
+      if (value.includes('\uFFFD')) invalid.push(`${key}:${locale}:replacement-character`);
+      const tokens = (value.match(tokenPattern) ?? []).sort();
+      if (tokens.join('\0') !== englishTokens.join('\0')) invalid.push(`${key}:${locale}:placeholders`);
+    }
+  }
+  eq('locale: 코어 사전 누락 없음', holes, []);
+  eq('locale: 코어 사전 값 유효', invalid, []);
 
   const t = makeTranslator('ja');
   eq('locale: 번역기도 같은 규칙', t.t('close'), '閉じる');
@@ -405,7 +537,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   eq('locale: 레코드에 그 말이 없으면 en', t.pick({ en: 'mine' }, 'close'), 'mine');
   eq('locale: 레코드 자체가 없으면 사전으로', t.pick(undefined, 'close'), '閉じる');
 
-  eq('locale: 11 이 남긴 한국어 하드코딩이 사전으로 왔다', translate('openWhileChanged', 'ko').startsWith('작성 중인'), true);
+  eq(
+    'locale: 11 이 남긴 한국어 하드코딩이 사전으로 왔다',
+    translate('openWhileChanged', 'ko').startsWith('작성 중인'),
+    true,
+  );
 }
 
 {
@@ -426,12 +562,13 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   ok('선언: 버튼 있는 wing 은 전부 하는 일을 말한다', noAction.length === 0, noAction);
 
   // 버튼이 부르는 커맨드는 실재해야 한다 — 죽은 이름을 그리지 않는다.
-  const { nabi } = createNabiWith(defaultWings);
+  const { nabi } = $createNabiWith(defaultWings, { parseHtml: tinyHtml });
   const dead: string[] = [];
   for (const wing of registry.wings) {
     const action = wing.button?.action;
     if (!action || action.kind === 'mark' || action.kind === 'file' || action.kind === 'host') continue;
-    if (!nabi.applyCommand(action.command, {}) && !registry.commands[action.command]) dead.push(`${wing.w} → ${action.command}`);
+    if (!nabi.applyCommand(action.command, {}) && !registry.commands[action.command])
+      dead.push(`${wing.w} → ${action.command}`);
   }
   ok('선언: 버튼이 부르는 커맨드가 전부 실재한다', dead.length === 0, dead);
 
@@ -482,7 +619,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   const GONE_KEYS = ['io.text', 'io.html', 'io.markdown', 'io.nabi'];
   const revived = GONE_KEYS.filter((key) => key in DICTIONARY);
   ok('사전: 형식 이름 키는 사전에 없다 (marks.ts 가 든다)', revived.length === 0, revived);
-  eq('내장 형식 넷은 영어 고정 대문자다', [HTML_LABEL, MARKDOWN_LABEL, TEXT_LABEL, NABI_LABEL], ['HTML', 'MARKDOWN', 'TEXT', 'NABI']);
+  eq(
+    '내장 형식 넷은 영어 고정 대문자다',
+    [HTML_LABEL, MARKDOWN_LABEL, TEXT_LABEL, NABI_LABEL],
+    ['HTML', 'MARKDOWN', 'TEXT', 'NABI'],
+  );
   // 판의 제목은 열넷을 다 들되 **키가 그대로 새면 안 된다** — 위의 구멍 그물과 짝이다.
   const rawKey = LOCALES.filter((code) => translate('io.title', code) === 'io.title');
   ok('사전: 판 제목이 키 그대로 새는 로케일이 없다', rawKey.length === 0, rawKey);
@@ -503,17 +644,23 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   {
     const hover = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-btn:hover, .nabi-btn.nabi-kbd {'));
     const hoverBody = hover.slice(0, hover.indexOf('}'));
-    ok('CSS: 툴바 hover는 바탕을 칠하지 않고 색만 바꾼다',
-      /color:\s*var\(--nabi-accent\)/.test(hoverBody) && !/background:/.test(hoverBody));
+    ok(
+      'CSS: 툴바 hover는 바탕을 칠하지 않고 색만 바꾼다',
+      /color:\s*var\(--nabi-accent\)/.test(hoverBody) && !/background:/.test(hoverBody),
+    );
     const on = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-btn.on, .nabi-btn.on:hover {'));
     const onBody = on.slice(0, on.indexOf('}'));
-    ok('CSS: 툴바 on도 바탕을 칠하지 않고 색만 바꾼다',
-      /color:\s*var\(--nabi-accent\)/.test(onBody) && !/background:/.test(onBody));
+    ok(
+      'CSS: 툴바 on도 바탕을 칠하지 않고 색만 바꾼다',
+      /color:\s*var\(--nabi-accent\)/.test(onBody) && !/background:/.test(onBody),
+    );
     const tap = CORE_CSS.slice(CORE_CSS.indexOf('@keyframes nabi-tap'));
     ok('CSS: 누름 반응은 아래로 내려갔다 돌아온다', /translateY\(2px\)/.test(tap.slice(0, tap.indexOf('\n}'))));
     ok('CSS: 버튼 아닌 요소도 같은 tap 클래스를 쓴다', CORE_CSS.includes('.nabi-tap { animation: nabi-tap'));
-    ok('CSS: 네이티브 active도 아래로 눌린다',
-      /\.nabi-btn:active:not\(:disabled\)[\s\S]*?translateY\(2px\)/.test(CORE_CSS));
+    ok(
+      'CSS: 네이티브 active도 아래로 눌린다',
+      /\.nabi-btn:active:not\(:disabled\)[\s\S]*?translateY\(2px\)/.test(CORE_CSS),
+    );
   }
 
   // 도구 둘(미리보기·전체화면)이 위치 잡힌 층에 **함께** 서야 한다 — 안 서면 손이 안 닿는다.
@@ -541,9 +688,15 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
 
     const rowRule = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-toolbar-row {'));
     const rowBody = rowRule.slice(0, rowRule.indexOf('}'));
-    ok('CSS: 툴바 줄은 세로 여백을 안 든다 (도구가 어디에 살든 같은 바닥)', !/padding:\s*[^;]*rem\s+[^;]*;/.test(rowBody));
+    ok(
+      'CSS: 툴바 줄은 세로 여백을 안 든다 (도구가 어디에 살든 같은 바닥)',
+      !/padding:\s*[^;]*rem\s+[^;]*;/.test(rowBody),
+    );
     const chromeRule = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-toolbar {'));
-    ok('CSS: 세로 여백은 크롬이 한 번만 준다', /padding-block:\s*[^;]+;/.test(chromeRule.slice(0, chromeRule.indexOf('}'))));
+    ok(
+      'CSS: 세로 여백은 크롬이 한 번만 준다',
+      /padding-block:\s*[^;]+;/.test(chromeRule.slice(0, chromeRule.indexOf('}'))),
+    );
   }
 
   // 편집 표면의 최소 높이 — 전체선택 삭제로 비어도 한 줄로 주저앉지 않는다. 접히면 그 아래
@@ -556,11 +709,14 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     const body = rule.slice(0, rule.indexOf('}'));
     // 값을 박아 두면 호스트가 :root 에 적은 값이 진다 — 코어는 토큰을 **정의하지 않고**
     // 대체값으로만 부른다(글꼴 토큰과 같은 무늬).
-    ok('CSS: 최소 높이는 호스트가 이길 수 있는 대체값이다',
-      /min-block-size:\s*var\(--nabi-content-min-height,\s*12\.5rem\)/.test(body));
+    ok(
+      'CSS: 최소 높이는 호스트가 이길 수 있는 대체값이다',
+      /min-block-size:\s*var\(--nabi-content-min-height,\s*12\.5rem\)/.test(body),
+    );
     ok('CSS: 코어는 그 토큰을 정의하지 않는다', !/--nabi-content-min-height:\s/.test(CORE_CSS));
-    // 발행·미리보기의 `.nabi-content` 는 글 길이가 높이여야 한다 — 짧은 글에 빈 200px 을 안 단다.
-    ok('CSS: 최소 높이는 편집 표면에만 걸린다', !/(^|\n)\.nabi-content \{[^}]*min-block-size/.test(CORE_CSS));
+    // 발행 문서는 글 길이대로지만, 모달 미리보기 카드는 빈 문서도 읽는 화면의 절반은 차지한다.
+    ok('CSS: 발행 문서 본문에는 최소 높이가 없다', !/(^|\n)\.nabi-content \{[^}]*min-block-size/.test(CORE_CSS));
+    ok('CSS: 미리보기 카드의 최소 높이는 화면의 절반이다', CORE_CSS.includes('.nabi-preview { min-block-size: min(50dvh, 100%); }'));
   }
 
   // 빈 편집기의 안내글 — **모양은 시트가, 말은 변수가.** 겨눔이 "받침 br 하나만 든 글 문단
@@ -568,14 +724,14 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   // 그리는 자리는 **편집 뿌리의 층**이다 — 빈 블록 자신의 ::before 였을 때는 그 블록이 입은 옷
   // (제목·정렬·드롭캡)을 통째로 상속해 안내글이 제목 얼굴로 떴다(주인 신고 2026-08-23).
   {
-    const mark = '.nabi-content.nabi-editing:not(:focus):has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before';
+    const mark =
+      '.nabi-content.nabi-editing:not(:focus):has(> :is(p, h1, h2, h3, h4, h5, h6):only-child > br:only-child)::before';
     const rule = CORE_CSS.slice(CORE_CSS.indexOf(mark));
     const body = rule.slice(0, rule.indexOf('}'));
     ok('CSS: 안내글은 편집 뿌리의 층이다', CORE_CSS.includes(mark));
     ok('CSS: 포커스 중에는 안내글 가상 요소가 IME 조합 자리에서 물러난다', mark.includes(':not(:focus)'));
     // 블록 자신에 붙던 옛 겨눔이 남아 있으면 제목·드롭캡이 도로 샌다.
-    ok('CSS: 안내글이 문서 블록의 몸에 안 붙는다',
-      !CORE_CSS.includes(':only-child:has(> br:only-child)::before'));
+    ok('CSS: 안내글이 문서 블록의 몸에 안 붙는다', !CORE_CSS.includes(':only-child:has(> br:only-child)::before'));
     // 뿌리가 절대 위치의 기준이라야 층이 글자 자리에 선다.
     ok('CSS: 편집 뿌리가 위치 잡힌 층이다', /\.nabi-content\.nabi-editing \{[^}]*position:\s*relative/.test(CORE_CSS));
     // 빈 판정은 그대로 받침 br 하나를 본다 — 트리를 세지 않으므로 IME 조합 중에도 안 어긋난다.
@@ -598,17 +754,20 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     // 여러 줄짜리 안내글 — surface 가 줄바꿈을 CSS 의 \A 로 적어 보내므로 시트가 받아야 선다.
     ok('CSS: 안내글의 줄바꿈이 살아 있다', /white-space:\s*pre-line/.test(body));
     // 색은 muted 그대로가 아니라 알파를 섞은 값이고, 갈아 끼우는 이름이 하나 있다 (주인 2026-08-23).
-    ok('CSS: 안내글 색은 토큰으로 갈아 끼운다',
-      /color:\s*var\(--nabi-placeholder-color,\s*var\(--nabi-placeholder-color-fallback,\s*#[0-9a-f]{8}\)\)/.test(body));
+    ok(
+      'CSS: 안내글 색은 토큰으로 갈아 끼운다',
+      /color:\s*var\(--nabi-placeholder-color,\s*var\(--nabi-placeholder-color-fallback,\s*#[0-9a-f]{8}\)\)/.test(body),
+    );
     // 코어가 호스트의 이름을 정의해 버리면 :root 에 적은 값이 늘 진다 — 글꼴·최소 높이와 같은 규칙.
-    ok('CSS: 코어는 --nabi-placeholder-color 를 정의하지 않는다',
-      !/--nabi-placeholder-color:/.test(CORE_CSS));
+    ok('CSS: 코어는 --nabi-placeholder-color 를 정의하지 않는다', !/--nabi-placeholder-color:/.test(CORE_CSS));
     // 대체값은 테마를 탄다 — 라이트·다크가 갈리는 토큰은 다크 블록이 **다시 줘야** 한다.
     {
       const dark = CORE_CSS.slice(CORE_CSS.indexOf(':is(.nabi, .nabi-scrim)[data-nabi-theme="dark"]'));
       const block = dark.slice(0, dark.indexOf('\n}'));
-      ok('CSS: 안내글 색의 대체값이 다크에서 다시 선다',
-        /--nabi-placeholder-color-fallback:\s*#[0-9a-f]{8};/.test(block));
+      ok(
+        'CSS: 안내글 색의 대체값이 다크에서 다시 선다',
+        /--nabi-placeholder-color-fallback:\s*#[0-9a-f]{8};/.test(block),
+      );
     }
   }
 
@@ -619,7 +778,10 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     ok('CSS: 상황 줄에 손가락 분기가 있다', touch.startsWith('@media (pointer: coarse)'));
     const branch = touch.slice(0, touch.indexOf('\n}'));
     ok('CSS: 그 분기가 접힌 줄에 세로 틈을 준다', /\.nabi-context\s*\{[^}]*gap:\s*\.25rem/.test(branch));
-    ok('CSS: 그 분기의 줄 높이가 손가락 표적이다', /\.nabi-ctx-group\s*\{[^}]*min-block-size:\s*2\.75rem/.test(branch));
+    ok(
+      'CSS: 그 분기의 줄 높이가 공개 touch 크기 토큰을 쓴다',
+      /\.nabi-ctx-group\s*\{[^}]*min-block-size:\s*var\(--nabi-touch-control-size\)/.test(branch),
+    );
     // 줄바꿈은 그룹 **안**에서도 일어난다(표는 단추가 열 개다) — 그 줄 사이는 그룹의 세로 gap 이
     // 잡는다. 이것이 빠지면 접힌 두 줄이 3px 틈으로 붙어, 고친 것이 바깥 그룹 사이에만 남는다.
     ok('CSS: 그룹 안에서 접힌 줄도 벌어진다', /\.nabi-ctx-group\s*\{[^}]*gap:\s*\.25rem\s+\.1875rem/.test(branch));
@@ -627,10 +789,15 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     // 눈금(글자 크기)이 주인이 짚은 그 자리다 — 손잡이가 작아 상자째 세워야 닿는다.
     // 손가락 기기에서 사람이 적는 칸의 글자는 16px 아래로 안 내린다 — iOS 의 자동 확대 방아쇠다
     // (011 8차). 막는 길(user-scalable=no)은 안 쓴다.
-    ok('CSS: 그 분기에서 적는 칸이 16px 아래로 안 내려간다',
-      /\.nabi-input\s*\{[^}]*font-size:\s*var\(--nabi-touch-font-size,\s*16px\)/.test(branch));
+    ok(
+      'CSS: 그 분기에서 적는 칸이 16px 아래로 안 내려간다',
+      /\.nabi-input\s*\{[^}]*font-size:\s*var\(--nabi-touch-font-size,\s*16px\)/.test(branch),
+    );
     ok('CSS: 코어는 --nabi-touch-font-size 를 정의하지 않는다', !/--nabi-touch-font-size:/.test(CORE_CSS));
-    ok('CSS: 확대를 막는 길은 안 쓴다', !/user-scalable\s*[:=]|maximum-scale\s*[:=]/.test(CORE_CSS.replace(/\/\*[\s\S]*?\*\//g, '')));
+    ok(
+      'CSS: 확대를 막는 길은 안 쓴다',
+      !/user-scalable\s*[:=]|maximum-scale\s*[:=]/.test(CORE_CSS.replace(/\/\*[\s\S]*?\*\//g, '')),
+    );
     ok('CSS: 그 분기에서 눈금도 커진다', /\.nabi-context \.nabi-range\s*\{[^}]*block-size:\s*2\.5rem/.test(branch));
   }
 
@@ -641,9 +808,15 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     const mark = sheet.slice(sheet.indexOf('.nabi-content.nabi-editing table[data-nabi-sortable]'));
     ok('CSS: 정렬 표식은 편집 화면에만 선다', mark.startsWith('.nabi-content.nabi-editing table[data-nabi-sortable]'));
     ok('CSS: 표식은 첫 행의 칸에 선다 — 붙는 쪽이 단추를 다는 그 자리다', /tr:first-child > :is\(th, td\)/.test(mark));
-    ok('CSS: 병합이 보이면 표식도 안 선다 (붙는 쪽이 거절하는 표다)', /:not\(:has\(\[colspan\], \[rowspan\]\)\)/.test(mark));
+    ok(
+      'CSS: 병합이 보이면 표식도 안 선다 (붙는 쪽이 거절하는 표다)',
+      /:not\(:has\(\[colspan\], \[rowspan\]\)\)/.test(mark),
+    );
     // 보는 쪽의 '원본' 아이콘과 같은 삼각형 둘이어야 한다 — 같은 뜻이니 같은 그림이다.
-    ok('CSS: 표식의 그림이 viewer 의 원본 아이콘과 같다', mark.includes('M8 2.9 12 7.4H4Z') && mark.includes('M8 13.1 4 8.6h8Z'));
+    ok(
+      'CSS: 표식의 그림이 viewer 의 원본 아이콘과 같다',
+      mark.includes('M8 2.9 12 7.4H4Z') && mark.includes('M8 13.1 4 8.6h8Z'),
+    );
   }
 
   // 격자 판 둘 — 붙여넣기와 **저장 판**이 한 규칙을 나눠 쓴다(주인 지시 2026-08-23).
@@ -683,7 +856,9 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     ok('CSS: 옵션 칸은 맨바탕이다', /background:\s*none/.test(rowBody));
 
     // 겨눈 자리의 테두리는 **표 칸을 고를 때와 같은 토큰**이다 — "골랐다" 는 말을 한 색으로 한다.
-    const aimed = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-choose-row[aria-selected="true"], .nabi-save-row[aria-selected="true"] {'));
+    const aimed = CORE_CSS.slice(
+      CORE_CSS.indexOf('.nabi-choose-row[aria-selected="true"], .nabi-save-row[aria-selected="true"] {'),
+    );
     const aimedBody = aimed.slice(0, aimed.indexOf('}'));
     ok('CSS: 겨눔 표식도 두 판이 한 규칙이다', aimedBody.length > 0);
     ok('CSS: 겨눈 자리는 표 선택과 같은 색을 두른다', /border-color:\s*var\(--nabi-accent\)/.test(aimedBody));
@@ -692,9 +867,15 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     // 호버로 칠하는 길도 없다 — 겨눔은 aria-selected 하나뿐이다(저장 판도 같다: 옛
     // `.nabi-save-format:hover` 의 --nabi-soft 칠이 이 라운드에 걷혔다 — 주인 지시 2026-08-23).
     ok('CSS: 옵션 칸에 호버 칠이 없다', !CORE_CSS.includes('.nabi-choose-row:hover'));
-    ok('CSS: 저장 판 칸에도 호버 칠이 없다', !CORE_CSS.includes('.nabi-save-row:hover') && !CORE_CSS.includes('.nabi-save-format'));
+    ok(
+      'CSS: 저장 판 칸에도 호버 칠이 없다',
+      !CORE_CSS.includes('.nabi-save-row:hover') && !CORE_CSS.includes('.nabi-save-format'),
+    );
     // 아이콘 색도 겨눔을 따라 바뀌지 않는다 — 덧칠 하나가 더 있으면 표식이 둘이 된다.
-    ok('CSS: 겨눔이 아이콘 색을 안 바꾼다', !CORE_CSS.includes('.nabi-choose-row[aria-selected="true"] .nabi-choose-icon'));
+    ok(
+      'CSS: 겨눔이 아이콘 색을 안 바꾼다',
+      !CORE_CSS.includes('.nabi-choose-row[aria-selected="true"] .nabi-choose-icon'),
+    );
 
     // 저장 판만의 것 — 이름 줄과 **이름 아래 아주 작은 한 마디**(md 한 칸에만 선다).
     const name = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-save-name {'));
@@ -708,7 +889,10 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     // 그림 셋은 한 크기다 — 넉 자를 읽히려고 조금 키웠고, 그 값은 셋에 한 번만 적힌다.
     const mark = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-save-icon svg {'));
     const markBody = mark.slice(0, mark.indexOf('}'));
-    ok('CSS: 저장 판 그림은 한 크기다', /inline-size:\s*(\d+)px/.test(markBody) && /block-size:\s*(\d+)px/.test(markBody));
+    ok(
+      'CSS: 저장 판 그림은 한 크기다',
+      /inline-size:\s*(\d+)px/.test(markBody) && /block-size:\s*(\d+)px/.test(markBody),
+    );
   }
 
   // 가족 시트 — 문단 속성 셋(제목·정렬·드롭캡)이 시트 하나를 나눠 쓴다. 옛 판은 여기서
@@ -768,7 +952,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
 
   // 편집 뒤의 한 걸음 — 위 변만 본다 (5차, 260823_000).
   eq('띠: 편집 뒤 — 툴바에 잠기면 잠긴 만큼 내린다', revealFix(above, band, 800), 100 - (120 + 20));
-  eq('띠: 편집 뒤 — 문서가 줄어 화면 위로 밀려난 캐럿도 같은 갈래', revealFix({ top: -98, bottom: -71 }, band, 800), -98 - (120 + 27));
+  eq(
+    '띠: 편집 뒤 — 문서가 줄어 화면 위로 밀려난 캐럿도 같은 갈래',
+    revealFix({ top: -98, bottom: -71 }, band, 800),
+    -98 - (120 + 27),
+  );
   eq('띠: 편집 뒤 — 띠 안이면 0', revealFix(inside, band, 800), 0);
   // 아래 변은 안 본다 — 사람이 굴려 내려 둔 화면을 글자마다 뺏지 않는다.
   eq('띠: 편집 뒤 — 아래로 벗어난 캐럿은 안 건드린다', revealFix(below, band, 800), 0);
@@ -824,7 +1012,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     let scroll = 400;
     revealWalk(
       REVEAL_STEPS,
-      () => ({ caret: { top: 122 - (scroll - 400), bottom: 149 - (scroll - 400) }, band: bandOf(110 - (scroll - 400), { top: 0, bottom: 848 }), limit: 848 }),
+      () => ({
+        caret: { top: 122 - (scroll - 400), bottom: 149 - (scroll - 400) },
+        band: bandOf(110 - (scroll - 400), { top: 0, bottom: 848 }),
+        limit: 848,
+      }),
       (delta) => {
         pushed += 1;
         scroll += delta;
@@ -836,13 +1028,21 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   // 잴 것이 없으면(캐럿이 없으면) 아무 걸음도 안 걷는다.
   {
     let pushed = 0;
-    revealWalk(REVEAL_STEPS, () => null, () => (pushed += 1));
+    revealWalk(
+      REVEAL_STEPS,
+      () => null,
+      () => (pushed += 1),
+    );
     eq('띠: 걸음걸이 — 잴 것이 없으면 안 민다', pushed, 0);
   }
   // 이미 띠 안이면 첫 걸음부터 0 — 잘 보이는 자리에서 치는 글자가 화면을 안 튀게 하는 규칙.
   {
     let pushed = 0;
-    revealWalk(REVEAL_STEPS, () => ({ caret: inside, band, limit: 800 }), () => (pushed += 1));
+    revealWalk(
+      REVEAL_STEPS,
+      () => ({ caret: inside, band, limit: 800 }),
+      () => (pushed += 1),
+    );
     eq('띠: 걸음걸이 — 띠 안이면 한 걸음도 안 민다', pushed, 0);
   }
 
@@ -853,10 +1053,14 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     limit: number,
   ): number => {
     let asked = 0;
-    underWalk(1, () => ({ caret, band: use, limit }), (delta) => {
-      asked = delta;
-      return delta;
-    });
+    underWalk(
+      1,
+      () => ({ caret, band: use, limit }),
+      (delta) => {
+        asked = delta;
+        return delta;
+      },
+    );
     return asked;
   };
   {
@@ -872,7 +1076,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     eq('띠: 키보드 걸음 — 가렸으면 위 변이 이긴다', once(covered, band, 800), revealFix(covered, band, 800));
 
     // 아래로 밀면 크롬에 가리는 자리 — 둘 다 못 맞추면 **위 변 우선**이라 아무것도 안 한다.
-    eq('띠: 키보드 걸음 — 둘 다 못 맞추면 안 민다(위 변 우선)', once({ top: 300, bottom: 340 }, { top: 300, bottom: 330 }, 800), 0);
+    eq(
+      '띠: 키보드 걸음 — 둘 다 못 맞추면 안 민다(위 변 우선)',
+      once({ top: 300, bottom: 340 }, { top: 300, bottom: 330 }, 800),
+      0,
+    );
 
     // 아래 변이 성하면 5차의 눈 그대로다.
     eq('띠: 키보드 걸음 — 아래가 성하면 위 변의 여유만 본다', once(inside, band, 800), 0);
@@ -909,13 +1117,20 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
         return delta;
       },
     );
-    ok('띠: 키보드 걸음 — 걸음마다 작아진다', walked.every((d, i) => i === 0 || Math.abs(d) < Math.abs(walked[i - 1] as number)));
+    ok(
+      '띠: 키보드 걸음 — 걸음마다 작아진다',
+      walked.every((d, i) => i === 0 || Math.abs(d) < Math.abs(walked[i - 1] as number)),
+    );
     ok('띠: 키보드 걸음 — 끝나면 캐럿이 창 안이다', 384 - scroll <= 377);
   }
   {
     // 잴 것이 없으면 아무 걸음도 안 걷는다.
     let pushed = 0;
-    underWalk(REVEAL_STEPS, () => null, () => (pushed += 1));
+    underWalk(
+      REVEAL_STEPS,
+      () => null,
+      () => (pushed += 1),
+    );
     eq('띠: 키보드 걸음 — 잴 것이 없으면 안 민다', pushed, 0);
   }
 
@@ -975,10 +1190,14 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     const only = bandOf(null, window377);
     eq('띠: 창만 기준이면 띠가 창 그대로다', only.top, 0);
     let asked = 0;
-    underWalk(1, () => ({ caret, band: only, limit: 377 }), (delta) => {
-      asked = delta;
-      return delta;
-    });
+    underWalk(
+      1,
+      () => ({ caret, band: only, limit: 377 }),
+      (delta) => {
+        asked = delta;
+        return delta;
+      },
+    );
     eq('띠: 창만 기준이면 캐럿을 창 안으로 끌어올린다', asked, 508 - (377 - 16));
 
     // 툴바가 창 안에 있으면 예전 그대로 툴바가 띠의 위 변이다 — 갈래가 함부로 안 열린다.
@@ -995,10 +1214,14 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
       limit: number,
     ): number => {
       let asked = 0;
-      placeWalk(1, () => ({ caret, band: use, limit }), (delta) => {
-        asked = delta;
-        return delta;
-      });
+      placeWalk(
+        1,
+        () => ({ caret, band: use, limit }),
+        (delta) => {
+          asked = delta;
+          return delta;
+        },
+      );
       return asked;
     };
     // 과녁 띠 — 지금 툴바가 어디 있든 **키**만 쓴다.
@@ -1014,30 +1237,38 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     {
       // 편집 문은 **딱 모자란 만큼**만 민다 — 아랫변이 한 줄 여유를 못 채운 10px 뿐이다.
       let asked = 0;
-      underWalk(1, () => ({ caret: iosCaret, band: bandOf(340, iosWindow), limit: 377 }), (d) => {
-        asked = d;
-        return d;
-      });
+      underWalk(
+        1,
+        () => ({ caret: iosCaret, band: bandOf(340, iosWindow), limit: 377 }),
+        (d) => {
+          asked = d;
+          return d;
+        },
+      );
       eq('겨눔: 편집 문 — 모자란 만큼만 민다(최소 넛지)', asked, 371 - (377 - 16));
       ok('겨눔: 편집 문의 걸음은 뷰포트 문보다 훨씬 작다', Math.abs(asked) < 20);
       // 캐럿이 띠 한가운데면 편집 문은 **한 픽셀도 안 민다** — 글자마다 화면이 뛰면 못 쓴다.
       let idle = 0;
-      underWalk(1, () => ({ caret: { top: 250, bottom: 266 }, band: bandOf(200, iosWindow), limit: 377 }), (d) => {
-        idle = d;
-        return d;
-      });
+      underWalk(
+        1,
+        () => ({ caret: { top: 250, bottom: 266 }, band: bandOf(200, iosWindow), limit: 377 }),
+        (d) => {
+          idle = d;
+          return d;
+        },
+      );
       eq('겨눔: 편집 문 — 띠 한가운데면 안 민다', idle, 0);
     }
-    eq(
-      '겨눔: 뷰포트 문 — 툴바를 창 맨 위로 끌어올린다',
-      place(iosCaret, aimOf(0, 377, 188), 377),
-      355 - (188 + 16),
-    );
+    eq('겨눔: 뷰포트 문 — 툴바를 창 맨 위로 끌어올린다', place(iosCaret, aimOf(0, 377, 188), 377), 355 - (188 + 16));
 
     // ⓑ 안드로이드 실측(`+400`) — 창 322..854 · 툴바 322..510(키 188) · 캐럿 491..507.
     // 진단이 `fixUp=-35` 라 적었던 그 값이 그대로 나와야 한다.
     // 가림은 `place` 가 아니라 **최소 넛지**가 잡는다 — `place` 는 위로 안 밀기 때문이다.
-    eq('겨눔: 뷰포트 문 — 가림은 place 가 아니라 넛지의 몫', place({ top: 491, bottom: 507 }, aimOf(322, 854, 188), 532), 0);
+    eq(
+      '겨눔: 뷰포트 문 — 가림은 place 가 아니라 넛지의 몫',
+      place({ top: 491, bottom: 507 }, aimOf(322, 854, 188), 532),
+      0,
+    );
     eq(
       '겨눔: 안드로이드의 19px 잠김을 넛지가 −35 로 잡는다',
       revealFix({ top: 491, bottom: 507 }, bandOf(510, { top: 322, bottom: 854 }), 532),
@@ -1046,8 +1277,15 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
 
     // **위로는 안 민다** (011 7차) — 캐럿이 이미 과녁보다 위면 아래로 끌어내리지 않는다.
     // "가려졌거나 창 밖일 때만 움직인다" 는 원칙이고, 그쪽은 `underWalk` 의 몫이다.
-    eq('겨눔: 뷰포트 문 — 캐럿이 과녁보다 위면 **안 민다**', place({ top: 100, bottom: 116 }, aimOf(0, 377, 188), 377), 0);
-    ok('겨눔: 뷰포트 문 — 캐럿이 과녁보다 아래면 위로 민다', place({ top: 300, bottom: 316 }, aimOf(0, 377, 188), 377) > 0);
+    eq(
+      '겨눔: 뷰포트 문 — 캐럿이 과녁보다 위면 **안 민다**',
+      place({ top: 100, bottom: 116 }, aimOf(0, 377, 188), 377),
+      0,
+    );
+    ok(
+      '겨눔: 뷰포트 문 — 캐럿이 과녁보다 아래면 위로 민다',
+      place({ top: 300, bottom: 316 }, aimOf(0, 377, 188), 377) > 0,
+    );
     eq('겨눔: 뷰포트 문 — 제자리면 0', place({ top: 204, bottom: 220 }, aimOf(0, 377, 188), 377), 0);
     // 툴바가 창보다 크면 과녁 띠가 비어 아무것도 안 한다 — 없는 자를 들고 재지 않는다.
     eq('겨눔: 뷰포트 문 — 툴바가 창보다 크면 안 민다', place(iosCaret, aimOf(0, 377, 400), 377), 0);
@@ -1178,7 +1416,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     700 - PANEL_EDGE - 200 - 600,
   );
   eq('판: 편집기 왼쪽을 넘으면 민다', panelShift(box({ left: 280, ...band })).dx, 300 + PANEL_EDGE - 280);
-  eq('판: 띠를 안 주면 옛 셈 그대로', panelShift(box({ left: 900 })).dx, panelShift(box({ left: 900, viewLeft: 0 })).dx);
+  eq(
+    '판: 띠를 안 주면 옛 셈 그대로',
+    panelShift(box({ left: 900 })).dx,
+    panelShift(box({ left: 900, viewLeft: 0 })).dx,
+  );
 
   // 아래가 막히고 위가 넉넉하면 버튼 **위로 뒤집는다** — 그냥 위로 밀면 판이 자기를 연 버튼을
   // 덮는다. 뒤집힌 판의 아랫변이 버튼 윗변에서 틈만큼 위다.
@@ -1209,11 +1451,10 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
 
   // 두 축은 서로를 안 본다 — 한 몸짓에 좌우와 위아래가 함께 보정된다.
   const both = panelShift(box({ left: 950, top: 780, anchorTop: 20 }));
-  eq(
-    '판: 좌우와 위아래가 한 번에 잡힌다',
-    both,
-    { dx: 1000 - PANEL_EDGE - 200 - 950, dy: 800 - PANEL_EDGE - 150 - 780 },
-  );
+  eq('판: 좌우와 위아래가 한 번에 잡힌다', both, {
+    dx: 1000 - PANEL_EDGE - 200 - 950,
+    dy: 800 - PANEL_EDGE - 150 - 780,
+  });
 }
 
 // ─── 확인 잠금 — 형식이 안 맞으면 확인이 안 눌린다 (084 ⑧) ──────────────────────────
@@ -1298,7 +1539,6 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   eq('사전: 확인 단추는 한국어로 "확인"', translate('ok', 'ko'), '확인');
 }
 
-
 // ─── 진행률 티커 — 시계 둘 (12) ───────────────────────────────────────────────────
 //
 // **가짜 시계로 돌린다.** 티커가 DOM 을 모르고 `now`·`schedule` 을 인자로 받는 것이 이걸 위해서다.
@@ -1308,6 +1548,7 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     now(): number;
     schedule(fn: () => void, ms: number): () => void;
     run(ms: number): void;
+    pending(): number;
   } => {
     let at = 0;
     let seq = 0;
@@ -1332,13 +1573,20 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
         }
         at = until;
       },
+      pending: () => jobs.size,
     };
   };
 
   {
     const c = clock();
     const seen: number[] = [];
-    const t = createTicker({ size: 1_000_000, bandwidth: 12_500_000, onChange: (v) => seen.push(v), now: c.now, schedule: c.schedule });
+    const t = createTicker({
+      size: 1_000_000,
+      bandwidth: 12_500_000,
+      onChange: (v) => seen.push(v),
+      now: c.now,
+      schedule: c.schedule,
+    });
     c.run(5000);
     ok('티커: 콜백이 하나도 안 와도 숫자가 걷는다', seen.length > 0);
     eq('티커: 완료 전에는 99 를 안 넘는다', Math.max(...seen) <= 99, true);
@@ -1351,7 +1599,13 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   {
     const c = clock();
     const seen: number[] = [];
-    const t = createTicker({ size: 1_000_000, bandwidth: 12_500_000, onChange: (v) => seen.push(v), now: c.now, schedule: c.schedule });
+    const t = createTicker({
+      size: 1_000_000,
+      bandwidth: 12_500_000,
+      onChange: (v) => seen.push(v),
+      now: c.now,
+      schedule: c.schedule,
+    });
     c.run(300);
     const before = seen[seen.length - 1] ?? 0;
     // 진짜 콜백이 앞서 있다 — 따라잡는다.
@@ -1369,9 +1623,19 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   {
     const c = clock();
     let last = -1;
-    const t = createTicker({ size: 500, bandwidth: 12_500_000, onChange: (v) => { last = v; }, now: c.now, schedule: c.schedule });
+    const t = createTicker({
+      size: 500,
+      bandwidth: 12_500_000,
+      onChange: (v) => {
+        last = v;
+      },
+      now: c.now,
+      schedule: c.schedule,
+    });
     let settled = false;
-    void t.finish().then(() => { settled = true; });
+    void t.finish().then(() => {
+      settled = true;
+    });
     c.run(400);
     await Promise.resolve();
     await Promise.resolve();
@@ -1381,9 +1645,37 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
 
   {
     const c = clock();
+    let ticker!: ReturnType<typeof createTicker>;
+    let calls = 0;
+    ticker = createTicker({
+      size: 500,
+      bandwidth: 12_500_000,
+      onChange: () => {
+        calls += 1;
+        if (calls === 1) void ticker.finish();
+      },
+      now: c.now,
+      schedule: c.schedule,
+    });
+    c.run(1000);
+    ok(
+      '티커: regular tick 안의 finish 재진입 뒤에도 하나의 꼬리만 남긴다',
+      calls > 0 && calls <= 20 && c.pending() === 0,
+    );
+    ticker.stop();
+  }
+
+  {
+    const c = clock();
     const seen: number[] = [];
     // 대역폭 0 = 티커를 끈다 — 진짜 콜백만 지나간다.
-    const t = createTicker({ size: 1_000_000, bandwidth: 0, onChange: (v) => seen.push(v), now: c.now, schedule: c.schedule });
+    const t = createTicker({
+      size: 1_000_000,
+      bandwidth: 0,
+      onChange: (v) => seen.push(v),
+      now: c.now,
+      schedule: c.schedule,
+    });
     c.run(5000);
     eq('티커: 꺼 두면 혼자 안 걷는다', seen.length, 0);
     t.report(42);
@@ -1437,53 +1729,53 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   const { nabi: hosted } = createNabiWith(defaultWings, {
     toast: (level, message, ms) => heard.push(`${level}:${message}:${ms ?? '-'}`),
   });
-  hosted.$toast('warn', '말', 700);
+  hostOf(hosted).toast('warn', '말', 700);
   eq('toast 배선: 호스트 콜백이 그대로 받는다 (ms 포함)', heard, ['warn:말:700']);
 
   const sunk: string[] = [];
-  hosted.$bindToast((level, message) => sunk.push(`${level}:${message}`));
-  hosted.$toast('info', '또');
+  hostOf(hosted).bindToast((level, message) => sunk.push(`${level}:${message}`));
+  hostOf(hosted).toast('info', '또');
   eq('toast 배선: 콜백이 있으면 그릇은 안 불린다', sunk, []);
 
   const { nabi: bare } = createNabiWith(defaultWings, {});
-  bare.$toast('info', '허공'); // 그릇도 콜백도 없다 — 침묵이고, 던지지 않는 것이 답이다
-  const unbind = bare.$bindToast((level, message) => sunk.push(`${level}:${message}`));
-  bare.$toast('error', '이제');
+  hostOf(bare).toast('info', '허공'); // 그릇도 콜백도 없다 — 침묵이고, 던지지 않는 것이 답이다
+  const unbind = hostOf(bare).bindToast((level, message) => sunk.push(`${level}:${message}`));
+  hostOf(bare).toast('error', '이제');
   eq('toast 배선: 콜백이 없으면 그릇이 받는다', sunk, ['error:이제']);
   unbind();
-  bare.$toast('info', '뗀 뒤');
+  hostOf(bare).toast('info', '뗀 뒤');
   eq('toast 배선: 그릇을 떼면 다시 침묵이다', sunk, ['error:이제']);
 
   // 결 둘 — 기본값과 옵션.
-  eq('toast 결: 기본 시간은 1초다', bare.$toastMs, 1000);
-  eq('toast 결: 기본 상한은 3이다', bare.$toastMax, 3);
+  eq('toast 결: 기본 시간은 1초다', hostOf(bare).toastMs, 1000);
+  eq('toast 결: 기본 상한은 3이다', hostOf(bare).toastMax, 3);
   const { nabi: tuned } = createNabiWith(defaultWings, { toastMs: 4000, toastMax: 5 });
-  eq('toast 결: 옵션이 기본 그릇의 결을 바꾼다', [tuned.$toastMs, tuned.$toastMax], [4000, 5]);
+  eq('toast 결: 옵션이 기본 그릇의 결을 바꾼다', [hostOf(tuned).toastMs, hostOf(tuned).toastMax], [4000, 5]);
 }
 
 {
   // Ask.message 통합 (084 ask ③) — 기본 message 는 toast(info) 로 흐르고, 끼운 칸만 이긴다.
   const said: string[] = [];
   const { nabi } = createNabiWith(defaultWings, {});
-  nabi.$bindToast((level, message, ms) => said.push(`${level}:${message}:${ms ?? '-'}`));
-  nabi.$ask.message('알림 하나');
+  hostOf(nabi).bindToast((level, message, ms) => said.push(`${level}:${message}:${ms ?? '-'}`));
+  hostOf(nabi).ask.message('알림 하나');
   eq('ask 통합: 기본 message 는 toast(info) 다', said, ['info:알림 하나:-']);
-  eq('ask 통합: 기본 confirm 은 여전히 아니오다', nabi.$ask.confirm('버릴까?'), false);
+  eq('ask 통합: 기본 confirm 은 여전히 아니오다', hostOf(nabi).ask.confirm('버릴까?'), false);
 
   // confirm 만 끼우면 message 는 그대로 toast 로 흐른다 — 데모가 딱 이 모양이다.
   const { nabi: half } = createNabiWith(defaultWings, { ask: { confirm: () => true } });
   const halfSaid: string[] = [];
-  half.$bindToast((level, message) => halfSaid.push(`${level}:${message}`));
-  half.$ask.message('반만');
+  hostOf(half).bindToast((level, message) => halfSaid.push(`${level}:${message}`));
+  hostOf(half).ask.message('반만');
   eq('ask 통합: confirm 만 끼워도 message 는 toast 다', halfSaid, ['info:반만']);
-  eq('ask 통합: 끼운 confirm 이 이긴다', half.$ask.confirm('열까?'), true);
+  eq('ask 통합: 끼운 confirm 이 이긴다', hostOf(half).ask.confirm('열까?'), true);
 
   // message 를 끼우면 그쪽이 이긴다 — toast 그릇은 안 불린다.
   const mine: string[] = [];
   const { nabi: asked } = createNabiWith(defaultWings, { ask: { message: (text) => mine.push(text) } });
   const stray: string[] = [];
-  asked.$bindToast((level, message) => stray.push(`${level}:${message}`));
-  asked.$ask.message('내 상자로');
+  hostOf(asked).bindToast((level, message) => stray.push(`${level}:${message}`));
+  hostOf(asked).ask.message('내 상자로');
   eq('ask 통합: 끼운 message 가 이긴다', mine, ['내 상자로']);
   eq('ask 통합: 그때 toast 그릇은 조용하다', stray, []);
 
@@ -1498,11 +1790,9 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
 // attach 는 DOM 을 받지만 만지는 어휘가 좁아서(closest·querySelectorAll·속성), 그 어휘만 든
 // 껍데기로 그물에 잡힌다 — 진짜 화면의 몸짓 순서(세 걸음 삼키기)는 브라우저 확인의 몫이다.
 {
-  const original = [
-    { w: 'p', ch: ['앞', { w: 'a', a: { href: '/f/x.txt', file: 'txt' }, ch: ['첨부파일'] }, '뒤'] },
-  ];
-  const { nabi } = createNabiWith(defaultWings, { doc: original, parseHtml: tinyHtml });
-  const holderId = (nabi.$doc()[0] as ElementNode)._id as string;
+  const original = [{ w: 'p', ch: ['앞', { w: 'a', a: { href: '/f/x.txt', file: 'txt' }, ch: ['첨부파일'] }, '뒤'] }];
+  const { nabi } = createNabiWith(defaultWings, { doc: original });
+  const holderId = (hostOf(nabi).doc()[0] as ElementNode)._id as string;
 
   // 화면의 최소 껍데기 — 첨부 a 하나가 문단 홀더 안에 선 모양.
   const pickedNames = new Set<string>();
@@ -1533,14 +1823,24 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     querySelector: (q: string) => (q.includes(holderId) ? holderEl : null),
   } as unknown as HTMLElement;
 
-  const stop = attachFileLink({ root, nabi, pathOfKey: (id) => (id === holderId ? [0] : null) });
+  const stop = attachFileLink({
+    root,
+    nabi,
+    doc: hostOf(nabi).doc,
+    env: hostOf(nabi).env,
+    pathOfKey: (id) => (id === holderId ? [0] : null),
+    onDispose: () => undefined,
+  });
   const span = (): [number, number] => {
     const s = nabi.getSelection();
     return [s.anchor.offset, s.focus.offset];
   };
   const savedHtml = nabi.getHtml();
-  eq('첨부의 저장값 — 링크 마크 그대로다(다른 껍데기가 안 생긴다)', savedHtml,
-    '<p>앞<a href="/f/x.txt" data-nabi-file="txt" download>첨부파일</a>뒤</p>');
+  eq(
+    '첨부의 저장값 — 링크 마크 그대로다(다른 껍데기가 안 생긴다)',
+    savedHtml,
+    '<p>앞<a href="/f/x.txt" data-nabi-file="txt" download>첨부파일</a>뒤</p>',
+  );
 
   // 누름 = 통째 고르기 — 몸짓의 세 걸음(mousedown·mouseup·click)을 다 삼킨다 (081 §3 의 규칙).
   let prevented = 0;
@@ -1579,7 +1879,7 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
 // 저장값 왕복 — 첨부가 든 문서를 내보내고 도로 들여도 같은 글자열이다(값이 흔들리면 이미
 // 저장된 글이 흔들린다).
 {
-  const { nabi } = createNabiWith(defaultWings, { parseHtml: tinyHtml });
+  const { nabi } = $createNabiWith(defaultWings, { parseHtml: tinyHtml });
   const saved = '<p>앞<a href="/f/x.txt" data-nabi-file="txt" download>첨부파일</a>뒤</p>';
   ok('첨부 HTML 이 들어온다', nabi.setHtml(saved));
   eq('첨부의 저장값 왕복 — 글자 하나 안 바뀐다', nabi.getHtml(), saved);
@@ -1627,7 +1927,6 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   ok('wing 을 들면 mod+s 가 산다', keysOf(withFile).includes('mod+s'));
   ok('wing 을 들면 mod+o 가 산다', keysOf(withFile).includes('mod+o'));
 }
-
 
 // --- 스티키의 겨눔 세션 — 260823_015 의 두 규칙 ------------------------------------------------
 // 여기만 창을 흉내 낸다. `sticky.ts` 가 답하는 것은 산수가 아니라 **언제 미는가**(문 여닫이)라
@@ -1937,7 +2236,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     // 완전히 가리는 자리로 떠난다.
     w.scroll(w.scrollY + 400);
     const hidden = w.caret().top < w.band().top;
-    ok('사람이 굴린 뒤 캐럿은 툴바에 가려 있다 (일부러 만든 자리다)', hidden, `caret=${round(w.caret().top)} band=${w.band().top}`);
+    ok(
+      '사람이 굴린 뒤 캐럿은 툴바에 가려 있다 (일부러 만든 자리다)',
+      hidden,
+      `caret=${round(w.caret().top)} band=${w.band().top}`,
+    );
     w.quiet(); // 기다리던 가라앉음 걸음
     w.frame();
     w.frame();
@@ -1951,7 +2254,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     w.edit();
     w.frame();
     ok('사람 스크롤 뒤에 타이핑하면 캐럿으로 돌아온다', w.moved < 0, `moved=${w.moved}`);
-    ok('돌아온 캐럿은 툴바 아래에 선다', w.caret().top >= w.band().top, `caret=${round(w.caret().top)} band=${w.band().top}`);
+    ok(
+      '돌아온 캐럿은 툴바 아래에 선다',
+      w.caret().top >= w.band().top,
+      `caret=${round(w.caret().top)} band=${w.band().top}`,
+    );
   }
 
   // --- 세션이 다시 켜지는 문 셋 -----------------------------------------------------------------
@@ -2011,7 +2318,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     w.edit();
     w.frame();
     eq('000 재현 ① — 우리가 민 값 −39', w.moved, -39);
-    eq('000 재현 ① — 캐럿이 툴바 아래 19px 여유에 선다', [round(w.caret().top), round(w.caret().top - w.chrome().bottom)], [99, 19]);
+    eq(
+      '000 재현 ① — 캐럿이 툴바 아래 19px 여유에 선다',
+      [round(w.caret().top), round(w.caret().top - w.chrome().bottom)],
+      [99, 19],
+    );
   }
   {
     // ② 스티키 끝자락 + 전체선택 백스페이스 → 178px 잠긴 캐럿이 107 로, 크롬이 상황 줄로 95 로
@@ -2110,9 +2421,36 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   {
     const cases = [
       // 캐럿은 셋 다 **키보드 뒤**(보이는 창 아래)에 둔다 — 011 3차가 고친 바로 그 자리다.
-      { name: '아이폰 — 창을 아래로 미는 사파리', innerHeight: 714, keyboard: 337, vvOffsetTop: 337, fixedTop: -337, stickTop: 0, chromeDocTop: 0, caretDoc: 1050 },
-      { name: '아이폰 — 아래를 깎는 사파리', innerHeight: 714, keyboard: 337, vvOffsetTop: 0, fixedTop: 0, stickTop: 0, chromeDocTop: 0, caretDoc: 1050 },
-      { name: '안드로이드', innerHeight: 784, keyboard: 322, vvOffsetTop: 322, fixedTop: 0, stickTop: 322, chromeDocTop: 322, caretDoc: 1450 },
+      {
+        name: '아이폰 — 창을 아래로 미는 사파리',
+        innerHeight: 714,
+        keyboard: 337,
+        vvOffsetTop: 337,
+        fixedTop: -337,
+        stickTop: 0,
+        chromeDocTop: 0,
+        caretDoc: 1050,
+      },
+      {
+        name: '아이폰 — 아래를 깎는 사파리',
+        innerHeight: 714,
+        keyboard: 337,
+        vvOffsetTop: 0,
+        fixedTop: 0,
+        stickTop: 0,
+        chromeDocTop: 0,
+        caretDoc: 1050,
+      },
+      {
+        name: '안드로이드',
+        innerHeight: 784,
+        keyboard: 322,
+        vvOffsetTop: 322,
+        fixedTop: 0,
+        stickTop: 322,
+        chromeDocTop: 322,
+        caretDoc: 1450,
+      },
     ];
     for (const c of cases) {
       const w = makeWorld({
@@ -2147,7 +2485,15 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
 
   // 그래도 **나가려고 굴리면 안 돌아온다** — 뷰포트가 조용해진 뒤의 스크롤은 여전히 사람의 것이다.
   {
-    const w = makeWorld({ innerHeight: 714, bar: 188, vvOffsetTop: 337, fixedTop: -337, caretDoc: 520, caretHeight: 19, scrollY: 600 });
+    const w = makeWorld({
+      innerHeight: 714,
+      bar: 188,
+      vvOffsetTop: 337,
+      fixedTop: -337,
+      caretDoc: 520,
+      caretHeight: 19,
+      scrollY: 600,
+    });
     w.focus();
     w.keyboard(337);
     w.frame();
@@ -2176,7 +2522,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     eq('툴바가 자란 그 순간 캐럿이 잠긴다', round(w.caret().top - w.band().top), -28);
     w.frame();
     ok('관찰자가 한 걸음을 걷는다', w.moved < 0, `moved=${w.moved}`);
-    ok('가림이 풀린다 — 캐럿이 툴바 아래로 나온다', w.caret().top >= w.band().top, `gap=${round(w.caret().top - w.band().top)}`);
+    ok(
+      '가림이 풀린다 — 캐럿이 툴바 아래로 나온다',
+      w.caret().top >= w.band().top,
+      `gap=${round(w.caret().top - w.band().top)}`,
+    );
 
     // **자리만 달라진 것은 사건이 아니다** — 우리가 굴리면 붙는 크롬의 아랫변이 늘 달라지므로,
     // 그것까지 문으로 삼으면 밀고-깨고-미는 고리가 된다. 키가 그대로면 안 걷는다.
@@ -2259,7 +2609,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     w.frame();
     w.quiet();
     w.frame(); // 가라앉은 뒤의 마지막 걸음 — 자리잡기가 여기서 끝난다
-    ok('자리잡기가 끝났다 — 캐럿이 띠 안에 선다', w.caret().top >= w.band().top - 1, `gap=${round(w.caret().top - w.band().top)}`);
+    ok(
+      '자리잡기가 끝났다 — 캐럿이 띠 안에 선다',
+      w.caret().top >= w.band().top - 1,
+      `gap=${round(w.caret().top - w.band().top)}`,
+    );
     w.resetMoved();
     w.growBar(260); // 상황 줄이 뒤늦게 선다 — 툴바가 188 → 260 으로 자란다
     w.frame();
@@ -2270,7 +2624,11 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     w.edit();
     w.frame();
     ok('편집이 들어오면 세션이 다시 켜진다', w.moved < 0, `moved=${w.moved}`);
-    ok('위쪽 가림이 풀린다 — 캐럿이 툴바 아래로 나온다', w.caret().top >= w.band().top, `gap=${round(w.caret().top - w.band().top)}`);
+    ok(
+      '위쪽 가림이 풀린다 — 캐럿이 툴바 아래로 나온다',
+      w.caret().top >= w.band().top,
+      `gap=${round(w.caret().top - w.band().top)}`,
+    );
     w.sticky.unmount();
   }
 }
@@ -2359,7 +2717,10 @@ import type { FileMount, SaveFormat } from '../src/surface/index.js';
       },
       addEventListener: (type, fn) => push(listeners, type, fn),
       removeEventListener: (type, fn) => {
-        listeners.set(type, (listeners.get(type) ?? []).filter((one) => one !== fn));
+        listeners.set(
+          type,
+          (listeners.get(type) ?? []).filter((one) => one !== fn),
+        );
       },
       remove: () => {
         const from = el.parent;
@@ -2389,7 +2750,10 @@ import type { FileMount, SaveFormat } from '../src/surface/index.js';
       createElement: (tag: string) => makeEl(tag, doc),
       addEventListener: (type: string, fn: FakeListener) => push(caps, type, fn),
       removeEventListener: (type: string, fn: FakeListener) => {
-        caps.set(type, (caps.get(type) ?? []).filter((one) => one !== fn));
+        caps.set(
+          type,
+          (caps.get(type) ?? []).filter((one) => one !== fn),
+        );
       },
     } as FakeDoc;
     doc.body = makeEl('body', doc);
@@ -2534,7 +2898,11 @@ import type { FileMount, SaveFormat } from '../src/surface/index.js';
   // 자리는 이름 칸과 카드 둘뿐이라 둘 다 같은 손으로 걷는지만 본다.
   {
     const w = openSave();
-    eq('판이 열리면 격자 칸은 탭 순서에 안 선다', w.rows.map((row) => row.getAttribute('tabindex')), ['-1', '-1', '-1']);
+    eq(
+      '판이 열리면 격자 칸은 탭 순서에 안 선다',
+      w.rows.map((row) => row.getAttribute('tabindex')),
+      ['-1', '-1', '-1'],
+    );
     press(w.doc, w.card, 'Tab');
     eq('카드에서 누른 탭도 형식을 옮긴다', w.aimed(), 2);
     press(w.doc, w.card, 'Tab', true);
@@ -2546,8 +2914,16 @@ import type { FileMount, SaveFormat } from '../src/surface/index.js';
   // 고정해 줘. 입력 칸이 동적으로 변하는 게 보기 불편해."
   {
     eq('폭은 가장 긴 확장자의 글자 수다 (.nhtml = 6)', extWidth(three), 6);
-    eq('호스트가 끼운 긴 형식도 그 셈에 든다', extWidth([...three, { id: 'docx', label: 'Word', extension: '.docx', lossy: true }]), 6);
-    eq('더 긴 것이 들어오면 자리도 그만큼 넓어진다', extWidth([...three, { id: 'x', label: 'X', extension: '.longer', lossy: false }]), 7);
+    eq(
+      '호스트가 끼운 긴 형식도 그 셈에 든다',
+      extWidth([...three, { id: 'docx', label: 'Word', extension: '.docx', lossy: true }]),
+      6,
+    );
+    eq(
+      '더 긴 것이 들어오면 자리도 그만큼 넓어진다',
+      extWidth([...three, { id: 'x', label: 'X', extension: '.longer', lossy: false }]),
+      7,
+    );
     eq('형식이 하나도 없으면 기본값(.nabi)만큼이다', extWidth([]), 5);
 
     const w = openSave();

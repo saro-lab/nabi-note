@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: क्रमांकित सूची
+description: क्रम महत्त्वपूर्ण होने पर मदों की क्रमांकित सूची बनाती है।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# क्रमांकित सूची
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+क्रम महत्त्वपूर्ण होने पर मदों की क्रमांकित सूची बनाती है। खाली अनुच्छेद में `1.` जैसे अंक और पूर्णविराम के बाद Space दबाएँ, या चुने अनुच्छेदों को टूलबार से बदलें।
 
-[Open the Korean canonical page](/ko/guide/features)
+दिखने वाला क्रमांक मद की स्थिति से निकलता है, इसलिए मद जोड़ने या indent बदलने पर अपने-आप आगे बढ़ता है। मनचाहा आरंभिक क्रमांक सहेजकर वहीं से गिनने की सुविधा नहीं है।
 
-</div>
+<WingDemo path="/wing/block/ordered-list" />
+
+```ts
+const selected = wings().use('ol').build()
+```

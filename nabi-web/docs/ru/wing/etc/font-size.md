@@ -1,14 +1,35 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Размер текста
+description: Меняет размер текста в пределах разрешённых ступеней.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Размер текста
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Меняет ступень размера выбранного текста. При выделении применяется к диапазону, а при одной каретке меняет размер текста в текущем абзаце. В сохранённых данных остаются только разрешённые ступени, а не произвольные значения вроде `px`.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/etc/font-size" />
 
-</div>
+```ts
+const selected = wings().use('fs', {
+  values: ['sm', 'lg', 'xl'],
+}).build()
+```
+
+Если не указать `values`, используются ступени `xs`, `sm`, `lg`, `xl`. При сужении списка остальные ступени из прежних документов также удаляются при загрузке.
+
+## CSS-стили
+
+Размер можно изменить селектором сохранённой ступени, например `.nabi-content [data-nabi-size="xs"]`. Не создавайте произвольные ступени, которых нет в документе: корректируйте CSS только в зарегистрированных `values`.
+
+```css
+.article-body [data-nabi-size="xs"] { font-size: .78em; }
+.article-body [data-nabi-size="sm"] { font-size: .9em; }
+.article-body [data-nabi-size="lg"] { font-size: 1.3em; }
+.article-body [data-nabi-size="xl"] { font-size: 1.65em; }
+```
+
+Если сохранять постоянную разницу размеров между ступенями, смысл выбора автора в редакторе сохранится и на опубликованной странице.

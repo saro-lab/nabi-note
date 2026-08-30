@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: سرخی
+description: پیراگراف کو سرخی میں بدلیں اور اس کی سطح منتخب کریں۔
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# سرخی
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+پیراگراف کو سرخی میں بدلیں اور اس کی سطح بھی متعین کریں۔ ٹول بار سے سرخی فعال کر کے H1 سے H6 تک منتخب کریں، یا خالی پیراگراف میں `#` سے `######` کے بعد Space دبائیں۔
 
-[Open the Korean canonical page](/ko/guide/features)
+سرخی الگ بلاک کی قسم نہیں بلکہ پیراگراف میں محفوظ ہونے والی ایک خصوصیت ہے۔ سرخی کو دوبارہ دبانے پر یہ عام پیراگراف بن جاتی ہے، اس لیے متن کی ساخت برقرار رکھتے ہوئے صرف سطح بدلی جا سکتی ہے۔
 
-</div>
+<WingDemo path="/wing/block/heading" />
+
+```ts
+const selected = wings().use('h').build()
+```

@@ -1,14 +1,24 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: استخدام CDN
+description: مثال على ربط NABI NOTE للمتصفح من دون أداة بناء.
 ---
 
-<div class="translation-shell">
+<script setup>
+import CdnDemo from '../../.vitepress/ui/CdnDemo.vue'
+</script>
 
-# Translation pending
+# استخدام CDN
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This route is reserved so navigation and language links do not lead to a missing page.
+في الصفحات الثابتة التي يصعب فيها تثبيت الحزمة، يمكنك تحميل حزمة المتصفح وCSS الخاصين بـ NABI NOTE من CDN. يقرأ المثال أدناه إصدار الحزمة تلقائيًا وقت البناء وينشئ العناوين، ثم يركّب المحرر عبر الكائن العام `NabiNote`.
 
-[Open the Korean canonical page](/ko/guide/cdn)
+<CdnDemo />
 
-</div>
+## نقاط يجب التحقق منها في NABI NOTE
+
+- في كود النشر، استخدم الإصدار المثبّت نفسه لكل من CSS وJavaScript الخاص بالمتصفح. قد يتغير السلوك في يوم صدور إصدار جديد عند استخدام عنوان بلا إصدار مثل `latest`.
+- تعرض حزمة المتصفح واجهة الجذر باسم `window.NabiNote`. لا تتوفر حزم عامة منفصلة لـ `nabi-note/ssr` و`nabi-note/viewer` و`nabi-note/diff`.
+- يعمل حفظ الملفات والسجل المحلي في المثال داخل متصفح المستخدم. إذا احتجت إلى حفظ على الخادم أو مزامنة حساب، فأرسل نتيجة `getJson()` إلى واجهة API في تطبيقك.
+- عند إضافة الرفع، لا تكتفِ بـ wing `upload`؛ اربط دالة النقل الفعلية وwings الصور أو الروابط اللازمة. يتحمل خادم الرفع مسؤولية التحقق من الملفات.
+- تتضمن حزمة المتصفح محلل HTML داخليًا. لذلك لا تحتاج إلى خيار parser منفصل أو API خاص لاستخدام `setHtml()` أو فتح ملف HTML أو لصق HTML.
+
+يختلف CDN في طريقة التحميل فقط. تنسيق الحفظ والتحقق من الإدخال متماثلان مع التثبيت عبر npm، لذا راجع أيضًا [الاستخدام الأساسي](/ar/guide/getting-started).

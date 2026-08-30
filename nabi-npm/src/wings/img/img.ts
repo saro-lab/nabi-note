@@ -6,16 +6,17 @@
 // 살아남았다 (옛 확실 버그 4 — image 값 스냅). 여기서는 boxObject 의 검증기가 null 을 답하고
 // repair 가 그 attr 를 떨어뜨린다.
 import type { AttrValue } from '../../schema/index.js';
+import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import { replaceAt } from '../../doc/index.js';
 import { caretAt, ordered } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
 import { safeUrl } from '../../html/url.js';
+import { blockOwnerAt } from '../../wing/ops.js';
 import {
   LUMP_DEFAULT_ALIGN,
   LUMP_DEFAULT_WIDTH,
   boxObject,
   insertLump,
-  topNodeAt,
   type Wing,
   type WingChoice,
 } from '../../wing/index.js';
@@ -32,12 +33,73 @@ const imageMd: MdBuilder = (node) => {
 };
 
 // 이름들 — old 사전 이식(14 로케일).
-const IMAGE_NAME: LocaleText = { ko: '이미지', en: 'Image', ja: '画像', zh: '图片', de: 'Bild', fr: 'Image', es: 'Imagen', pt: 'Imagem', ru: 'Изображение', ar: 'صورة', hi: 'छवि', bn: 'ছবি', ur: 'تصویر', id: 'Gambar' };
-const WIDTH_NAME: LocaleText = { ko: '이미지 너비', en: 'Image width', ja: '画像の幅', zh: '图片宽度', de: 'Bildbreite', fr: "Largeur de l'image", es: 'Ancho de imagen', pt: 'Largura da imagem', ru: 'Ширина изображения', ar: 'عرض الصورة', hi: 'छवि की चौड़ाई', bn: 'ছবির প্রস্থ', ur: 'تصویر کی چوڑائی', id: 'Lebar gambar' };
-const ADDRESS_NAME: LocaleText = { ko: '주소', en: 'Address', ja: 'リンク先', zh: '链接地址', de: 'Adresse', fr: 'Adresse', es: 'Dirección', pt: 'Endereço', ru: 'Адрес', ar: 'عنوان الرابط', hi: 'लिंक का पता', bn: 'লিঙ্কের ঠিকানা', ur: 'لنک کا پتہ', id: 'Alamat' };
-const VIEW_NAME: LocaleText = { ko: '크게 보기', en: 'View image', ja: '拡大表示', zh: '查看大图', de: 'Groß anzeigen', fr: 'Voir en grand', es: 'Ver en grande', pt: 'Ver maior', ru: 'Открыть крупно', ar: 'عرض بحجم أكبر', hi: 'बड़ा देखें', bn: 'বড় করে দেখুন', ur: 'بڑا دیکھیں', id: 'Lihat besar' };
+const IMAGE_NAME: LocaleText = {
+  ko: '이미지',
+  en: 'Image',
+  ja: '画像',
+  zh: '图片',
+  de: 'Bild',
+  fr: 'Image',
+  es: 'Imagen',
+  pt: 'Imagem',
+  ru: 'Изображение',
+  ar: 'صورة',
+  hi: 'छवि',
+  bn: 'ছবি',
+  ur: 'تصویر',
+  id: 'Gambar',
+};
+const WIDTH_NAME: LocaleText = {
+  ko: '이미지 너비',
+  en: 'Image width',
+  ja: '画像の幅',
+  zh: '图片宽度',
+  de: 'Bildbreite',
+  fr: "Largeur de l'image",
+  es: 'Ancho de imagen',
+  pt: 'Largura da imagem',
+  ru: 'Ширина изображения',
+  ar: 'عرض الصورة',
+  hi: 'छवि की चौड़ाई',
+  bn: 'ছবির প্রস্থ',
+  ur: 'تصویر کی چوڑائی',
+  id: 'Lebar gambar',
+};
+const ADDRESS_NAME: LocaleText = {
+  ko: '주소',
+  en: 'Address',
+  ja: 'リンク先',
+  zh: '链接地址',
+  de: 'Adresse',
+  fr: 'Adresse',
+  es: 'Dirección',
+  pt: 'Endereço',
+  ru: 'Адрес',
+  ar: 'عنوان الرابط',
+  hi: 'लिंक का पता',
+  bn: 'লিঙ্কের ঠিকানা',
+  ur: 'لنک کا پتہ',
+  id: 'Alamat',
+};
+const VIEW_NAME: LocaleText = {
+  ko: '크게 보기',
+  en: 'View image',
+  ja: '拡大表示',
+  zh: '查看大图',
+  de: 'Groß anzeigen',
+  fr: 'Voir en grand',
+  es: 'Ver en grande',
+  pt: 'Ver maior',
+  ru: 'Открыть крупно',
+  ar: 'عرض بحجم أكبر',
+  hi: 'बड़ा देखें',
+  bn: 'বড় করে দেখুন',
+  ur: 'بڑا دیکھیں',
+  id: 'Lihat besar',
+};
 // 돋보기 — 크게 보기 단추의 속.
-const ZOOM_ICON = '<g stroke-width="1.5"><circle cx="7" cy="7" r="4.25"/><path d="M10.2 10.2 13.5 13.5M5.2 7h3.6M7 5.2v3.6"/></g>';
+const ZOOM_ICON =
+  '<g stroke-width="1.5"><circle cx="7" cy="7" r="4.25"/><path d="M10.2 10.2 13.5 13.5M5.2 7h3.6M7 5.2v3.6"/></g>';
 
 const IMAGE_ICON =
   '<g transform="translate(8 8) scale(1.0476) translate(-8 -8)" stroke-width="1.336">' +
@@ -125,17 +187,23 @@ export function makeImageWing(options: ImageWingOptions = {}): Wing {
     const width = widthAttr((args['w'] ?? '') as AttrValue);
     if (width === null) return null;
     const [start] = ordered(sel);
-    const top = topNodeAt(doc, start.path);
-    const lump = top?.ch[0];
-    if (!top || lump === undefined || typeof lump === 'string' || lump.w !== 'img') return null;
+    const owner = blockOwnerAt(doc, start.path, 'img');
+    const lump = owner?.node;
+    if (!owner || !lump) return null;
     if (lump.a?.['w'] === width) return null; // 같은 값 — 무변화 침묵
-    const at = [start.path[0] as number, 0];
-    const next = replaceAt(doc, at, [{ w: 'img', a: {...(lump.a ?? {}), w: width }, ch: [] }]);
+    const next = replaceAt(doc, owner.path, [
+      {
+        w: 'img',
+        a: { ...(lump.a ?? {}), w: width },
+        ch: [],
+        ...(lump._id !== undefined ? { _id: lump._id } : {}),
+      },
+    ]);
     return { doc: next, selection: sel };
   };
 
-  return {
-...boxObject({
+  const wing: Wing = {
+    ...boxObject({
       w: 'img',
       // 이름이 곧 화이트리스트다 — 여기 없는 attr(옛 판의 정렬 `a` 가 그것이다)는 떨어진다.
       attrs: { src: srcAttr, w: widthAttr },
@@ -192,6 +260,8 @@ export function makeImageWing(options: ImageWingOptions = {}): Wing {
     // 깨짐 감시·라이트박스 자리 — 선언만 하고 붙이는 것은 surface 의 mount 다.
     attach: imageAttach,
   };
+  $markBuiltinAttrOwner(wing, ['img']);
+  return wing;
 }
 
 // 기본 인스턴스 — 로컬 주소는 꺼져 있다. 업로드 미리보기를 쓰는 호스트가 makeImageWing 으로 연다.

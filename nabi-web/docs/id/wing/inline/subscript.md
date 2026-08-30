@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Subskrip
+description: Turunkan teks terpilih di bawah baseline.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Subskrip
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Menurunkan teks terpilih di bawah baseline untuk rumus kimia dan indeks. Menerapkannya lagi akan menghapus pemformatan.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/subscript" />
 
-</div>
+```ts
+const selected = wings().use('sub').build()
+```

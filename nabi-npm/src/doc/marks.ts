@@ -39,8 +39,7 @@ function coveredHolders(doc: NabiDoc, start: Position, end: Position, env: EditE
     const length = holderLength(node, env);
     if (comparePositions({ path, offset: length }, start) <= 0) continue;
     if (comparePositions({ path, offset: 0 }, end) >= 0) continue;
-    const samePathAs = (p: Position): boolean =>
-      p.path.length === path.length && p.path.every((v, i) => v === path[i]);
+    const samePathAs = (p: Position): boolean => p.path.length === path.length && p.path.every((v, i) => v === path[i]);
     const from = samePathAs(start) ? start.offset : 0;
     const to = samePathAs(end) ? end.offset : length;
     if (from < to) out.push({ path, node, from, to });
@@ -72,9 +71,7 @@ function remapCovered(
 
 function normalize(range: DocRange): { start: Position; end: Position } {
   const forward = comparePositions(range.anchor, range.focus) <= 0;
-  return forward
-    ? { start: range.anchor, end: range.focus }
-    : { start: range.focus, end: range.anchor };
+  return forward ? { start: range.anchor, end: range.focus } : { start: range.focus, end: range.anchor };
 }
 
 const keepRange = (doc: NabiDoc, range: DocRange): EditResult => ({
@@ -91,41 +88,43 @@ export function toggleMark(doc: NabiDoc, range: DocRange, mark: ElementNode, env
   if (covered.length === 0) return keepRange(doc, range);
 
   const terminal = terminalOf(env);
-  const coveredRuns = covered.flatMap((c) =>
-    sliceRuns(holderRuns(c.node, terminal), c.from, c.to),
-  );
+  const coveredRuns = covered.flatMap((c) => sliceRuns(holderRuns(c.node, terminal), c.from, c.to));
   const judged = coveredRuns.filter((run) => run.kind === 'text');
   const pool = judged.length > 0 ? judged : coveredRuns;
   const allHave = pool.length > 0 && pool.every((run) => run.marks.some((m) => m.w === mark.w));
 
   let next = doc;
   for (const c of covered) {
-    next = remapCovered(next, { ...c, node: nodeAt(next, c.path) ?? c.node }, (marks) => {
-      if (allHave) return marks.filter((m) => m.w !== mark.w);
-      if (marks.some((m) => sameMark(m, mark))) return marks;
-      return [...marks.filter((m) => m.w !== mark.w), mark];
-    }, env);
+    next = remapCovered(
+      next,
+      { ...c, node: nodeAt(next, c.path) ?? c.node },
+      (marks) => {
+        if (allHave) return marks.filter((m) => m.w !== mark.w);
+        if (marks.some((m) => sameMark(m, mark))) return marks;
+        return [...marks.filter((m) => m.w !== mark.w), mark];
+      },
+      env,
+    );
   }
   return keepRange(next, range);
 }
 
 // 값 마크 — attrs 를 주면 같은 이름을 교체하며 입히고, null 이면 벗긴다.
-export function setMark(
-  doc: NabiDoc,
-  range: DocRange,
-  w: string,
-  a: Attrs | null,
-  env: EditEnv,
-): EditResult {
+export function setMark(doc: NabiDoc, range: DocRange, w: string, a: Attrs | null, env: EditEnv): EditResult {
   const { start, end } = normalize(range);
   if (comparePositions(start, end) === 0) return keepRange(doc, range);
   const covered = coveredHolders(doc, start, end, env);
   let next = doc;
   for (const c of covered) {
-    next = remapCovered(next, { ...c, node: nodeAt(next, c.path) ?? c.node }, (marks) => {
-      const rest = marks.filter((m) => m.w !== w);
-      return a === null ? rest : [...rest, { w, a, ch: [] }];
-    }, env);
+    next = remapCovered(
+      next,
+      { ...c, node: nodeAt(next, c.path) ?? c.node },
+      (marks) => {
+        const rest = marks.filter((m) => m.w !== w);
+        return a === null ? rest : [...rest, { w, a, ch: [] }];
+      },
+      env,
+    );
   }
   return keepRange(next, range);
 }

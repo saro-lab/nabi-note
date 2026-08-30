@@ -21,7 +21,7 @@
 //
 // **진행률은 값 하나(`--nabi-per`)가 몬다.** 숫자·격자가 그 하나를 보므로 함께 움직인다. 그 값을
 // 미는 것은 `parts/ticker.ts`(시계 둘)이고, 이 파일은 받아 그리기만 한다.
-import type { Nabi } from '../editor/index.js';
+import { hostOf, type Nabi } from '../editor/index.js';
 import type { Translator } from '../locale/index.js';
 import { makeTranslator } from '../locale/index.js';
 import type { StartedTask, UploadMount } from '../surface/index.js';
@@ -87,9 +87,9 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
 
   // 캐럿이 든 최상위 블록의 키 — 파일을 넘겨받던 그 순간의 자리다.
   const anchorNow = (): string | null => {
-    const top = nabi.$doc()[nabi.getSelection().focus.path[0] ?? -1];
+    const top = hostOf(nabi).doc()[nabi.getSelection().focus.path[0] ?? -1];
     if (top && typeof top._id === 'string') return top._id;
-    const last = nabi.$doc()[nabi.$doc().length - 1];
+    const last = hostOf(nabi).doc()[hostOf(nabi).doc().length - 1];
     return last && typeof last._id === 'string' ? last._id : null;
   };
 
@@ -139,7 +139,7 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
   // 연산이 읽는 것이 바로 그 자리다 — 그래서 `Math.imul` 이다.
   const shuffledRanks = (count: number, seed: number): number[] => {
     const ranks = Array.from({ length: count }, (_, index) => index);
-    let state = (Math.imul(seed, 2654435761) >>> 0) || 1;
+    let state = Math.imul(seed, 2654435761) >>> 0 || 1;
     for (let i = count - 1; i > 0; i -= 1) {
       state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
       const pick = state % (i + 1);

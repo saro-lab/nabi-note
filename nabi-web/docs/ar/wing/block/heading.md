@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: عنوان
+description: يحوّل الفقرة إلى عنوان ويحدد مستواه.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# عنوان
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+يحوّل الفقرة إلى عنوان ويحدد مستواه. فعّل العنوان من شريط الأدوات واختر من H1 إلى H6، أو اكتب في فقرة فارغة من `#` إلى `######` ثم اضغط Space.
 
-[Open the Korean canonical page](/ko/guide/features)
+العنوان ليس نوع كتلة مستقلًا، بل خاصية محفوظة في الفقرة. يؤدي تفعيله مرة أخرى إلى إرجاع الفقرة العادية، لذلك يمكن تغيير المستوى مع إبقاء بنية النص كما هي.
 
-</div>
+<WingDemo path="/wing/block/heading" />
+
+```ts
+const selected = wings().use('h').build()
+```

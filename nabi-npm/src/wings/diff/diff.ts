@@ -7,7 +7,7 @@
 import type { Wing } from '../../wing/index.js';
 import type { LocaleText } from '../../locale/index.js';
 
-// 새 말이라 ko·en 만 — 폴백 규칙이 나머지를 잇는다 (diff.* 사전 항목과 같은 결).
+// 나머지 지원 로케일은 locale catalog가 같은 원문 키의 실제 번역으로 완성한다.
 const DIFF_NAME: LocaleText = { ko: '변경 비교', en: 'Diff' };
 
 // 엇갈린 화살표 둘 — 위는 오른쪽으로, 아래는 왼쪽으로 (before/after 를 오가는 모양).

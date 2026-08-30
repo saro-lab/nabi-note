@@ -7,13 +7,19 @@
 //
 // 이 그물의 요점은 **경로 대칭**이다. 개별 방어를 하나씩 세는 것이 아니라, "같은 공격 문자열을
 // 두 문에 넣으면 트리가 같다" 는 한 문장을 공격 목록 전체에 대해 확인한다.
-import { createNabiWith, makeRegistry, renderStoredEditorHtml, renderStoredHtml } from '../src/wing/index.js';
+import {
+  $createNabiWith,
+  createNabiWith,
+  makeRegistry,
+  renderStoredEditorHtml,
+  renderStoredHtml,
+} from '../src/wing/index.js';
 import { defaultWings, makeImageWing } from '../src/wings/index.js';
 import { tinyHtml } from './tiny-html.js';
 import { done, eq, ok } from './net.js';
 
 const stand = (allowLocalUrls = false) =>
-  createNabiWith(defaultWings, { parseHtml: tinyHtml, ...(allowLocalUrls ? { allowLocalUrls } : {}) }).nabi;
+  $createNabiWith(defaultWings, { parseHtml: tinyHtml, ...(allowLocalUrls ? { allowLocalUrls } : {}) }).nabi;
 
 // --- 1. 경로 대칭 — 같은 공격이 두 문에서 같은 트리를 낸다 -------------------------------------
 
@@ -58,7 +64,10 @@ const PAIRS: readonly (readonly [string, string, unknown[]])[] = [
             ch: [
               {
                 w: 'tr',
-                ch: [{ w: 'td', ch: [{ w: 'a', a: { href: 'javascript:alert(1)' }, ch: ['클릭'] }] }, { w: 'td', ch: [] }],
+                ch: [
+                  { w: 'td', ch: [{ w: 'a', a: { href: 'javascript:alert(1)' }, ch: ['클릭'] }] },
+                  { w: 'td', ch: [] },
+                ],
               },
             ],
           },
@@ -179,10 +188,10 @@ for (const attack of ATTACKS) {
   // 그림 자리에서는 산다 — 업로드 미리보기가 이 길로 그려진다. **짝이라 한쪽만 켜면 안 된다**:
   // 문서의 `allowLocalUrls` 와 그림 wing 의 `allowLocalUrls` 가 함께 열려야 그 주소가 산다.
   const localImage = (): ReturnType<typeof stand> =>
-    createNabiWith(
-      [...defaultWings.filter((wing) => wing.w !== 'img'), makeImageWing({ allowLocalUrls: true })],
-      { parseHtml: tinyHtml, allowLocalUrls: true },
-    ).nabi;
+    $createNabiWith([...defaultWings.filter((wing) => wing.w !== 'img'), makeImageWing({ allowLocalUrls: true })], {
+      allowLocalUrls: true,
+      parseHtml: tinyHtml,
+    }).nabi;
 
   const preview = localImage();
   preview.setHtml('<p><img src="data:image/png;base64,AA"/></p>');

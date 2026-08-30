@@ -7,7 +7,7 @@
 // 그리고 상태 토큰은 "같다"가 아니라 "품는가"로 읽는다 (10 판단 — 표의 칸이 'merged th' 를
 // 답하고 표가 'sort' 를 답한다. 둘은 같은 줄의 단추라 한 벌로 읽혀야 한다).
 import type { ElementNode } from '../schema/index.js';
-import type { Nabi } from '../editor/index.js';
+import { hostOf, type Nabi } from '../editor/index.js';
 import type { ContextControl, Registry, Wing } from '../wing/index.js';
 import { localeDirection, makeTranslator, type Translator } from '../locale/index.js';
 import { bandFix, bandOf, type Rect } from './band.js';
@@ -21,6 +21,7 @@ import { watchSettle, type Settle } from './parts/settle.js';
 import { openLightbox } from './overlay.js';
 import type { Overlay } from './overlay.js';
 import { watchNarrow } from './narrow.js';
+import { claimMountRoot, DisposerStack, HostElementBaseline, HostElementLease } from '../lifecycle.js';
 
 export interface ContextToolbarOptions {
   readonly nabi: Nabi;
@@ -70,172 +71,220 @@ interface Draw {
 
 export function mountContextToolbar(options: ContextToolbarOptions): ContextToolbar {
   const { nabi, registry, root } = options;
-  const owner = root.ownerDocument;
-  const t = options.translator ?? makeTranslator(options.locale);
-  // 말이 곧 방향이다 (098) — 툴바와 같은 규칙이다.
-  if (options.locale !== undefined) options.root.setAttribute('dir', localeDirection(options.locale));
-  const settle = options.settle ?? watchSettle(owner, options.surface ? { surface: options.surface } : {});
-  const ownSettle = options.settle === undefined;
+  const baseline = new HostElementBaseline(root);
+  const lifecycle = new DisposerStack();
+  lifecycle.add(claimMountRoot(root));
+  let unmounted = false;
+  try {
+    const owner = root.ownerDocument;
+    const t = options.translator ?? makeTranslator(options.locale);
+    const attributes = new HostElementLease(root);
+    lifecycle.add(() => attributes.dispose());
+    // 말이 곧 방향이다 (098) — 툴바와 같은 규칙이다.
+    if (options.locale !== undefined || options.translator !== undefined)
+      attributes.attribute('dir', localeDirection(t.locale));
+    const suppliedSettle = options.settle;
+    const settle = suppliedSettle ?? watchSettle(owner, options.surface ? { surface: options.surface } : {});
+    const ownSettle = suppliedSettle === undefined;
+    if (ownSettle) lifecycle.add(() => settle.unmount());
 
-  let views: ContextGroupView[] = [];
-  let pending = false;
-  // 뜬 것 둘 — 판과 라이트박스. 줄이 다시 지어지면 함께 걷힌다(가리키던 노드가 사라졌을 수 있다).
-  let panel: Panel | null = null;
-  let lightbox: Overlay | null = null;
-
-  root.classList.add('nabi-context');
-  // 한 줄 모드 (260824_000) — 줄 자체가 flex 그릇이라 툴바처럼 감쌀 것 없이 제가 구른다.
-  const stopNarrow = watchNarrow(root);
-
-  const closeFloating = (): void => {
-    panel?.close();
-    panel = null;
-  };
-
-  // 고친 자리를 화면에 들인다 — **상황 줄에서 고치는 자리는 화면 밖에 있을 수 있다.**
-  // 손이 이 줄에 머무는 동안 화면이 굴러가 대상이 밖으로 나가면, 이름을 바꾸고 엔터를 쳐도 무엇이
-  // 바뀌었는지 안 보인다 (주인 신고 2026-08-21).
-  //
-  // **스스로 굴러갈 사람이 없다.** 포커스는 `preventScroll` 로 돌려주고(바로 아래), 선택을 코드로
-  // 쓰는 것은 브라우저를 안 굴린다 — 굴리는 것은 사람이 친 키뿐이다. 그래서 여기서 한 번 부른다.
-  //
-  // 셈은 **띠의 그 산수 그대로**다(`band.ts` — `mountSticky` 가 모바일 키보드에 쓰는 그 한 벌).
-  // `scrollIntoView` 를 안 쓰는 까닭이 여기 있다: 그것은 붙는 크롬의 키를 모르고 시트의 어림값
-  // (`.nabi-content > *` 의 `scroll-margin`, 3.5rem = 툴바 한 줄)만 아는데, **이름을 고치는 동안은
-  // 상황 줄까지 떠 있어 크롬이 두 줄이다.** 그래서 어림값으로 굴리면 고친 자리가 상황 줄 **밑에**
-  // 가려 선다(실제로 그렇게 섰다). 크롬의 아랫변을 그때그때 재면 그 자리가 안 생긴다.
-  //
-  // 띠 안이면 `bandFix` 가 0 을 답한다 — **보이는 것을 굴려서 놀래키지 않는다**(규칙의 절반이 그
-  // 0 이다). 겨누는 것은 겨눔의 사각형이고, 못 재면 캐럿이 든 맨 위 블록으로 갈음한다.
-  const targetBox = (): Rect | null => {
-    const selection = owner.getSelection?.() ?? owner.defaultView?.getSelection() ?? null;
-    if (selection && selection.rangeCount > 0) {
-      const box = selection.getRangeAt(0).getBoundingClientRect();
-      if (box.height > 0) return { top: box.top, bottom: box.bottom };
-    }
-    const top = nabi.getSelection().focus.path[0];
-    const node = typeof top === 'number' ? nabi.$doc()[top] : undefined;
-    const id = node && typeof node._id === 'string' ? node._id : null;
-    const el = id === null ? null : options.surface?.querySelector(`[data-key="${id.replace(/["\\]/g, '\\$&')}"]`);
-    if (!el) return null;
-    const box = el.getBoundingClientRect();
-    return { top: box.top, bottom: box.bottom };
-  };
-
-  const reveal = (): void => {
-    const view = owner.defaultView;
-    if (!view || !options.surface) return;
-    const box = targetBox();
-    if (!box) return;
-    // 띠의 위 변 — 붙는 크롬의 아랫변이다. 그 클래스가 곧 "위에 붙는다"는 계약이라(문서의 그 말),
-    // 안 붙는 호스트에서는 창의 위가 위 변이 된다.
-    const chrome = root.closest('.nabi-toolbar');
-    const chromeBottom = chrome ? chrome.getBoundingClientRect().bottom : null;
-    const visual = view.visualViewport;
-    const viewport: Rect = { top: 0, bottom: visual ? visual.height : view.innerHeight };
-    const delta = bandFix(box, bandOf(chromeBottom, viewport), viewport.bottom - viewport.top);
-    if (delta !== 0) view.scrollBy({ top: delta, behavior: 'auto' });
-  };
-
-  const run = (command: string, args?: Readonly<Record<string, unknown>>): void => {
-    // 겨눔을 먼저 돌려주고 문을 지난다 — 커맨드는 캐럿이 든 자리를 보고 일한다.
-    focusQuiet(options.surface);
-    nabi.applyCommand(command, args ?? {});
-    reveal();
-  };
-
-  const ask = (anchor: HTMLElement, control: Extract<ContextControl, { kind: 'prompt' }>): void => {
-    // 같은 단추를 다시 누르면 닫힌다 — 툴바의 피커와 같은 규칙이다.
-    const wasOpen = anchor.getAttribute('aria-expanded') === 'true';
-    closeFloating();
-    if (wasOpen) return;
-    const group = views.find((view) => view.el.contains(anchor));
-    const wing = group ? registry.wingOf(group.w) : null;
-    const node = group?.node;
-    panel = openPrompt(owner, {
-      anchor,
-      restore: options.surface ?? null,
-      okLabel: t.t('ok'),
-      fields: control.fields.map((field) => ({
-        name: field.name,
-        label: t.pick(field.label, `field.${wing?.w ?? ''}.${field.name}`),
-        // 고치러 온 자리다 — 지금 값이 미리 차 있어야 한다(넣을 때와 다른 점은 이것뿐).
-        ...(field.attr && node ? { value: String(node.a?.[field.attr] ?? '') } : {}),
-        ...(field.optional ? { optional: true } : {}),
-        // 고치러 여는 판도 **같은 문**이다 — 넣을 때 못 지나던 값이 고칠 때 지나가면 안 된다.
-        ...(field.validate ? { validate: field.validate } : {}),
-      })),
-      onClose: () => {
-        panel = null;
-      },
-      onSubmit: (values) => run(control.command, values),
+    let views: ContextGroupView[] = [];
+    let pending = false;
+    // 뜬 것 둘 — 판과 라이트박스. 줄이 다시 지어지면 함께 걷힌다(가리키던 노드가 사라졌을 수 있다).
+    let panel: Panel | null = null;
+    let lightbox: Overlay | null = null;
+    let generation = 0;
+    lifecycle.add(() => {
+      for (const view of views) view.el.remove();
+      views = [];
     });
-  };
 
-  const view = (src: string, alt?: string): void => {
-    lightbox?.close();
-    lightbox = options.surface
-      ? openLightbox({
-          surface: options.surface,
-          src,
-          ...(alt ? { alt } : {}),
-          translator: t,
-        })
-      : null;
-  };
+    attributes.className('nabi-context', true);
+    // 한 줄 모드 (260824_000) — 줄 자체가 flex 그릇이라 툴바처럼 감쌀 것 없이 제가 구른다.
+    const stopNarrow = watchNarrow(root);
+    lifecycle.add(stopNarrow);
 
-  const build = (): void => {
-    closeFloating();
-    root.replaceChildren();
-    views = [];
-    const doc = nabi.$doc();
-    const sel = nabi.getSelection();
-    for (const group of contextGroupsAt(doc, sel, registry, nabi.$env)) {
-      const drawn = drawGroup(owner, group, t, { run, ask, view });
-      if (drawn.buttons.length === 0 && drawn.el.childElementCount === 0) continue;
-      root.append(drawn.el);
-      views.push(drawn);
-    }
-    root.hidden = views.length === 0;
-  };
-
-  const refresh = (): void => {
-    // 이 줄은 통째로 떴다 사라진다 — 높이가 바뀌므로 몸짓 중에는 미룬다.
-    if (settle.busy()) {
-      pending = true;
-      return;
-    }
-    pending = false;
-    build();
-  };
-
-  const stopChange = nabi.onChange(refresh);
-  const stopSettle = settle.onSettle(() => {
-    if (!pending) return;
-    pending = false;
-    build();
-  });
-
-  refresh();
-
-  return {
-    root,
-    groups: () => views,
-    buttons: () => views.flatMap((view) => view.buttons),
-    refresh,
-    unmount() {
-      stopChange();
-      stopSettle();
+    const closeFloating = (): void => {
+      panel?.close();
+      panel = null;
+    };
+    lifecycle.add(() => {
       closeFloating();
       lightbox?.close();
       lightbox = null;
-      if (ownSettle) settle.unmount();
-      stopNarrow();
-      root.classList.remove('nabi-context');
-      root.replaceChildren();
-      root.hidden = false;
-    },
-  };
+    });
+
+    // 고친 자리를 화면에 들인다 — **상황 줄에서 고치는 자리는 화면 밖에 있을 수 있다.**
+    // 손이 이 줄에 머무는 동안 화면이 굴러가 대상이 밖으로 나가면, 이름을 바꾸고 엔터를 쳐도 무엇이
+    // 바뀌었는지 안 보인다 (주인 신고 2026-08-21).
+    //
+    // **스스로 굴러갈 사람이 없다.** 포커스는 `preventScroll` 로 돌려주고(바로 아래), 선택을 코드로
+    // 쓰는 것은 브라우저를 안 굴린다 — 굴리는 것은 사람이 친 키뿐이다. 그래서 여기서 한 번 부른다.
+    //
+    // 셈은 **띠의 그 산수 그대로**다(`band.ts` — `mountSticky` 가 모바일 키보드에 쓰는 그 한 벌).
+    // `scrollIntoView` 를 안 쓰는 까닭이 여기 있다: 그것은 붙는 크롬의 키를 모르고 시트의 어림값
+    // (`.nabi-content > *` 의 `scroll-margin`, 3.5rem = 툴바 한 줄)만 아는데, **이름을 고치는 동안은
+    // 상황 줄까지 떠 있어 크롬이 두 줄이다.** 그래서 어림값으로 굴리면 고친 자리가 상황 줄 **밑에**
+    // 가려 선다(실제로 그렇게 섰다). 크롬의 아랫변을 그때그때 재면 그 자리가 안 생긴다.
+    //
+    // 띠 안이면 `bandFix` 가 0 을 답한다 — **보이는 것을 굴려서 놀래키지 않는다**(규칙의 절반이 그
+    // 0 이다). 겨누는 것은 겨눔의 사각형이고, 못 재면 캐럿이 든 맨 위 블록으로 갈음한다.
+    const targetBox = (): Rect | null => {
+      const selection = owner.getSelection?.() ?? owner.defaultView?.getSelection() ?? null;
+      if (selection && selection.rangeCount > 0) {
+        const box = selection.getRangeAt(0).getBoundingClientRect();
+        if (box.height > 0) return { top: box.top, bottom: box.bottom };
+      }
+      const top = nabi.getSelection().focus.path[0];
+      const node = typeof top === 'number' ? hostOf(nabi).doc()[top] : undefined;
+      const id = node && typeof node._id === 'string' ? node._id : null;
+      const el = id === null ? null : options.surface?.querySelector(`[data-key="${id.replace(/["\\]/g, '\\$&')}"]`);
+      if (!el) return null;
+      const box = el.getBoundingClientRect();
+      return { top: box.top, bottom: box.bottom };
+    };
+
+    const reveal = (): void => {
+      const view = owner.defaultView;
+      if (!view || !options.surface) return;
+      const box = targetBox();
+      if (!box) return;
+      // 띠의 위 변 — 붙는 크롬의 아랫변이다. 그 클래스가 곧 "위에 붙는다"는 계약이라(문서의 그 말),
+      // 안 붙는 호스트에서는 창의 위가 위 변이 된다.
+      const chrome = root.closest('.nabi-toolbar');
+      const chromeBottom = chrome ? chrome.getBoundingClientRect().bottom : null;
+      const visual = view.visualViewport;
+      const viewport: Rect = { top: 0, bottom: visual ? visual.height : view.innerHeight };
+      const delta = bandFix(box, bandOf(chromeBottom, viewport), viewport.bottom - viewport.top);
+      if (delta !== 0) view.scrollBy({ top: delta, behavior: 'auto' });
+    };
+
+    const run = (command: string, args?: Readonly<Record<string, unknown>>): void => {
+      if (unmounted) return;
+      // 겨눔을 먼저 돌려주고 문을 지난다 — 커맨드는 캐럿이 든 자리를 보고 일한다.
+      focusQuiet(options.surface);
+      nabi.applyCommand(command, args ?? {});
+      reveal();
+    };
+
+    const ask = (anchor: HTMLElement, control: Extract<ContextControl, { kind: 'prompt' }>): void => {
+      if (unmounted) return;
+      // 같은 단추를 다시 누르면 닫힌다 — 툴바의 피커와 같은 규칙이다.
+      const wasOpen = anchor.getAttribute('aria-expanded') === 'true';
+      closeFloating();
+      if (wasOpen) return;
+      const group = views.find((view) => view.el.contains(anchor));
+      const wing = group ? registry.wingOf(group.w) : null;
+      const node = group?.node;
+      panel = openPrompt(owner, {
+        anchor,
+        restore: options.surface ?? null,
+        okLabel: t.t('ok'),
+        fields: control.fields.map((field) => ({
+          name: field.name,
+          label: t.pick(field.label, `field.${wing?.w ?? ''}.${field.name}`),
+          // 고치러 온 자리다 — 지금 값이 미리 차 있어야 한다(넣을 때와 다른 점은 이것뿐).
+          ...(field.attr && node ? { value: String(node.a?.[field.attr] ?? '') } : {}),
+          ...(field.optional ? { optional: true } : {}),
+          // 고치러 여는 판도 **같은 문**이다 — 넣을 때 못 지나던 값이 고칠 때 지나가면 안 된다.
+          ...(field.validate ? { validate: field.validate } : {}),
+        })),
+        onClose: () => {
+          panel = null;
+        },
+        onSubmit: (values) => run(control.command, values),
+      });
+    };
+
+    const view = (src: string, alt?: string): void => {
+      if (unmounted) return;
+      lightbox?.close();
+      lightbox = options.surface
+        ? openLightbox({
+            surface: options.surface,
+            src,
+            ...(alt ? { alt } : {}),
+            translator: t,
+          })
+        : null;
+    };
+
+    const invalidate = (): void => {
+      generation += 1;
+      closeFloating();
+      lightbox?.close();
+      lightbox = null;
+    };
+
+    const build = (): void => {
+      if (unmounted) return;
+      invalidate();
+      for (const view of views) view.el.remove();
+      views = [];
+      const doc = hostOf(nabi).doc();
+      const sel = nabi.getSelection();
+      const current = generation;
+      const alive = (): boolean => !unmounted && current === generation;
+      for (const group of contextGroupsAt(doc, sel, registry, hostOf(nabi).env)) {
+        const drawn = drawGroup(owner, group, t, {
+          run: (command, args) => {
+            if (alive()) run(command, args);
+          },
+          ask: (anchor, control) => {
+            if (alive()) ask(anchor, control);
+          },
+          view: (src, alt) => {
+            if (alive()) view(src, alt);
+          },
+        });
+        if (drawn.buttons.length === 0 && drawn.el.childElementCount === 0) continue;
+        root.append(drawn.el);
+        views.push(drawn);
+      }
+      attributes.attribute('hidden', views.length === 0 ? '' : null);
+    };
+
+    const refresh = (): void => {
+      if (unmounted) return;
+      // 이 줄은 통째로 떴다 사라진다 — 높이가 바뀌므로 몸짓 중에는 미룬다.
+      if (settle.busy()) {
+        invalidate();
+        pending = true;
+        return;
+      }
+      pending = false;
+      build();
+    };
+
+    const stopChange = nabi.onChange(refresh);
+    lifecycle.add(stopChange);
+    const stopSettle = settle.onSettle(() => {
+      if (unmounted) return;
+      if (!pending) return;
+      pending = false;
+      build();
+    });
+    lifecycle.add(stopSettle);
+
+    refresh();
+
+    return {
+      root,
+      groups: () => (unmounted ? [] : views),
+      buttons: () => (unmounted ? [] : views.flatMap((view) => view.buttons)),
+      refresh,
+      unmount() {
+        if (unmounted) return;
+        unmounted = true;
+        lifecycle.dispose();
+      },
+    };
+  } catch (error) {
+    unmounted = true;
+    lifecycle.dispose();
+    baseline.restore();
+    throw error;
+  }
 }
 
 // --- 그룹 하나 --------------------------------------------------------------------------------
@@ -252,12 +301,7 @@ function wordless(controls: readonly ContextControl[]): boolean {
   );
 }
 
-function drawGroup(
-  owner: Document,
-  group: ContextGroup,
-  t: Translator,
-  doors: Doors,
-): ContextGroupView {
+function drawGroup(owner: Document, group: ContextGroup, t: Translator, doors: Doors): ContextGroupView {
   const { wing, node } = group;
   const el = make(owner, 'div', 'nabi-ctx-group', { 'data-wing': wing.w });
   const buttons: HTMLButtonElement[] = [];
@@ -304,10 +348,7 @@ function tagFor(draw: Draw, text: string): readonly Node[] {
 
 // --- 렌더러 넷 (종류마다 하나 — 이 표가 곧 "종류별 분리"다) ---------------------------------
 
-type Renderer<K extends ContextControl['kind']> = (
-  draw: Draw,
-  control: Extract<ContextControl, { kind: K }>,
-) => Made;
+type Renderer<K extends ContextControl['kind']> = (draw: Draw, control: Extract<ContextControl, { kind: K }>) => Made;
 
 // 하는 일 — 눌림이 없다 (행 추가·열 삭제).
 const drawButton: Renderer<'button'> = (draw, control) => {
@@ -358,7 +399,8 @@ const drawSelect: Renderer<'select'> = (draw, control) => {
 // 글 한 줄 — 지금 값으로 채워 두고, 확정하면 커맨드로 간다.
 const drawText: Renderer<'text'> = (draw, control) => {
   // 지금 값 — 선언한 `initial` 이 먼저다(속성 하나로 못 읽는 값이 그 문으로 온다).
-  const now = (control.initial ? control.initial(draw.node) : controlValueOf(draw.node, draw.value, control.attr)) ?? '';
+  const now =
+    (control.initial ? control.initial(draw.node) : controlValueOf(draw.node, draw.value, control.attr)) ?? '';
   const label = nameOf(draw, control);
   const row = make(draw.owner, 'label', 'nabi-field');
   const tag = make(draw.owner, 'span');
@@ -367,14 +409,16 @@ const drawText: Renderer<'text'> = (draw, control) => {
     type: 'text',
     'data-name': control.name,
     'aria-label': label,
-    placeholder: control.placeholder ? draw.t.pick(control.placeholder, `ctx.${draw.wing.w}.${control.name}`) : undefined,
+    placeholder: control.placeholder
+      ? draw.t.pick(control.placeholder, `ctx.${draw.wing.w}.${control.name}`)
+      : undefined,
   }) as HTMLInputElement;
   input.value = now;
 
   // 확정은 **한 번만** 돈다. 엔터를 치면 `keydown` 이 확정하는데, 그 뒤 칸이 포커스를 잃거나
   // 상황 줄이 다시 그려지며 떨어져 나갈 때 브라우저가 `change` 를 한 번 더 보낸다. 그때 `now` 는
   // 아직 옛 값이라 "안 바뀌었다" 검사가 못 막고 같은 커맨드가 두 번 돈다 (주인 신고 2026-08-19).
-  let sent = '';
+  let sent: string | null = null;
   const commit = (): void => {
     const value = input.value.trim();
     if (value === now || value === sent) return; // 안 바뀌었다 — 빈 되돌리기 지점을 안 남긴다
@@ -420,7 +464,13 @@ const drawRange: Renderer<'range'> = (draw, control) => {
   const now = controlValueOf(draw.node, draw.value, control.attr);
   // 쉬는 자리 — 선언한 값, 없으면 `''` 칸, 그것도 없으면 첫 칸.
   const declared = control.rest === undefined ? -1 : steps.findIndex((step) => String(step.value) === control.rest);
-  const resting = declared >= 0 ? declared : Math.max(steps.findIndex((step) => step.value === ''), 0);
+  const resting =
+    declared >= 0
+      ? declared
+      : Math.max(
+          steps.findIndex((step) => step.value === ''),
+          0,
+        );
   const at = steps.findIndex((step) => step.value !== '' && hasToken(now, String(step.value)));
 
   const slider = make(draw.owner, 'input', 'nabi-range', {

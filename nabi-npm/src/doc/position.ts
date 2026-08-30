@@ -63,11 +63,7 @@ export function siblingsAt(doc: NabiDoc, path: readonly number[]): readonly Nabi
 }
 
 // 경로 자리의 노드를 여러 노드로 갈아 끼운 새 문서 — 경로 위 조상만 새로 짓는다 (구조 공유).
-export function replaceAt(
-  doc: NabiDoc,
-  path: readonly number[],
-  replacement: readonly NabiNode[],
-): NabiDoc {
+export function replaceAt(doc: NabiDoc, path: readonly number[], replacement: readonly NabiNode[]): NabiDoc {
   if (path.length === 0) return doc;
   const walk = (nodes: readonly NabiNode[], depth: number): readonly NabiNode[] => {
     const index = path[depth] as number;
@@ -79,9 +75,10 @@ export function replaceAt(
     if (!isElement(node)) return nodes;
     const ch = walk(node.ch, depth + 1);
     if (ch === node.ch) return nodes;
-    const next: ElementNode = node.a !== undefined
-      ? { w: node.w, a: node.a, ch, ...(node._id !== undefined ? { _id: node._id } : {}) }
-      : { w: node.w, ch, ...(node._id !== undefined ? { _id: node._id } : {}) };
+    const next: ElementNode =
+      node.a !== undefined
+        ? { w: node.w, a: node.a, ch, ...(node._id !== undefined ? { _id: node._id } : {}) }
+        : { w: node.w, ch, ...(node._id !== undefined ? { _id: node._id } : {}) };
     return [...nodes.slice(0, index), next, ...nodes.slice(index + 1)];
   };
   return walk(doc, 0) as NabiDoc;
@@ -111,19 +108,77 @@ export interface HolderAt {
   readonly node: ElementNode;
 }
 
+export interface IndexedNode {
+  readonly path: readonly number[];
+  readonly node: ElementNode;
+}
+
+export class DocumentIndex {
+  readonly holders: readonly HolderAt[];
+  readonly top: readonly IndexedNode[];
+  private readonly byId = new Map<string, IndexedNode>();
+  private readonly byPath = new Map<string, IndexedNode>();
+
+  constructor(
+    readonly doc: NabiDoc,
+    env: SchemaEnv,
+  ) {
+    const holderList: HolderAt[] = [];
+    const top: IndexedNode[] = [];
+    const walk = (nodes: readonly NabiNode[], base: readonly number[], topLevel: boolean): void => {
+      nodes.forEach((node, i) => {
+        if (!isElement(node)) return;
+        const path = Object.freeze([...base, i]);
+        const entry = Object.freeze({ path, node });
+        this.byPath.set(pathKey(path), entry);
+        if (topLevel) top.push(entry);
+        if (typeof node._id === 'string' && !this.byId.has(node._id)) this.byId.set(node._id, entry);
+        if (isHolder(node, env)) holderList.push(entry);
+        walk(node.ch, path, false);
+      });
+    };
+    walk(doc, [], true);
+    this.holders = Object.freeze(holderList);
+    this.top = Object.freeze(top);
+  }
+
+  byIdAt(id: string): IndexedNode | null {
+    return this.byId.get(id) ?? null;
+  }
+  at(path: readonly number[]): IndexedNode | null {
+    return this.byPath.get(pathKey(path)) ?? null;
+  }
+  ownerAt(path: readonly number[], w?: string): IndexedNode | null {
+    for (let depth = path.length; depth >= 1; depth -= 1) {
+      const found = this.at(path.slice(0, depth));
+      if (found && (w === undefined || found.node.w === w)) return found;
+    }
+    return null;
+  }
+}
+
+const indexCache = new WeakMap<object, WeakMap<object, DocumentIndex>>();
+
+export function documentIndex(doc: NabiDoc, env: SchemaEnv): DocumentIndex {
+  let byEnv = indexCache.get(doc);
+  if (!byEnv) {
+    byEnv = new WeakMap();
+    indexCache.set(doc, byEnv);
+  }
+  let index = byEnv.get(env);
+  if (!index) {
+    index = new DocumentIndex(doc, env);
+    byEnv.set(env, index);
+  }
+  return index;
+}
+
+function pathKey(path: readonly number[]): string {
+  return path.join('.');
+}
+
 export function holders(doc: NabiDoc, env: SchemaEnv): HolderAt[] {
-  const out: HolderAt[] = [];
-  const walk = (nodes: readonly NabiNode[], base: readonly number[]): void => {
-    nodes.forEach((node, i) => {
-      if (!isElement(node)) return;
-      const path = [...base, i];
-      if (isHolder(node, env)) out.push({ path, node });
-      // 인라인 홀더 속은 글자뿐이라 더 내려갈 것이 없다.
-      if (!env.inlineHolders.has(node.w)) walk(node.ch, path);
-    });
-  };
-  walk(doc, []);
-  return out;
+  return [...documentIndex(doc, env).holders];
 }
 
 // 문서 순서 비교 — 경로 사전순, 같은 홀더면 오프셋순.

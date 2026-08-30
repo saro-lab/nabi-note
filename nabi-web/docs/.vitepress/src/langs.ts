@@ -15,6 +15,27 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 
 export const languageList = localeNames
 
+const KOREAN_INITIALS = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'
+
+function normalizeLanguageSearch(value: string): string {
+  return value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+}
+
+function koreanInitials(value: string): string {
+  return [...value].map((character) => {
+    const offset = character.codePointAt(0)! - 0xac00
+    return offset >= 0 && offset < 11172 ? KOREAN_INITIALS[Math.floor(offset / 588)] : character
+  }).join('')
+}
+
+export function languageMatches(code: LocaleCode, name: string, query: string): boolean {
+  const needle = normalizeLanguageSearch(query.trim())
+  if (!needle) return true
+  return [code, name].some((value) => {
+    return normalizeLanguageSearch(value).includes(needle) || koreanInitials(value).includes(needle)
+  })
+}
+
 function isLocaleCode(code: string): code is LocaleCode {
   return (localeCodes as string[]).includes(code)
 }

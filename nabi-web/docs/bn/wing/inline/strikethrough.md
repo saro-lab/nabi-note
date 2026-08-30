@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: স্ট্রাইকথ্রু
+description: নির্বাচিত লেখার ওপর কাটারেখা দিন।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# স্ট্রাইকথ্রু
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+নির্বাচিত লেখার ওপর কাটারেখা দেয়। একই পরিসরে আবার প্রয়োগ করলে ফরম্যাটিং সরিয়ে যায়, এবং mark সংরক্ষিত ডকুমেন্টে থাকে।
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/strikethrough" />
 
-</div>
+```ts
+const selected = wings().use('s').build()
+```

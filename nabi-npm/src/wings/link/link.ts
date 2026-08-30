@@ -2,6 +2,7 @@
 // 주소 화이트리스트는 새로 짜지 않는다 — `html/url.ts` 의 `safeUrl` 한 벌이 조립·들여오기
 // 커맨드의 같은 문이다. http/https 절대 주소와 같은 사이트 상대 경로만 지난다.
 import { isElement, type Attrs, type ElementNode, type NabiNode } from '../../schema/index.js';
+import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import { deleteRange, insertText, setMark, type EditEnv } from '../../doc/index.js';
 import { isCollapsed, ordered } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
@@ -128,16 +129,59 @@ const renameLink: Command = (doc, sel, args, env: EditEnv) => {
   const lump = typeof file === 'string' && file !== '';
   return {
     doc: put.doc,
-    selection: lump
-      ? { anchor: cut.caret, focus: put.caret }
-      : { anchor: put.caret, focus: put.caret },
+    selection: lump ? { anchor: cut.caret, focus: put.caret } : { anchor: put.caret, focus: put.caret },
   };
 };
 
 // 이름 셋 — old 사전 이식(14 로케일).
-const LINK_NAME: LocaleText = { ko: '링크', en: 'Link', ja: 'リンク', zh: '链接', de: 'Link', fr: 'Lien', es: 'Enlace', pt: 'Link', ru: 'Ссылка', ar: 'رابط', hi: 'लिंक', bn: 'লিঙ্ক', ur: 'لنک', id: 'Tautan' };
-const ADDRESS_NAME: LocaleText = { ko: '주소', en: 'Address', ja: 'リンク先', zh: '链接地址', de: 'Adresse', fr: 'Adresse', es: 'Dirección', pt: 'Endereço', ru: 'Адрес', ar: 'عنوان الرابط', hi: 'लिंक का पता', bn: 'লিঙ্কের ঠিকানা', ur: 'لنک کا پتہ', id: 'Alamat' };
-const TEXT_NAME: LocaleText = { ko: '표시 이름', en: 'Display name', ja: '表示文字列', zh: '显示文字', de: 'Anzeigetext', fr: 'Texte à afficher', es: 'Texto para mostrar', pt: 'Texto exibido', ru: 'Текст ссылки', ar: 'نص الرابط', hi: 'लिंक का टेक्स्ट', bn: 'প্রদর্শিত লেখা', ur: 'لنک کا متن', id: 'Teks tautan' };
+const LINK_NAME: LocaleText = {
+  ko: '링크',
+  en: 'Link',
+  ja: 'リンク',
+  zh: '链接',
+  de: 'Link',
+  fr: 'Lien',
+  es: 'Enlace',
+  pt: 'Link',
+  ru: 'Ссылка',
+  ar: 'رابط',
+  hi: 'लिंक',
+  bn: 'লিঙ্ক',
+  ur: 'لنک',
+  id: 'Tautan',
+};
+const ADDRESS_NAME: LocaleText = {
+  ko: '주소',
+  en: 'Address',
+  ja: 'リンク先',
+  zh: '链接地址',
+  de: 'Adresse',
+  fr: 'Adresse',
+  es: 'Dirección',
+  pt: 'Endereço',
+  ru: 'Адрес',
+  ar: 'عنوان الرابط',
+  hi: 'लिंक का पता',
+  bn: 'লিঙ্কের ঠিকানা',
+  ur: 'لنک کا پتہ',
+  id: 'Alamat',
+};
+const TEXT_NAME: LocaleText = {
+  ko: '표시 이름',
+  en: 'Display name',
+  ja: '表示文字列',
+  zh: '显示文字',
+  de: 'Anzeigetext',
+  fr: 'Texte à afficher',
+  es: 'Texto para mostrar',
+  pt: 'Texto exibido',
+  ru: 'Текст ссылки',
+  ar: 'نص الرابط',
+  hi: 'लिंक का टेक्स्ट',
+  bn: 'প্রদর্শিত লেখা',
+  ur: 'لنک کا متن',
+  id: 'Teks tautan',
+};
 const ADDRESS_HINT: LocaleText = { ko: 'https://…', en: 'https://…' };
 
 const LINK_ICON =
@@ -189,6 +233,7 @@ const LINK_CSS = `
 export const linkWing: Wing = {
   ...simpleMark({
     w: 'a',
+    clearable: true,
     escapeKeys: ['Escape'],
     button: {
       group: 'link',
@@ -282,3 +327,5 @@ export const linkWing: Wing = {
     { trigger: 'enter', scope: 'word', pattern: BARE_URL, run: (m) => ({ name: 'setLink', args: { href: m[0] } }) },
   ],
 };
+
+$markBuiltinAttrOwner(linkWing, ['a']);

@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: غامق
+description: اجعل النص المحدد غامقاً.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# غامق
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+يجعل النص المحدد غامقاً. تطبيقه مرة أخرى على النطاق نفسه يزيل التنسيق. تبقى العلامة مرتبطة بالنص في المستندات المحفوظة.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/bold" />
 
-</div>
+```ts
+const selected = wings().use('b').build()
+```

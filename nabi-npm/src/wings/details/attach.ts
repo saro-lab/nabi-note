@@ -15,7 +15,7 @@ import { isElement } from '../../schema/index.js';
 import { selectObject } from '../../caret/index.js';
 import type { Attach } from '../../wing/index.js';
 
-export const attachDetailsOpen: Attach = ({ root, nabi, pathOfKey }) => {
+export const attachDetailsOpen: Attach = ({ root, nabi, doc, pathOfKey }) => {
   const onToggle = (event: Event): void => {
     const target = event.target as Node | null;
     if (target?.nodeType !== 1) return;
@@ -25,7 +25,7 @@ export const attachDetailsOpen: Attach = ({ root, nabi, pathOfKey }) => {
     if (key === null || key === '') return;
     const path = pathOfKey(key);
     if (!path) return;
-    const node = nabi.$doc()[path[0] as number];
+    const node = doc()[path[0] as number];
     if (!node) return;
 
     const want = box.open ? 1 : 0;

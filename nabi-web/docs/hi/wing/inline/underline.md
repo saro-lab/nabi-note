@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: रेखांकन
+description: चयनित पाठ को रेखांकित करें।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# रेखांकन
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+चयनित पाठ को रेखांकित करता है। उसी सीमा पर दोबारा लागू करने से फ़ॉर्मैटिंग हट जाती है, और mark सहेजे गए दस्तावेज़ों में बनी रहती है।
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/underline" />
 
-</div>
+```ts
+const selected = wings().use('u').build()
+```

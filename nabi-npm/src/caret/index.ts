@@ -8,6 +8,7 @@ export {
   sameSelection,
   selectObject,
   selectionExists,
+  normalizeSelection,
 } from './selection.js';
 export type { Selection } from './selection.js';
 export { marksAt } from './normalize.js';

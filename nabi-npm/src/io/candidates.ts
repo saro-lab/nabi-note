@@ -7,6 +7,8 @@
 //   3. 맨 글자 기본값은 **언제나 마지막**이다 — 어느 필터도 못 읽는 글이 갈 곳이 늘 하나는 있다.
 //   4. 필터가 배열을 답하면 그 순서대로 펴진다.
 import { P, type ElementNode } from '../schema/index.js';
+import { $guarded, $ownDataArray, $ownDataObject } from '../schema/json.js';
+import { canonicalTextLines } from '../schema/text.js';
 import type { LocaleText } from '../locale/index.js';
 import type { IoFilter, PasteCandidate, PasteData } from './contract.js';
 
@@ -20,8 +22,9 @@ export interface CollectOptions {
 
 // 맨 글자 후보 — 줄마다 문단 하나. 한 줄뿐이면 `inline` 이라 캐럿에 이어 쓴다.
 export function textCandidate(plain: string, label: LocaleText | string, icon?: string): PasteCandidate {
-  const lines = plain.split('\n');
-  const build = (): readonly ElementNode[] => lines.map((line) => (line === '' ? { w: P, ch: [] } : { w: P, ch: [line] }));
+  const lines = canonicalTextLines(plain);
+  const build = (): readonly ElementNode[] =>
+    lines.map((line) => (line === '' ? { w: P, ch: [] } : { w: P, ch: [line] }));
   return {
     id: 'text',
     label,
@@ -37,10 +40,48 @@ export function collectCandidates(data: PasteData, options: CollectOptions): rea
 
   const out: PasteCandidate[] = [];
   for (const filter of options.filters) {
-    const taken = filter.paste?.(data);
+    const paste = $ownDataObject(filter)?.['paste']?.value;
+    if (paste === undefined) continue;
+    if (typeof paste !== 'function') continue;
+    const taken = $guarded(`paste filter ${filter.id}`, null, () => paste.call(filter, data) as unknown);
     if (!taken) continue;
-    if (Array.isArray(taken)) out.push(...(taken as readonly PasteCandidate[]));
-    else out.push(taken as PasteCandidate);
+    const values = Array.isArray(taken) ? $ownDataArray(taken) : [taken];
+    if (!values) continue;
+    for (const value of values) {
+      const fields = $ownDataObject(value);
+      if (!fields) continue;
+      const id = fields['id']?.value;
+      const labelValue = fields['label']?.value;
+      const build = fields['build']?.value;
+      const icon = fields['icon']?.value;
+      const inline = fields['inline']?.value;
+      if (typeof id !== 'string' || typeof build !== 'function') continue;
+      let label: LocaleText | string | null = null;
+      if (typeof labelValue === 'string') label = labelValue;
+      else {
+        const labels = $ownDataObject(labelValue);
+        if (labels) {
+          const copied: Record<string, string> = {};
+          let valid = true;
+          for (const [code, descriptor] of Object.entries(labels)) {
+            if (typeof descriptor.value !== 'string') {
+              valid = false;
+              break;
+            }
+            copied[code] = descriptor.value;
+          }
+          if (valid) label = copied;
+        }
+      }
+      if (label === null || (icon !== undefined && typeof icon !== 'string')) continue;
+      out.push({
+        id,
+        label,
+        build: () => build.call(value) as readonly ElementNode[],
+        ...(typeof icon === 'string' ? { icon } : {}),
+        ...(inline === true ? { inline: true } : {}),
+      });
+    }
   }
   // 맨 글자는 `plain` 에서만 판다 — html 뿐인 붙여넣기에 빈 줄 하나를 세우지 않는다.
   if (data.plain !== '') out.push(textCandidate(data.plain, options.textLabel, options.textIcon));

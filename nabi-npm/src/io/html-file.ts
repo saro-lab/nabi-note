@@ -21,8 +21,11 @@ export interface HtmlFileOptions {
 
 // 글자 하나가 태그가 되지 않게 — 제목은 사람이 적은 이름이라 `<`·`&` 가 그대로 올 수 있다.
 // **밖에 안 내놓는다**: HTML 이 되는 문은 조립기 안에 하나뿐이라는 규칙(html 층)이 여기서도 같다.
-const escapeText = (raw: string): string =>
-  raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const escapeText = (raw: string): string => raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+const escapeAttr = (raw: string): string => escapeText(raw).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+const LANGUAGE_TAG = /^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/;
 
 // 시트 속의 `</style` 은 그 자리에서 태그를 닫아 버린다 — CSS 로는 뜻이 없는 글이라 백슬래시
 // 하나로 눕힌다. 우리 시트에는 없지만, 남의 wing 이 들고 온 시트가 지날 수 있는 문이다.
@@ -30,8 +33,8 @@ const guardSheet = (sheet: string): string => sheet.replace(/<\/(style)/gi, '<\\
 
 export function writeHtmlFile(options: HtmlFileOptions): string {
   const attrs = [
-    options.lang !== undefined && options.lang !== '' ? ` lang="${escapeText(options.lang)}"` : '',
-    options.dir !== undefined ? ` dir="${options.dir}"` : '',
+    typeof options.lang === 'string' && LANGUAGE_TAG.test(options.lang) ? ` lang="${escapeAttr(options.lang)}"` : '',
+    options.dir === 'ltr' || options.dir === 'rtl' ? ` dir="${options.dir}"` : '',
   ].join('');
   const style = options.sheets.map(guardSheet).join('\n');
   return [

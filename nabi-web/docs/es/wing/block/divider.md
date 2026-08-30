@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Separador
+description: Inserta una línea horizontal que separa el flujo del documento.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Separador
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Inserta una línea horizontal entre bloques. Escribir `---` en una línea vacía y pulsar Enter también crea un separador. Es un bloque sin contenido de texto.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/block/divider" />
 
-</div>
+```ts
+const selected = wings().use('hr').build()
+```

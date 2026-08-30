@@ -5,7 +5,7 @@
 //
 // import 는 `locale/` 하나뿐이다 — 읽는 페이지가 편집기 무게 없이 이 모듈만 실을 수 있어야 한다
 // (그물 test/entry.test.ts 가 그것을 기계로 지킨다).
-import { makeTranslator, type LocaleText } from '../locale/index.js';
+import { localeOf, makeTranslator, type LocaleText } from '../locale/index.js';
 
 // 값 없는 불리언 속성 — 있으면 켜짐이다. 적는 쪽은 호스트(또는 표 wing)이고 읽는 쪽이 이 파일이다.
 export const SORTABLE_ATTR = 'data-nabi-sortable';
@@ -22,10 +22,70 @@ export function hasMergedCells(table: Element): boolean {
 
 // 화살표만으로는 스크린 리더가 읽을 것이 없다 — 이름을 함께 단다.
 const TEXT = {
-  sort: { ko: '정렬', en: 'Sort', ja: '並べ替え', zh: '排序', de: 'Sortieren', fr: 'Trier', es: 'Ordenar', pt: 'Ordenar', ru: 'Сортировка', ar: 'فرز', hi: 'क्रमबद्ध करें', bn: 'সাজান', ur: 'ترتیب دیں', id: 'Urutkan' },
-  original: { ko: '원본', en: 'Original', ja: '元の順序', zh: '原始顺序', de: 'Ursprüngliche Reihenfolge', fr: 'Ordre d’origine', es: 'Orden original', pt: 'Ordem original', ru: 'Исходный порядок', ar: 'الترتيب الأصلي', hi: 'मूल क्रम', bn: 'মূল ক্রম', ur: 'اصل ترتیب', id: 'Urutan asli' },
-  descending: { ko: '내림차순', en: 'Descending', ja: '降順', zh: '降序', de: 'Absteigend', fr: 'Décroissant', es: 'Descendente', pt: 'Decrescente', ru: 'По убыванию', ar: 'تنازلي', hi: 'अवरोही', bn: 'অবরোহী', ur: 'نزولی', id: 'Menurun' },
-  ascending: { ko: '오름차순', en: 'Ascending', ja: '昇順', zh: '升序', de: 'Aufsteigend', fr: 'Croissant', es: 'Ascendente', pt: 'Crescente', ru: 'По возрастанию', ar: 'تصاعدي', hi: 'आरोही', bn: 'আরোহী', ur: 'صعودی', id: 'Menaik' },
+  sort: {
+    ko: '정렬',
+    en: 'Sort',
+    ja: '並べ替え',
+    zh: '排序',
+    de: 'Sortieren',
+    fr: 'Trier',
+    es: 'Ordenar',
+    pt: 'Ordenar',
+    ru: 'Сортировка',
+    ar: 'فرز',
+    hi: 'क्रमबद्ध करें',
+    bn: 'সাজান',
+    ur: 'ترتیب دیں',
+    id: 'Urutkan',
+  },
+  original: {
+    ko: '원본',
+    en: 'Original',
+    ja: '元の順序',
+    zh: '原始顺序',
+    de: 'Ursprüngliche Reihenfolge',
+    fr: 'Ordre d’origine',
+    es: 'Orden original',
+    pt: 'Ordem original',
+    ru: 'Исходный порядок',
+    ar: 'الترتيب الأصلي',
+    hi: 'मूल क्रम',
+    bn: 'মূল ক্রম',
+    ur: 'اصل ترتیب',
+    id: 'Urutan asli',
+  },
+  descending: {
+    ko: '내림차순',
+    en: 'Descending',
+    ja: '降順',
+    zh: '降序',
+    de: 'Absteigend',
+    fr: 'Décroissant',
+    es: 'Descendente',
+    pt: 'Decrescente',
+    ru: 'По убыванию',
+    ar: 'تنازلي',
+    hi: 'अवरोही',
+    bn: 'অবরোহী',
+    ur: 'نزولی',
+    id: 'Menurun',
+  },
+  ascending: {
+    ko: '오름차순',
+    en: 'Ascending',
+    ja: '昇順',
+    zh: '升序',
+    de: 'Aufsteigend',
+    fr: 'Croissant',
+    es: 'Ascendente',
+    pt: 'Crescente',
+    ru: 'По возрастанию',
+    ar: 'تصاعدي',
+    hi: 'आरोही',
+    bn: 'আরোহী',
+    ur: 'صعودی',
+    id: 'Menaik',
+  },
 } as const satisfies Record<string, LocaleText>;
 
 // 꽉 찬 삼각형 둘 — 어느 표 프로그램에서나 쓰는 모양이다. 정렬 안 된 열은 둘 다 연하고
@@ -74,7 +134,14 @@ function toNumber(value: string): number {
 export function rankRows(values: readonly string[], direction: SortDirection, locale: string): number[] {
   const filled = values.filter((value) => value !== '');
   const numeric = filled.length > 0 && filled.every((value) => NUMBER.test(value));
-  const collator = new Intl.Collator(locale, { numeric: true });
+  // Intl rejects '' and malformed BCP 47 tags. Sorting is optional reader behavior, so a bad host
+  // lang must degrade to the runtime default rather than make a table unusable.
+  let collator: Intl.Collator;
+  try {
+    collator = new Intl.Collator(localeOf(locale), { numeric: true });
+  } catch {
+    collator = new Intl.Collator(undefined, { numeric: true });
+  }
 
   return values
     .map((_, index) => index)
@@ -109,6 +176,7 @@ function attachOne(table: HTMLTableElement, locale: string): (() => void) | null
   if (!parent || body.some((row) => row.parentElement !== parent)) return null;
 
   const original = [...body];
+  let renderedSequence = [...parent.children];
   const owner = table.ownerDocument;
   const t = makeTranslator(locale);
   const label = (key: keyof typeof TEXT): string => t.pick(TEXT[key], key);
@@ -116,6 +184,9 @@ function attachOne(table: HTMLTableElement, locale: string): (() => void) | null
   // 상태는 `active` 하나뿐이다.
   let active: SortState | null = null;
   const buttons: HTMLButtonElement[] = [];
+  const buttonCells = new Map<HTMLButtonElement, HTMLTableCellElement>();
+  const buttonClicks = new Map<HTMLButtonElement, () => void>();
+  const aria = new Map<HTMLTableCellElement, string | null>();
 
   const render = (): void => {
     for (const [column, button] of buttons.entries()) {
@@ -126,7 +197,10 @@ function attachOne(table: HTMLTableElement, locale: string): (() => void) | null
       button.dataset['nabiTip'] = name;
       button.toggleAttribute('data-nabi-sort-active', state !== null);
       // aria-sort 는 제목 칸의 것이다 — "이 열은 정렬된다" 를 리더가 알 유일한 자리다.
-      button.closest('th, td')?.setAttribute('aria-sort', state ?? 'none');
+      const cell = buttonCells.get(button);
+      if (!cell) continue;
+      if (!aria.has(cell)) aria.set(cell, cell.getAttribute('aria-sort'));
+      cell.setAttribute('aria-sort', state ?? 'none');
     }
   };
 
@@ -140,30 +214,53 @@ function attachOne(table: HTMLTableElement, locale: string): (() => void) | null
       : original;
     // 제목 행은 손대지 않는다 — 몸통 행만 순서대로 다시 붙인다.
     for (const row of order) parent.append(row);
+    renderedSequence = [...parent.children];
   };
 
-  for (const [column, cell] of [...header.cells].entries()) {
-    const button = owner.createElement('button');
-    button.type = 'button';
-    button.className = 'nabi-sort';
-    button.addEventListener('click', () => {
-      active = nextSortState(active, column);
-      apply();
-      render();
-    });
-    buttons.push(button);
-    cell.append(button);
-  }
-  render();
-
-  return () => {
+  const detach = (): void => {
     // 순서·단추·aria 를 전부 되돌린다 — 해제 뒤의 DOM 은 붙이기 전과 같다.
-    for (const row of original) parent.append(row);
+    const current = [...parent.children];
+    if (current.length === renderedSequence.length && current.every((node, at) => node === renderedSequence[at])) {
+      for (const row of original) parent.append(row);
+    }
     for (const button of buttons) {
-      button.closest('th, td')?.removeAttribute('aria-sort');
+      const cell = buttonCells.get(button);
+      const before = cell ? aria.get(cell) : undefined;
+      if (
+        cell &&
+        cell.getAttribute('aria-sort') === (active?.column === buttons.indexOf(button) ? active.direction : 'none')
+      ) {
+        if (before === null) cell.removeAttribute('aria-sort');
+        else if (before !== undefined) cell.setAttribute('aria-sort', before);
+      }
+      const click = buttonClicks.get(button);
+      if (click) button.removeEventListener('click', click);
       button.remove();
     }
   };
+
+  try {
+    for (const [column, cell] of [...header.cells].entries()) {
+      const button = owner.createElement('button');
+      button.type = 'button';
+      button.className = 'nabi-sort';
+      const click = (): void => {
+        active = nextSortState(active, column);
+        apply();
+        render();
+      };
+      button.addEventListener('click', click);
+      buttons.push(button);
+      buttonCells.set(button, cell);
+      buttonClicks.set(button, click);
+      cell.append(button);
+    }
+    render();
+  } catch (error) {
+    detach();
+    throw error;
+  }
+  return detach;
 }
 
 // 해제는 원본 행 순서까지 되돌린다 — 정렬된 채 떼면 그 순서가 호스트 DOM 에 굳는다.
@@ -171,14 +268,24 @@ export function attachTableSort(root: HTMLElement, options: TableSortOptions = {
   const owner = root.ownerDocument;
   const locale = options.locale ?? owner.documentElement.lang ?? '';
   const selector = options.tables === 'all' ? 'table' : `table[${SORTABLE_ATTR}]`;
-  const tables = [
-    ...(root.matches(selector) ? [root] : []),
-    ...root.querySelectorAll(selector),
-  ] as HTMLTableElement[];
+  const tables = [...(root.matches(selector) ? [root] : []), ...root.querySelectorAll(selector)] as HTMLTableElement[];
 
-  const detachers = tables
-    .map((table) => attachOne(table, locale))
-    .filter((detach): detach is () => void => detach !== null);
+  const detachers: (() => void)[] = [];
+  try {
+    for (const table of tables) {
+      const detach = attachOne(table, locale);
+      if (detach) detachers.push(detach);
+    }
+  } catch (error) {
+    for (const detach of detachers.reverse()) {
+      try {
+        detach();
+      } catch {
+        // Preserve the setup failure while returning earlier tables to their baseline.
+      }
+    }
+    throw error;
+  }
 
   return () => {
     for (const detach of detachers) detach();

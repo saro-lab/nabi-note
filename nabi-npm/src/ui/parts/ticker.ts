@@ -62,6 +62,7 @@ export function createTicker(options: TickerOptions): Ticker {
   let stopped = false;
   let cancel: (() => void) | null = null;
   let releaseFinish: (() => void) | null = null;
+  let finishing: Promise<void> | null = null;
 
   const startedAt = now();
 
@@ -89,6 +90,7 @@ export function createTicker(options: TickerOptions): Ticker {
       reportedSinceStage = false;
     }
     if (shown < CEILING) show(shown + 1);
+    if (stopped || releaseFinish) return;
     cancel = schedule(tick, stepMs());
   };
 
@@ -109,14 +111,16 @@ export function createTicker(options: TickerOptions): Ticker {
     },
     finish() {
       if (stopped) return Promise.resolve();
+      if (finishing) return finishing;
       cancel?.();
       cancel = null;
-      return new Promise<void>((resolve) => {
+      finishing = new Promise<void>((resolve) => {
         releaseFinish = resolve;
         // 남은 거리를 FINISH_MS 안에 나눠 걷는다 — 100 으로 튀지 않고 달려간다.
         const left = 100 - shown;
         if (left <= 0) {
           releaseFinish = null;
+          finishing = null;
           resolve();
           return;
         }
@@ -131,9 +135,11 @@ export function createTicker(options: TickerOptions): Ticker {
           }
           done += 1;
           show(shown + per);
+          if (stopped || finishing === null) return;
           if (done >= steps || shown >= 100) {
             show(100);
             releaseFinish = null;
+            finishing = null;
             resolve();
             return;
           }
@@ -141,6 +147,7 @@ export function createTicker(options: TickerOptions): Ticker {
         };
         cancel = schedule(run, TAIL_TICK_MS);
       });
+      return finishing;
     },
     stop() {
       stopped = true;
@@ -148,6 +155,7 @@ export function createTicker(options: TickerOptions): Ticker {
       cancel = null;
       releaseFinish?.();
       releaseFinish = null;
+      finishing = null;
     },
   };
 }

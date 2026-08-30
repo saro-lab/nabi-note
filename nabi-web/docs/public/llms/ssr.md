@@ -8,8 +8,8 @@ The entry exports:
 
 - `makeRegistry`, `renderStoredHtml`, `renderStoredEditorHtml`;
 - `renderToolbarHtml`, `renderViewToolsHtml`, `toolbarSlots`, `TOOLBAR_GROUPS`;
-- `defaultWings`, `extraWings`, `wingNames`, `wings`;
-- lower-level `renderHtml`, `renderEditorHtml`, and `safeUrl`;
+- `defaultWings`, `wingNames`, `wings`;
+- `safeUrl`;
 - NABI TREE types and `P`, `BR`, `isElement`, `isText`;
 - locale helpers needed by rendering.
 
@@ -52,14 +52,12 @@ Browser:
 import {
   createNabiWith,
   mountSurface,
-  parseNodes,
   wings,
 } from 'nabi-note';
 
 const selected = wings().allBasic();
 const { nabi, registry } = createNabiWith(selected, {
   doc: storedJson,
-  parseHtml: parseNodes,
 });
 
 const surface = mountSurface({
@@ -102,17 +100,17 @@ const viewToolsHtml = renderViewToolsHtml({ locale: 'en' });
 
 In the browser, mount the matching UI on those roots. `mountToolbar()` compares button names and localized labels. If the structure matches, it wires the existing buttons. If not, it removes only direct pre-rendered wing groups and renders the correct structure.
 
+Matching direct toolbar groups produced by `renderToolbarHtml()` are the package-owned pre-render exception to the otherwise empty dedicated-root rule. The toolbar mount may move, wire, replace, and remove those groups. Arbitrary host-owned child DOM inside a toolbar root is not a supported baseline and must live outside that root.
+
 The matching inputs are:
 
 - the registry and wing order;
 - locale or translator;
 - toolbar group order.
 
-Pre-rendering avoids an empty toolbar before JavaScript, but the browser remains authoritative.
+Pre-rendering avoids an empty toolbar before JavaScript, but the browser remains authoritative. A failed browser mount rolls back wiring on matching pre-rendered buttons, and `unmount()` detaches that wiring.
 
-## Lower-level rendering
-
-`renderHtml(doc, options)` and `renderEditorHtml(doc, options)` expect an already normalized internal `NabiDoc` and a matching schema environment/builders. Most hosts should use the stored renderers, which validate unknown input first.
+The public detached rendering boundary is the stored renderer pair. Low-level rendering of an internal canonical document is package-private.
 
 ## CSS on SSR pages
 

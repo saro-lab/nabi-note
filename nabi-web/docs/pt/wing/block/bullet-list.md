@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Lista com marcadores
+description: Liste vários itens sem numeração.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Lista com marcadores
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Transforma vários parágrafos em uma lista sem ordem. Tab e Shift+Tab mudam a profundidade do item, e Enter cria o próximo item. Em um parágrafo vazio, digitar `-` e pressionar Espaço também cria uma lista com marcadores.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/block/bullet-list" />
 
-</div>
+```ts
+const selected = wings().use('ul').build()
+```

@@ -21,7 +21,7 @@ import {
 import { done, eq, ok } from './net.js';
 
 const ENV: EditEnv = {
-...makeEnv({
+  ...makeEnv({
     voids: ['hr', 'img', 'youtube'],
     lumps: ['hr', 'img', 'youtube', 'table', 'ul', 'ol', 'tl', 'quote', 'details', 'code'],
     blockHolders: ['table', 'tr', 'td', 'ul', 'li', 'ol', 'oli', 'tl', 'tli', 'quote', 'details'],
@@ -100,17 +100,17 @@ function walkAll(doc: NabiDoc): Position[] {
   const table = el('table', [el('tr', [cell])]);
   const doc: NabiDoc = [wrap(img()), wrap(img()), wrap(table)];
   const path = walkAll(doc);
-  eq(
-    '걸음: 물건·표 나열',
-    path,
-    [
-      at([0], 0), at([0], 1),           // img1 앞·뒤
-      at([1], 0), at([1], 1),           // img2 앞·뒤
-      at([2], 0),                        // table 앞
-      at([2, 0, 0, 0, 0], 0), at([2, 0, 0, 0, 0], 1), at([2, 0, 0, 0, 0], 2), // 칸 속 문단
-      at([2], 1),                        // table 뒤
-    ],
-);
+  eq('걸음: 물건·표 나열', path, [
+    at([0], 0),
+    at([0], 1), // img1 앞·뒤
+    at([1], 0),
+    at([1], 1), // img2 앞·뒤
+    at([2], 0), // table 앞
+    at([2, 0, 0, 0, 0], 0),
+    at([2, 0, 0, 0, 0], 1),
+    at([2, 0, 0, 0, 0], 2), // 칸 속 문단
+    at([2], 1), // table 뒤
+  ]);
   // 뒤로 걸으면 정확히 역순이다.
   const backs: Position[] = [];
   let pos = docEnd(doc, ENV) as Position;
@@ -150,16 +150,15 @@ function walkAll(doc: NabiDoc): Position[] {
   // 접기 — 래퍼.0 → 제목 → 속 문단 → 래퍼.1.
   const details = el('details', [el('summary', ['ab']), p(['c'])], { o: 1 });
   const doc: NabiDoc = [wrap(details)];
-  eq(
-    '걸음: 접기 출입',
-    walkAll(doc),
-    [
-      at([0], 0),
-      at([0, 0, 0], 0), at([0, 0, 0], 1), at([0, 0, 0], 2), // summary "ab"
-      at([0, 0, 1], 0), at([0, 0, 1], 1),                    // p "c"
-      at([0], 1),
-    ],
-);
+  eq('걸음: 접기 출입', walkAll(doc), [
+    at([0], 0),
+    at([0, 0, 0], 0),
+    at([0, 0, 0], 1),
+    at([0, 0, 0], 2), // summary "ab"
+    at([0, 0, 1], 0),
+    at([0, 0, 1], 1), // p "c"
+    at([0], 1),
+  ]);
 }
 
 {
@@ -177,10 +176,7 @@ function walkAll(doc: NabiDoc): Position[] {
   ok('선택: 물건 선택도 실재', selectionExists(doc, objSel, ENV));
   ok('선택: 접힌 래퍼 0 은 물건 골라짐 아님', !isObjectSelection(doc, caretAt(at([1], 0)), ENV));
   ok('선택: 글 문단 0~1 은 물건 골라짐 아님', !isObjectSelection(doc, { anchor: at([0], 0), focus: at([0], 1) }, ENV));
-  ok(
-    '선택: 거꾸로 잡아도(1→0) 물건 골라짐',
-    isObjectSelection(doc, { anchor: at([1], 1), focus: at([1], 0) }, ENV),
-);
+  ok('선택: 거꾸로 잡아도(1→0) 물건 골라짐', isObjectSelection(doc, { anchor: at([1], 1), focus: at([1], 0) }, ENV));
 
   // 정렬 — anchor 가 뒤에 서도 문서 순서로 편다.
   const [start, end] = ordered({ anchor: at([2], 1), focus: at([0], 1) });
@@ -236,10 +232,11 @@ function walkAll(doc: NabiDoc): Position[] {
 
   // 값 마크는 기본 더미의 같은 이름을 이긴다.
   armed.arm(hlG);
-  eq('예약: 같은 이름 교체 적용', armed.takeForInsert([hlY, bold]).map((m) => JSON.stringify(m.a ?? {})), [
-    '{}',
-    JSON.stringify({ c: 'green' }),
-  ]);
+  eq(
+    '예약: 같은 이름 교체 적용',
+    armed.takeForInsert([hlY, bold]).map((m) => JSON.stringify(m.a ?? {})),
+    ['{}', JSON.stringify({ c: 'green' })],
+  );
 
   // ④ 음수 방향 — escape 는 마크를 벗고 쓴다.
   armed.escape('a');

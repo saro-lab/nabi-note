@@ -29,7 +29,7 @@ import { saveMark, today, NABI_FILE_EXTENSION } from '../io/index.js';
 import type { FileMount, SaveFormat } from '../surface/index.js';
 import { make } from './parts/dom.js';
 import { makeGrid } from './parts/grid.js';
-import { openScrim } from './parts/scrim.js';
+import { openScrim, type Scrim } from './parts/scrim.js';
 import type { Overlay } from './overlay.js';
 
 export interface SavePanelOptions {
@@ -45,9 +45,11 @@ export interface SavePanelOptions {
 export function extensionFor(formats: readonly SaveFormat[], at: number): string {
   const aimed = formats[at];
   if (aimed) return aimed.extension;
-  return formats.find((format) => format.extension === NABI_FILE_EXTENSION)?.extension
-    ?? formats[0]?.extension
-    ?? NABI_FILE_EXTENSION;
+  return (
+    formats.find((format) => format.extension === NABI_FILE_EXTENSION)?.extension ??
+    formats[0]?.extension ??
+    NABI_FILE_EXTENSION
+  );
 }
 
 // 표식이 잡아 두는 **자리의 너비** — 판에 뜬 확장자 중 가장 긴 것의 글자 수다(주인 지시
@@ -80,6 +82,7 @@ export function openSavePanel(options: SavePanelOptions): Overlay {
     tabindex: '-1',
     role: 'dialog',
     'aria-modal': 'true',
+    'aria-label': t.t('save.title'),
     dir: direction,
   });
   const title = make(owner, 'div', 'nabi-save-title');
@@ -99,72 +102,91 @@ export function openSavePanel(options: SavePanelOptions): Overlay {
   ext.style.setProperty('--nabi-save-ext-len', String(extWidth(formats)));
   row.append(input, ext);
 
-  const scrim = openScrim(owner, { card, restore: options.surface });
+  let active = true;
+  let scrim: Scrim | null = null;
 
   // 저장은 한 번뿐이다 — 칸을 두 번 누르거나 엔터가 겹쳐 와도 판이 이미 닫혀 있다.
   let done = false;
   const put = (at: number): void => {
     const format = formats[at];
-    if (done || !format) return;
+    if (!active || done || !format) return;
     done = true;
     options.file.saveAs(format.id, input.value);
-    scrim.close();
+    scrim?.close();
   };
 
   const paintExt = (at: number): void => {
     ext.textContent = extensionFor(formats, at);
   };
 
-  const grid = makeGrid(owner, {
-    prefix: 'nabi-save',
-    rtl: direction === 'rtl',
-    // 여기서 형식을 옮기는 키는 **Tab/Shift+Tab** 이다(방향키가 아니다 — 위 머리글).
-    aimBy: 'tab',
-    cells: formats.map((format) => ({
-      label: formatName(format),
-      // 그림은 **붙여넣기 판의 것을 그대로 쓴다**(주인 지시 2026-08-23) — html 은 `</>`, md 는
-      // `MD` 두 글자, nabi 는 OG 의 나비 마크. 없는 형식(호스트의 것)은 그림 자리를 안 만든다.
-      ...(saveMark(format.extension) !== '' ? { icon: saveMark(format.extension) } : {}),
-      // 되돌아오지 못하는 형식에만 한 마디가 붙는다 — 누르는 것을 막지는 않는다.
-      ...(format.lossy ? { note: t.t('save.lossy') } : {}),
-      ariaLabel: t.t('save.as', { ext: formatName(format) }),
-    })),
-    onAim: paintExt,
-    onPick: put,
-  });
-  card.append(title, row, grid.list);
+  try {
+    const grid = makeGrid(owner, {
+      prefix: 'nabi-save',
+      rtl: direction === 'rtl',
+      // 여기서 형식을 옮기는 키는 **Tab/Shift+Tab** 이다(방향키가 아니다 — 위 머리글).
+      aimBy: 'tab',
+      cells: formats.map((format) => ({
+        label: formatName(format),
+        // 그림은 **붙여넣기 판의 것을 그대로 쓴다**(주인 지시 2026-08-23) — html 은 `</>`, md 는
+        // `MD` 두 글자, nabi 는 OG 의 나비 마크. 없는 형식(호스트의 것)은 그림 자리를 안 만든다.
+        ...(saveMark(format.extension) !== '' ? { icon: saveMark(format.extension) } : {}),
+        // 되돌아오지 못하는 형식에만 한 마디가 붙는다 — 누르는 것을 막지는 않는다.
+        ...(format.lossy ? { note: t.t('save.lossy') } : {}),
+        ariaLabel: t.t('save.as', { ext: formatName(format) }),
+      })),
+      onAim: paintExt,
+      onPick: put,
+    });
+    card.append(title, row, grid.list);
 
-  // 이름 칸의 엔터는 **지금 겨눈 형식**으로 저장한다 — 칸에서 손을 떼지 않고 끝낼 수 있다.
-  // 그 밖의 키는 편집기로도 격자로도 새면 안 된다(글을 치는 동안 방향키는 글자 사이를 걷는다).
-  //
-  // 딱 하나 예외가 **Tab/Shift+Tab** 이다(주인 지시 2026-08-23: "제목 입력 중에도 탭·시프트탭
-  // 누르면 그거 씹히고 그 아래 저장 아이콘 이동"). 이름을 치던 손 그대로 형식을 훑는 길이다:
-  //   · 겨눔은 **이름 칸에 그대로** 있다 — `preventDefault` 가 브라우저의 겨눔 이동을 막으니
-  //     캐럿도 고른 글자도 안 흔들리고, 누른 뒤 바로 이어 칠 수 있다. (칸은 `tabindex="-1"`
-  //     이라 애초에 겨눔이 설 자리가 아니다 — 겨눔은 판이 열려 있는 동안 이름 칸 하나뿐이다.)
-  //   · 탭 문자도 안 들어간다 — 기본 동작을 통째로 막았다.
-  //   · 눈에 보이는 변화는 **선택 표시와 그에 딸린 확장자 표식** 하나뿐이다.
-  // 접근성: 모달이 Tab 을 가두는 것은 흔한 관례지만 여기서는 **가둬서 못 가게 하는 것이 아니라
-  // 가둬서 판 안에서 고르게 한다** — 형식 단추는 브라우저의 탭 순서에 안 서므로(겨눔이 아리아
-  // 표식 하나다), 이 길이 곧 키보드만으로 형식에 닿는 길이다.
-  input.addEventListener('keydown', (event) => {
-    event.stopPropagation();
-    if (event.key === 'Tab') {
+    // 이름 칸의 엔터는 **지금 겨눈 형식**으로 저장한다 — 칸에서 손을 떼지 않고 끝낼 수 있다.
+    // 그 밖의 키는 편집기로도 격자로도 새면 안 된다(글을 치는 동안 방향키는 글자 사이를 걷는다).
+    //
+    // 딱 하나 예외가 **Tab/Shift+Tab** 이다(주인 지시 2026-08-23: "제목 입력 중에도 탭·시프트탭
+    // 누르면 그거 씹히고 그 아래 저장 아이콘 이동"). 이름을 치던 손 그대로 형식을 훑는 길이다:
+    //   · 겨눔은 **이름 칸에 그대로** 있다 — `preventDefault` 가 브라우저의 겨눔 이동을 막으니
+    //     캐럿도 고른 글자도 안 흔들리고, 누른 뒤 바로 이어 칠 수 있다. (칸은 `tabindex="-1"`
+    //     이라 애초에 겨눔이 설 자리가 아니다 — 겨눔은 판이 열려 있는 동안 이름 칸 하나뿐이다.)
+    //   · 탭 문자도 안 들어간다 — 기본 동작을 통째로 막았다.
+    //   · 눈에 보이는 변화는 **선택 표시와 그에 딸린 확장자 표식** 하나뿐이다.
+    // 접근성: 모달이 Tab 을 가두는 것은 흔한 관례지만 여기서는 **가둬서 못 가게 하는 것이 아니라
+    // 가둬서 판 안에서 고르게 한다** — 형식 단추는 브라우저의 탭 순서에 안 서므로(겨눔이 아리아
+    // 표식 하나다), 이 길이 곧 키보드만으로 형식에 닿는 길이다.
+    input.addEventListener('keydown', (event) => {
+      if (!active) return;
+      event.stopPropagation();
+      if (event.key === 'Tab') {
+        grid.key(event);
+        return;
+      }
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      put(grid.aimed());
+    });
+
+    // 키는 카드가 받아 격자에 건넨다 — 붙여넣기 판과 같은 길이되, 이 판이 듣는 겨눔 키는
+    // Tab 뿐이다(`aimBy: 'tab'`). 방향키는 여기서도 격자가 안 집는다 — 이름 칸의 키다.
+    card.addEventListener('keydown', (event) => {
       grid.key(event);
-      return;
+    });
+
+    paintExt(grid.aimed());
+    scrim = openScrim(owner, {
+      card,
+      restore: options.surface,
+      onClose: () => {
+        active = false;
+      },
+    });
+    card.focus({ preventScroll: true });
+    return { card, close: () => scrim?.close() };
+  } catch (error) {
+    active = false;
+    if (scrim) {
+      try {
+        scrim.close();
+      } catch {}
     }
-    if (event.key !== 'Enter') return;
-    event.preventDefault();
-    put(grid.aimed());
-  });
-
-  // 키는 카드가 받아 격자에 건넨다 — 붙여넣기 판과 같은 길이되, 이 판이 듣는 겨눔 키는
-  // Tab 뿐이다(`aimBy: 'tab'`). 방향키는 여기서도 격자가 안 집는다 — 이름 칸의 키다.
-  card.addEventListener('keydown', (event) => {
-    grid.key(event);
-  });
-
-  paintExt(grid.aimed());
-  card.focus({ preventScroll: true });
-  return { card, close: () => scrim.close() };
+    throw error;
+  }
 }

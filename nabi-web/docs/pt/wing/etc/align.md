@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Alinhamento
+description: Altere o alinhamento horizontal de parágrafos e blocos de objeto.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Alinhamento
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Alinhe o parágrafo atual, ou os parágrafos no intervalo selecionado, à esquerda, ao centro ou à direita. Objetos que vivem dentro de um parágrafo, como imagens, vídeos e tabelas, são alinhados pelo parágrafo que os envolve.
 
-[Open the Korean canonical page](/ko/guide/features)
+O alinhamento é salvo como atributo de parágrafo, não como formatação de texto. Blocos de código são excluídos do alinhamento porque a indentação tem significado próprio.
 
-</div>
+<WingDemo path="/wing/etc/align" />
+
+```ts
+const selected = wings().use('align').build()
+```

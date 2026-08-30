@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Курсив
+description: Сделайте выбранный текст курсивным.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Курсив
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Делает выбранный текст курсивным. Повторное применение к тому же диапазону удаляет форматирование, а метка сохраняется в сохранённых документах.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/italic" />
 
-</div>
+```ts
+const selected = wings().use('i').build()
+```

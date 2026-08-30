@@ -9,8 +9,10 @@
 // 박힌 편집기는 모바일과 같은 처지다. 값은 기존 좁은 화면 분기의 40rem 과 같다 — 두 판정이
 // 다른 것을 재지만(겨눔의 굵기 / 그릇의 폭) 같은 지점에서 갈려야 화면이 한 번에 바뀐다.
 
+import { NARROW_REM } from '../style/tokens.js';
+
 export const NARROW_CLASS = 'nabi-narrow';
-export const NARROW_REM = 40;
+export { NARROW_REM };
 
 type Watcher = { observe(el: Element): void; disconnect(): void };
 

@@ -1,14 +1,30 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Cita
+description: Agrupa texto citado o un contexto separado en varios párrafos.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Cita
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Agrupa una frase tomada de otro texto, o contenido que quieras separar del flujo principal, como una cita. Una cita puede contener varios párrafos y bloques. En una línea vacía, escribir `>` y pulsar Espacio también crea una cita.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/block/quote" />
 
-</div>
+```ts
+const selected = wings().use('quote').build()
+```
+
+## Estilos CSS
+
+Usa `.nabi-content blockquote` para cambiar el aspecto de la cita. Mantén el espacio interior suficiente para que varios párrafos no queden pegados.
+
+```css
+.article-body blockquote {
+  border-inline-start: 4px solid var(--nabi-accent);
+  padding: .5rem 1rem;
+  background: var(--nabi-soft);
+}
+```

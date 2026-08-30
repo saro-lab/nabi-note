@@ -3,7 +3,7 @@
 //
 // ** 예외 — 서버 조립에서 제외된다.** 다른 부속과 달리 이것은 클라이언트 전용이다:
 // 저장소가 그 사람의 브라우저에 있어서, 서버가 대신 기억해 주면 로컬 히스토리가 아니게 된다.
-import type { Ask, Nabi, Toast } from '../../editor/index.js';
+import { hostOf, type Ask, type Nabi, type Toast } from '../../editor/index.js';
 import {
   HISTORY_LIMIT,
   historyStorageAlive,
@@ -81,6 +81,8 @@ export function mountLocalHistory(options: HistoryMountOptions): HistoryMount {
   const interval = options.minIntervalMs ?? 3000;
   const clock = options.now ?? ((): number => Date.now());
   let lastAt = 0;
+  let trailing = false;
+  let unmounted = false;
   // 이 편집기의 줄이 처음 적힌 때 — 목록의 "만든 날" 이다.
   let createdAt = 0;
 
@@ -93,16 +95,21 @@ export function mountLocalHistory(options: HistoryMountOptions): HistoryMount {
     if (createdAt === 0) {
       createdAt = readHistory(storage).find((row) => row.sessionId === nabi.sessionId)?.createdAt ?? at;
     }
-    lastAt = at;
-    return writeHistory(
+    const saved = writeHistory(
       storage,
       { sessionId: nabi.sessionId, summary: summarize(json), body: JSON.stringify(json), savedAt: at, createdAt },
       limit,
     );
+    if (saved) {
+      lastAt = at;
+      trailing = false;
+    }
+    return saved;
   };
 
   const stop = nabi.onChange((change) => {
     if (!change.doc) return;
+    trailing = true;
     if (interval > 0 && clock() - lastAt < interval) return;
     write();
   });
@@ -117,9 +124,9 @@ export function mountLocalHistory(options: HistoryMountOptions): HistoryMount {
       // 이 줄을 다시 열었으면 이제 이 편집기가 그 문서를 이어 쓴다 — 사본이 아니라 같은 줄에 쌓인다.
       if (done && record.sessionId !== nabi.sessionId && storage) {
         createdAt = record.createdAt;
-        removeHistory(storage, record.sessionId);
         lastAt = 0;
-        write();
+        trailing = true;
+        if (write()) removeHistory(storage, record.sessionId);
       }
       return done;
     },
@@ -127,8 +134,13 @@ export function mountLocalHistory(options: HistoryMountOptions): HistoryMount {
     remove: (sessionId) => (storage ? removeHistory(storage, sessionId) : false),
     clear: () => (storage ? clearHistory(storage) : false),
     sessionId: nabi.sessionId,
-    ask: nabi.$ask,
-    toast: nabi.$toast,
-    unmount: stop,
+    ask: hostOf(nabi).ask,
+    toast: hostOf(nabi).toast,
+    unmount() {
+      if (unmounted) return;
+      unmounted = true;
+      stop();
+      if (trailing) write();
+    },
   };
 }

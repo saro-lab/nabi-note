@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Task List
+description: A list that stores completion state with the document.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Task List
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+A list with completion state. Type `[ ]` or `[x]` followed by Space in an empty paragraph, or create one from the toolbar, then click the checkbox to change its state.
 
-[Open the Korean canonical page](/ko/guide/features)
+The checked state is stored with each item in the document. When an item is split, the checked state follows the item that keeps the text rather than the empty item before it, so splitting a completed task does not flip the state unexpectedly.
 
-</div>
+<WingDemo path="/wing/block/task-list" />
+
+```ts
+const selected = wings().use('tl').build()
+```

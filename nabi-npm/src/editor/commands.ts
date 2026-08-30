@@ -29,12 +29,7 @@ export interface CommandOutcome {
   readonly arm?: ElementNode;
 }
 
-export type Command = (
-  doc: NabiDoc,
-  sel: Selection,
-  args: CommandArgs,
-  env: EditEnv,
-) => CommandOutcome | null;
+export type Command = (doc: NabiDoc, sel: Selection, args: CommandArgs, env: EditEnv) => CommandOutcome | null;
 
 // EditResult → 선택. anchor 가 실리면 범위를 남기는 연산(마크)이다.
 function outcome(r: EditResult): CommandOutcome {
@@ -45,11 +40,7 @@ function outcome(r: EditResult): CommandOutcome {
 }
 
 // 범위가 있으면 먼저 지운다 — 타이핑·엔터가 선택을 덮어쓰는 표준 동작.
-function collapsedAt(
-  doc: NabiDoc,
-  sel: Selection,
-  env: EditEnv,
-): { readonly doc: NabiDoc; readonly caret: Position } {
+function collapsedAt(doc: NabiDoc, sel: Selection, env: EditEnv): { readonly doc: NabiDoc; readonly caret: Position } {
   if (isCollapsed(sel)) return { doc, caret: sel.focus };
   const [start, end] = ordered(sel);
   const r = docDeleteRange(doc, { anchor: start, focus: end }, env);

@@ -20,3 +20,16 @@ const selected = wings().use('fs', {
 ```
 
 `values`를 생략하면 `xs`, `sm`, `lg`, `xl` 단계를 사용합니다. 목록을 좁히면 이전 문서에 들어 있던 다른 단계도 불러올 때 제거됩니다.
+
+## CSS 스타일
+
+크기는 `.nabi-content [data-nabi-size="xs"]`처럼 저장된 단계 선택자로 바꿀 수 있습니다. 문서에 없는 임의의 단계는 만들지 말고, 등록한 `values` 안에서만 CSS를 조정하세요.
+
+```css
+.article-body [data-nabi-size="xs"] { font-size: .78em; }
+.article-body [data-nabi-size="sm"] { font-size: .9em; }
+.article-body [data-nabi-size="lg"] { font-size: 1.3em; }
+.article-body [data-nabi-size="xl"] { font-size: 1.65em; }
+```
+
+단계 사이의 크기 차이를 일정하게 두면 작성자가 편집기에서 고른 의미가 게시 화면에서도 유지됩니다.

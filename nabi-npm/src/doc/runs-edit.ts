@@ -9,6 +9,7 @@ import {
   type Run,
   type Terminal,
 } from '../schema/index.js';
+import { graphemeBoundaries } from './grapheme.js';
 
 // 마크가 같은가 — 이름과 attrs 가 같으면 같은 마크다 (`_id` 는 안 본다).
 export function sameMark(a: ElementNode, b: ElementNode): boolean {
@@ -99,41 +100,48 @@ export function withChildren(holder: ElementNode, ch: readonly NabiNode[]): Elem
   };
 }
 
-// 오프셋 바로 앞 한 칸의 너비 — 글자는 코드 포인트 단위로 물러난다(서로게이트 쌍 보호)
-// 단말은 한 칸이다. 앞이 없으면 0.
+export function runGraphemeBoundaries(runs: readonly Run[]): readonly number[] {
+  const out: number[] = [0];
+  let offset = 0;
+  let text = '';
+  const flush = (): void => {
+    if (text === '') return;
+    for (const boundary of graphemeBoundaries(text)) {
+      const absolute = offset + boundary;
+      if (absolute !== out[out.length - 1]) out.push(absolute);
+    }
+    offset += text.length;
+    text = '';
+  };
+  for (const run of runs) {
+    if (run.kind === 'text') {
+      text += run.text;
+      continue;
+    }
+    flush();
+    offset += 1;
+    if (offset !== out[out.length - 1]) out.push(offset);
+  }
+  flush();
+  return out;
+}
+
+// 오프셋 바로 앞 한 문자소의 너비. 단말은 한 칸이다. 앞이 없으면 0.
 export function stepBefore(runs: readonly Run[], offset: number): number {
   if (offset <= 0) return 0;
-  let at = 0;
-  for (const run of runs) {
-    const end = at + runLength(run);
-    if (offset <= end) {
-      if (run.kind === 'node') return 1;
-      const local = offset - at;
-      if (local >= 2 && isPair(run.text.charCodeAt(local - 2), run.text.charCodeAt(local - 1))) return 2;
-      return 1;
-    }
-    at = end;
+  const boundaries = runGraphemeBoundaries(runs);
+  let before = 0;
+  for (const boundary of boundaries) {
+    if (boundary >= offset) return Math.max(0, offset - before);
+    before = boundary;
   }
-  return 0;
+  return Math.max(0, offset - before);
 }
 
-// 오프셋 바로 뒤 한 칸의 너비 — stepBefore 의 대칭. 뒤가 없으면 0.
+// 오프셋 바로 뒤 한 문자소의 너비 — stepBefore 의 대칭. 뒤가 없으면 0.
 export function stepAfter(runs: readonly Run[], offset: number): number {
-  let at = 0;
-  for (const run of runs) {
-    const end = at + runLength(run);
-    if (offset < end) {
-      if (run.kind === 'node') return 1;
-      const local = offset - at;
-      if (local + 1 < run.text.length && isPair(run.text.charCodeAt(local), run.text.charCodeAt(local + 1))) return 2;
-      return 1;
-    }
-    at = end;
+  for (const boundary of runGraphemeBoundaries(runs)) {
+    if (boundary > offset) return boundary - offset;
   }
   return 0;
-}
-
-// 서로게이트 쌍인가 — 높은 짝 뒤에 낮은 짝.
-function isPair(hi: number, lo: number): boolean {
-  return hi >= 0xd800 && hi <= 0xdbff && lo >= 0xdc00 && lo <= 0xdfff;
 }

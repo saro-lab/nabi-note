@@ -1,14 +1,65 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: البرمجة الانسيابية بالذكاء الاصطناعي
+description: يساعد وكلاء البرمجة على قراءة حدود API العامة الحالية والوثائق لاستخدام NABI NOTE بدقة.
 ---
 
-<div class="translation-shell">
+# البرمجة الانسيابية بالذكاء الاصطناعي
 
-# Translation pending
+يقدّم NABI NOTE ملف [`llms.txt`](/llms.txt) للذكاء الاصطناعي وأدوات الأتمتة. بدل أن تجعل الوكيل يخمّن المكتبة كاملة، اطلب منه قراءة هذا الفهرس أولًا ثم متابعة الوثائق اللازمة للمهمة فقط؛ فتكون الإجابة والتنفيذ أدق.
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+## prompt جاهز للاستخدام
 
-[Open the Korean canonical page](/ko/guide/document)
+املأ في المثال التالي إطار العمل والميزات المطلوبة فقط.
 
-</div>
+```text
+نفّذ محررًا باستخدام NABI NOTE (nabi-note).
+اقرأ أولًا https://nabi.saro.me/llms.txt، ثم اقرأ الوثائق المطلوبة لهذه المهمة فقط.
+
+البيئة: Vue 3 + TypeScript
+الميزات المطلوبة: التنسيق الأساسي، الجداول، الصور، الرفع
+الأصل المحفوظ: NABI TREE JSON
+طريقة النشر: عرض JSON المحفوظ إلى HTML على الخادم
+
+استخدم فقط API الموجودة فعلًا في public exports والأنواع المثبتة.
+بعد التنفيذ شغّل فحص الأنواع والبناء، وأخبرني بالملفات التي تغيرت ونتائج التحقق.
+```
+
+إذا لم يستطع الوكيل قراءة URL، فأضف محتوى `llms.txt` والوثائق الفرعية المتعلقة بالمهمة إلى المحادثة.
+
+## اجعله يختار الوثائق اللازمة فقط
+
+`llms.txt` فهرس إرشادي قصير. من الأفضل تحديد الوثائق الموافقة للمهمة بدل إدخالها كلها منذ البداية.
+
+- لتجميع المحرر عبر npm، استخدم [`quickstart-npm.md`](https://nabi.saro.me/llms/quickstart-npm.md).
+- لمثال CDN، استخدم [`quickstart-cdn.md`](https://nabi.saro.me/llms/quickstart-cdn.md).
+- لاختيار wings ودمجها، راجع [`wings.md`](https://nabi.saro.me/llms/wings.md).
+- لـJSON المحفوظ وHTML وإشعارات التغيير، راجع [`document-model.md`](https://nabi.saro.me/llms/document-model.md).
+- لاستيراد HTML واللصق وحدود الرفع، راجع [`io-security.md`](https://nabi.saro.me/llms/io-security.md).
+- استخدم [`custom-wing.md`](https://nabi.saro.me/llms/custom-wing.md) لإنشاء wing، و[`ssr.md`](https://nabi.saro.me/llms/ssr.md) للعرض على الخادم.
+- راجع [`viewer-diff.md`](https://nabi.saro.me/llms/viewer-diff.md) لـviewer وdiff، و[`styling.md`](https://nabi.saro.me/llms/styling.md) للأنماط والحرف الاستهلالي.
+- ابحث عن import والأنواع الدقيقة في [`api-reference.md`](https://nabi.saro.me/llms/api-reference.md).
+
+## مرّر المتطلبات مع المهمة
+
+لا يستطيع الوكيل معرفة طريقة التخزين أو سياسة الأمان من شاشة المحرر وحدها. أخبره بإطار العمل الفعلي، وwings المطلوبة والمستبعدة، ونطاق تخزين JSON وHTML، وتنسيق طلب واستجابة خادم الرفع وحدود الملفات، وما إذا كانت صفحة النشر تحتاج SSR أو viewer أو diff.
+
+إذا بقيت قرارات غير محسومة، فاطلب منه ألا يختارها وينفذها اعتباطيًا، بل أن يشرح الخيارات وآثارها ثم يسأل أولًا.
+
+## معايير مراجعة النتيجة
+
+راجع الشفرة المولّدة مثل أي شفرة عادية. وتحقق خصوصًا مما يلي.
+
+- تحميل `nabi-note/nabi.css` في شاشتي التحرير والنشر
+- استخدام wings المحددة وكل mount للـ`registry` نفسها
+- كون أصل الحفظ هو `getJson()`، وعدم حفظ `getEditorHtml()`
+- عدم تغيير `innerHTML` لـ`.nabi-content` الجاري تحريرها مباشرة
+- استدعاء `unmount()` لكل mount عند إغلاق الشاشة
+- تحقق خادم الرفع من MIME والحجم والصلاحيات وموقع التخزين
+- استخدام SSR والمتصفح ترتيب wings وخيارات HTML نفسها
+- تأكيد أسماء exports الفعلية بفحص الأنواع والاختبارات والبناء
+
+يصعب الحكم على سلامة IME والمؤشر وتنسيق الحفظ لمجرد أن الشاشة ظهرت صحيحة مرة واحدة. اختبر إدخال التركيب على الهاتف والحفظ وإعادة التحميل فعلًا.
+
+## قدّم النسخة المثبتة على غيرها
+
+إذا كان `nabi-note` مثبتًا في المشروع، فإن exports في `package.json` وتعريفات الأنواع للحزمة المثبتة مرجع مباشر للكود الحالي أكثر من وثائق الويب. قد تختلف الوثائق عن النسخة المثبتة، لذلك اطلب من الوكيل فحص هذا الفرق أولًا.

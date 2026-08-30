@@ -128,8 +128,7 @@ function fileAnchorGroups(holderEl: Element): Element[][] {
 // 속성 선택자용 — _id 는 안전 문자만 갖지만(schema), surface/map 과 같은 방어를 한다.
 const escapeId = (id: string): string => id.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
-export const attachFileLink: Attach = ({ root, nabi, pathOfKey }) => {
-  const env = nabi.$env;
+export const attachFileLink: Attach = ({ root, nabi, doc, env, pathOfKey }) => {
   // 우리가 세운 선택이 다시 우리를 부르는 것을 막는다 — 넓힌 선택은 이미 넓어져 있어서 widen 이
   // null 을 답하지만, 그 한 바퀴조차 안 돌게 한다.
   let fixing = false;
@@ -152,17 +151,17 @@ export const attachFileLink: Attach = ({ root, nabi, pathOfKey }) => {
     if (typeof root.querySelector !== 'function') return; // 그물의 껍데기 root — 표시는 화면의 것이다
     const sel = nabi.getSelection();
     const [start, end] = ordered(sel);
-    const doc = nabi.$doc();
+    const current = doc();
     let group: Element[] | null = null;
     if (
       start.offset !== end.offset &&
       start.path.length === end.path.length &&
       start.path.every((v, i) => v === end.path[i])
     ) {
-      const spans = fileSpans(doc, start.path, env);
+      const spans = fileSpans(current, start.path, env);
       const index = spans.findIndex((span) => span.from === start.offset && span.to === end.offset);
       if (index >= 0) {
-        const holder = nodeAt(doc, start.path);
+        const holder = nodeAt(current, start.path);
         const id = holder && typeof holder._id === 'string' ? holder._id : null;
         const holderEl = id !== null ? root.querySelector(`[data-key="${escapeId(id)}"]`) : null;
         group = holderEl ? (fileAnchorGroups(holderEl)[index] ?? null) : null;
@@ -176,7 +175,7 @@ export const attachFileLink: Attach = ({ root, nabi, pathOfKey }) => {
 
   const fix = (): void => {
     if (fixing) return;
-    const wanted = widen(nabi.$doc(), nabi.getSelection(), env);
+    const wanted = widen(doc(), nabi.getSelection(), env);
     if (wanted) {
       fixing = true;
       try {
@@ -206,7 +205,7 @@ export const attachFileLink: Attach = ({ root, nabi, pathOfKey }) => {
     const path = id !== '' ? pathOfKey(id) : null;
     if (!keyed || !path) return;
     const index = fileAnchorGroups(keyed).findIndex((g) => g.includes(anchor));
-    const span = index >= 0 ? fileSpans(nabi.$doc(), path, env)[index] : undefined;
+    const span = index >= 0 ? fileSpans(doc(), path, env)[index] : undefined;
     if (!span) return;
     took = true;
     event.preventDefault();
@@ -226,7 +225,7 @@ export const attachFileLink: Attach = ({ root, nabi, pathOfKey }) => {
     const sel = nabi.getSelection();
     if (!isCollapsed(sel)) return; // 이미 골라져 있다 — 지우는 것은 코어의 범위 삭제다
     const at = sel.focus;
-    const hit = fileSpans(nabi.$doc(), at.path, env).find((span) =>
+    const hit = fileSpans(doc(), at.path, env).find((span) =>
       event.key === 'Backspace' ? at.offset === span.to : at.offset === span.from,
     );
     if (!hit) return;

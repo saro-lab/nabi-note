@@ -1,22 +1,8 @@
 // 리스트 부품 — 항목 풀기(표식 하나만)와 리스트 가르기. 실제 키 배선은 리스트 wing(08)이 하고
 // 여기는 그 wing 이 쓰는 순수 연산이다 (리스트 특칙, 재질문 답).
 // 구조: 스코프 → 래퍼문단(p) → 리스트(ul·ol·tl) → 항목(li·oli·tli) → 문단 배열.
-import {
-  P,
-  isElement,
-  isWrapper,
-  type ElementNode,
-  type NabiDoc,
-  type NabiNode,
-} from '../schema/index.js';
-import {
-  isHolder,
-  nodeAt,
-  replaceAt,
-  type EditEnv,
-  type EditResult,
-  type Position,
-} from './position.js';
+import { P, isElement, isWrapper, type ElementNode, type NabiDoc, type NabiNode } from '../schema/index.js';
+import { isHolder, nodeAt, replaceAt, type EditEnv, type EditResult, type Position } from './position.js';
 import { withChildren } from './runs-edit.js';
 
 // 항목 하나를 풀어 문단으로 되돌린다 — 그 항목의 속(문단들)이 리스트 밖으로 나오고
@@ -52,9 +38,7 @@ export function unwrapItem(doc: NabiDoc, itemPath: readonly number[], env: EditE
     const body: ElementNode = reuse
       ? withChildren(list, slice)
       : { w: list.w, ...(list.a ? { a: list.a } : {}), ch: slice };
-    return reuse
-      ? withChildren(wrapper, [body])
-      : { w: P, ...(wrapper.a ? { a: wrapper.a } : {}), ch: [body] };
+    return reuse ? withChildren(wrapper, [body]) : { w: P, ...(wrapper.a ? { a: wrapper.a } : {}), ch: [body] };
   };
 
   let replacement: ElementNode[];
@@ -78,7 +62,6 @@ export function unwrapItem(doc: NabiDoc, itemPath: readonly number[], env: EditE
   const wrapperIndex = wrapperPath[wrapperPath.length - 1] as number;
   const caretPath = [...parent, wrapperIndex + caretIndexShift];
   const landed = nodeAt(next, caretPath);
-  const caret: Position =
-    landed && isHolder(landed, env) ? { path: caretPath, offset: 0 } : { path: [0], offset: 0 };
+  const caret: Position = landed && isHolder(landed, env) ? { path: caretPath, offset: 0 } : { path: [0], offset: 0 };
   return { doc: next, caret };
 }

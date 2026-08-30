@@ -7,19 +7,16 @@
 //
 //   npm run build:trees      (nabi-web 폴더에서)
 //
-// 변환은 **패키지의 공식 문**만 쓴다: `createNabiWith(wings, { parseHtml })` 로 세우고
-// `setHtml()` 로 들여보낸 뒤 `getJson()` 으로 받는다. 데모가 쓰던 그 문 그대로다.
-//
-// `parseHtml` 에 꽂는 것만 다르다 — 브라우저의 `parseNodes` 는 `DOMParser` 를 타는데 노드에는
-// 그것이 없다. `html/parse.ts` 머리말이 말하는 그 자리라 ("서버가 HTML 을 읽어야 하면 최소 모양을
-// 손수 지어 importDoc 을 직접 부른다 — 그물이 그렇게 한다") 그물의 토크나이저를 그대로 꽂는다.
-// 패키지가 DOM 없는 들여오기 문을 열면 이 줄만 갈아 끼우면 된다 (ailog/todo/094).
+// 브라우저의 공개 `createNabiWith()`는 DOMParser를 내부에서 연결한다. 이 Node 전용 생성기는
+// DOM이 없으므로, 패키지 소스의 build-only 내부 조립 문에 테스트 adapter를 넘긴다. 이 경로는
+// 사이트 원고를 굳히는 용도일 뿐, 배포물이나 사용자 공개 API에는 들어가지 않는다.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // 굳히기(HTML → 트리)는 편집기를 한 번 세워야 해서 코어 엔트리를 문다 — `setHtml` 이 거기 산다.
-import { createNabiWith, defaultWings, makeTranslator } from 'nabi-note';
+import { defaultWings, makeTranslator } from 'nabi-note';
+import { $createNabiWith } from '../../nabi-npm/src/wing/index.ts';
 // 그리는 쪽은 **서버 진입점**이면 충분하다 — 편집 표면·화면 도구를 한 파일도 안 딛는다 (095).
 import { makeRegistry, renderStoredEditorHtml, renderToolbarHtml, renderViewToolsHtml } from 'nabi-note/ssr';
 import { tinyHtml } from '../../nabi-npm/test/tiny-html.ts';
@@ -68,19 +65,19 @@ const registry = makeRegistry(defaultWings);
 const directTrees: Readonly<Partial<Record<string, SampleTrees>>> = { ko: koTrees };
 
 function treeOf(html: string): unknown[] {
-  const { nabi } = createNabiWith(defaultWings, { ...open, parseHtml: tinyHtml });
+  const { nabi } = $createNabiWith(defaultWings, { ...open, parseHtml: tinyHtml });
   if (!nabi.setHtml(html)) throw new Error('setHtml 이 거절했다');
   const tree = nabi.getJson();
 
   // 굳힌 트리가 원고와 같은 문서인가 — 트리로 세운 편집기의 HTML 이 원고를 들여온 편집기의
   // 것과 한 글자도 다르지 않아야 한다. 다르면 그 자리에서 멈춘다.
-  const seen = createNabiWith(defaultWings, { ...open, doc: tree });
+  const seen = $createNabiWith(defaultWings, { ...open, doc: tree });
   if (seen.nabi.getHtml() !== nabi.getHtml()) throw new Error('트리 왕복이 원고와 어긋난다');
   return tree;
 }
 
 function checkedTree(tree: SampleTree, code: string, key: string): unknown[] {
-  const { nabi } = createNabiWith(defaultWings, { ...open, doc: tree });
+  const { nabi } = $createNabiWith(defaultWings, { ...open, doc: tree });
   const normalized = nabi.getJson();
   if (JSON.stringify(normalized) !== JSON.stringify(tree)) {
     throw new Error(`${code} ${key} NABI TREE가 정규형이 아니다`);

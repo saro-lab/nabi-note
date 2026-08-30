@@ -7,6 +7,7 @@ import {
   readNabiFile,
   textCandidate,
   writeHtmlFile,
+  writeNabiFile,
   saveMark,
   NABI_MARK,
   NHTML_FILE_EXTENSION,
@@ -20,21 +21,19 @@ import {
   type PasteCandidate,
   type PasteData,
 } from '../src/io/index.js';
+import { hostOf } from '../src/editor/index.js';
 import { createNabiWith, makeRegistry, simpleMark, type Registry, type Wing } from '../src/wing/index.js';
 import { defaultWings } from '../src/wings/index.js';
 import {
-  clipMemory,
-  clipText,
   dressClipHtml,
+  clipboardBodyOf,
+  encodeClipboardBody,
   fileClipHtml,
-  forgetClip,
-  fromNabi,
   loadClipboard,
   loneFileLink,
   makePasteFlow,
-  normalizeClipHtml,
-  rememberClip,
-  sameClip,
+  NABI_CLIPBOARD_MIME,
+  ioFiltersOf,
   wrapClipHtml,
   type SaveFormat,
 } from '../src/surface/index.js';
@@ -47,6 +46,7 @@ import { tinyHtml } from './tiny-html.js';
 import { done, eq, ok } from './net.js';
 
 const data = (draft: Partial<PasteData>): PasteData => ({
+  custom: '',
   html: '',
   plain: '',
   files: [],
@@ -108,6 +108,12 @@ function throws(name: string, fn: () => void, wants?: string): void {
 
   ok('한 줄 평문 후보는 inline 이다', textCandidate('한 줄', 'x').inline === true);
   ok('여러 줄 평문 후보는 inline 이 아니다', textCandidate('두\n줄', 'x').inline === undefined);
+  eq('CRLF·CR·LF 평문은 각각 문단 한 번만 나눈다', textCandidate('a\r\nb\rc\nd', 'x').build(), [
+    { w: 'p', ch: ['a'] },
+    { w: 'p', ch: ['b'] },
+    { w: 'p', ch: ['c'] },
+    { w: 'p', ch: ['d'] },
+  ]);
   eq('맨 글자 후보는 줄마다 문단 하나다 (빈 줄은 빈 문단)', textCandidate('a\n\nb', 'x').build(), [
     { w: 'p', ch: ['a'] },
     { w: 'p', ch: [] },
@@ -117,41 +123,118 @@ function throws(name: string, fn: () => void, wants?: string): void {
 
 // --- 레지스트리 접기 -----------------------------------------------------------------------
 {
-  const wingFilter: IoFilter = { id: 'nabi', label: 'nabi' };
-  const hostFilter: IoFilter = { id: '호스트', label: '호스트' };
+  const wingFilter: IoFilter = { id: 'exNabi', label: 'nabi' };
+  const hostFilter: IoFilter = { id: 'exHost', label: '호스트' };
 
-  const bold: Wing = { ...simpleMark({ w: 'b' }), ioFilter: wingFilter, toMd: (_node, ctx) => `**${ctx.children()}**` };
-  const italic: Wing = { ...simpleMark({ w: 'i' }) };
+  const bold: Wing = {
+    ...simpleMark({ w: 'exBold' }),
+    ioFilter: wingFilter,
+    toMd: (_node, ctx) => `**${ctx.children()}**`,
+  };
+  const italic: Wing = { ...simpleMark({ w: 'exItalic' }) };
 
   const plain = makeRegistry([bold, italic]);
-  eq('wing 의 IO 필터가 등록순으로 접힌다', plain.ioFilters.map((f) => f.id), ['nabi']);
-  ok('toMd 를 든 wing 만 md 조립 맵에 든다', typeof plain.mdBuilders['b'] === 'function' && plain.mdBuilders['i'] === undefined);
+  eq(
+    'wing 의 IO 필터가 등록순으로 접힌다',
+    plain.ioFilters.map((f) => f.id),
+    ['exNabi'],
+  );
+  ok(
+    'toMd 를 든 wing 만 md 조립 맵에 든다',
+    typeof plain.mdBuilders['exBold'] === 'function' && plain.mdBuilders['exItalic'] === undefined,
+  );
 
   const withHost = makeRegistry([bold, italic], { ioFilters: [hostFilter] });
-  eq('호스트 필터가 wing 필터보다 앞에 선다', withHost.ioFilters.map((f) => f.id), ['호스트', 'nabi']);
+  eq(
+    '호스트 필터가 wing 필터보다 앞에 선다',
+    withHost.ioFilters.map((f) => f.id),
+    ['exHost', 'exNabi'],
+  );
 
   throws(
     'IO 필터 id 가 겹치면 등록이 죽는다',
-    () => makeRegistry([bold, { ...simpleMark({ w: 'i' }), ioFilter: { id: 'nabi', label: '둘째' } }]),
-    'IO 필터 id "nabi"',
+    () => makeRegistry([bold, { ...simpleMark({ w: 'exItalic' }), ioFilter: { id: 'exNabi', label: '둘째' } }]),
+    'IO 필터 id "exNabi"',
   );
   throws(
     '호스트와 wing 이 같은 id 를 들어도 죽는다',
-    () => makeRegistry([bold], { ioFilters: [{ id: 'nabi', label: '호스트' }] }),
+    () => makeRegistry([bold], { ioFilters: [{ id: 'exNabi', label: '호스트' }] }),
     '호스트',
+  );
+  throws(
+    'untyped filter의 문자열 canonical은 truthy clean 표식으로 쓰이지 않고 등록에서 죽는다',
+    () =>
+      makeRegistry([], {
+        ioFilters: [
+          {
+            id: 'exBadSave',
+            label: 'bad',
+            save: { extension: '.bad', write: () => '', canonical: 'false' },
+          } as unknown as IoFilter,
+        ],
+      }),
+    'canonical must be a boolean',
+  );
+  const invalidShapes: readonly (readonly [string, unknown])[] = [
+    ['paste function', { paste: true }],
+    ['save object', { save: null }],
+    ['save extension', { save: { extension: 'bad', write: () => '', canonical: false } }],
+    ['save write', { save: { extension: '.bad', write: true, canonical: false } }],
+    ['save canonical', { save: { extension: '.bad', write: () => '', canonical: 'false' } }],
+    ['save lossy', { save: { extension: '.bad', write: () => '', canonical: false, lossy: 'yes' } }],
+    ['save mime', { save: { extension: '.bad', write: () => '', canonical: false, mime: '' } }],
+    ['read object', { read: null }],
+    ['read extensions empty', { read: { extensions: [], run: () => null } }],
+    ['read extension dot', { read: { extensions: ['txt'], run: () => null } }],
+    ['read extensions unique', { read: { extensions: ['.MD', '.md'], run: () => null } }],
+    ['read run', { read: { extensions: ['.bad'], run: true } }],
+  ];
+  invalidShapes.forEach(([name, shape], index) => {
+    throws(`untyped filter shape - ${name} 계약을 어기면 등록에서 죽는다`, () =>
+      makeRegistry([], {
+        ioFilters: [
+          { id: `exBad${index}`, label: 'bad', ...(shape as Record<string, unknown>) } as unknown as IoFilter,
+        ],
+      }),
+    );
+  });
+  for (const [name, value] of [
+    ['null root', null],
+    ['array root', []],
+  ] as const) {
+    throws(
+      `untyped filter shape - ${name} 계약을 어기면 등록에서 죽는다`,
+      () => makeRegistry([], { ioFilters: [value as unknown as IoFilter] }),
+      'filter must be an object',
+    );
+  }
+  throws(
+    'mount 단위 필터도 내장 id를 가로채지 못한다',
+    () => ioFiltersOf({ registry: plain, extra: [{ id: 'html', label: '가짜 HTML' }], parse: tinyHtml }),
+    'reserved',
+  );
+  throws(
+    'mount 단위 필터 id도 전체 목록에서 유일해야 한다',
+    () => ioFiltersOf({ registry: plain, extra: [{ id: 'exNabi', label: '가짜 wing' }], parse: tinyHtml }),
+    'duplicated',
+  );
+  throws(
+    'mount 단위 필터 id는 빈 문자열일 수 없다',
+    () => ioFiltersOf({ registry: plain, extra: [{ id: '', label: '빈 이름' }], parse: tinyHtml }),
+    'non-empty',
   );
 
   // 부품의 md 조립 — partHtml 과 같은 한 줄이다.
   const list: Wing = {
-    w: 'ul',
+    w: 'exList',
     place: 'container',
     holds: 'blocks',
-    parts: { li: { holds: 'blocks' } },
+    parts: { exItem: { holds: 'blocks' } },
     toHtml: () => '<ul></ul>',
-    partHtml: { li: () => '<li></li>' },
-    partMd: { li: (_node, ctx) => `- ${ctx.children()}` },
+    partHtml: { exItem: () => '<li></li>' },
+    partMd: { exItem: (_node, ctx) => `- ${ctx.children()}` },
   };
-  ok('partMd 도 타입 이름으로 md 조립 맵에 든다', typeof makeRegistry([list]).mdBuilders['li'] === 'function');
+  ok('partMd 도 타입 이름으로 md 조립 맵에 든다', typeof makeRegistry([list]).mdBuilders['exItem'] === 'function');
 }
 
 // --- 내장 필터 셋 -----------------------------------------------------------------------------
@@ -159,55 +242,82 @@ function throws(name: string, fn: () => void, wants?: string): void {
   const { registry } = createNabiWith(defaultWings, {});
   const mdOf = (reg: Registry): MdEnv => ({ has: (w) => reg.wingOf(w) !== null || reg.ownerOf(w) !== null });
   const builtin = (md: MdEnv = mdOf(registry)): readonly IoFilter[] =>
-    makeBuiltinFilters({ env: registry.env, parse: tinyHtml, md, ...(registry.claim ? { claim: registry.claim } : {}) });
+    makeBuiltinFilters({
+      env: registry.env,
+      parse: tinyHtml,
+      md,
+      ...(registry.claim ? { claim: registry.claim } : {}),
+    });
 
-  // 저장하는 셋(nabi·html·md)에 **읽기만 하는 짝** 하나가 뒤따른다 — 밖에서 온 `.html` 을
-  // 여는 길이다(저장 이름이 `.nhtml` 로 바뀌면서 생긴 자리). 저장 판에는 안 선다.
-  eq('내장 셋은 nabi·html·md 순이고 읽기짝이 뒤에 선다', builtin().map((f) => f.id),
-    ['nabi', 'html', 'markdown', 'html-open']);
+  eq(
+    '내장 셋은 nabi·html·md 순이다',
+    builtin().map((f) => f.id),
+    ['nabi', 'html', 'markdown'],
+  );
   eq('저장 형식은 여전히 셋이다', builtin().filter((f) => f.save !== undefined).length, 3);
   eq(
     '저장 확장자는 형식마다 하나다',
-    builtin().filter((f) => f.save).map((f) => `${f.save?.extension}:${f.save?.mime}`),
+    builtin()
+      .filter((f) => f.save)
+      .map((f) => `${f.save?.extension}:${f.save?.mime}`),
     ['.nabi:application/json', '.nhtml:text/html', '.md:text/markdown'],
   );
-  ok('md 저장만 되돌아오지 못한다', builtin().filter((f) => f.save).map((f) => f.save?.lossy === true).join() === 'false,false,true');
-  // 읽기짝은 제 이름 판정을 든다 — `.html` 만 받고 그 밖은 조용히 넘긴다(다음 필터의 몫이다).
-  eq('읽기짝은 .html 을 읽는다', builtin()[3]?.read?.('밖.html', '<p>글</p>'), [{ w: 'p', ch: ['글'] }]);
-  eq('읽기짝은 남의 확장자를 안 받는다', builtin()[3]?.read?.('밖.txt', '<p>글</p>'), null);
-  ok('읽기짝은 저장도 붙여넣기도 안 한다', builtin()[3]?.save === undefined && builtin()[3]?.paste === undefined);
+  ok(
+    'md 저장만 되돌아오지 못한다',
+    builtin()
+      .filter((f) => f.save)
+      .map((f) => f.save?.lossy === true)
+      .join() === 'false,false,true',
+  );
+  eq('html 읽기 확장자는 명시적이다', builtin()[1]?.read?.extensions, ['.nhtml', '.html', '.htm', '.xhtml', '.shtml']);
   ok('nabi 필터는 붙여넣기에 안 선다', builtin()[0]?.paste === undefined);
 
   // 저장·열기의 왕복 — 판을 안 띄우고 필터 자신에게 묻는다.
   const source = { json: () => [{ w: 'p', ch: ['글'] }], html: () => '<p>글</p>', md: () => '글' };
   const written = builtin()[0]?.save?.write(source) ?? '';
   eq('nabi 필터가 쓴 것을 nabi 필터가 되읽는다', readNabiFile(written), [{ w: 'p', ch: ['글'] }]);
+  {
+    const stored = writeNabiFile([
+      {
+        w: 'evilRoot',
+        a: { onclick: 'alert(1)', style: 'background:url(javascript:x)' },
+        ch: [
+          { w: 'p', ch: ['A'] },
+          { w: 'evilNested', a: { href: 'javascript:x' }, ch: [{ w: 'p', ch: ['B'] }] },
+        ],
+      },
+    ]);
+    const loaded = readNabiFile(stored);
+    const target = createNabiWith([]);
+    ok('.nabi roundtrip - 저장 문서를 읽어 canonical 경계에 넣는다', loaded !== null && target.nabi.setJson(loaded));
+    eq('.nabi roundtrip - 미등록 wrapper와 attrs는 사라지고 block 경계는 보존된다', target.nabi.getJson(), [
+      { w: 'p', ch: ['A'] },
+      { w: 'p', ch: ['B'] },
+    ]);
+  }
   eq('md 필터는 문서의 md() 를 그대로 쓴다', builtin()[2]?.save?.write(source), '글');
-  eq('html 필터가 읽은 것은 문서 JSON 이다', builtin()[1]?.read?.('a.html', '<p>글</p>'), [{ w: 'p', ch: ['글'] }]);
+  eq('html 필터가 읽은 것은 문서 JSON 이다', builtin()[1]?.read?.run('a.html', '<p>글</p>'), [{ w: 'p', ch: ['글'] }]);
 
   const paste = (draft: Partial<PasteData>, filters: readonly IoFilter[]): string[] =>
     ids(collectCandidates(data(draft), { filters, textLabel: 'io.text' }));
 
   eq('md 냄새가 나는 평문에는 md 후보가 선다', paste({ plain: '# 제목' }, builtin()), ['markdown', 'text']);
   eq('평범한 산문에는 md 후보가 없다', paste({ plain: '그냥 두 줄\n짜리 글' }, builtin()), ['text']);
-  eq(
-    '받아 줄 wing 이 하나도 없으면 md 는 잠잔다',
-    paste({ plain: '# 제목' }, builtin({ has: () => false })),
-    ['text'],
-  );
-  eq(
-    'md 결과가 맨 글자와 같으면 후보를 안 낸다',
-    paste({ plain: '- 목록' }, builtin({ has: (w) => w === 'h' })),
-    ['text'],
-  );
-  eq('html 이 있으면 html 후보가 맨 글자 앞에 선다', paste({ html: '<p>글</p>', plain: '글' }, builtin()), ['html', 'text']);
+  eq('받아 줄 wing 이 하나도 없으면 md 는 잠잔다', paste({ plain: '# 제목' }, builtin({ has: () => false })), ['text']);
+  eq('md 결과가 맨 글자와 같으면 후보를 안 낸다', paste({ plain: '- 목록' }, builtin({ has: (w) => w === 'h' })), [
+    'text',
+  ]);
+  eq('html 이 있으면 html 후보가 맨 글자 앞에 선다', paste({ html: '<p>글</p>', plain: '글' }, builtin()), [
+    'html',
+    'text',
+  ]);
 }
 
 // --- 붙여넣기 한 걸음 (surface/paste — DOM 이 없다) ---------------------------------------------
 {
   interface Rig {
     readonly nabi: Nabi;
-    readonly take: (draft: Partial<PasteData>, files?: readonly unknown[]) => void;
+    readonly take: (draft: Partial<PasteData>, files?: readonly unknown[]) => boolean;
     // 판이 받은 자리들 — 판을 안 띄우고 가짜 ask 로 답한다.
     readonly asked: string[][];
     // 그 자리마다 그림을 들었나 — 내장 셋은 들고, 호스트 필터는 안 든다.
@@ -231,7 +341,7 @@ function throws(name: string, fn: () => void, wants?: string): void {
     const asked: string[][] = [];
     const icons: boolean[][] = [];
     let dropped = 0;
-    nabi.$bindChoose((_question, choices) => {
+    hostOf(nabi).bindChoose((_question, choices) => {
       asked.push(choices.map((choice) => choice.label));
       // 내장 셋은 이름과 함께 그림도 든다 — 판이 이름만 받던 때와 갈리는 자리다.
       icons.push(choices.map((choice) => choice.icon !== undefined));
@@ -251,7 +361,7 @@ function throws(name: string, fn: () => void, wants?: string): void {
       icons,
       dropped: () => dropped,
       take: (draft, files = []) =>
-        flow({ html: '', plain: '', files: [], types: [], ...draft }, files as readonly File[]),
+        flow({ custom: '', html: '', plain: '', files: [], types: [], ...draft }, files as readonly File[]),
     };
   };
 
@@ -286,7 +396,11 @@ function throws(name: string, fn: () => void, wants?: string): void {
   }
   // 줄이 하나뿐이면(후보 셋 이하) 위아래도 그 줄을 걷는다 — 안 움직이는 화살표보다 낫다.
   ok('한 줄짜리 판은 셋이 다 걷는다', gridStep(2, 3, 'ArrowDown') === 0 && gridStep(0, 3, 'ArrowUp') === 2);
-  eq('화살표가 아닌 키는 겨눔을 안 건드린다', ['Enter', ' ', 'Escape', 'a'].map((key) => gridStep(0, 3, key)), [-1, -1, -1, -1]);
+  eq(
+    '화살표가 아닌 키는 겨눔을 안 건드린다',
+    ['Enter', ' ', 'Escape', 'a'].map((key) => gridStep(0, 3, key)),
+    [-1, -1, -1, -1],
+  );
   ok('줄이 없으면 겨눌 것도 없다', gridStep(0, 0, 'ArrowRight') === -1);
 
   // --- 판에 서는 그림 넷 -------------------------------------------------------------------------
@@ -294,16 +408,33 @@ function throws(name: string, fn: () => void, wants?: string): void {
   // 성질**이다: 같은 껍데기(viewBox 16), 제 굵기를 안 드는 속, 그리고 종이·상자 없는 선뿐.
   {
     const marks: readonly (readonly [string, string])[] = [
-      ['HTML', HTML_ICON], ['MARKDOWN', MARKDOWN_ICON], ['TEXT', TEXT_ICON], ['NABI', NABI_ICON],
+      ['HTML', HTML_ICON],
+      ['MARKDOWN', MARKDOWN_ICON],
+      ['TEXT', TEXT_ICON],
+      ['NABI', NABI_ICON],
     ];
-    ok('그림 넷이 다 서 있다', marks.every(([, body]) => body.length > 0));
+    ok(
+      '그림 넷이 다 서 있다',
+      marks.every(([, body]) => body.length > 0),
+    );
     // 굵기는 밖에서 하나로 온다 — 속이 제 굵기를 들면 그 그림만 굵거나 가늘어진다.
-    eq('어느 그림도 제 굵기를 안 든다', marks.filter(([, body]) => body.includes('stroke-width')).map(([name]) => name), []);
+    eq(
+      '어느 그림도 제 굵기를 안 든다',
+      marks.filter(([, body]) => body.includes('stroke-width')).map(([name]) => name),
+      [],
+    );
     // 선으로만 그린다 — rect·circle 이 섞이면 같은 붓으로 그린 것처럼 안 보인다.
-    eq('넷 다 path 로만 그린다', marks.filter(([, body]) => !/^(?:<path d="[^"]*"\/>)+$/.test(body)).map(([name]) => name), []);
+    eq(
+      '넷 다 path 로만 그린다',
+      marks.filter(([, body]) => !/^(?:<path d="[^"]*"\/>)+$/.test(body)).map(([name]) => name),
+      [],
+    );
     // 판이 칠하는 굵기가 껍데기의 기본과 같다 — 한 값이 두 곳에서 갈리지 않는다.
     ok('굵기 한 값이 껍데기의 기본과 같다', iconSvg('<path d="M0 0"/>').includes(`stroke-width="${MARK_STROKE}"`));
-    ok('껍데기는 16×16 하나다', marks.every(([, body]) => iconSvg(body, MARK_STROKE).includes('viewBox="0 0 16 16"')));
+    ok(
+      '껍데기는 16×16 하나다',
+      marks.every(([, body]) => iconSvg(body, MARK_STROKE).includes('viewBox="0 0 16 16"')),
+    );
 
     // MARKDOWN 은 `MD` 두 글자다 — 획 둘, 테두리 상자 없음.
     ok('MARKDOWN 은 글자 둘이다', MARKDOWN_ICON.split('<path').length - 1 === 2);
@@ -336,10 +467,17 @@ function throws(name: string, fn: () => void, wants?: string): void {
     ok('옅은 날개도 아이콘 크기에서 보인다', Math.min(...tones) >= 0.5, String(Math.min(...tones)));
     // 칠 기반이라 선 둘 옆에서 무거워진다 — 줄여 앉힌 그 값이 여기 박혀 있다(눈으로 맞춘 값).
     ok('나비 마크는 16 상자에 맞춰 줄여 앉힌다', /scale\(\.\d+\)/.test(NABI_MARK) && NABI_MARK.includes('translate('));
-    ok('셋 다 같은 16×16 껍데기를 쓴다', ['.nabi', NHTML_FILE_EXTENSION, '.md']
-      .every((ext) => iconSvg(saveMark(ext), MARK_STROKE).includes('viewBox="0 0 16 16"')));
+    ok(
+      '셋 다 같은 16×16 껍데기를 쓴다',
+      ['.nabi', NHTML_FILE_EXTENSION, '.md'].every((ext) =>
+        iconSvg(saveMark(ext), MARK_STROKE).includes('viewBox="0 0 16 16"'),
+      ),
+    );
     // 선 굵기는 밖에서 오는 한 값이다 — 선 둘은 제 굵기를 안 든다.
-    ok('선으로 그린 둘은 제 굵기를 안 든다', !HTML_ICON.includes('stroke-width') && !MARKDOWN_ICON.includes('stroke-width'));
+    ok(
+      '선으로 그린 둘은 제 굵기를 안 든다',
+      !HTML_ICON.includes('stroke-width') && !MARKDOWN_ICON.includes('stroke-width'),
+    );
   }
 
   // --- 저장 판의 순수 판정 ----------------------------------------------------------------------
@@ -350,7 +488,11 @@ function throws(name: string, fn: () => void, wants?: string): void {
   {
     const fmt = (id: string, extension: string, lossy = false): SaveFormat => ({ id, label: id, extension, lossy });
     const three = [fmt('nabi', '.nabi'), fmt('html', NHTML_FILE_EXTENSION), fmt('markdown', '.md', true)];
-    eq('표식은 겨눈 칸의 확장자다', three.map((_, at) => extensionFor(three, at)), ['.nabi', '.nhtml', '.md']);
+    eq(
+      '표식은 겨눈 칸의 확장자다',
+      three.map((_, at) => extensionFor(three, at)),
+      ['.nabi', '.nhtml', '.md'],
+    );
     eq('자리 밖이면 원본의 확장자로 답한다', extensionFor(three, -1), '.nabi');
     eq('형식이 하나도 없어도 답은 있다', extensionFor([], 0), '.nabi');
     eq('열릴 때 겨눔은 첫 줄 가운데다 (붙여넣기 판과 같은 산수)', initialChoice(three.length), 1);
@@ -372,7 +514,10 @@ function throws(name: string, fn: () => void, wants?: string): void {
       '시트 속의 `</style` 은 그 자리에서 태그를 못 닫는다',
       writeHtmlFile({ title: 'x', sheets: ['a::after { content: "</style>"; }'], body: '' }).includes('<\\/style>'),
     );
-    ok('말을 주면 `lang` 이 적힌다', writeHtmlFile({ title: 'x', sheets: [], body: '', lang: 'ko' }).includes('<html lang="ko">'));
+    ok(
+      '말을 주면 `lang` 이 적힌다',
+      writeHtmlFile({ title: 'x', sheets: [], body: '', lang: 'ko' }).includes('<html lang="ko">'),
+    );
   }
 
   // 엑셀에서 온 붙여넣기 — 표(html) + 탭 글자(plain) + 그림(png) 이 한 번에 온다.
@@ -380,25 +525,29 @@ function throws(name: string, fn: () => void, wants?: string): void {
   {
     const r = rig(0, [{ w: 'p', ch: [] }]);
     r.take(
-      { html: '<table><tr><td>a</td><td>b</td></tr></table>', plain: 'a\tb', types: ['text/html', 'text/plain', 'Files'] },
+      {
+        html: '<table><tr><td>a</td><td>b</td></tr></table>',
+        plain: 'a\tb',
+        types: ['text/html', 'text/plain', 'Files'],
+      },
       [{ name: 'sheet.png', type: 'image/png', size: 12 }],
     );
     await settled();
-    eq('엑셀 붙여넣기의 후보는 글자 계열뿐이다 (파일 없음)', r.asked, [['HTML', 'TEXT']]);
-    eq('내장 후보는 저마다 그림을 든다', r.icons, [[true, true]]);
+    eq('엑셀 붙여넣기는 안전한 HTML을 선택 판 없이 먼저 쓴다', r.asked, []);
+    eq('고정 우선순위에서는 후보 그림 판도 만들지 않는다', r.icons, []);
     ok('엑셀 붙여넣기에서는 파일 처리기가 안 불린다', r.dropped() === 0);
     ok('첫째를 고르면 표가 선다', JSON.stringify(r.nabi.getJson()).includes('"table"'));
   }
 
-  // 취소 — Esc 가 답한 -1 이다. 문서는 손대지 않는다.
+  // HTML은 custom MIME 다음의 고정 fallback이라 선택 판보다 먼저 적용한다.
   {
     const r = rig(-1, [{ w: 'p', ch: ['그대로'] }]);
     r.take({ html: '<p>새 글</p>', plain: '새 글\n둘째 줄' });
     await settled();
-    eq('취소(-1)면 문서가 안 바뀐다', r.nabi.getJson(), [{ w: 'p', ch: ['그대로'] }]);
+    eq('HTML fallback은 선택 판의 -1과 무관하게 적용된다', r.nabi.getJson(), [{ w: 'p', ch: ['새 글그대로'] }]);
   }
 
-  // 자리 번호가 곧 답이다 — 셋째 후보(맨 글자)가 붙는다.
+  // HTML이 있으면 custom host 후보보다도 안전한 HTML fallback이 먼저다.
   {
     const mine: IoFilter = {
       id: '내 형식',
@@ -408,10 +557,9 @@ function throws(name: string, fn: () => void, wants?: string): void {
     const r = rig(2, [{ w: 'p', ch: [] }], [mine]);
     r.take({ html: '<p>글</p>', plain: '첫 줄\n둘째 줄' });
     await settled();
-    eq('판이 든 자리는 등록순 + 맨 글자다', r.asked, [['내 형식', 'HTML', 'TEXT']]);
-    // 호스트 필터의 후보는 그림이 없다 — 판은 그 자리를 이름만으로 세운다(빈 칸을 안 남긴다).
-    eq('그림 없는 후보도 그대로 선다', r.icons, [[false, true, true]]);
-    eq('2 를 고르면 셋째 후보가 붙는다', r.nabi.getJson(), [{ w: 'p', ch: ['첫 줄'] }, { w: 'p', ch: ['둘째 줄'] }]);
+    eq('HTML fallback은 후보 선택 판을 열지 않는다', r.asked, []);
+    eq('선택 판이 없으므로 후보 그림도 만들지 않는다', r.icons, []);
+    eq('HTML fallback이 원래 캐럿에 붙는다', r.nabi.getJson(), [{ w: 'p', ch: ['글'] }]);
   }
 
   // 파일만 온 붙여넣기 — 후보가 0 이라 마지막 처리기가 받는다.
@@ -434,85 +582,209 @@ function throws(name: string, fn: () => void, wants?: string): void {
     eq('그 길에는 판이 안 뜬다', r.asked, []);
   }
 
-  // --- 나비 → 나비 붙여넣기 (260823_007) -------------------------------------------------------
-  //
-  // 복사·잘라내기 때 떠 둔 조각이 그대로 돌아오면 판을 안 띄운다. 기억은 전역 하나이고
-  // 소비되지 않는다 — 한 번 잘라 여러 번 붙이는 걸음이 그것으로 산다.
+  // --- versioned custom MIME -> safe HTML -> plain fallback -----------------------------------
   {
-    // 우리가 DOM 에서 뜨는 조각의 모양 — 편집기 HTML 이라 `data-key` 를 든다.
-    const mine = '<p data-key="k1">나비 글</p>';
-    // 크롬이 되돌려 주는 모양 — charset 과 조각 주석을 두른다.
-    const chrome = `<meta charset='utf-8'><!--StartFragment-->${mine}<!--EndFragment-->`;
-    // 사파리가 되돌려 주는 모양 — 한 장을 통째로 씌우고 조각에 없던 스타일을 덧입힌다.
-    const safari =
-      '<html><head><meta charset="utf-8"></head><body>' +
-      '<!--StartFragment--><p data-key="k1" style="color: rgb(0, 0, 0);">나비 글</p><!--EndFragment-->' +
-      '</body></html>';
+    const body = [{ w: 'p', ch: [{ w: 'b', ch: ['나비 글'] }] }];
+    const internal = encodeClipboardBody(body);
+    const r = rig(1, [{ w: 'p', ch: [] }]);
+    r.take({ custom: internal, html: '<p>HTML</p>', plain: 'PLAIN' });
+    await settled();
+    eq('지원하는 custom MIME body가 HTML보다 먼저 붙는다', r.nabi.getJson(), body);
+    eq('custom MIME은 선택 판을 열지 않는다', r.asked, []);
 
-    // 포장 걷기 — 값이 아닌 것은 다 떨어진다.
-    eq('포장을 걷으면 조각만 남는다', normalizeClipHtml(chrome), mine);
-    eq('한 장으로 씌운 것도 조각만 남는다', normalizeClipHtml('<html><body> ' + mine + ' </body></html>'), mine);
-    eq('맨 글자는 태그를 다 걷는다', clipText(chrome), '나비 글');
-    ok('나비 표식은 `data-key` 다', fromNabi(mine) && !fromNabi('<p>남의 글</p>'));
+    const unknown = rig(0, [{ w: 'p', ch: [] }]);
+    unknown.take({
+      custom: encodeClipboardBody([
+        {
+          w: 'p',
+          ch: [
+            {
+              w: 'evil',
+              a: { onclick: 'alert(1)', style: 'background:url(javascript:x)', href: 'javascript:x' },
+              ch: ['안전한 내용'],
+            },
+          ],
+        },
+      ]),
+    });
+    await settled();
+    eq('custom MIME - 미등록 wrapper/attrs는 normalize 뒤 재등장하지 않는다', unknown.nabi.getJson(), [
+      { w: 'p', ch: ['안전한 내용'] },
+    ]);
 
-    ok('①  포장만 다르면 같은 것이다', sameClip(mine, chrome));
-    ok('②  브라우저가 조상 태그를 얹어도 품으면 같다', sameClip('나비 글', `<meta charset='utf-8'><ul><li>나비 글</li></ul>`));
-    ok('③  스타일이 덧입혀져도 맨 글자와 표식으로 잡는다', sameClip(mine, safari));
-    ok('밖에서 온 같은 글자는 표식이 없어 안 걸린다', !sameClip(mine, '<p>나비 글</p><p>덤</p>'));
-    ok('내용이 다르면 안 걸린다', !sameClip(mine, '<p data-key="k9">남의 글</p>'));
-    ok('기억이 비었으면 안 걸린다', !sameClip('', chrome));
-    ok('받침뿐인 껍데기끼리는 안 걸린다', !sameClip('<br/>', '<meta charset="utf-8"><br/>'));
+    const htmlFallback = rig(1, [{ w: 'p', ch: [] }]);
+    htmlFallback.take({ custom: '{"version":2,"body":[]}', html: '<p>HTML</p>', plain: 'PLAIN' });
+    await settled();
+    eq('지원하지 않는 envelope는 안전한 HTML로 떨어진다', htmlFallback.nabi.getJson(), [{ w: 'p', ch: ['HTML'] }]);
 
-    // 붙여넣기 흐름 — 판이 뜨나 안 뜨나.
-    forgetClip();
-    {
-      const r = rig(1, [{ w: 'p', ch: [] }]);
-      r.take({ html: chrome, plain: '나비 글' });
-      await settled();
-      eq('기억이 비어 있으면 지금까지처럼 판이 뜬다', r.asked, [['HTML', 'TEXT']]);
-    }
+    const plainFallback = rig(1, [{ w: 'p', ch: [] }]);
+    plainFallback.take({ custom: '{broken', plain: 'PLAIN' });
+    await settled();
+    eq('custom과 HTML이 없으면 평문으로 떨어진다', plainFallback.nabi.getJson(), [{ w: 'p', ch: ['PLAIN'] }]);
 
-    rememberClip(mine);
-    eq('기억은 마지막 조각 하나다', clipMemory(), mine);
-    {
-      const r = rig(1, [{ w: 'p', ch: [] }]);
-      r.take({ html: chrome, plain: '나비 글' });
-      await settled();
-      eq('나비에서 복사한 것은 판 없이 붙는다', r.asked, []);
-      eq('그때 붙는 것은 html 후보다', r.nabi.getJson(), [{ w: 'p', ch: ['나비 글'] }]);
-    }
-    {
-      // 잘라내기 한 번, 붙여넣기 여러 번 — 기억은 소비되지 않는다.
-      const r = rig(1, [{ w: 'p', ch: [] }]);
-      r.take({ html: chrome, plain: '나비 글' });
-      r.take({ html: safari, plain: '나비 글' });
-      await settled();
-      eq('한 번 기억하면 여러 번 붙여도 판이 안 뜬다', r.asked, []);
-      ok('기억은 붙여넣기로 안 지워진다', clipMemory() === mine);
-    }
-    {
-      // 밖에서 새로 복사한 것 — 기억은 그대로인데 내용이 갈려 일반 흐름이다.
-      const r = rig(1, [{ w: 'p', ch: [] }]);
-      r.take({ html: '<p>남의 편집기 글</p>', plain: '남의 편집기 글' });
-      await settled();
-      eq('기억과 다른 html 은 지금까지처럼 판이 뜬다', r.asked, [['HTML', 'TEXT']]);
-    }
-    forgetClip();
+    let fakeHtmlHits = 0;
+    const brokenHtml: IoFilter = {
+      id: 'html',
+      label: '가짜 HTML',
+      paste: () => {
+        fakeHtmlHits += 1;
+        return { id: 'html', label: '가짜 HTML', build: () => [{ w: 'p', ch: ['가짜'] }] };
+      },
+    };
+    const broken = createNabiWith(defaultWings, { doc: [{ w: 'p', ch: [] }] });
+    const brokenFlow = makePasteFlow({
+      nabi: broken.nabi,
+      filters: [
+        brokenHtml,
+        ...makeBuiltinFilters({
+          env: broken.registry.env,
+          parse: () => {
+            throw new Error('broken HTML parser');
+          },
+          md: { has: () => false },
+          ...(broken.registry.claim ? { claim: broken.registry.claim } : {}),
+        }),
+      ],
+      locale: () => 'ko',
+    });
+    ok(
+      '고정 HTML 후보가 실패하면 선택 판 없이 평문을 원자적으로 쓴다',
+      brokenFlow(data({ custom: '{broken', html: '<p>HTML</p>', plain: 'PLAIN' }), []),
+    );
+    eq('host의 id=html 가짜 후보는 고정 HTML 경계를 가로채지 못한다', fakeHtmlHits, 0);
+    eq('HTML build 실패의 다음 후보는 평문이다', broken.nabi.getJson(), [{ w: 'p', ch: ['PLAIN'] }]);
+
+    const tableDoc = [
+      {
+        w: 'p',
+        ch: [{ w: 'table', ch: [{ w: 'tr', ch: [{ w: 'td', ch: [{ w: 'p', ch: ['XYZ'] }] }] }] }],
+      },
+    ];
+    const atomic = rig(0, tableDoc);
+    const selected = {
+      anchor: { path: [0, 0, 0, 0, 0], offset: 0 },
+      focus: { path: [0, 0, 0, 0, 0], offset: 3 },
+    };
+    ok('실패 원자성 준비 — 표 칸 범위를 고른다', atomic.nabi.select(selected));
+    const beforeDoc = atomic.nabi.getJson();
+    const beforeSelection = atomic.nabi.getSelection();
+    const onlyLumps = encodeClipboardBody([
+      { w: 'p', ch: [{ w: 'img', a: { src: 'https://x/a.png' }, ch: [] }] },
+      { w: 'p', ch: [{ w: 'img', a: { src: 'https://x/b.png' }, ch: [] }] },
+    ]);
+    ok('글줄로 누를 수 없는 custom body는 처리 실패다', !atomic.take({ custom: onlyLumps }));
+    eq('삽입 실패가 먼저 고른 범위를 지우지 않는다', atomic.nabi.getJson(), beforeDoc);
+    eq('삽입 실패가 선택도 바꾸지 않는다', atomic.nabi.getSelection(), beforeSelection);
   }
 
-  // --- 덧입힌 style 은 포장이다 (260823_008 ㉠) -------------------------------------------------
-  //
-  // 우리 조립은 인라인 `style` 을 한 글자도 안 낸다 — 되돌아온 html 의 `style=` 은 100%
-  // 브라우저가 덧입힌 것이다. 이것이 포장에 안 들었을 때, 마크가 하나라도 걸린 부분 선택
-  // (파일링크·형광펜)은 ①②를 다 어긋나고 ③ 은 `data-key` 를 요구하는데 마크에는 그 표식이
-  // 구조적으로 없어서 — 판이 떴다.
   {
-    const link = '<a href="https://x/f.txt" data-nabi-file="txt" download="">첨부파일</a>';
-    const dressed = `<meta charset='utf-8'><a href="https://x/f.txt" data-nabi-file="txt" download="" style="color: rgb(0, 0, 0); font-size: 16px">첨부파일</a>`;
-    ok('덧입힌 style 은 포장이라 같은 것으로 본다', sameClip(link, dressed));
-    ok('홑따옴표 style 도 걷힌다', sameClip(link, link.replace('download=""', `download="" style='color: red'`)));
-    eq('포장 걷기는 style 만 걷고 다른 속성은 안 건드린다', normalizeClipHtml(dressed), link);
-    ok('style 을 걷어도 알맹이가 다르면 안 걸린다', !sameClip(link, '<a href="https://x/f.txt" style="color: red">첨부파일</a>'));
+    const custom: Wing = {
+      w: 'exCard',
+      place: 'container',
+      holds: 'blocks',
+      attrs: ['exTone'],
+      parts: { exRow: { holds: 'blocks', attrs: ['exFlag'], boolAttrs: ['exFlag'] } },
+      toHtml: (_node, children, ctx) => ctx.element('section', children()),
+      partHtml: { exRow: (_node, children, ctx) => ctx.element('div', children()) },
+    };
+    const source = [
+      {
+        w: 'p',
+        ch: [
+          {
+            w: 'exCard',
+            a: { exTone: 'blue' },
+            ch: [
+              {
+                w: 'exRow',
+                a: { exFlag: 1 },
+                ch: [
+                  { w: 'p', ch: ['A'] },
+                  { w: 'p', ch: ['B'] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+    const made = createNabiWith([custom], { doc: source });
+    const selection = {
+      anchor: { path: [0, 0, 0, 0], offset: 0 },
+      focus: { path: [0, 0, 0, 1], offset: 1 },
+    };
+    eq(
+      'custom MIME body는 HTML 재파싱 없이 custom 구조와 attrs를 그대로 뜬다',
+      clipboardBodyOf(hostOf(made.nabi).doc(), selection, made.registry.env),
+      source,
+    );
+
+    const targetDoc = [
+      {
+        w: 'p',
+        ch: [{ w: 'table', ch: [{ w: 'tr', ch: [{ w: 'td', ch: [{ w: 'p', ch: [] }] }] }] }],
+      },
+    ];
+    const target = createNabiWith([...defaultWings, custom], { doc: targetDoc });
+    target.nabi.select(caretAt({ path: [0, 0, 0, 0, 0], offset: 0 }));
+    const flow = makePasteFlow({
+      nabi: target.nabi,
+      filters: makeBuiltinFilters({
+        env: target.registry.env,
+        parse: tinyHtml,
+        md: { has: () => false },
+        ...(target.registry.claim ? { claim: target.registry.claim } : {}),
+      }),
+      locale: () => 'ko',
+    });
+    const withEmpty = [
+      {
+        w: 'p',
+        ch: [
+          {
+            w: 'exCard',
+            ch: [
+              {
+                w: 'exRow',
+                ch: [
+                  { w: 'p', ch: ['A'] },
+                  { w: 'p', ch: [] },
+                  { w: 'p', ch: ['B'] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      { w: 'p', ch: ['C'] },
+    ];
+    ok(
+      'custom block container를 inline-only 표 칸에 붙인다',
+      flow(data({ custom: encodeClipboardBody(withEmpty) }), []),
+    );
+    eq('nested block holder의 문단 경계와 빈 holder는 각각 실제 br로 보존된다', target.nabi.getJson(), [
+      {
+        w: 'p',
+        ch: [
+          {
+            w: 'table',
+            ch: [
+              {
+                w: 'tr',
+                ch: [
+                  {
+                    w: 'td',
+                    ch: [
+                      { w: 'p', ch: ['A', { w: 'br', ch: [] }, { w: 'br', ch: [] }, 'B', { w: 'br', ch: [] }, 'C'] },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
   }
 
   // --- 클립보드에 직접 싣기 (260823_008 ㉡) ----------------------------------------------------
@@ -534,7 +806,11 @@ function throws(name: string, fn: () => void, wants?: string): void {
     );
 
     // 받침 br 은 **노드째** 걷는다 — 속성만 걷으면 진짜 라인이 되어 없던 줄이 생긴다.
-    eq('받침 br 은 노드째 걷힌다', dressClipHtml('<p data-key="k1">글<br data-nabi-filler=""></p>'), '<p data-key="k1">글</p>');
+    eq(
+      '받침 br 은 노드째 걷힌다',
+      dressClipHtml('<p data-key="k1">글<br data-nabi-filler=""></p>'),
+      '<p data-key="k1">글</p>',
+    );
     eq('진짜 라인은 그대로 산다', dressClipHtml('<p data-key="k1">앞<br>뒤</p>'), '<p data-key="k1">앞<br>뒤</p>');
     eq(
       '편집 드롭캡의 실제 첫 글자 상자는 복사 HTML에서 걷힌다',
@@ -546,21 +822,58 @@ function throws(name: string, fn: () => void, wants?: string): void {
       dressClipHtml('<span class="x" data-nabi-dropcap-letter="">가</span>나다'),
       '가나다',
     );
-    ok('data-key 는 남긴다 — ③ 겹의 잣대다', fromNabi(dressClipHtml('<p data-key="k1">글</p>')));
+    ok('data-key 는 HTML fallback에 남긴다', dressClipHtml('<p data-key="k1">글</p>').includes('data-key="k1"'));
 
     // 블록 맥락 되씌우기 — 조상은 안쪽부터 온다.
     eq('조상을 안쪽부터 두른다', wrapClipHtml('글', ['<b>', '<h1 data-key="k1">']), '<h1 data-key="k1"><b>글</b></h1>');
     eq('조상이 없으면 조각 그대로다', wrapClipHtml('글', []), '글');
 
-    // 싣기 — 실은 글자와 기억이 **같은 글자**여야 `sameClip` 의 ① 이 언제나 선다.
-    forgetClip();
     const loaded: Record<string, string> = {};
-    loadClipboard({ setData: (type, value) => { loaded[type] = value; } }, dressed, '첨부파일');
+    const body = [{ w: 'p', ch: [{ w: 'a', a: { href: 'https://x/f.txt', file: 'txt' }, ch: ['첨부파일'] }] }];
+    loadClipboard(
+      {
+        setData: (type, value) => {
+          loaded[type] = value;
+        },
+      },
+      body,
+      dressed,
+      '첨부파일',
+    );
+    eq('version 1 custom MIME을 함께 싣는다', loaded[NABI_CLIPBOARD_MIME], encodeClipboardBody(body));
     eq('html 을 우리가 싣는다', loaded['text/html'], dressed);
     eq('맨 글자도 함께 싣는다', loaded['text/plain'], '첨부파일');
-    eq('기억과 실은 글자가 같다', clipMemory(), dressed);
-    ok('그래서 되돌아오면 ① 겹이 선다', sameClip(clipMemory(), `<meta charset='utf-8'>${dressed}`));
-    forgetClip();
+
+    const fallback: Record<string, string> = {};
+    ok(
+      'custom MIME setData가 던져도 HTML과 평문 fallback은 둘 다 싣는다',
+      loadClipboard(
+        {
+          setData: (type, value) => {
+            if (type === NABI_CLIPBOARD_MIME) throw new Error('unsupported custom MIME');
+            fallback[type] = value;
+          },
+        },
+        body,
+        dressed,
+        '첨부파일',
+      ),
+    );
+    eq('custom MIME 실패 뒤 HTML fallback이 남는다', fallback['text/html'], dressed);
+    eq('custom MIME 실패 뒤 평문 fallback이 남는다', fallback['text/plain'], '첨부파일');
+    ok(
+      'HTML과 평문이 모두 실패하면 원본을 지울 성공으로 세지 않는다',
+      !loadClipboard(
+        {
+          setData: () => {
+            throw new Error('blocked');
+          },
+        },
+        body,
+        dressed,
+        '첨부파일',
+      ),
+    );
   }
 
   // --- 첨부는 문단으로 감싸고 빈 문단을 잇는다 (260823_010) ------------------------------------
@@ -577,21 +890,26 @@ function throws(name: string, fn: () => void, wants?: string): void {
     ok('표식 없는 그냥 링크는 아니다', !loneFileLink('<a href="https://x/">링크</a>'));
     ok('표식이 빈 첨부도 아니다 — attach 가 그것을 첨부로 안 센다', !loneFileLink(link.replace('"txt"', '""')));
 
-    eq('문단으로 감싸고 빈 문단을 **뒤에** 잇는다', fileClipHtml(link), `<p>${link}</p><p><br/></p>`);
+    eq('문단으로 감싸고 빈 문단을 **뒤에** 잇는다', fileClipHtml(link), `<p>${link}</p><p></p>`);
 
-    // 실은 글자와 기억이 같은 함수에서 나오므로 판정이 어긋날 자리가 없다.
-    forgetClip();
     const loaded: Record<string, string> = {};
     const html = fileClipHtml(link);
-    loadClipboard({ setData: (type, value) => { loaded[type] = value; } }, html, '첨부파일');
+    const body = [
+      { w: 'p', ch: [{ w: 'a', a: { href: 'https://x/f.txt', file: 'txt' }, ch: ['첨부파일'] }] },
+      { w: 'p', ch: [] },
+    ];
+    loadClipboard(
+      {
+        setData: (type, value) => {
+          loaded[type] = value;
+        },
+      },
+      body,
+      html,
+      '첨부파일',
+    );
     eq('감싼 글자를 그대로 싣는다', loaded['text/html'], html);
-    ok('되돌아와도 판이 안 뜬다', sameClip(clipMemory(), `<meta charset='utf-8'>${html}`));
-    // 브라우저는 빈 태그의 닫는 빗금을 안 적는다 — 그 하나로 갈리면 안 된다.
-    ok('br 의 닫는 빗금이 걷혀도 같다', sameClip(clipMemory(), `<meta charset='utf-8'>${html.replace('<br/>', '<br>')}`));
-    forgetClip();
-
-    eq('빈 태그의 빗금은 포장으로 센다', normalizeClipHtml('<p><br/></p>'), '<p><br></p>');
-    eq('빗금 앞의 공백도 함께 걷힌다', normalizeClipHtml('<img src="u" />'), '<img src="u">');
+    eq('첨부 body도 custom MIME에 같은 구조로 실린다', loaded[NABI_CLIPBOARD_MIME], encodeClipboardBody(body));
   }
 }
 

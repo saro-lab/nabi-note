@@ -20,7 +20,8 @@
 //   · 깨진 그림 표식(`wings/img/watch.ts`) — 시트가 그 자리에 깨짐을 그린다.
 //   · 미리보기를 못 그린 상자(`ui/upload.ts`) — 그 자리에서 첨부 상자로 모양이 바뀐다.
 // 같은 말을 화면과 toast 가 두 번 하면 사람은 두 번 다 안 읽는다.
-import type { Nabi } from '../../editor/index.js';
+import { hostOf, type Nabi } from '../../editor/index.js';
+import { AsyncMountScope, DisposerStack, HostElementLease } from '../../lifecycle.js';
 import { makeTranslator, type Translator } from '../../locale/index.js';
 import {
   acceptFiles,
@@ -106,26 +107,38 @@ export function mountUpload(options: UploadOptions): UploadMount {
   const { nabi, uploader } = options;
   const t = options.translator ?? makeTranslator(options.locale);
   const attachmentLabel = t.t('upload.attachment');
+  const lifetime = new AsyncMountScope();
   let running = false;
-  let controller = new AbortController();
   let counter = 0;
-  let release: (() => void) | null = null;
+  let active: {
+    readonly generation: number;
+    readonly controller: AbortController;
+    readonly release: () => void;
+  } | null = null;
 
-  const lock = (): void => {
-    release = nabi.$lock('upload');
-    const root = options.root;
-    if (root) {
-      root.setAttribute('contenteditable', 'false');
-      root.classList.add('nabi-uploading');
+  const lock = (): (() => void) => {
+    const releases = new DisposerStack();
+    try {
+      releases.add(hostOf(nabi).lock('upload'));
+      const root = options.root;
+      if (root) {
+        const lease = new HostElementLease(root);
+        releases.add(() => lease.dispose());
+        lease.attribute('contenteditable', 'false');
+        lease.className('nabi-uploading', true);
+      }
+      return () => releases.dispose();
+    } catch (error) {
+      releases.dispose();
+      throw error;
     }
   };
-  const unlock = (): void => {
-    release?.();
-    release = null;
-    const root = options.root;
-    if (root) {
-      root.setAttribute('contenteditable', 'true');
-      root.classList.remove('nabi-uploading');
+
+  const call = (fn: (() => void) | undefined): void => {
+    try {
+      fn?.();
+    } catch {
+      // Host UI callbacks are not allowed to strand the editor lock.
     }
   };
 
@@ -137,43 +150,65 @@ export function mountUpload(options: UploadOptions): UploadMount {
       return;
     }
     const said = t.t(`upload.${problem.code}`, { name: problem.file?.name ?? '', max: problem.max ?? '' });
-    nabi.$toast('warn', said, UPLOAD_TOAST_MS);
+    hostOf(nabi).toast('warn', said, UPLOAD_TOAST_MS);
   };
 
   const take = (files: readonly UploadFile[]): void => {
-    if (files.length === 0) return;
+    if (files.length === 0 || lifetime.disposed) return;
     // 배치는 한 번에 하나다 — 도는 중에 넘어온 파일은 무시한다(잠긴 동안의 편집과 같은 규칙).
     // 다만 **무시했다는 것은 말한다**: 떨어뜨린 파일이 아무 자국도 없이 사라지면 사람은 자기가
     // 놓친 줄 알고 같은 몸짓을 되풀이한다.
     if (running) {
-      nabi.$toast('warn', t.t('upload.busy'), UPLOAD_TOAST_MS);
+      hostOf(nabi).toast('warn', t.t('upload.busy'), UPLOAD_TOAST_MS);
       return;
     }
-    const accepted = acceptFiles(files, options, refuse);
-    if (accepted.length === 0) return;
+    const generation = lifetime.next();
+    const accepted = acceptFiles(files, options, (problem) => {
+      if (!lifetime.active(generation) || running || active !== null) return;
+      refuse(problem);
+    });
+    if (accepted.length === 0 || !lifetime.active(generation) || running || active !== null) return;
 
+    const controller = new AbortController();
+    const batch = { generation, controller, release: lock() };
+    active = batch;
     running = true;
-    lock();
     const signal = controller.signal;
 
     // 화면이 세울 자리표시자 목록 — **전송을 시작하기 전에** 알린다. 상자가 먼저 서고 그 위에서
     // 숫자가 걷는 것이 순서다(끝나고 나서 나타나면 아무것도 안 보인 채로 기다린 것이 된다).
-    const started: StartedTask[] = accepted.map((file, at) => ({
-      id: `u${counter + at + 1}`,
-      file,
-      name: file.name,
-      size: file.size,
-      image: isImageFile(file),
-    }));
-    options.onStart?.(started);
+    const started: StartedTask[] = accepted.map((file) => {
+      counter += 1;
+      return {
+        id: `u${counter}`,
+        file,
+        name: file.name,
+        size: file.size,
+        image: isImageFile(file),
+      };
+    });
+    try {
+      options.onStart?.(started);
+    } catch {
+      if (lifetime.active(generation) && active === batch) {
+        lifetime.invalidate();
+        active = null;
+        running = false;
+        controller.abort();
+        batch.release();
+        call(() => options.onDone?.({ committed: 0, cancelled: true }));
+      }
+      return;
+    }
+    if (!lifetime.active(generation) || active !== batch) return;
 
     // 못 올라간 파일의 이름 — 배치가 끝난 뒤 한 마디로 모아 말한다. 파일마다 따로 말하면
     // 상한(기본 셋)을 넘겨 서로를 밀어내고, 정작 몇 개가 빠졌는지가 안 남는다.
     const failed: string[] = [];
 
-    const work = accepted.map(async (file): Promise<UploadItem | null> => {
-      counter += 1;
-      const id = `u${counter}`;
+    const work = accepted.map(async (file, at): Promise<UploadItem | null> => {
+      if (!lifetime.active(generation) || active !== batch) return null;
+      const id = (started[at] as StartedTask).id;
       const dot = file.name.lastIndexOf('.');
       const task: UploadTask = {
         id,
@@ -182,11 +217,16 @@ export function mountUpload(options: UploadOptions): UploadMount {
         extension: dot > 0 ? file.name.slice(dot + 1).toLowerCase() : '',
         size: file.size,
         type: file.type,
-        onProgress: (percent) => options.onProgress?.(id, Math.max(0, Math.min(100, percent))),
+        onProgress: (percent) => {
+          if (!lifetime.active(generation) || active !== batch) return;
+          call(() => options.onProgress?.(id, Math.max(0, Math.min(100, percent))));
+        },
         signal,
       };
       try {
+        if (!lifetime.active(generation) || active !== batch) return null;
         const answer = await uploader(task);
+        if (!lifetime.active(generation) || active !== batch) return null;
         // 빈 답도 실패다 — 훅이 주소를 못 돌려줬다는 뜻이라 문서에 세울 것이 없다.
         if (!answer || typeof answer.uri !== 'string' || answer.uri === '') {
           failed.push(file.name);
@@ -194,6 +234,7 @@ export function mountUpload(options: UploadOptions): UploadMount {
         }
         return { kind: isImageFile(file) ? 'image' : 'file', uri: answer.uri, name: file.name };
       } catch {
+        if (!lifetime.active(generation) || active !== batch) return null;
         // 파일 하나가 터져도 배치는 간다 — 올라간 것들은 올라간 것이다. 다만 **조용히 가지는
         // 않는다**: 여기서 삼킨 예외가 예전에는 어디에도 안 남아, 자리표시자만 걷히고 끝났다.
         failed.push(file.name);
@@ -202,16 +243,20 @@ export function mountUpload(options: UploadOptions): UploadMount {
     });
 
     void Promise.all(work).then(async (answers) => {
+      if (!lifetime.active(generation) || active !== batch) return;
       const items = answers.filter((item): item is UploadItem => item !== null);
       // **잠금을 먼저 푼다** — 커밋도 커맨드라, 잠긴 채로는 자기 자신도 못 들어온다.
-      running = false;
-      unlock();
-      const cancelled = signal.aborted;
+      batch.release();
       // 숫자를 100 까지 몰고 나서 커밋한다 — 87% 에서 실물이 튀어나오면 "끝난 건가?" 가 남고
       // 커밋 뒤에 몰면 실물과 자리표시자가 함께 보인다. 그 사이에 이 한 걸음이 있다.
-      if (!cancelled) await options.onSettle?.();
+      try {
+        await options.onSettle?.();
+      } catch {
+        // Settling is presentation only; uploaded data can still commit.
+      }
+      if (!lifetime.active(generation) || active !== batch) return;
       // 끊긴 배치는 커밋하지 않는다 — 취소는 "여기까지만 올려 두기"가 아니다.
-      if (!cancelled && items.length > 0) {
+      if (items.length > 0) {
         // 배치 전체가 undo 한 점이다.
         nabi.group(() => {
           nabi.applyCommand('commitUpload', { items, label: attachmentLabel });
@@ -220,21 +265,29 @@ export function mountUpload(options: UploadOptions): UploadMount {
       // 못 올라간 것이 있으면 여기서 말한다 — 커밋 뒤라야 "무엇이 섰고 무엇이 빠졌나"가
       // 화면과 말이 같은 순간을 가리킨다. **취소된 배치는 말하지 않는다**: 끊긴 파일이 전부
       // 실패로 잡히지만 그것은 사람이 시킨 일이라 오류가 아니다.
-      if (!cancelled && failed.length > 0) {
+      if (failed.length > 0) {
         const said =
           failed.length === 1
             ? t.t('upload.failed', { name: failed[0] as string })
             : t.t('upload.failed_many', { n: failed.length });
-        nabi.$toast('error', said, UPLOAD_TOAST_MS);
+        hostOf(nabi).toast('error', said, UPLOAD_TOAST_MS);
       }
       // 커밋 **뒤**에 알린다 — 화면은 실물이 선 다음에 자리표시자를 걷어야 깜박이지 않는다.
-      options.onDone?.({ committed: cancelled ? 0 : items.length, cancelled });
+      active = null;
+      running = false;
+      call(() => options.onDone?.({ committed: items.length, cancelled: false }));
     });
   };
 
-  const abort = (): void => {
-    controller.abort();
-    controller = new AbortController();
+  const abort = (notify: boolean): void => {
+    const batch = active;
+    if (!batch) return;
+    lifetime.invalidate();
+    active = null;
+    running = false;
+    batch.controller.abort();
+    batch.release();
+    if (notify) call(() => options.onDone?.({ committed: 0, cancelled: true }));
   };
 
   return {
@@ -242,12 +295,11 @@ export function mountUpload(options: UploadOptions): UploadMount {
     isRunning: () => running,
     cancel() {
       if (!running) return;
-      abort();
+      abort(true);
     },
     unmount() {
-      abort();
-      running = false;
-      unlock();
+      abort(false);
+      lifetime.dispose();
     },
   };
 }

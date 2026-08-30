@@ -2,14 +2,7 @@
 // 글자·라인은 한 칸, 물건(래퍼문단)은 통째, 문단끼리 만나면 병합(속성은 윗 속성).
 // 방향 규칙은 래퍼문단 안까지 관통한다 — 오프셋 0/1 에서는 경계 너머 이웃에 작용한다.
 // 2단계(선택 후 삭제)는 없다 — 즉시 삭제, 안전망은 undo 한 걸음이다.
-import {
-  P,
-  isElement,
-  isWrapper,
-  type ElementNode,
-  type NabiDoc,
-  type NabiNode,
-} from '../schema/index.js';
+import { P, isElement, isWrapper, type ElementNode, type NabiDoc, type NabiNode } from '../schema/index.js';
 import {
   holderLength,
   isHolder,
@@ -242,13 +235,8 @@ function removeSlot(
 ): EditResult {
   const terminal = terminalOf(env);
   const runs = holderRuns(holder, terminal);
-  const ch = fromRuns([
-    ...sliceRuns(runs, 0, from),
-    ...sliceRuns(runs, to, Number.MAX_SAFE_INTEGER),
-  ]);
-  const next = spliceSiblings(doc, path.slice(0, -1), path[path.length - 1] as number, 1, [
-    withChildren(holder, ch),
-  ]);
+  const ch = fromRuns([...sliceRuns(runs, 0, from), ...sliceRuns(runs, to, Number.MAX_SAFE_INTEGER)]);
+  const next = spliceSiblings(doc, path.slice(0, -1), path[path.length - 1] as number, 1, [withChildren(holder, ch)]);
   return { doc: next, caret: { path, offset: caretAt } };
 }
 

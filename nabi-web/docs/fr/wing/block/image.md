@@ -1,14 +1,39 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Image
+description: Insérez une URL d'image et ajustez la largeur et l'alignement.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Image
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Insérez une URL d'image et ajustez sa largeur et son alignement. Par défaut, les adresses sont limitées à `http:`, `https:` ou aux chemins du même site, et une nouvelle image commence centrée à 60 % de la largeur.
 
-[Open the Korean canonical page](/ko/guide/features)
+La largeur n'est stockée que par étapes fixes, et l'alignement est stocké sur le paragraphe qui englobe l'image. Pour utiliser les aperçus `blob:` ou `data:image/...`, autorisez explicitement les URL locales à la fois dans la wing d'image et dans l'assemblage de l'éditeur. Les URL de données SVG ne sont pas autorisées.
 
-</div>
+<WingDemo path="/wing/block/image" />
+
+```ts
+const selected = wings().use('img', {
+  allowLocalUrls: false,
+}).build()
+```
+
+Cette wing insère une adresse dans le document ; elle ne téléverse pas de fichiers. Pour envoyer des fichiers à un serveur, connectez la [wing de téléversement](/fr/wing/etc/upload).
+
+## Styles CSS
+
+Stylisez les images avec `.nabi-content img`. Conservez la largeur et l'alignement stockés intacts, et modifiez uniquement les détails visuels tels que les bordures ou les ombres.
+
+```css
+.article-body img {
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.dark .article-body img { box-shadow: 0 8px 24px rgb(0 0 0 / 35%); }
+```
+
+Conservez les règles par défaut pour `max-inline-size`, `block-size`, la largeur et l'alignement. La taille de l'image est stockée dans le document, donc forcer une largeur CSS fixe peut entrer en conflit avec la largeur choisie par l'auteur.

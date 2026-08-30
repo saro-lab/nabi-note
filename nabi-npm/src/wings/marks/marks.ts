@@ -6,10 +6,14 @@
 // old 번역이고, 16×16 틀은 ui 가 씌운다 — wing 은 화면 도구를 모른다.
 import { simpleMark, type Wing } from '../../wing/index.js';
 import type { MdBuilder } from '../../io/index.js';
+import { $markBuiltinAttrOwner } from '../../schema/env.js';
 
 // md 표식 하나로 감싸는 마크 — 셋뿐이다(굵게·기울임·취소선). 밑줄·첨자 둘은 md 에 자리가
 // 없어서 `toMd` 를 **안 단다** — 그러면 그 노드만 html 로 떨어진다(뜻을 잃는 것보다 낫다).
-const wrapMd = (mark: string): MdBuilder => (_node, ctx) => `${mark}${ctx.children()}${mark}`;
+const wrapMd =
+  (mark: string): MdBuilder =>
+  (_node, ctx) =>
+    `${mark}${ctx.children()}${mark}`;
 
 const ICONS = {
   b:
@@ -46,12 +50,28 @@ const SCRIPT_CSS = `
 export const boldWing: Wing = {
   ...simpleMark({
     w: 'b',
+    clearable: true,
     button: {
       group: 'emphasis',
       accelerator: 'mod+b',
       shortcut: 'B',
       svg: ICONS.b,
-      label: { ko: '굵게', en: 'Bold', ja: '太字', zh: '加粗', de: 'Fett', fr: 'Gras', es: 'Negrita', pt: 'Negrito', ru: 'Полужирный', ar: 'عريض', hi: 'बोल्ड', bn: 'গাঢ়', ur: 'جلی', id: 'Tebal' },
+      label: {
+        ko: '굵게',
+        en: 'Bold',
+        ja: '太字',
+        zh: '加粗',
+        de: 'Fett',
+        fr: 'Gras',
+        es: 'Negrita',
+        pt: 'Negrito',
+        ru: 'Полужирный',
+        ar: 'عريض',
+        hi: 'बोल्ड',
+        bn: 'গাঢ়',
+        ur: 'جلی',
+        id: 'Tebal',
+      },
       action: { kind: 'mark' },
     },
   }),
@@ -62,12 +82,28 @@ export const boldWing: Wing = {
 export const italicWing: Wing = {
   ...simpleMark({
     w: 'i',
+    clearable: true,
     button: {
       group: 'emphasis',
       accelerator: 'mod+i',
       shortcut: 'I',
       svg: ICONS.i,
-      label: { ko: '기울임', en: 'Italic', ja: '斜体', zh: '斜体', de: 'Kursiv', fr: 'Italique', es: 'Cursiva', pt: 'Itálico', ru: 'Курсив', ar: 'مائل', hi: 'इटैलिक', bn: 'তির্যক', ur: 'ترچھا', id: 'Miring' },
+      label: {
+        ko: '기울임',
+        en: 'Italic',
+        ja: '斜体',
+        zh: '斜体',
+        de: 'Kursiv',
+        fr: 'Italique',
+        es: 'Cursiva',
+        pt: 'Itálico',
+        ru: 'Курсив',
+        ar: 'مائل',
+        hi: 'इटैलिक',
+        bn: 'তির্যক',
+        ur: 'ترچھا',
+        id: 'Miring',
+      },
       action: { kind: 'mark' },
     },
   }),
@@ -79,12 +115,28 @@ export const italicWing: Wing = {
 export const underlineWing: Wing = {
   ...simpleMark({
     w: 'u',
+    clearable: true,
     button: {
       group: 'emphasis',
       accelerator: 'mod+u',
       shortcut: 'U',
       svg: ICONS.u,
-      label: { ko: '밑줄', en: 'Underline', ja: '下線', zh: '下划线', de: 'Unterstrichen', fr: 'Souligné', es: 'Subrayado', pt: 'Sublinhado', ru: 'Подчёркнутый', ar: 'تسطير', hi: 'रेखांकित', bn: 'আন্ডারলাইন', ur: 'خط کشیدہ', id: 'Garis bawah' },
+      label: {
+        ko: '밑줄',
+        en: 'Underline',
+        ja: '下線',
+        zh: '下划线',
+        de: 'Unterstrichen',
+        fr: 'Souligné',
+        es: 'Subrayado',
+        pt: 'Sublinhado',
+        ru: 'Подчёркнутый',
+        ar: 'تسطير',
+        hi: 'रेखांकित',
+        bn: 'আন্ডারলাইন',
+        ur: 'خط کشیدہ',
+        id: 'Garis bawah',
+      },
       action: { kind: 'mark' },
     },
   }),
@@ -94,11 +146,27 @@ export const underlineWing: Wing = {
 export const strikeWing: Wing = {
   ...simpleMark({
     w: 's',
+    clearable: true,
     button: {
       group: 'emphasis',
       shortcut: 'S',
       svg: ICONS.s,
-      label: { ko: '취소선', en: 'Strikethrough', ja: '取り消し線', zh: '删除线', de: 'Durchgestrichen', fr: 'Barré', es: 'Tachado', pt: 'Tachado', ru: 'Зачёркнутый', ar: 'يتوسطه خط', hi: 'स्ट्राइकथ्रू', bn: 'স্ট্রাইকথ্রু', ur: 'خط زدہ', id: 'Coret' },
+      label: {
+        ko: '취소선',
+        en: 'Strikethrough',
+        ja: '取り消し線',
+        zh: '删除线',
+        de: 'Durchgestrichen',
+        fr: 'Barré',
+        es: 'Tachado',
+        pt: 'Tachado',
+        ru: 'Зачёркнутый',
+        ar: 'يتوسطه خط',
+        hi: 'स्ट्राइकथ्रू',
+        bn: 'স্ট্রাইকথ্রু',
+        ur: 'خط زدہ',
+        id: 'Coret',
+      },
       action: { kind: 'mark' },
     },
   }),
@@ -109,11 +177,28 @@ export const strikeWing: Wing = {
 export const subscriptWing: Wing = {
   ...simpleMark({
     w: 'sub',
-    button: { group: 'script', svg: ICONS.sub, label: {
-        ko: '아랫첨자', en: 'Subscript', ja: '下付き文字', zh: '下标', de: 'Tiefgestellt', fr: 'Indice',
-        es: 'Subíndice', pt: 'Subscrito', ru: 'Подстрочный', ar: 'منخفض', hi: 'सबस्क्रिप्ट',
-        bn: 'সাবস্ক্রিপ্ট', ur: 'زیریں', id: 'Subskrip',
-      }, action: { kind: 'mark' } },
+    clearable: true,
+    button: {
+      group: 'script',
+      svg: ICONS.sub,
+      label: {
+        ko: '아랫첨자',
+        en: 'Subscript',
+        ja: '下付き文字',
+        zh: '下标',
+        de: 'Tiefgestellt',
+        fr: 'Indice',
+        es: 'Subíndice',
+        pt: 'Subscrito',
+        ru: 'Подстрочный',
+        ar: 'منخفض',
+        hi: 'सबस्क्रिप्ट',
+        bn: 'সাবস্ক্রিপ্ট',
+        ur: 'زیریں',
+        id: 'Subskrip',
+      },
+      action: { kind: 'mark' },
+    },
     styles: SCRIPT_CSS,
   }),
   basic: true,
@@ -122,11 +207,28 @@ export const subscriptWing: Wing = {
 export const superscriptWing: Wing = {
   ...simpleMark({
     w: 'sup',
-    button: { group: 'script', svg: ICONS.sup, label: {
-        ko: '윗첨자', en: 'Superscript', ja: '上付き文字', zh: '上标', de: 'Hochgestellt', fr: 'Exposant',
-        es: 'Superíndice', pt: 'Sobrescrito', ru: 'Надстрочный', ar: 'مرتفع', hi: 'सुपरस्क्रिप्ट',
-        bn: 'সুপারস্ক্রিপ্ট', ur: 'بالائی', id: 'Superskrip',
-      }, action: { kind: 'mark' } },
+    clearable: true,
+    button: {
+      group: 'script',
+      svg: ICONS.sup,
+      label: {
+        ko: '윗첨자',
+        en: 'Superscript',
+        ja: '上付き文字',
+        zh: '上标',
+        de: 'Hochgestellt',
+        fr: 'Exposant',
+        es: 'Superíndice',
+        pt: 'Sobrescrito',
+        ru: 'Надстрочный',
+        ar: 'مرتفع',
+        hi: 'सुपरस्क्रिप्ट',
+        bn: 'সুপারস্ক্রিপ্ট',
+        ur: 'بالائی',
+        id: 'Superskrip',
+      },
+      action: { kind: 'mark' },
+    },
     // 첨자 둘이 시트 하나를 나눠 쓴다 — 문자열이 같으므로 문서에는 **한 번만** 실린다 (12 의 dedupe).
     styles: SCRIPT_CSS,
   }),
@@ -144,3 +246,5 @@ export const simpleMarkWings: readonly Wing[] = [
   superscriptWing,
   subscriptWing,
 ];
+
+for (const wing of simpleMarkWings) $markBuiltinAttrOwner(wing, [wing.w]);

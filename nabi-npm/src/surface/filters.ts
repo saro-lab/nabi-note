@@ -6,7 +6,7 @@
 // makeRegistry 가 이미 접었다) → 내장 셋(nabi·html·md)**. 맨 글자 기본값은 필터가 아니라
 // 목록의 끝이라 여기 없다(`collectCandidates` 가 늘 세운다).
 import { parseNodes, type ParseNode } from '../html/index.js';
-import { makeBuiltinFilters, type IoFilter, type MdEnv } from '../io/index.js';
+import { $assertIoFilter, makeBuiltinFilters, type IoFilter, type MdEnv } from '../io/index.js';
 import type { Registry } from '../wing/index.js';
 
 export interface FilterListOptions {
@@ -31,7 +31,8 @@ export function mdEnvOf(registry: Registry, allowLocalUrls?: boolean): MdEnv {
 
 export function ioFiltersOf(options: FilterListOptions): readonly IoFilter[] {
   const { registry } = options;
-  return [
+  const extraCount = options.extra?.length ?? 0;
+  const filters = [
     ...(options.extra ?? []),
     ...registry.ioFilters,
     ...makeBuiltinFilters({
@@ -42,4 +43,15 @@ export function ioFiltersOf(options: FilterListOptions): readonly IoFilter[] {
       ...(options.allowLocalUrls ? { allowLocalUrls: true } : {}),
     }),
   ];
+  const reserved = new Set(['nabi', 'html', 'markdown', 'text']);
+  const seen = new Set<string>();
+  for (const [index, filter] of filters.entries()) {
+    $assertIoFilter(filter);
+    if (index < extraCount && reserved.has(filter.id)) {
+      throw new Error(`IO filter id "${filter.id}" is reserved by a built-in format`);
+    }
+    if (seen.has(filter.id)) throw new Error(`IO filter id "${filter.id}" is duplicated`);
+    seen.add(filter.id);
+  }
+  return filters;
 }

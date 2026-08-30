@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Разделитель
+description: Вставьте горизонтальную линию между блоками.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Разделитель
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Горизонтальная линия разделяет поток документа. В пустом абзаце введите не менее трёх дефисов и нажмите Enter либо вставьте её с панели инструментов.
 
-[Open the Korean canonical page](/ko/guide/features)
+Разделитель — самостоятельный блок без текста, поэтому не содержит форматирование вроде заголовка или цвета. Используйте его только для разделения соседних абзацев.
 
-</div>
+<WingDemo path="/wing/block/divider" />
+
+```ts
+const selected = wings().use('hr').build()
+```

@@ -3,6 +3,7 @@
 import { makeEnv, type ElementNode, type NabiDoc, type NabiNode } from '../src/schema/index.js';
 import {
   comparePositions,
+  documentIndex,
   deleteBackward,
   deleteForward,
   deleteRange,
@@ -21,7 +22,7 @@ import {
 import { done, eq, ok } from './net.js';
 
 const ENV: EditEnv = {
-...makeEnv({
+  ...makeEnv({
     voids: ['hr', 'img', 'youtube'],
     lumps: ['hr', 'img', 'youtube', 'table', 'ul', 'ol', 'tl', 'quote', 'details', 'code'],
     blockHolders: ['table', 'tr', 'td', 'ul', 'li', 'ol', 'oli', 'tl', 'tli', 'quote', 'details'],
@@ -106,10 +107,16 @@ function checked(name: string, result: EditResult): EditResult {
   //   h  **글이 있는 쪽만** — 빈 문단은 제목이 아니다
   const doc: NabiDoc = [p(['Xy'], { h: 2, a: 'c', dc: 1 })];
   const mid = checked('분할: 속성(중간)', splitParagraph(doc, at([0], 1), ENV));
-  eq('분할: 가운데를 가르면 양쪽 다 제목이다', mid.doc, [p(['X'], { h: 2, a: 'c', dc: 1 }), p(['y'], { h: 2, a: 'c' })]);
+  eq('분할: 가운데를 가르면 양쪽 다 제목이다', mid.doc, [
+    p(['X'], { h: 2, a: 'c', dc: 1 }),
+    p(['y'], { h: 2, a: 'c' }),
+  ]);
 
   const front = checked('분할: 속성(맨 앞)', splitParagraph(doc, at([0], 0), ENV));
-  eq('분할: 빈 머리는 제목을 안 받고, 꼬리가 드롭캡을 갖는다', front.doc, [p([], { a: 'c' }), p(['Xy'], { h: 2, a: 'c', dc: 1 })]);
+  eq('분할: 빈 머리는 제목을 안 받고, 꼬리가 드롭캡을 갖는다', front.doc, [
+    p([], { a: 'c' }),
+    p(['Xy'], { h: 2, a: 'c', dc: 1 }),
+  ]);
 
   // 제목 끝에서 엔터 — **다음 줄은 본문을 쓰려는 자리다.** 빈 문단이 제목을 물려받으면
   // 글자를 치는 순간 제목 둘이 되어, 사람이 매번 제목을 풀어야 했다.
@@ -163,10 +170,7 @@ function checked(name: string, result: EditResult): EditResult {
 }
 {
   // 문단 첫머리 — 앞이 문단이면 병합 (속성은 윗 속성, 빈 문단도 같은 규칙).
-  const r = checked(
-    'BS: 병합',
-    deleteBackward([p(['ab'], { h: 1 }), p(['cd'], { a: 'c' })], at([1], 0), ENV),
-);
+  const r = checked('BS: 병합', deleteBackward([p(['ab'], { h: 1 }), p(['cd'], { a: 'c' })], at([1], 0), ENV));
   eq('BS: 병합 — 윗 속성', r.doc, [p(['abcd'], { h: 1 })]);
   eq('BS: 병합 — 이음매 캐럿', r.caret, at([0], 2));
 
@@ -193,23 +197,23 @@ function checked(name: string, result: EditResult): EditResult {
 
   // 목록 사이에 끼어 있던 문단이 사라지면 **위아래 목록은 원래 하나였다** — 둘로 남기면
   // 번호가 1 부터 다시 시작한다.
-  const listOf = (...texts: string[]) => el('ul', texts.map((t) => el('li', [p([t])])));
+  const listOf = (...texts: string[]) =>
+    el(
+      'ul',
+      texts.map((t) => el('li', [p([t])])),
+    );
   const between = checked(
     'BS: 목록 사이의 문단',
     deleteBackward([wrap(listOf('aaa')), p(['mid']), wrap(listOf('bbb'))], at([1], 0), ENV),
-);
+  );
   eq('BS: 문단이 앞 목록 끝에 붙고 뒤 목록도 합쳐진다', between.doc, [wrap(listOf('aaamid', 'bbb'))]);
   eq('BS: 캐럿은 붙은 자리', between.caret, at([0, 0, 0, 0], 3));
 
   // 갈래가 다르면 안 합친다 — 글머리와 번호는 서로 다른 목록이다.
   const mixed = checked(
     'BS: 갈래가 다른 목록',
-    deleteBackward(
-      [wrap(listOf('aaa')), p(['mid']), wrap(el('ol', [el('oli', [p(['bbb'])])]))],
-      at([1], 0),
-      ENV,
-),
-);
+    deleteBackward([wrap(listOf('aaa')), p(['mid']), wrap(el('ol', [el('oli', [p(['bbb'])])]))], at([1], 0), ENV),
+  );
   eq('BS: 뒤 목록은 그대로 남는다', mixed.doc.length, 2);
 }
 {
@@ -245,10 +249,7 @@ function checked(name: string, result: EditResult): EditResult {
 }
 {
   // Delete 대칭.
-  const merge = checked(
-    'Del: 병합',
-    deleteForward([p(['ab'], { h: 1 }), p(['cd'], { a: 'c' })], at([0], 2), ENV),
-);
+  const merge = checked('Del: 병합', deleteForward([p(['ab'], { h: 1 }), p(['cd'], { a: 'c' })], at([0], 2), ENV));
   eq('Del: 병합 — 지금(윗) 속성', merge.doc, [p(['abcd'], { h: 1 })]);
   eq('Del: 캐럿 제자리', merge.caret, at([0], 2));
 
@@ -273,17 +274,23 @@ function checked(name: string, result: EditResult): EditResult {
 
 // --- 범위 삭제 -------------------------------------------------------------------------------
 {
-  const same = checked('범위: 한 홀더 안', deleteRange([p(['abcdef'])], { anchor: at([0], 1), focus: at([0], 4) }, ENV));
+  const same = checked(
+    '범위: 한 홀더 안',
+    deleteRange([p(['abcdef'])], { anchor: at([0], 1), focus: at([0], 4) }, ENV),
+  );
   eq('범위: 가운데가 사라진다', same.doc, [p(['aef'])]);
   eq('범위: 캐럿 시작', same.caret, at([0], 1));
 
-  const rev = checked('범위: 역방향 정규화', deleteRange([p(['abcdef'])], { anchor: at([0], 4), focus: at([0], 1) }, ENV));
+  const rev = checked(
+    '범위: 역방향 정규화',
+    deleteRange([p(['abcdef'])], { anchor: at([0], 4), focus: at([0], 1) }, ENV),
+  );
   eq('범위: 역방향도 같다', rev.doc, [p(['aef'])]);
 
   const cross = checked(
     '범위: 문단 둘 병합',
     deleteRange([p(['abc'], { h: 1 }), p(['def'], { a: 'c' })], { anchor: at([0], 2), focus: at([1], 1) }, ENV),
-);
+  );
   eq('범위: 잘리고 병합(윗 속성)', cross.doc, [p(['abef'], { h: 1 })]);
   eq('범위: 캐럿 시작', cross.caret, at([0], 2));
 
@@ -313,20 +320,20 @@ function checked(name: string, result: EditResult): EditResult {
   const lump = checked(
     '범위: 사이 물건 통삭제(042)',
     deleteRange([p(['abc']), wrap(img()), p(['def'])], { anchor: at([0], 1), focus: at([2], 2) }, ENV),
-);
+  );
   eq('범위: 물건이 함께 사라진다', lump.doc, [p(['af'])]);
 
   const startLump = checked(
     '범위: 시작이 래퍼 0',
     deleteRange([wrap(img()), p(['ab'])], { anchor: at([0], 0), focus: at([1], 1) }, ENV),
-);
+  );
   eq('범위: 래퍼 통삭제 + 끝 문단 잘림', startLump.doc, [p(['b'])]);
   eq('범위: 캐럿 그 자리 처음', startLump.caret, at([0], 0));
 
   const whole = checked(
     '범위: 전체 선택',
     deleteRange([p(['ab']), wrap(img())], { anchor: at([0], 0), focus: at([1], 1) }, ENV),
-);
+  );
   eq('범위: 경계 문단은 남는다(빈 문단)', whole.doc, [p([])]);
   eq('범위: 캐럿', whole.caret, at([0], 0));
 }
@@ -336,7 +343,7 @@ function checked(name: string, result: EditResult): EditResult {
   const r = checked(
     '범위: 표 부분 — 속만',
     deleteRange([p(['ab']), table], { anchor: at([0], 1), focus: at([1, 0, 0, 1, 0], 1) }, ENV),
-);
+  );
   eq('범위: 칸 구조 유지·속만 비움', r.doc, [
     p(['a']),
     wrap(el('table', [el('tr', [el('td', [p([])]), el('td', [p(['f'])])])])),
@@ -400,7 +407,7 @@ function checked(name: string, result: EditResult): EditResult {
   const r = checked(
     '범위: 인용 속 문단들',
     deleteRange(doc, { anchor: at([0, 0, 0], 1), focus: at([0, 0, 2], 1) }, ENV),
-);
+  );
   eq('범위: 인용 속 병합', r.doc, [wrap(el('quote', [p(['af'])]))]);
 }
 
@@ -437,39 +444,72 @@ function checked(name: string, result: EditResult): EditResult {
   const cross = checked(
     '마크: 홀더 둘',
     toggleMark([p(['ab']), p(['cd'])], { anchor: at([0], 1), focus: at([1], 1) }, b([]), ENV),
-);
+  );
   eq('마크: 두 문단에 걸친다', cross.doc, [p(['a', b(['b'])]), p([b(['c']), 'd'])]);
 
-  const line = checked('마크: 라인 포함', toggleMark([p(['a', br(), 'b'])], { anchor: at([0], 0), focus: at([0], 3) }, b([]), ENV));
+  const line = checked(
+    '마크: 라인 포함',
+    toggleMark([p(['a', br(), 'b'])], { anchor: at([0], 0), focus: at([0], 3) }, b([]), ENV),
+  );
   eq('마크: 라인도 마크 안', line.doc, [p([b(['a', br(), 'b'])])]);
 
   const hl = checked('마크: 값 마크 set', setMark([p(['abcd'])], range, 'hl', { c: 'yellow' }, ENV));
   eq('마크: 형광펜', hl.doc, [p(['a', el('hl', ['bc'], { c: 'yellow' }), 'd'])]);
 
-  const swap = checked('마크: 값 교체', setMark([p([el('hl', ['ab'], { c: 'yellow' })])], { anchor: at([0], 0), focus: at([0], 2) }, 'hl', { c: 'green' }, ENV));
+  const swap = checked(
+    '마크: 값 교체',
+    setMark(
+      [p([el('hl', ['ab'], { c: 'yellow' })])],
+      { anchor: at([0], 0), focus: at([0], 2) },
+      'hl',
+      { c: 'green' },
+      ENV,
+    ),
+  );
   eq('마크: 색이 갈린다', swap.doc, [p([el('hl', ['ab'], { c: 'green' })])]);
 
-  const clear = checked('마크: 값 벗김', setMark([p([el('hl', ['ab'], { c: 'yellow' })])], { anchor: at([0], 0), focus: at([0], 2) }, 'hl', null, ENV));
+  const clear = checked(
+    '마크: 값 벗김',
+    setMark([p([el('hl', ['ab'], { c: 'yellow' })])], { anchor: at([0], 0), focus: at([0], 2) }, 'hl', null, ENV),
+  );
   eq('마크: 맨글로', clear.doc, [p(['ab'])]);
 }
 {
   // 문단 속성 — 접힌 캐럿은 자기 문단, 래퍼는 정렬만, 값 검증은 cocoon 과 같은 규칙.
-  const one = checked('속성: 제목', setParagraphAttr([p(['ab'])], { anchor: at([0], 1), focus: at([0], 1) }, 'h', 2, ENV));
+  const one = checked(
+    '속성: 제목',
+    setParagraphAttr([p(['ab'])], { anchor: at([0], 1), focus: at([0], 1) }, 'h', 2, ENV),
+  );
   eq('속성: h 얹힘', one.doc, [p(['ab'], { h: 2 })]);
 
-  const bad = checked('속성: 값 거절', setParagraphAttr([p(['ab'])], { anchor: at([0], 1), focus: at([0], 1) }, 'h', 9, ENV));
+  const bad = checked(
+    '속성: 값 거절',
+    setParagraphAttr([p(['ab'])], { anchor: at([0], 1), focus: at([0], 1) }, 'h', 9, ENV),
+  );
   eq('속성: h 9 는 거절', bad.doc, [p(['ab'])]);
 
-  const wrapA = checked('속성: 래퍼 정렬', setParagraphAttr([wrap(img())], { anchor: at([0], 0), focus: at([0], 0) }, 'a', 'c', ENV));
+  const wrapA = checked(
+    '속성: 래퍼 정렬',
+    setParagraphAttr([wrap(img())], { anchor: at([0], 0), focus: at([0], 0) }, 'a', 'c', ENV),
+  );
   eq('속성: 래퍼에 정렬', wrapA.doc, [wrap(img(), { a: 'c' })]);
 
-  const wrapH = checked('속성: 래퍼 제목 거절', setParagraphAttr([wrap(img())], { anchor: at([0], 0), focus: at([0], 0) }, 'h', 2, ENV));
+  const wrapH = checked(
+    '속성: 래퍼 제목 거절',
+    setParagraphAttr([wrap(img())], { anchor: at([0], 0), focus: at([0], 0) }, 'h', 2, ENV),
+  );
   eq('속성: 래퍼에 h 는 안 얹힌다', wrapH.doc, [wrap(img())]);
 
-  const drop = checked('속성: 벗김', setParagraphAttr([p(['ab'], { h: 2, a: 'c' })], { anchor: at([0], 0), focus: at([0], 0) }, 'h', null, ENV));
+  const drop = checked(
+    '속성: 벗김',
+    setParagraphAttr([p(['ab'], { h: 2, a: 'c' })], { anchor: at([0], 0), focus: at([0], 0) }, 'h', null, ENV),
+  );
   eq('속성: h 만 벗겨진다', drop.doc, [p(['ab'], { a: 'c' })]);
 
-  const many = checked('속성: 범위', setParagraphAttr([p(['ab']), p(['cd'])], { anchor: at([0], 1), focus: at([1], 1) }, 'a', 'r', ENV));
+  const many = checked(
+    '속성: 범위',
+    setParagraphAttr([p(['ab']), p(['cd'])], { anchor: at([0], 1), focus: at([1], 1) }, 'a', 'r', ENV),
+  );
   eq('속성: 두 문단 정렬', many.doc, [p(['ab'], { a: 'r' }), p(['cd'], { a: 'r' })]);
 }
 
@@ -479,6 +519,36 @@ function checked(name: string, result: EditResult): EditResult {
   ok('순서: 래퍼 1 은 속보다 뒤', comparePositions(at([1], 1), at([1, 0, 0, 0, 0], 3)) > 0);
   ok('순서: 같은 홀더는 오프셋', comparePositions(at([0], 1), at([0], 2)) < 0);
   ok('순서: 형제', comparePositions(at([0], 5), at([1], 0)) < 0);
+}
+
+// --- document index --------------------------------------------------------------------------
+{
+  const nested: NabiDoc = [
+    {
+      w: 'p',
+      _id: 'outer',
+      ch: [{ w: 'summary', _id: 'inline', ch: [{ w: 'b', _id: 'deep', ch: [] }] }],
+    } as ElementNode,
+  ];
+  const index = documentIndex(nested, ENV);
+  ok('인덱스: 중첩 경로와 id', index.byIdAt('deep')?.path.join('.') === '0.0.0');
+  ok('인덱스: 인라인 내부 element도 id를 가진다', index.at([0, 0, 0])?.node.w === 'b');
+  ok(
+    '인덱스: holder 의미는 기존처럼 인라인에서 멈춘다',
+    index.holders.some((h) => h.path.join('.') === '0.0') && !index.holders.some((h) => h.path.join('.') === '0.0.0'),
+  );
+  const duplicate: NabiDoc = [
+    { w: 'p', _id: 'same', ch: [] },
+    { w: 'p', _id: 'same', ch: [] },
+  ];
+  ok('인덱스: 중복 id는 첫 발견', documentIndex(duplicate, ENV).byIdAt('same')?.path.join('.') === '0');
+  ok('인덱스: 같은 revision은 재사용', documentIndex(nested, ENV) === index);
+  const replacement: NabiDoc = [{ w: 'p', _id: 'new', ch: [] }];
+  ok(
+    '인덱스: 문서 교체는 새 매핑',
+    documentIndex(replacement, ENV) !== index && !documentIndex(replacement, ENV).byIdAt('deep'),
+  );
+  ok('인덱스: 환경 identity가 다르면 재사용하지 않음', documentIndex(nested, { ...ENV }) !== index);
 }
 
 done('doc');

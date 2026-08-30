@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: اٹالک
+description: منتخب متن کو اٹالک کریں۔
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# اٹالک
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+منتخب متن کو اٹالک کرتا ہے۔ اسی حد پر دوبارہ لگانے سے فارمیٹنگ ہٹ جاتی ہے، اور mark محفوظ دستاویزات میں برقرار رہتی ہے۔
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/italic" />
 
-</div>
+```ts
+const selected = wings().use('i').build()
+```

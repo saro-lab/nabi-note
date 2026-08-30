@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Lista numerada
+description: Convierte elementos ordenados en una lista numerada.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Lista numerada
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Convierte párrafos en una lista donde el orden importa. Los números se recalculan automáticamente cuando insertas, eliminas o mueves elementos. En un párrafo vacío, escribir `1.` y pulsar Espacio también crea una lista numerada.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/block/ordered-list" />
 
-</div>
+```ts
+const selected = wings().use('ol').build()
+```

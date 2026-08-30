@@ -29,7 +29,7 @@ const ENV = makeEnv({
 const OPT: HtmlOptions = { env: ENV };
 
 const read = (html: string, options: Partial<HtmlOptions> = {}): NabiDoc =>
-  importDoc(tinyHtml(html), { env: ENV,...options });
+  importDoc(tinyHtml(html), { env: ENV, ...options });
 
 const json = (doc: NabiDoc): string => JSON.stringify($toJson(doc));
 
@@ -69,9 +69,7 @@ const EX = [
         ch: [
           {
             w: 'tr',
-            ch: [
-              { w: 'td', a: { colspan: '2' }, ch: [{ w: 'p', ch: ['칸 글', { w: 'br', ch: [] }, '둘째 줄'] }] },
-            ],
+            ch: [{ w: 'td', a: { colspan: '2' }, ch: [{ w: 'p', ch: ['칸 글', { w: 'br', ch: [] }, '둘째 줄'] }] }],
           },
         ],
       },
@@ -83,7 +81,16 @@ const EX = [
   { w: 'p', ch: [{ w: 'quote', ch: [{ w: 'p', ch: ['인용 글'] }] }] },
   {
     w: 'p',
-    ch: [{ w: 'details', a: { o: 1 }, ch: [{ w: 'summary', ch: ['접기 제목'] }, { w: 'p', ch: ['접기 속 글'] }] }],
+    ch: [
+      {
+        w: 'details',
+        a: { o: 1 },
+        ch: [
+          { w: 'summary', ch: ['접기 제목'] },
+          { w: 'p', ch: ['접기 속 글'] },
+        ],
+      },
+    ],
   },
   { w: 'p', ch: [{ w: 'code', a: { lang: 'ts' }, ch: ['const x = 1', { w: 'br', ch: [] }, 'const y = 2'] }] },
 ];
@@ -129,10 +136,14 @@ const editor = renderEditorHtml(EXAMPLE, OPT);
 const SEAL = ' contenteditable="false" draggable="false"';
 const bare = editor
   .replace(/ data-key="[^"]*"/g, '')
-  .split(SEAL).join('')
+  .split(SEAL)
+  .join('')
   .replace(/<span data-nabi-dropcap-letter>([^<]*)<\/span>/g, '$1');
 ok('편집기 HTML 은 화면 전용 세 가지를 걷으면 보기와 같다', bare === view, [bare.slice(0, 200)]);
-ok('편집 드롭캡은 가상 요소 대신 실제 첫 글자 상자를 가진다', editor.includes('<span data-nabi-dropcap-letter>맨</span>'));
+ok(
+  '편집 드롭캡은 가상 요소 대신 실제 첫 글자 상자를 가진다',
+  editor.includes('<span data-nabi-dropcap-letter>맨</span>'),
+);
 ok(
   '첨부는 편집기에서 봉해진다 — 캐럿이 안 드는 섬',
   editor.includes('data-nabi-file="\uCCA8\uBD80.png" download' + SEAL),
@@ -145,15 +156,11 @@ ok('물건·컨테이너에도 data-key 가 붙는다 (부분 재그리기의 �
 
 // --- 조립 — 문단의 세 얼굴 -------------------------------------------------------------------
 
+eq('빈 문단은 발행 HTML에서 빈 holder다', renderHtml([{ w: 'p', ch: [] }], OPT), '<p></p>');
 eq(
-  '빈 문단은 출력에서도 한 줄이다 (받침)',
-  renderHtml([{ w: 'p', ch: [] }], OPT),
-  '<p><br/></p>',
-);
-eq(
-  '빈 문단의 받침은 편집기에서도 같다',
+  '빈 문단의 편집기 받침은 실제 줄과 구별되는 표식을 단다',
   renderEditorHtml([{ w: 'p', ch: [], _id: 'k1' }], OPT),
-  '<p data-key="k1"><br/></p>',
+  '<p data-key="k1"><br data-nabi-filler/></p>',
 );
 // 끝의 라인 — 브라우저가 블록 맨 끝의 `<br>` 를 줄바꿈으로 안 그려서, 글 끝의 첫 Shift+Enter 가
 // 화면에서 무시된 것처럼 보였다. 화면에만 받침을 하나 더 세운다. **발행값은 안 변한다.**
@@ -165,12 +172,12 @@ eq(
     '끝이 라인이면 편집기 화면에만 받침이 하나 더 선다',
     renderEditorHtml(tail(['abc', line]), OPT),
     '<p data-key="k1">abc<br/><br data-nabi-filler/></p>',
-);
+  );
   eq(
     '가운데 라인에는 안 붙는다 — 끝일 때만이다',
     renderEditorHtml(tail(['abc', line, 'def']), OPT),
     '<p data-key="k1">abc<br/>def</p>',
-);
+  );
   // 홀더는 문단만이 아니다 — 칸·항목·요약·코드가 같은 문(`ctx.filled`)을 지난다.
   const inCell: NabiDoc = [
     { w: 'p', ch: [{ w: 'table', ch: [{ w: 'tr', ch: [{ w: 'td', ch: [{ w: 'p', ch: ['a', line] }] }] }] }] },
@@ -197,10 +204,7 @@ eq(
     renderEditorHtml(tail([{ w: 'tf', a: { v: 'serif' }, ch: [{ w: 'b', ch: ['abc', line] }] }]), OPT),
     '<p data-key="k1"><span data-nabi-typeface="serif"><b>abc<br/></b></span><br data-nabi-filler/></p>',
   );
-  ok(
-    '마크 속 끝 라인도 발행값은 그대로다',
-    !renderHtml(tail([{ w: 'b', ch: ['abc', line] }]), OPT).includes('filler'),
-  );
+  ok('마크 속 끝 라인도 발행값은 그대로다', !renderHtml(tail([{ w: 'b', ch: ['abc', line] }]), OPT).includes('filler'));
   eq(
     '마크 속 가운데 라인에는 안 붙는다 — 끝일 때만이다',
     renderEditorHtml(tail([{ w: 'b', ch: ['abc', line] }, 'def']), OPT),
@@ -246,15 +250,11 @@ eq(
   renderHtml([{ w: 'p', a: { a: 'c', dc: 1, h: 2 }, ch: [{ w: 'hr', ch: [] }] }], OPT),
   '<div data-nabi-p data-nabi-align="c"><hr/></div>',
 );
+eq('라인은 br 하나다', renderHtml([{ w: 'p', ch: ['앞', { w: 'br', ch: [] }, '뒤'] }], OPT), '<p>앞<br/>뒤</p>');
 eq(
-  '라인은 br 하나다',
-  renderHtml([{ w: 'p', ch: ['앞', { w: 'br', ch: [] }, '뒤'] }], OPT),
-  '<p>앞<br/>뒤</p>',
-);
-eq(
-  '빈 칸·빈 항목에도 받침이 선다',
+  '빈 칸·빈 항목은 발행 HTML에서 빈 holder다',
   renderHtml([{ w: 'p', ch: [{ w: 'table', ch: [{ w: 'tr', ch: [{ w: 'td', ch: [] }] }] }] }], OPT),
-  '<div data-nabi-p><div class="nabi-scroll"><table><tr><td><br/></td></tr></table></div></div>',
+  '<div data-nabi-p><div class="nabi-scroll"><table><tr><td></td></tr></table></div></div>',
 );
 eq(
   '접기는 보기에서 글쓴이가 고른 대로, 편집기에서는 늘 펼쳐진다',
@@ -303,16 +303,8 @@ eq(
   renderHtml([{ w: 'p', ch: ['abc    '] }], OPT),
   '<p>abc&nbsp; &nbsp;&nbsp;</p>',
 );
-eq(
-  '문단 끝 공백 하나도 접히지 않는다',
-  renderHtml([{ w: 'p', ch: ['abc '] }], OPT),
-  '<p>abc&nbsp;</p>',
-);
-eq(
-  '공백 하나는 손대지 않는다',
-  renderHtml([{ w: 'p', ch: ['abc def'] }], OPT),
-  '<p>abc def</p>',
-);
+eq('문단 끝 공백 하나도 접히지 않는다', renderHtml([{ w: 'p', ch: ['abc '] }], OPT), '<p>abc&nbsp;</p>');
+eq('공백 하나는 손대지 않는다', renderHtml([{ w: 'p', ch: ['abc def'] }], OPT), '<p>abc def</p>');
 eq(
   '인라인 경계 앞 공백 하나는 줄바꿈 자리를 막지 않는다',
   renderHtml([{ w: 'p', ch: ['abc ', { w: 'b', ch: ['def'] }] }], OPT),
@@ -328,9 +320,10 @@ eq(
   renderHtml([{ w: 'p', ch: [{ w: 'x', a: { v: 'a  b' }, ch: [] }] }], {
     env: ENV,
     builders: {
-      x: (node, _children, ctx) => ctx.element('span', ctx.escape(String(node.a?.['v'] ?? '')), {
-        'data-value': String(node.a?.['v'] ?? ''),
-      }),
+      x: (node, _children, ctx) =>
+        ctx.element('span', ctx.escape(String(node.a?.['v'] ?? '')), {
+          'data-value': String(node.a?.['v'] ?? ''),
+        }),
     },
   }),
   '<p><span data-value="a  b">a&nbsp; b</span></p>',
@@ -366,9 +359,9 @@ eq(
   '<p>눌러</p>',
 );
 eq(
-  'javascript: 그림은 없는 것으로 친다 (래퍼문단만 받침을 안고 남는다)',
+  'javascript: 그림은 없는 것으로 친다 (빈 래퍼문단만 남는다)',
   renderHtml([{ w: 'p', ch: [{ w: 'img', a: { src: 'javascript:alert(1)' }, ch: [] }] }], OPT),
-  '<div data-nabi-p><br/></div>',
+  '<div data-nabi-p></div>',
 );
 eq(
   '낯선 wing 이 낸 태그 이름도 문법을 못 깬다',
@@ -383,7 +376,10 @@ ok('safeUrl — 상대 경로는 그대로 둔다', safeUrl('/f/x.png') === '/f/
 ok('safeUrl — 상대 경로에 스킴 흉내가 섞이면 거절한다', safeUrl('./a:b') === null);
 ok('safeUrl — javascript: 는 거절한다', safeUrl('javascript:alert(1)') === null);
 ok('safeUrl — data:text/html 은 allowLocal 이어도 거절한다', safeUrl('data:text/html,<b>x', true) === null);
-ok('safeUrl — data:image 는 allowLocal 일 때만 받는다', safeUrl('data:image/png;base64,AA', true) !== null && safeUrl('data:image/png;base64,AA') === null);
+ok(
+  'safeUrl — data:image 는 allowLocal 일 때만 받는다',
+  safeUrl('data:image/png;base64,AA', true) !== null && safeUrl('data:image/png;base64,AA') === null,
+);
 // 프로토콜 상대 주소 — 스킴이 없어 상대 경로처럼 보이지만 **호스트가 바뀐다.** 피싱·오픈
 // 리다이렉트이고, 그림이면 문서를 여는 순간 남의 서버로 요청이 나가 IP·Referer 가 샌다.
 ok('safeUrl — 프로토콜 상대 주소(//)는 거절한다', safeUrl('//evil.com/x') === null);
@@ -391,9 +387,17 @@ ok('safeUrl — allowLocal 이어도 // 는 거절한다', safeUrl('//evil.com/x
 ok('safeUrl — 앞뒤 공백을 털고도 // 는 거절한다', safeUrl('  //evil.com/x  ') === null);
 // SVG 는 스크립트를 품는 유일한 그림 형식이다 — `data:` 로 실려 오면 그림의 얼굴을 한 문서다.
 ok('safeUrl — data:image/svg+xml 은 allowLocal 이어도 거절한다', safeUrl('data:image/svg+xml,<svg/>', true) === null);
-ok('safeUrl — blob: 은 allowLocal 일 때만 받는다', safeUrl('blob:https://x/1', true) !== null && safeUrl('blob:https://x/1') === null);
+ok(
+  'safeUrl — blob: 은 allowLocal 일 때만 받는다',
+  safeUrl('blob:https://x/1', true) !== null && safeUrl('blob:https://x/1') === null,
+);
 // 대소문자·공백을 섞은 스킴 흉내.
-for (const bad of ['JavaScript:alert(1)', ' javascript:alert(1)', 'vbscript:msgbox(1)', 'data:text/html;base64,PHNjcmlwdD4=']) {
+for (const bad of [
+  'JavaScript:alert(1)',
+  ' javascript:alert(1)',
+  'vbscript:msgbox(1)',
+  'data:text/html;base64,PHNjcmlwdD4=',
+]) {
   ok(`safeUrl — 거절: ${bad}`, safeUrl(bad, true) === null);
 }
 
@@ -451,8 +455,21 @@ eq(
   json(read('<div><p>가</p><p>나</p></div>')),
   '[{"w":"p","ch":["가"]},{"w":"p","ch":["나"]}]',
 );
-eq('빈 문단의 받침은 도로 빈 문단이 된다', json(read('<p><br></p>')), '[{"w":"p","ch":[]}]');
-eq('제목·정렬·드롭캡은 되읽힌다', json(read('<h2 data-nabi-align="c" data-nabi-dropcap="1">제목</h2>')), '[{"w":"p","a":{"h":2,"a":"c","dc":1},"ch":["제목"]}]');
+eq('표식 없는 sole br은 실제 줄로 보존된다', json(read('<p><br></p>')), '[{"w":"p","ch":[{"w":"br","ch":[]}]}]');
+eq('표식 있는 편집기 받침만 빈 문단으로 돌아온다', json(read('<p><br data-nabi-filler></p>')), '[{"w":"p","ch":[]}]');
+for (const [name, source] of [
+  ['empty holder', [{ w: 'p', ch: [] }]],
+  ['sole real br', [{ w: 'p', ch: [{ w: 'br', ch: [] }] }]],
+  ['trailing real br', [{ w: 'p', ch: ['x', { w: 'br', ch: [] }] }]],
+] as const) {
+  eq(`${name} published HTML roundtrip`, json(read(renderHtml(source, OPT))), json(source));
+  eq(`${name} editor HTML roundtrip`, json(read(renderEditorHtml(source, OPT))), json(source));
+}
+eq(
+  '제목·정렬·드롭캡은 되읽힌다',
+  json(read('<h2 data-nabi-align="c" data-nabi-dropcap="1">제목</h2>')),
+  '[{"w":"p","a":{"h":2,"a":"c","dc":1},"ch":["제목"]}]',
+);
 eq(
   '표의 횡스크롤 겉옷과 tbody 는 벗겨진다',
   json(read('<div class="nabi-scroll"><table><tbody><tr><td>칸</td></tr></tbody></table></div>')),
@@ -486,6 +503,12 @@ eq(
 eq('왕복 — 두 번째 걸음은 아무것도 안 바꾼다 f(f(x)) = f(x)', json(read(renderHtml(back, OPT))), json(back));
 eq('왕복 — 편집기 HTML 도 같은 트리로 되읽힌다', json(read(renderEditorHtml(EXAMPLE, OPT))), json(back));
 
+{
+  const chars = $fromJson([{ w: 'p', ch: ['A\u00a0B\u200bC'] }], ENV) as NabiDoc;
+  eq('NBSP·ZWSP는 보기 HTML 왕복에서 그대로 남는다', json(read(renderHtml(chars, OPT))), json(chars));
+  eq('편집기 HTML 왕복도 NBSP·ZWSP를 보존한다', json(read(renderEditorHtml(chars, OPT))), json(chars));
+}
+
 // --- 붙여넣기 자료 ---------------------------------------------------------------------------
 
 eq('빈 조각에는 빈 문단이 딸려 오지 않는다', fragmentOf(read('')), []);
@@ -505,7 +528,11 @@ ok('이스케이프 함수는 층 밖으로 안 나간다 (06 규칙)', !/\besca
 
 // 문단 하나만 다시 그리는 문(부분 재그리기·SSR 조각)이 전체 조립과 같은 값을 낸다.
 const first = EXAMPLE[0] as ElementNode;
-eq('문단 하나 조립은 전체 조립의 한 걸음과 같다', renderParagraphHtml(first, OPT), '<h1 data-nabi-align="c">제목글</h1>');
+eq(
+  '문단 하나 조립은 전체 조립의 한 걸음과 같다',
+  renderParagraphHtml(first, OPT),
+  '<h1 data-nabi-align="c">제목글</h1>',
+);
 eq(
   '문단 하나 조립도 편집기 갈래를 갖는다 (hydrate 조각)',
   renderParagraphHtml(first, OPT, true),

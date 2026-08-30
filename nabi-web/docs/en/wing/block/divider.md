@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Divider
+description: Insert a horizontal rule that separates the document flow.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Divider
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+A horizontal rule that separates the flow of the document. Type three or more hyphens in an empty paragraph and press Enter, or insert one from the toolbar.
 
-[Open the Korean canonical page](/ko/guide/features)
+A divider is an independent block with no text, so it does not hold formatting such as heading or color. Use it only to separate the paragraphs before and after it.
 
-</div>
+<WingDemo path="/wing/block/divider" />
+
+```ts
+const selected = wings().use('hr').build()
+```

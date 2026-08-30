@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: خط فاصل
+description: يدرج خطًا أفقيًا يقسم مسار المستند.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# خط فاصل
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+هو خط أفقي يقسم مسار المستند. في فقرة فارغة، اكتب ثلاث شرطات أو أكثر ثم اضغط Enter، أو أدرجه من شريط الأدوات.
 
-[Open the Korean canonical page](/ko/guide/features)
+الخط الفاصل كتلة مستقلة بلا نص، لذلك لا يحمل تنسيقات مثل العنوان أو اللون. استخدمه فقط للفصل بين الفقرات التي قبله وبعده.
 
-</div>
+<WingDemo path="/wing/block/divider" />
+
+```ts
+const selected = wings().use('hr').build()
+```

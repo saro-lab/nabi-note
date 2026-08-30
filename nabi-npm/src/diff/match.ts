@@ -97,43 +97,45 @@ export function matchBlocks(before: readonly MatchBlock[], after: readonly Match
   // del run 과 ins run 이 붙어 오면 한 틈이다 — 그 안에서 짝을 찾는다.
   let pendingDel: number[] = [];
   const flushGap = (pendingIns: number[]): void => {
-    let i = 0;
-    let j = 0;
-    while (i < pendingDel.length && j < pendingIns.length) {
-      const bi = pendingDel[i] as number;
-      const ai = pendingIns[j] as number;
-      const b = before[bi] as MatchBlock;
-      const a = after[ai] as MatchBlock;
-      if (similarity(b.text, a.text) >= PAIR_THRESHOLD) {
-        entries.push(changedEntry({ before: b, after: a }, bi, ai));
-        i += 1;
-        j += 1;
-      } else {
-        entries.push({ kind: 'removed', before: bi, after: null });
-        i += 1;
+    const pairs: Array<{ bi: number; ai: number; score: number }> = [];
+    for (const bi of pendingDel)
+      for (const ai of pendingIns) {
+        const score = similarity(before[bi]!.text, after[ai]!.text);
+        if (score >= PAIR_THRESHOLD) pairs.push({ bi, ai, score });
       }
+    // Deterministic best-first heuristic: highest score first; document order is the complete tie-breaker. This
+    // makes duplicate blocks and reordered duplicates independent of traversal
+    // or Map/Set insertion details.
+    pairs.sort(
+      (x, y) => y.score - x.score || Math.abs(x.bi - x.ai) - Math.abs(y.bi - y.ai) || x.bi - y.bi || x.ai - y.ai,
+    );
+    const usedB = new Set<number>();
+    const usedA = new Set<number>();
+    const chosen: Array<{ bi: number; ai: number }> = [];
+    for (const pair of pairs) {
+      if (usedB.has(pair.bi) || usedA.has(pair.ai)) continue;
+      usedB.add(pair.bi);
+      usedA.add(pair.ai);
+      chosen.push(pair);
     }
-    while (i < pendingDel.length) {
-      entries.push({ kind: 'removed', before: pendingDel[i] as number, after: null });
-      i += 1;
-    }
-    while (j < pendingIns.length) {
-      entries.push({ kind: 'added', before: null, after: pendingIns[j] as number });
-      j += 1;
-    }
+    chosen.sort((x, y) => x.bi - y.bi || x.ai - y.ai);
+    for (const pair of chosen)
+      entries.push(changedEntry({ before: before[pair.bi]!, after: after[pair.ai]! }, pair.bi, pair.ai));
+    for (const bi of pendingDel) if (!usedB.has(bi)) entries.push({ kind: 'removed', before: bi, after: null });
+    for (const ai of pendingIns) if (!usedA.has(ai)) entries.push({ kind: 'added', before: null, after: ai });
     pendingDel = [];
   };
 
   for (const run of runs) {
     if (run.op === 'eq') {
-      flushGap([]);
+      const pendingIns: number[] = [];
+      flushGap(pendingIns);
       for (let k = 0; k < run.n; k += 1) {
         entries.push({ kind: 'same', before: run.a + k, after: run.b + k });
       }
       continue;
     }
     if (run.op === 'del') {
-      flushGap([]);
       for (let k = 0; k < run.n; k += 1) pendingDel.push(run.a + k);
       continue;
     }

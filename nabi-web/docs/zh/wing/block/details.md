@@ -1,14 +1,38 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: 折叠
+description: 将摘要和正文组合起来，并保存初始展开状态。
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# 折叠
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+把简短摘要和正文组合成一个块。从工具栏创建时，先输入摘要，再在下面继续编写内容。
 
-[Open the Korean canonical page](/ko/guide/features)
+通过三角按钮设置的展开状态会保存在文档中，并成为发布页面中的初始状态。编辑时正文会保持展开以便修改，但保存的状态值会保留。
 
-</div>
+<WingDemo path="/wing/block/details" />
+
+```ts
+const selected = wings().use('details').build()
+```
+
+## CSS 样式
+
+用 `.nabi-content details` 设置折叠块样式，用 `.nabi-content details > summary` 设置标题样式。
+
+```css
+.article-body details {
+  padding: .75rem 1rem;
+  border: 1px solid var(--nabi-line);
+  border-radius: var(--nabi-radius);
+  background: var(--nabi-soft);
+}
+
+.article-body details > summary { cursor: pointer; font-weight: 700; }
+.article-body details[open] > summary { margin-block-end: .75rem; }
+```
+
+`open` 属性是作者保存的初始展开状态。CSS 可以为这个状态设置样式，但最好不要强行改变状态本身。

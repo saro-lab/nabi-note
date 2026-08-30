@@ -104,8 +104,12 @@ export function exactTime(at: number, locale?: string): string {
   const date = new Date(at);
   try {
     return new Intl.DateTimeFormat(locale === '' ? undefined : locale, {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
     }).format(date);
   } catch {
     // Intl 이 없거나 모양이 아닌 로케일 — 시각을 통째로 잃느니 ISO 로라도 말한다.
@@ -202,7 +206,22 @@ function safeParse(text: string): unknown {
   }
 }
 
-const HISTORY_NAME: LocaleText = { ko: '로컬 히스토리', en: 'Local history', ja: 'ローカル履歴', zh: '本地历史', de: 'Lokaler Verlauf', fr: 'Historique local', es: 'Historial local', pt: 'Histórico local', ru: 'Локальная история', ar: 'السجل المحلي', hi: 'स्थानीय इतिहास', bn: 'স্থানীয় ইতিহাস', ur: 'مقامی تاریخ', id: 'Riwayat lokal' };
+const HISTORY_NAME: LocaleText = {
+  ko: '로컬 히스토리',
+  en: 'Local history',
+  ja: 'ローカル履歴',
+  zh: '本地历史',
+  de: 'Lokaler Verlauf',
+  fr: 'Historique local',
+  es: 'Historial local',
+  pt: 'Histórico local',
+  ru: 'Локальная история',
+  ar: 'السجل المحلي',
+  hi: 'स्थानीय इतिहास',
+  bn: 'স্থানীয় ইতিহাস',
+  ur: 'مقامی تاریخ',
+  id: 'Riwayat lokal',
+};
 
 const HISTORY_ICON =
   '<path d="M8 4.25V8l2.5 1.5"/><path d="M2.9 6.6A5.5 5.5 0 1 1 2.75 9.4"/><path d="M1.75 3.75v3h3"/>';

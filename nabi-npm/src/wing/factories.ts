@@ -16,6 +16,7 @@ function builderOf(w: string, given?: HtmlBuilder): HtmlBuilder {
 
 export interface SimpleMarkSpec {
   readonly w: string;
+  readonly clearable?: boolean;
   readonly toHtml?: HtmlBuilder;
   readonly escapeKeys?: readonly string[];
   readonly button?: WingButton;
@@ -28,6 +29,8 @@ export function simpleMark(spec: SimpleMarkSpec): Wing {
     w: spec.w,
     place: 'mark',
     toHtml: builderOf(spec.w, spec.toHtml),
+    attrs: [],
+    ...(spec.clearable === true ? { clearable: true } : {}),
     escapeKeys: spec.escapeKeys ?? ['Escape'],
     ...(spec.button ? { button: spec.button } : {}),
     ...(spec.styles ? { styles: spec.styles } : {}),
@@ -47,6 +50,7 @@ export interface ValueMarkSpec {
   readonly escapeKeys?: readonly string[];
   readonly button?: WingButton;
   readonly styles?: string;
+  readonly clearable?: boolean;
 }
 
 export function valueMark(spec: ValueMarkSpec): Wing {
@@ -59,6 +63,8 @@ export function valueMark(spec: ValueMarkSpec): Wing {
     w: spec.w,
     place: 'mark',
     toHtml: builderOf(spec.w, spec.toHtml),
+    attrs: [spec.key],
+    ...(spec.clearable === true ? { clearable: true } : {}),
     escapeKeys: spec.escapeKeys ?? ['Escape'],
     currentValue: valueOf,
     // 값이 없거나 목록 밖이면 **마크가 아니다** — 껍데기를 벗기고 글자만 남긴다.
@@ -69,7 +75,9 @@ export function valueMark(spec: ValueMarkSpec): Wing {
       if (value === undefined) return null;
       // 값 하나만 남긴다 — 곁에 실려 온 다른 attr 은 계약 밖이다.
       const same = node.a !== undefined && Object.keys(node.a).length === 1 && node.a[spec.key] === value;
-      return same ? node : { w: node.w, a: { [spec.key]: value }, ch: node.ch, ...(node._id !== undefined ? { _id: node._id } : {}) };
+      return same
+        ? node
+        : { w: node.w, a: { [spec.key]: value }, ch: node.ch, ...(node._id !== undefined ? { _id: node._id } : {}) };
     },
     ...(spec.button ? { button: spec.button } : {}),
     ...(spec.styles ? { styles: spec.styles } : {}),
@@ -130,6 +138,7 @@ export function boxObject(spec: BoxObjectSpec): Wing {
     w: spec.w,
     place: 'void',
     toHtml: builderOf(spec.w, spec.toHtml),
+    attrs: Object.keys(validators),
     repair,
     ...(spec.button ? { button: spec.button } : {}),
     ...(spec.styles ? { styles: spec.styles } : {}),
@@ -175,6 +184,7 @@ export function listFamily(spec: ListFamilySpec): Wing {
 
   const itemDecl: StructureDecl = {
     holds: 'blocks',
+    attrs: [],
     ...(spec.itemDecl ?? {}),
   };
 
@@ -182,6 +192,7 @@ export function listFamily(spec: ListFamilySpec): Wing {
     w: spec.w,
     place: 'container',
     holds: 'blocks',
+    attrs: [],
     parts: { [spec.item]: itemDecl },
     toHtml: builderOf(spec.w, spec.toHtml),
     partHtml: { [spec.item]: builderOf(spec.item, spec.itemHtml) },

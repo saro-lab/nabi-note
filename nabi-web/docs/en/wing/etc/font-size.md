@@ -1,14 +1,35 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Font Size
+description: Change text size within the allowed steps.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Font Size
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Change selected text to a size step. If a range is selected, the step applies to that range; if there is only a caret, it changes the text size of the current paragraph. Stored data keeps only allowed steps, not arbitrary values such as `px`.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/etc/font-size" />
 
-</div>
+```ts
+const selected = wings().use('fs', {
+  values: ['sm', 'lg', 'xl'],
+}).build()
+```
+
+If `values` is omitted, the `xs`, `sm`, `lg`, and `xl` steps are used. If you narrow the list, other steps already present in older documents are removed when loaded.
+
+## CSS Styles
+
+You can change sizes through stored-step selectors such as `.nabi-content [data-nabi-size="xs"]`. Do not invent arbitrary steps that are not in the document; adjust CSS only within registered `values`.
+
+```css
+.article-body [data-nabi-size="xs"] { font-size: .78em; }
+.article-body [data-nabi-size="sm"] { font-size: .9em; }
+.article-body [data-nabi-size="lg"] { font-size: 1.3em; }
+.article-body [data-nabi-size="xl"] { font-size: 1.65em; }
+```
+
+Keeping the size difference between steps consistent preserves the meaning the author chose in the editor when the document is published.

@@ -1,14 +1,35 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Detalles
+description: Agrupa un resumen y un cuerpo, y guarda si empieza abierto.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Detalles
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Agrupa un resumen y un cuerpo que puede abrirse y cerrarse. El estado abierto se guarda con el documento, así que el lector ve el bloque como lo dejó el autor.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/block/details" />
 
-</div>
+```ts
+const selected = wings().use('details').build()
+```
+
+## Estilos CSS
+
+Da estilo al contenedor con `.nabi-content details` y al encabezado con `.nabi-content summary`. No ocultes el `summary`, porque es el control que abre y cierra el bloque.
+
+```css
+.article-body details {
+  padding: .75rem 1rem;
+  border: 1px solid var(--nabi-line);
+  border-radius: 12px;
+}
+
+.article-body summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+```

@@ -8,11 +8,62 @@
 // 모든 엘리먼트에 유일한 _id 를 결정적으로 채운다 — 같은 JSON 은 같은 키를 얻는다 (hydrate).
 // 바뀐 것이 없으면 원래 참조를 그대로 돌려준다 — 매 커맨드 위에서도 구조 공유로 싸게 돈다.
 import { BR, P } from './reserved.js';
+import { canonicalTextLines } from './text.js';
+import { $callbackTree, $snapshotNodes } from './raw.js';
 import { isElement, type Attrs, type AttrValue, type ElementNode, type NabiDoc, type NabiNode } from './types.js';
-import { isLump, refusesAlign, type SchemaEnv } from './env.js';
+import {
+  $hasClosedBuiltinAttrs,
+  $isKnownType,
+  $usesClosedBuiltinAttrs,
+  isLump,
+  refusesAlign,
+  type SchemaEnv,
+} from './env.js';
 
 // 정렬 값은 첫 글자 표기 하나로 통일한다.
 const ALIGNS: ReadonlySet<string> = new Set(['l', 'c', 'r']);
+
+const BUILTIN_ATTRS: Readonly<Record<string, ReadonlySet<string>>> = {
+  b: new Set(),
+  i: new Set(),
+  u: new Set(),
+  s: new Set(),
+  sub: new Set(),
+  sup: new Set(),
+  hl: new Set(['c']),
+  tc: new Set(['c']),
+  fs: new Set(['v']),
+  tf: new Set(['v']),
+  a: new Set(['href', 'file']),
+  ul: new Set(),
+  li: new Set(),
+  ol: new Set(),
+  oli: new Set(),
+  tl: new Set(),
+  tli: new Set(['ck']),
+  quote: new Set(),
+  details: new Set(['o']),
+  summary: new Set(),
+  code: new Set(['lang']),
+  hr: new Set(),
+  table: new Set(['sort']),
+  tr: new Set(),
+  td: new Set(['colspan', 'rowspan', 'th']),
+  img: new Set(['src', 'w']),
+  youtube: new Set(['v', 'w']),
+};
+
+const BUILTIN_BOOL_ATTRS: Readonly<Record<string, ReadonlySet<string>>> = {
+  tli: new Set(['ck']),
+  details: new Set(['o']),
+  table: new Set(['sort']),
+  td: new Set(['th']),
+};
+const BUILTIN_BOOL_KEYS: ReadonlySet<string> = new Set(['ck', 'o', 'sort', 'th']);
+
+export function $hasBuiltinAttrSchema(w: string): boolean {
+  return Object.prototype.hasOwnProperty.call(BUILTIN_ATTRS, w);
+}
 
 // --- attrs ---------------------------------------------------------------------------------
 
@@ -36,7 +87,8 @@ function paragraphAttrs(a: Attrs | undefined, wrapper: boolean, align = true): A
   for (const [key, value] of Object.entries(a)) {
     if (key === 'a' && align && typeof value === 'string' && ALIGNS.has(value)) out['a'] = value;
     if (wrapper) continue;
-    if (key === 'h' && typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 6) out['h'] = value;
+    if (key === 'h' && typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 6)
+      out['h'] = value;
     if (key === 'dc' && value === 1) out['dc'] = 1;
   }
   return Object.keys(out).length > 0 ? out : undefined;
@@ -44,12 +96,20 @@ function paragraphAttrs(a: Attrs | undefined, wrapper: boolean, align = true): A
 
 // wing 노드의 attrs 는 일반 규칙만 본다 — 값은 문자열이거나 유한한 숫자, `_` 접두 키는 내부
 // 전용이라 걷고, 불리언 attr 는 숫자 1 만 남는다. 이름별 화이트리스트는 그 wing 의 몫이다(07).
-function wingAttrs(a: Attrs | undefined, env: SchemaEnv): Attrs | undefined {
+function wingAttrs(w: string, a: Attrs | undefined, env: SchemaEnv): Attrs | undefined {
   if (!a) return undefined;
+  const closed = $hasClosedBuiltinAttrs(env, w);
+  const schema = closed ? BUILTIN_ATTRS[w] : env.attrSchemas?.get(w);
   const out: Record<string, AttrValue> = {};
   for (const [key, value] of Object.entries(a)) {
     if (key.startsWith('_')) continue;
-    if (env.boolAttrs.has(key)) {
+    if (schema && !schema.has(key)) continue;
+    const builtinBool = closed && (BUILTIN_BOOL_ATTRS[w]?.has(key) ?? false);
+    const customBool =
+      !closed &&
+      (env.boolAttrsByType?.get(w)?.has(key) ?? env.boolAttrs.has(key)) &&
+      (!$usesClosedBuiltinAttrs(env) || !BUILTIN_BOOL_KEYS.has(key));
+    if (builtinBool || customBool) {
       if (value === 1) out[key] = 1;
       continue;
     }
@@ -73,6 +133,44 @@ function rebuild(orig: ElementNode, w: string, a: Attrs | undefined, ch: readonl
   return next;
 }
 
+function repairOf(env: SchemaEnv, w: string): ((node: ElementNode) => ElementNode | null) | undefined {
+  const repairs = env.repair;
+  return repairs && Object.prototype.hasOwnProperty.call(repairs, w) ? repairs[w] : undefined;
+}
+
+function isUnknown(node: ElementNode, env: SchemaEnv): boolean {
+  return !$isKnownType(env, node.w);
+}
+
+function repairResult(
+  value: ElementNode,
+  original: ElementNode,
+  env: SchemaEnv,
+  known: Readonly<WeakMap<object, NabiNode>>,
+): ElementNode {
+  const copied = $snapshotNodes([value], true, known)?.[0];
+  if (!copied || !isElement(copied) || copied.w !== original.w) {
+    throw new TypeError(`invalid repair result for ${original.w}`);
+  }
+  const attrs = wingAttrs(copied.w, copied.a, env);
+  const children = env.voids.has(copied.w)
+    ? []
+    : env.blockHolders.has(copied.w)
+      ? blockChildren(copied.ch, env)
+      : inlineChildren(copied.ch, env);
+  return rebuild(copied, copied.w, attrs, children);
+}
+
+function runRepair(
+  repair: (node: ElementNode) => ElementNode | null,
+  original: ElementNode,
+  env: SchemaEnv,
+): ElementNode | null {
+  const given = $callbackTree([original]);
+  const value = repair(given.nodes[0] as ElementNode);
+  return value === null ? null : repairResult(value, original, env, given.originals);
+}
+
 // --- 인라인 정리 ----------------------------------------------------------------------------
 
 // 문단·마크·인라인 홀더의 속을 고른다: 빈 글자는 걷고, 이웃한 글자는 잇고, 라인(br)은 속을
@@ -82,6 +180,14 @@ function inlineChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] 
   const out: NabiNode[] = [];
   const push = (node: NabiNode): void => {
     if (typeof node === 'string') {
+      const lines = canonicalTextLines(node);
+      if (lines.length > 1) {
+        lines.forEach((line, index) => {
+          if (index > 0) push({ w: BR, ch: [] });
+          if (line !== '') push(line);
+        });
+        return;
+      }
       if (node === '') return;
       const last = out[out.length - 1];
       if (typeof last === 'string') {
@@ -106,6 +212,10 @@ function inlineChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] 
       for (const inner of inlineChildren(node.ch, env)) push(inner);
       continue;
     }
+    if (isUnknown(node, env)) {
+      for (const inner of inlineChildren(node.ch, env)) push(inner);
+      continue;
+    }
     // 마크 하나 — 속을 먼저 고치고, 그 wing 의 repair 에게 값을 묻는다.
     //
     // **여기가 JSON 입구의 값 검사 자리다**. 예전에는 마크에 repair 를 안 태워서
@@ -113,9 +223,9 @@ function inlineChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] 
     // 벗겨졌는데, JSON 으로 들어온 같은 것은 트리에 그대로 남았다. 출력은 render 가 막으니
     // 안 터졌지만 **저장값이 오염된 채** 백엔드로 갔고, 그 JSON 을 읽는 다른 렌더러에서 터진다.
     // repair 가 null 을 답하면 껍데기를 벗기고 속을 이 자리로 올린다 — HTML 입구와 같은 걸음이다.
-    const fixed = rebuild(node, node.w, wingAttrs(node.a, env), inlineChildren(node.ch, env));
-    const repair = env.repair?.[fixed.w];
-    const kept = repair ? repair(fixed) : fixed;
+    const fixed = rebuild(node, node.w, wingAttrs(node.w, node.a, env), inlineChildren(node.ch, env));
+    const repair = repairOf(env, fixed.w);
+    const kept = repair ? runRepair(repair, fixed, env) : fixed;
     if (kept === null) {
       for (const inner of fixed.ch) push(inner);
       continue;
@@ -133,7 +243,7 @@ function inlineChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] 
 // 그런 그림을 아예 안 들이는데(`import.ts`), JSON 입구만 껍데기를 남기면 두 문의 답이 갈린다.
 // 물건은 속이 없거나 제 안에서 끝나므로, 여기서는 벗기지 않고 **통째로 뺀다**(마크와 다른 점).
 function lumpNode(node: ElementNode, env: SchemaEnv): ElementNode | null {
-  const a = wingAttrs(node.a, env);
+  const a = wingAttrs(node.w, node.a, env);
   let next: ElementNode;
   if (env.voids.has(node.w)) {
     next = rebuild(node, node.w, a, node.ch.length === 0 ? node.ch : []);
@@ -144,13 +254,14 @@ function lumpNode(node: ElementNode, env: SchemaEnv): ElementNode | null {
   } else {
     next = rebuild(node, node.w, a, inlineChildren(node.ch, env));
   }
-  const repair = env.repair?.[next.w];
-  return repair ? repair(next) : next;
+  const repair = repairOf(env, next.w);
+  if (!repair) return next;
+  return runRepair(repair, next, env);
 }
 
 // p 가 아닌 블록 노드 하나 — 갈래(단말/블록 홀더/인라인 홀더)에 따라 속을 고치고 repair 를 태운다.
 function blockNode(node: ElementNode, env: SchemaEnv): ElementNode {
-  const a = wingAttrs(node.a, env);
+  const a = wingAttrs(node.w, node.a, env);
   let next: ElementNode;
   if (env.voids.has(node.w)) {
     next = rebuild(node, node.w, a, node.ch.length === 0 ? node.ch : []);
@@ -162,9 +273,19 @@ function blockNode(node: ElementNode, env: SchemaEnv): ElementNode {
     // 모르는 타입 — 속을 인라인으로만 고르고 그대로 둔다. 걸러내는 것은 wing 계약(07)의 몫이다.
     next = rebuild(node, node.w, a, inlineChildren(node.ch, env));
   }
-  const repair = env.repair?.[next.w];
+  const repair = repairOf(env, next.w);
   // 블록 자리에서는 벗기지 않는다 — 껍데기만 벗기면 속의 블록들이 갈 곳을 잃는다(계약 주석).
-  return repair ? (repair(next) ?? next) : next;
+  if (!repair) return next;
+  return runRepair(repair, next, env) ?? next;
+}
+
+function unwrapUnknown(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] {
+  const out: NabiNode[] = [];
+  for (const node of nodes) {
+    if (isElement(node) && isUnknown(node, env)) out.push(...unwrapUnknown(node.ch, env));
+    else out.push(node);
+  }
+  return out;
 }
 
 // 문단 하나를 문단 목록으로 — 물건이 섞여 있으면 쪼개지고, 물건 하나뿐이면 래퍼문단이 된다.
@@ -177,11 +298,14 @@ function paragraph(node: ElementNode, env: SchemaEnv): ElementNode[] {
     if (buffer.length > 0) slots.push(buffer);
     buffer = [];
   };
-  for (const child of node.ch) {
+  const children = unwrapUnknown(node.ch, env);
+  for (const child of children) {
     if (isLump(child, env)) {
+      const fixed = lumpNode(child, env);
+      if (!fixed) continue;
       flush();
-      lumps.push(child);
-      slots.push(child);
+      lumps.push(fixed);
+      slots.push(fixed);
       continue;
     }
     buffer.push(child);
@@ -190,15 +314,14 @@ function paragraph(node: ElementNode, env: SchemaEnv): ElementNode[] {
 
   // 물건이 없다 — 글 문단 하나. 빈 문단도 그대로 선다 (공백은 내용이다).
   if (lumps.length === 0) {
-    return [rebuild(node, P, paragraphAttrs(node.a, false), inlineChildren(node.ch, env))];
+    return [rebuild(node, P, paragraphAttrs(node.a, false), inlineChildren(children, env))];
   }
 
   // 물건 하나에 글이 없다 — 이미 래퍼문단이다. attrs 만 정렬로 좁힌다.
   if (lumps.length === 1 && slots.length === 1) {
-    // 물건이 거절되면 빈 문단만 남는다 — 껍데기 없는 자리에 캐럿이 설 곳은 있어야 한다.
-    const only = lumpNode(lumps[0] as ElementNode, env);
-    const attrs = paragraphAttrs(node.a, true, only === null || !refusesAlign(only.w, env));
-    return [rebuild(node, P, attrs, only ? [only] : [])];
+    const only = lumps[0] as ElementNode;
+    const attrs = paragraphAttrs(node.a, true, !refusesAlign(only.w, env));
+    return [rebuild(node, P, attrs, [only])];
   }
 
   // 섞였다 — 쪼갠다. 글 조각은 글 문단으로(속성 화이트리스트), 물건마다 래퍼문단이 선다(정렬만 상속).
@@ -210,10 +333,8 @@ function paragraph(node: ElementNode, env: SchemaEnv): ElementNode[] {
       const attrs = paragraphAttrs(node.a, false);
       out.push(attrs ? { w: P, a: attrs, ch: inline } : { w: P, ch: inline });
     } else {
-      const wrapped = lumpNode(slot, env);
-      if (!wrapped) continue; // 거절된 물건 — 쓴 적 없는 빈 문단을 대신 세우지 않는다
-      const attrs = paragraphAttrs(node.a, true, !refusesAlign(wrapped.w, env));
-      out.push(attrs ? { w: P, a: attrs, ch: [wrapped] } : { w: P, ch: [wrapped] });
+      const attrs = paragraphAttrs(node.a, true, !refusesAlign(slot.w, env));
+      out.push(attrs ? { w: P, a: attrs, ch: [slot] } : { w: P, ch: [slot] });
     }
   }
   return out;
@@ -231,16 +352,17 @@ function blockChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] {
     if (inline.length === 0) return;
     out.push({ w: P, ch: inline });
   };
-  for (const node of nodes) {
+  for (const node of unwrapUnknown(nodes, env)) {
     if (isElement(node) && node.w === P) {
       flush();
       out.push(...paragraph(node, env));
       continue;
     }
     if (isLump(node, env)) {
-      flush();
       const wrapped = lumpNode(node, env); // 맨몸 물건 — 래퍼문단을 입는다
-      if (wrapped) out.push({ w: P, ch: [wrapped] });
+      if (!wrapped) continue;
+      flush();
+      out.push({ w: P, ch: [wrapped] });
       continue;
     }
     if (isElement(node) && (env.blockHolders.has(node.w) || env.inlineHolders.has(node.w))) {

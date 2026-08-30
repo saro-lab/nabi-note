@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Titre
+description: Transformez un paragraphe en titre et choisissez son niveau.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Titre
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Transformez un paragraphe en titre et choisissez son niveau. Activez le titre dans la barre d'outils et choisissez H1 à H6, ou tapez `#` à `######` suivi d'un espace dans un paragraphe vide.
 
-[Open the Korean canonical page](/ko/guide/features)
+Un titre n'est pas un type de bloc séparé. Il est stocké sous forme d'attribut sur un paragraphe. Appuyer à nouveau sur le titre le ramène à un paragraphe normal, vous permettant ainsi de modifier uniquement le niveau tout en conservant la structure du corps intacte.
 
-</div>
+<WingDemo path="/wing/block/heading" />
+
+```ts
+const selected = wings().use('h').build()
+```

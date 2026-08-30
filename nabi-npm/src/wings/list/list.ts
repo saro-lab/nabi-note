@@ -5,14 +5,8 @@
 //   backspace  항목 첫머리 = 표식 하나만 지운다(unwrapItem 리스트 특칙, 3종 공통)
 //   tab        앞 항목 속으로 들어간다(중첩)          shiftTab  한 겹 나온다(맨 층이면 리스트 밖)
 //   enter      항목 분할 — 빈 항목이면 탈출(내어쓰기)
-import {
-  P,
-  isElement,
-  isWrapper,
-  type ElementNode,
-  type NabiDoc,
-  type NabiNode,
-} from '../../schema/index.js';
+import { P, isElement, isWrapper, type ElementNode, type NabiDoc, type NabiNode } from '../../schema/index.js';
+import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import {
   comparePositions,
   fromRuns,
@@ -26,7 +20,6 @@ import {
   terminalOf,
   withChildren,
   type EditEnv,
-  type EditResult,
   type Position,
 } from '../../doc/index.js';
 import { caretAt, isCollapsed, ordered, type Selection } from '../../caret/index.js';
@@ -34,22 +27,7 @@ import type { Command, CommandOutcome } from '../../editor/index.js';
 import { listFamily, unwrapItem, type InputRule, type OnKey, type Wing } from '../../wing/index.js';
 import type { MdBuilder } from '../../io/index.js';
 import type { LocaleText } from '../../locale/index.js';
-
-interface Family {
-  readonly list: string;
-  readonly item: string;
-}
-
-const BULLET: Family = { list: 'ul', item: 'li' };
-const ORDERED: Family = { list: 'ol', item: 'oli' };
-const TASK: Family = { list: 'tl', item: 'tli' };
-
-// 세 가족이 서로를 아는 유일한 자리 — 토글이 리스트를 리스트로 갈아입히기 때문이다(한 파일 안).
-const LIST_TYPES: ReadonlySet<string> = new Set([BULLET.list, ORDERED.list, TASK.list]);
-
-const emptyParagraph = (): ElementNode => ({ w: P, ch: [] });
-
-const outcomeOf = (r: EditResult): CommandOutcome => ({ doc: r.doc, selection: caretAt(r.caret) });
+import { BULLET, ORDERED, TASK, LIST_TYPES, emptyParagraph, outcomeOf, type Family } from './helpers.js';
 
 function isEmptyItem(item: ElementNode): boolean {
   if (item.ch.length === 0) return true;
@@ -92,10 +70,10 @@ function indent(doc: NabiDoc, itemPath: readonly number[], focus: Position, env:
     head = [...listPath, index - 1, prev.ch.length, 0, 0];
   }
 
-  const nextItems = [...items.slice(0, index - 1), withChildren(prev, prevCh),...items.slice(index + 1)];
+  const nextItems = [...items.slice(0, index - 1), withChildren(prev, prevCh), ...items.slice(index + 1)];
   const next = replaceAt(doc, listPath, [withChildren(list, nextItems)]);
   const rest = focus.path.slice(itemPath.length);
-  return { doc: next, selection: caretAt({ path: [...head,...rest], offset: focus.offset }) };
+  return { doc: next, selection: caretAt({ path: [...head, ...rest], offset: focus.offset }) };
 }
 
 // --- 내어쓰기 — 한 겹 나온다. 맨 층이면 리스트 밖 문단이다(표식 하나만 걷는 것과 같은 문). ----
@@ -131,17 +109,17 @@ function outdent(doc: NabiDoc, itemPath: readonly number[], focus: Position, env
   const keptCh =
     before.length > 0
       ? [
-...grand.ch.slice(0, wrapperIndex),
+          ...grand.ch.slice(0, wrapperIndex),
           withChildren(wrapper, [withChildren(list, before)]),
-...grand.ch.slice(wrapperIndex + 1),
+          ...grand.ch.slice(wrapperIndex + 1),
         ]
-      : [...grand.ch.slice(0, wrapperIndex),...grand.ch.slice(wrapperIndex + 1)];
+      : [...grand.ch.slice(0, wrapperIndex), ...grand.ch.slice(wrapperIndex + 1)];
   const keptGrand = withChildren(grand, keptCh.length > 0 ? keptCh : [emptyParagraph()]);
 
   const next = replaceAt(doc, grandPath, [keptGrand, moved]);
   const grandIndex = grandPath[grandPath.length - 1] as number;
   const rest = focus.path.slice(itemPath.length);
-  const caret: Position = { path: [...grandPath.slice(0, -1), grandIndex + 1,...rest], offset: focus.offset };
+  const caret: Position = { path: [...grandPath.slice(0, -1), grandIndex + 1, ...rest], offset: focus.offset };
   return { doc: next, selection: caretAt(caret) };
 }
 
@@ -180,7 +158,7 @@ function joinItems(doc: NabiDoc, listPath: readonly number[], index: number, env
 
   const inner = lastHolderIn(prev, env);
   if (!inner) return null;
-  const target = nodeAt(doc, [...listPath, index - 1,...inner]);
+  const target = nodeAt(doc, [...listPath, index - 1, ...inner]);
   if (!target) return null;
 
   const terminal = terminalOf(env);
@@ -191,16 +169,16 @@ function joinItems(doc: NabiDoc, listPath: readonly number[], index: number, env
   // 첫 블록이 글자리면 그 글을 이어 붙이고, 아니면(중첩 목록으로 시작하는 항목) 통째로 따라간다.
   const joinable = head !== undefined && isElement(head) && isHolder(head, env) && !isWrapper(head, env);
   const filled = joinable
-    ? withChildren(target, fromRuns([...holderRuns(target, terminal),...holderRuns(head, terminal)]))
+    ? withChildren(target, fromRuns([...holderRuns(target, terminal), ...holderRuns(head, terminal)]))
     : target;
   const tail = joinable ? rest : item.ch;
 
-  let merged = replaceAt([prev], [0,...inner], [filled])[0] as ElementNode;
-  if (tail.length > 0) merged = withChildren(merged, [...merged.ch,...tail]);
+  let merged = replaceAt([prev], [0, ...inner], [filled])[0] as ElementNode;
+  if (tail.length > 0) merged = withChildren(merged, [...merged.ch, ...tail]);
 
-  const nextItems = [...items.slice(0, index - 1), merged,...items.slice(index + 1)];
+  const nextItems = [...items.slice(0, index - 1), merged, ...items.slice(index + 1)];
   const next = replaceAt(doc, listPath, [withChildren(list, nextItems)]);
-  return { doc: next, selection: caretAt({ path: [...listPath, index - 1,...inner], offset: junction }) };
+  return { doc: next, selection: caretAt({ path: [...listPath, index - 1, ...inner], offset: junction }) };
 }
 
 // 목록 **뒤**에 선 블록을 마지막 항목 끝으로 끌어올린다 (§6 의 마지막 항목· §12).
@@ -224,12 +202,12 @@ function pullAfterList(
   if (!item) return null;
   const inner = lastHolderIn(item, env);
   if (!inner) return null;
-  const target = nodeAt(doc, [...itemPath,...inner]);
+  const target = nodeAt(doc, [...itemPath, ...inner]);
   if (!target) return null;
 
   const terminal = terminalOf(env);
   const junction = holderLength(target, env);
-  const caret = caretAt({ path: [...itemPath,...inner], offset: junction });
+  const caret = caretAt({ path: [...itemPath, ...inner], offset: junction });
 
   // 뒤가 목록이면 그 **첫 항목**을 끌어올린다 — 목록끼리 붙어 있는 자리다 (§12).
   const lump = isWrapper(after, env) ? after.ch[0] : undefined;
@@ -237,15 +215,16 @@ function pullAfterList(
     const first = lump.ch.filter(isElement)[0];
     if (first === undefined) return null;
     const firstHead = first.ch[0];
-    const joinable = firstHead !== undefined && isElement(firstHead) && isHolder(firstHead, env) && !isWrapper(firstHead, env);
+    const joinable =
+      firstHead !== undefined && isElement(firstHead) && isHolder(firstHead, env) && !isWrapper(firstHead, env);
     const filled = joinable
-      ? withChildren(target, fromRuns([...holderRuns(target, terminal),...holderRuns(firstHead, terminal)]))
+      ? withChildren(target, fromRuns([...holderRuns(target, terminal), ...holderRuns(firstHead, terminal)]))
       : target;
     const tail = joinable ? first.ch.slice(1) : first.ch;
-    let grown = replaceAt(doc, [...itemPath,...inner], [filled]);
+    let grown = replaceAt(doc, [...itemPath, ...inner], [filled]);
     if (tail.length > 0) {
       const owner = nodeAt(grown, itemPath);
-      if (owner) grown = replaceAt(grown, itemPath, [withChildren(owner, [...owner.ch,...tail])]);
+      if (owner) grown = replaceAt(grown, itemPath, [withChildren(owner, [...owner.ch, ...tail])]);
     }
     const kept = lump.ch.filter(isElement).slice(1);
     const nextDoc =
@@ -257,17 +236,19 @@ function pullAfterList(
 
   // 뒤가 글 문단이면 그 글만 올라오고 문단은 걷힌다.
   if (!isHolder(after, env) || isWrapper(after, env)) return null;
-  const filled = withChildren(target, fromRuns([...holderRuns(target, terminal),...holderRuns(after, terminal)]));
-  const grown = replaceAt(doc, [...itemPath,...inner], [filled]);
+  const filled = withChildren(target, fromRuns([...holderRuns(target, terminal), ...holderRuns(after, terminal)]));
+  const grown = replaceAt(doc, [...itemPath, ...inner], [filled]);
   return { doc: spliceSiblings(grown, parentPath, at + 1, 1), selection: caret };
 }
 
 // 형제 하나를 걷는다 — `replaceAt` 은 갈아 끼우기만 하므로 지우는 손이 따로 필요하다.
 function spliceSiblings(doc: NabiDoc, parentPath: readonly number[], at: number, count: number): NabiDoc {
-  if (parentPath.length === 0) return [...doc.slice(0, at),...doc.slice(at + count)];
+  if (parentPath.length === 0) return [...doc.slice(0, at), ...doc.slice(at + count)];
   const parent = nodeAt(doc, parentPath);
   if (!parent) return doc;
-  return replaceAt(doc, parentPath, [withChildren(parent, [...parent.ch.slice(0, at),...parent.ch.slice(at + count)])]);
+  return replaceAt(doc, parentPath, [
+    withChildren(parent, [...parent.ch.slice(0, at), ...parent.ch.slice(at + count)]),
+  ]);
 }
 
 // --- 엔터 — 항목이 갈라진다. 체크는 **글을 따라간다** (§10) -----------------------------------
@@ -285,8 +266,10 @@ function splitItem(doc: NabiDoc, itemPath: readonly number[], focus: Position, e
   // **체크는 글을 따라간다** (§10). 보통은 앞 반쪽이 원래 항목이라 속성을 그대로 들지만
   // 첫머리에서 가르면 앞 반쪽이 **빈 껍데기**다 — 그때 체크를 거기 두면 체크했던 글 전체가
   // 사용자 모르게 "안 한 일" 로 둔갑한다. 체크는 칸이 아니라 그 할 일에 대한 표시다.
-  const headEmpty = head.length === 0 || head.every((block) => isElement(block) && isHolder(block, env) && holderLength(block, env) === 0);
-  const withAttrs = (ch: readonly NabiNode[]): ElementNode => ({ w: item.w,...(item.a ? { a: item.a } : {}), ch });
+  const headEmpty =
+    head.length === 0 ||
+    head.every((block) => isElement(block) && isHolder(block, env) && holderLength(block, env) === 0);
+  const withAttrs = (ch: readonly NabiNode[]): ElementNode => ({ w: item.w, ...(item.a ? { a: item.a } : {}), ch });
   const bare = (ch: readonly NabiNode[]): ElementNode => ({ w: item.w, ch });
   const dress = headEmpty ? bare : withAttrs;
   const dressTail = headEmpty ? withAttrs : bare;
@@ -298,7 +281,7 @@ function splitItem(doc: NabiDoc, itemPath: readonly number[], focus: Position, e
   const index = itemPath[itemPath.length - 1] as number;
   const rest = split.caret.path.slice(itemPath.length + 1);
   const caret: Position = {
-    path: [...itemPath.slice(0, -1), index + 1, 0,...rest],
+    path: [...itemPath.slice(0, -1), index + 1, 0, ...rest],
     offset: split.caret.offset,
   };
   return { doc: next, selection: caretAt(caret) };
@@ -362,13 +345,7 @@ function itemsInRange(doc: NabiDoc, sel: Selection, env: EditEnv, family: Family
 // 첫째가 되어 같은 둥지에 이어 붙는다(잡은 것들이 한 덩어리로 유지된다). 내어쓰기는 뒤에서부터
 // 나가는 항목이 제 뒤의 형제들을 데리고 나가므로, 앞에서부터 하면 아직 안 옮긴 것들이 먼저
 // 끌려 들어간다.
-function moveItems(
-  doc: NabiDoc,
-  sel: Selection,
-  env: EditEnv,
-  family: Family,
-  back: boolean,
-): CommandOutcome | null {
+function moveItems(doc: NabiDoc, sel: Selection, env: EditEnv, family: Family, back: boolean): CommandOutcome | null {
   const ids = itemsInRange(doc, sel, env, family);
   if (ids.length === 0) return null;
 
@@ -454,9 +431,7 @@ function listKeys(family: Family): OnKey {
       case 'shiftTab':
         return outdent(doc, itemPath, focus, env);
       case 'enter':
-        return isEmptyItem(owner.node)
-          ? outdent(doc, itemPath, focus, env)
-          : splitItem(doc, itemPath, focus, env);
+        return isEmptyItem(owner.node) ? outdent(doc, itemPath, focus, env) : splitItem(doc, itemPath, focus, env);
       default:
         return null;
     }
@@ -479,7 +454,7 @@ function toggleList(family: Family): Command {
     const key = (path: readonly number[], depth: number): string => path.slice(0, depth).join('.');
     const remap = (pos: Position, depth: number): Position => {
       const head = moves.get(key(pos.path, depth));
-      return head === undefined ? pos : { path: [...head,...pos.path.slice(depth)], offset: pos.offset };
+      return head === undefined ? pos : { path: [...head, ...pos.path.slice(depth)], offset: pos.offset };
     };
     const settle = (next: NabiDoc, depth: number): CommandOutcome => ({
       doc: next,
@@ -501,7 +476,7 @@ function toggleList(family: Family): Command {
         });
       });
       const freed = blocks.length > 0 ? blocks : [emptyParagraph()];
-      const next = [...doc.slice(0, a),...freed,...doc.slice(b + 1)] as NabiDoc;
+      const next = [...doc.slice(0, a), ...freed, ...doc.slice(b + 1)] as NabiDoc;
       return settle(next, 4);
     }
 
@@ -525,10 +500,9 @@ function toggleList(family: Family): Command {
     });
 
     const wrapper: ElementNode = { w: P, ch: [{ w: family.list, ch: items }] };
-    const next = [...doc.slice(0, a), wrapper,...doc.slice(b + 1)] as NabiDoc;
+    const next = [...doc.slice(0, a), wrapper, ...doc.slice(b + 1)] as NabiDoc;
     // 감싸기는 옛 자리의 깊이가 둘(리스트면 [t,0,i], 아니면 [t])이라 깊은 쪽을 먼저 본다.
-    const deep = (pos: Position): Position =>
-      moves.has(key(pos.path, 3)) ? remap(pos, 3) : remap(pos, 1);
+    const deep = (pos: Position): Position => (moves.has(key(pos.path, 3)) ? remap(pos, 3) : remap(pos, 1));
     return { doc: next, selection: { anchor: deep(sel.anchor), focus: deep(sel.focus) } };
   };
 }
@@ -579,14 +553,14 @@ function toggleCheck(family: Family): Command {
     const raw = args['ck'];
     const next = raw === 1 || raw === '1' ? true : raw === 0 || raw === '0' ? false : !now;
     if (next === now) return null; // 무변화 침묵
-    const a = {...(item.a ?? {}) };
+    const a = { ...(item.a ?? {}) };
     if (next) a['ck'] = 1;
     else delete a['ck'];
     const rebuilt: ElementNode = {
       w: item.w,
-...(Object.keys(a).length > 0 ? { a } : {}),
+      ...(Object.keys(a).length > 0 ? { a } : {}),
       ch: item.ch,
-...(item._id !== undefined ? { _id: item._id } : {}),
+      ...(item._id !== undefined ? { _id: item._id } : {}),
     };
     // 트리 모양이 안 바뀌므로(attr 하나) 들어온 자리가 그대로 산다.
     return { doc: replaceAt(doc, path, [rebuilt]), selection: sel };
@@ -611,8 +585,7 @@ const taskAttach: Wing['attach'] = ({ root, nabi }) => {
     const fontSize = Number.parseFloat(style?.fontSize ?? '') || FALLBACK_FONT_SIZE;
     const band = CHECKBOX_HIT_EM * fontSize;
     const rect = item.getBoundingClientRect();
-    const hit =
-      style?.direction === 'rtl' ? event.clientX >= rect.right - band : event.clientX <= rect.left + band;
+    const hit = style?.direction === 'rtl' ? event.clientX >= rect.right - band : event.clientX <= rect.left + band;
     if (!hit) return;
     event.preventDefault();
     nabi.applyCommand('toggleCheck', { id });
@@ -700,9 +673,54 @@ const TASK_ICON =
   '<path d="M6.25 4.5h6.56M6.25 11.06h6.56M2.31 4.15l1.05 1.05 1.75-1.93M2.31 10.71l1.05 1.05 1.75-1.93"/>';
 
 // 이름 셋 — old 사전 이식(14 로케일).
-const BULLET_NAME: LocaleText = { ko: '글머리 목록', en: 'Bullet list', ja: '箇条書き', zh: '项目符号列表', de: 'Aufzählung', fr: 'Liste à puces', es: 'Lista con viñetas', pt: 'Lista com marcadores', ru: 'Маркированный список', ar: 'قائمة نقطية', hi: 'बुलेट सूची', bn: 'বুলেট তালিকা', ur: 'بلٹ فہرست', id: 'Daftar berpoin' };
-const ORDERED_NAME: LocaleText = { ko: '번호 목록', en: 'Numbered list', ja: '番号付きリスト', zh: '编号列表', de: 'Nummerierte Liste', fr: 'Liste numérotée', es: 'Lista numerada', pt: 'Lista numerada', ru: 'Нумерованный список', ar: 'قائمة مرقمة', hi: 'क्रमांकित सूची', bn: 'সংখ্যাযুক্ত তালিকা', ur: 'نمبر شدہ فہرست', id: 'Daftar bernomor' };
-const TASK_NAME: LocaleText = { ko: '체크리스트', en: 'Checklist', ja: 'チェックリスト', zh: '任务列表', de: 'Checkliste', fr: 'Liste de tâches', es: 'Lista de tareas', pt: 'Lista de tarefas', ru: 'Список задач', ar: 'قائمة المهام', hi: 'चेकलिस्ट', bn: 'চেকলিস্ট', ur: 'چیک لسٹ', id: 'Daftar tugas' };
+const BULLET_NAME: LocaleText = {
+  ko: '글머리 목록',
+  en: 'Bullet list',
+  ja: '箇条書き',
+  zh: '项目符号列表',
+  de: 'Aufzählung',
+  fr: 'Liste à puces',
+  es: 'Lista con viñetas',
+  pt: 'Lista com marcadores',
+  ru: 'Маркированный список',
+  ar: 'قائمة نقطية',
+  hi: 'बुलेट सूची',
+  bn: 'বুলেট তালিকা',
+  ur: 'بلٹ فہرست',
+  id: 'Daftar berpoin',
+};
+const ORDERED_NAME: LocaleText = {
+  ko: '번호 목록',
+  en: 'Numbered list',
+  ja: '番号付きリスト',
+  zh: '编号列表',
+  de: 'Nummerierte Liste',
+  fr: 'Liste numérotée',
+  es: 'Lista numerada',
+  pt: 'Lista numerada',
+  ru: 'Нумерованный список',
+  ar: 'قائمة مرقمة',
+  hi: 'क्रमांकित सूची',
+  bn: 'সংখ্যাযুক্ত তালিকা',
+  ur: 'نمبر شدہ فہرست',
+  id: 'Daftar bernomor',
+};
+const TASK_NAME: LocaleText = {
+  ko: '체크리스트',
+  en: 'Checklist',
+  ja: 'チェックリスト',
+  zh: '任务列表',
+  de: 'Checkliste',
+  fr: 'Liste de tâches',
+  es: 'Lista de tareas',
+  pt: 'Lista de tarefas',
+  ru: 'Список задач',
+  ar: 'قائمة المهام',
+  hi: 'चेकलिस्ट',
+  bn: 'চেকলিস্ট',
+  ur: 'چیک لسٹ',
+  id: 'Daftar tugas',
+};
 
 // --- md 조립 -------------------------------------------------------------------------------------
 // 목록은 항목이 **붙어 서야** 한 목록이다 — 사이에 빈 줄이 들면 되읽을 때 목록이 둘로 갈린다.
@@ -753,17 +771,17 @@ function listWing(
   extra?: Partial<Wing>,
 ): Wing {
   return {
-...listFamily({
+    ...listFamily({
       w: family.list,
       item: family.item,
-...(itemDecl ? { itemDecl } : {}),
+      ...(itemDecl ? { itemDecl } : {}),
       onKey: listKeys(family),
       inputRules: rules,
       button: {
         group: 'list',
         svg: icon,
         label,
-...(shortcut ? { shortcut } : {}),
+        ...(shortcut ? { shortcut } : {}),
         action: { kind: 'command', command },
       },
       styles: LIST_CSS,
@@ -772,7 +790,7 @@ function listWing(
     toMd: family.list === ORDERED.list ? orderedMd : listMd,
     partMd: { [family.item]: itemMd(family.item) },
     commands: { [command]: toggleList(family) },
-...(extra ?? {}),
+    ...(extra ?? {}),
   };
 }
 
@@ -819,3 +837,7 @@ export const taskListWing: Wing = listWing(
 );
 
 export const listWings: readonly Wing[] = [bulletListWing, orderedListWing, taskListWing];
+
+$markBuiltinAttrOwner(bulletListWing, ['ul', 'li']);
+$markBuiltinAttrOwner(orderedListWing, ['ol', 'oli']);
+$markBuiltinAttrOwner(taskListWing, ['tl', 'tli']);

@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Unterstreichung
+description: Ausgewählten Text unterstreichen.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Unterstreichung
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Unterstreicht den ausgewählten Text. Wird sie erneut auf denselben Bereich angewendet, wird die Formatierung entfernt, und die Markierung in gespeicherten Dokumenten bleibt erhalten.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/underline" />
 
-</div>
+```ts
+const selected = wings().use('u').build()
+```

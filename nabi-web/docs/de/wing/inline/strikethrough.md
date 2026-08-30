@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Durchgestrichen
+description: Markierten Text durchstreichen.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Durchgestrichen
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Durchstreicht den markierten Text. Wird die Formatierung erneut auf denselben Bereich angewendet, wird sie entfernt, und die Markierung bleibt in gespeicherten Dokumenten erhalten.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/strikethrough" />
 
-</div>
+```ts
+const selected = wings().use('s').build()
+```

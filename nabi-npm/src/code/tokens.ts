@@ -26,38 +26,197 @@ export type CodeHighlighter = (code: string, language: string | null) => readonl
 export const CODE_TOKEN_ATTR = 'data-nabi-token';
 
 export const CODE_TOKEN_TYPES: readonly string[] = [
-  'keyword', 'string', 'number', 'comment', 'function', 'class',
-  'variable', 'operator', 'punctuation', 'tag', 'attribute', 'literal', 'regexp', 'meta',
+  'keyword',
+  'string',
+  'number',
+  'comment',
+  'function',
+  'class',
+  'variable',
+  'operator',
+  'punctuation',
+  'tag',
+  'attribute',
+  'literal',
+  'regexp',
+  'meta',
 ];
 
 // --- 언어군 (old 의 언어 목록에서 이름만 번역) --------------------------------------------------
 
 const C_LIKE = new Set([
-  'js', 'jsx', 'javascript', 'ts', 'tsx', 'typescript', 'java', 'c', 'cpp', 'c++', 'csharp', 'cs',
-  'go', 'rust', 'rs', 'kotlin', 'swift', 'php', 'scala', 'dart',
+  'js',
+  'jsx',
+  'javascript',
+  'ts',
+  'tsx',
+  'typescript',
+  'java',
+  'c',
+  'cpp',
+  'c++',
+  'csharp',
+  'cs',
+  'go',
+  'rust',
+  'rs',
+  'kotlin',
+  'swift',
+  'php',
+  'scala',
+  'dart',
 ]);
 const KEYWORDS: Readonly<Record<string, readonly string[]>> = {
   clike: [
-    'as', 'async', 'await', 'break', 'case', 'catch', 'class', 'const', 'continue', 'default',
-    'delete', 'do', 'else', 'enum', 'export', 'extends', 'finally', 'for', 'from', 'function',
-    'if', 'implements', 'import', 'in', 'instanceof', 'interface', 'let', 'new', 'of', 'private',
-    'protected', 'public', 'readonly', 'return', 'static', 'super', 'switch', 'this', 'throw',
-    'try', 'type', 'typeof', 'var', 'void', 'while', 'yield', 'struct', 'impl', 'fn', 'pub',
-    'package', 'func', 'defer', 'go', 'match', 'mut', 'use', 'namespace', 'using',
+    'as',
+    'async',
+    'await',
+    'break',
+    'case',
+    'catch',
+    'class',
+    'const',
+    'continue',
+    'default',
+    'delete',
+    'do',
+    'else',
+    'enum',
+    'export',
+    'extends',
+    'finally',
+    'for',
+    'from',
+    'function',
+    'if',
+    'implements',
+    'import',
+    'in',
+    'instanceof',
+    'interface',
+    'let',
+    'new',
+    'of',
+    'private',
+    'protected',
+    'public',
+    'readonly',
+    'return',
+    'static',
+    'super',
+    'switch',
+    'this',
+    'throw',
+    'try',
+    'type',
+    'typeof',
+    'var',
+    'void',
+    'while',
+    'yield',
+    'struct',
+    'impl',
+    'fn',
+    'pub',
+    'package',
+    'func',
+    'defer',
+    'go',
+    'match',
+    'mut',
+    'use',
+    'namespace',
+    'using',
   ],
   python: [
-    'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue', 'def', 'del', 'elif',
-    'else', 'except', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda',
-    'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try', 'while', 'with', 'yield',
+    'and',
+    'as',
+    'assert',
+    'async',
+    'await',
+    'break',
+    'class',
+    'continue',
+    'def',
+    'del',
+    'elif',
+    'else',
+    'except',
+    'finally',
+    'for',
+    'from',
+    'global',
+    'if',
+    'import',
+    'in',
+    'is',
+    'lambda',
+    'nonlocal',
+    'not',
+    'or',
+    'pass',
+    'raise',
+    'return',
+    'try',
+    'while',
+    'with',
+    'yield',
   ],
   sql: [
-    'select', 'from', 'where', 'insert', 'into', 'values', 'update', 'set', 'delete', 'create',
-    'table', 'drop', 'alter', 'join', 'left', 'right', 'inner', 'outer', 'on', 'group', 'order',
-    'by', 'having', 'limit', 'offset', 'and', 'or', 'not', 'null', 'as', 'distinct', 'union',
+    'select',
+    'from',
+    'where',
+    'insert',
+    'into',
+    'values',
+    'update',
+    'set',
+    'delete',
+    'create',
+    'table',
+    'drop',
+    'alter',
+    'join',
+    'left',
+    'right',
+    'inner',
+    'outer',
+    'on',
+    'group',
+    'order',
+    'by',
+    'having',
+    'limit',
+    'offset',
+    'and',
+    'or',
+    'not',
+    'null',
+    'as',
+    'distinct',
+    'union',
   ],
   bash: [
-    'if', 'then', 'else', 'elif', 'fi', 'for', 'while', 'do', 'done', 'case', 'esac', 'function',
-    'return', 'export', 'local', 'echo', 'cd', 'source', 'set', 'unset',
+    'if',
+    'then',
+    'else',
+    'elif',
+    'fi',
+    'for',
+    'while',
+    'do',
+    'done',
+    'case',
+    'esac',
+    'function',
+    'return',
+    'export',
+    'local',
+    'echo',
+    'cd',
+    'source',
+    'set',
+    'unset',
   ],
 };
 const LITERALS = new Set(['true', 'false', 'null', 'undefined', 'None', 'True', 'False', 'nil', 'NULL']);
@@ -92,19 +251,55 @@ interface Rules {
 function rulesOf(dialect: CodeDialect): Rules {
   switch (dialect) {
     case 'clike':
-      return { lineComment: ['//'], blockComment: ['/*', '*/'], quotes: ['"', "'", '`'], keywords: new Set(KEYWORDS['clike']), callIsFunction: true };
+      return {
+        lineComment: ['//'],
+        blockComment: ['/*', '*/'],
+        quotes: ['"', "'", '`'],
+        keywords: new Set(KEYWORDS['clike']),
+        callIsFunction: true,
+      };
     case 'python':
-      return { lineComment: ['#'], blockComment: null, quotes: ['"', "'"], keywords: new Set(KEYWORDS['python']), callIsFunction: true };
+      return {
+        lineComment: ['#'],
+        blockComment: null,
+        quotes: ['"', "'"],
+        keywords: new Set(KEYWORDS['python']),
+        callIsFunction: true,
+      };
     case 'json':
       return { lineComment: [], blockComment: null, quotes: ['"'], keywords: new Set(), callIsFunction: false };
     case 'css':
-      return { lineComment: ['//'], blockComment: ['/*', '*/'], quotes: ['"', "'"], keywords: new Set(), callIsFunction: true };
+      return {
+        lineComment: ['//'],
+        blockComment: ['/*', '*/'],
+        quotes: ['"', "'"],
+        keywords: new Set(),
+        callIsFunction: true,
+      };
     case 'sql':
-      return { lineComment: ['--'], blockComment: ['/*', '*/'], quotes: ["'", '"'], keywords: new Set(KEYWORDS['sql']), callIsFunction: false };
+      return {
+        lineComment: ['--'],
+        blockComment: ['/*', '*/'],
+        quotes: ["'", '"'],
+        keywords: new Set(KEYWORDS['sql']),
+        callIsFunction: false,
+      };
     case 'bash':
-      return { lineComment: ['#'], blockComment: null, quotes: ['"', "'"], keywords: new Set(KEYWORDS['bash']), callIsFunction: false };
+      return {
+        lineComment: ['#'],
+        blockComment: null,
+        quotes: ['"', "'"],
+        keywords: new Set(KEYWORDS['bash']),
+        callIsFunction: false,
+      };
     default:
-      return { lineComment: ['//', '#'], blockComment: ['/*', '*/'], quotes: ['"', "'", '`'], keywords: new Set(), callIsFunction: false };
+      return {
+        lineComment: ['//', '#'],
+        blockComment: ['/*', '*/'],
+        quotes: ['"', "'", '`'],
+        keywords: new Set(),
+        callIsFunction: false,
+      };
   }
 }
 
@@ -285,11 +480,7 @@ export function tokenize(code: string, language: string | null = null): CodeToke
 // 보는 쪽의 `viewer/code-paint`) 여기 한 벌만 둔다 — 두 벌이면 언젠가 갈린다.
 //
 // 하이라이터가 던지면 **색칠만** 포기한다 — 편집도 읽기도 계속돼야 한다.
-export function tokensFor(
-  source: string,
-  language: string | null,
-  highlight?: CodeHighlighter,
-): CodeToken[] {
+export function tokensFor(source: string, language: string | null, highlight?: CodeHighlighter): CodeToken[] {
   let answer: readonly CodeToken[] | null | undefined;
   try {
     answer = highlight?.(source, language);

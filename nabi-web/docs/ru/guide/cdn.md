@@ -1,14 +1,24 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Использование CDN
+description: Пример подключения NABI NOTE для браузера без инструмента сборки.
 ---
 
-<div class="translation-shell">
+<script setup>
+import CdnDemo from '../../.vitepress/ui/CdnDemo.vue'
+</script>
 
-# Translation pending
+# Использование CDN
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This route is reserved so navigation and language links do not lead to a missing page.
+На статичной странице, где сложно установить пакет, можно загрузить браузерную сборку и CSS NABI NOTE через CDN. Пример ниже автоматически читает версию пакета при сборке и создаёт адреса, затем собирает редактор через глобальный объект `NabiNote`.
 
-[Open the Korean canonical page](/ko/guide/cdn)
+<CdnDemo />
 
-</div>
+## Что важно учитывать в NABI NOTE
+
+- В коде развёртывания используйте одну и ту же закреплённую версию для CSS и браузерного JavaScript. Адрес без версии, например `latest`, может изменить работу в день выхода новой версии.
+- Браузерная сборка предоставляет корневой API как `window.NabiNote`. Для `nabi-note/ssr`, `nabi-note/viewer` и `nabi-note/diff` отдельных глобальных сборок нет.
+- Сохранение файлов и локальная история в примере работают в браузере пользователя. Если нужны сохранение на сервере или синхронизация учётной записи, отправляйте результат `getJson()` в API приложения.
+- При добавлении загрузки подключайте не только wing `upload`, но и фактическую функцию отправки, а также необходимые wings изображения или ссылки. Проверку файлов выполняет сервер загрузки.
+- Браузерная сборка подключает HTML parser внутри. Поэтому для `setHtml()`, открытия HTML-файла и вставки HTML не нужны отдельная опция parser или закрытый API.
+
+CDN отличается только способом загрузки. Формат сохранения и проверка ввода такие же, как при установке через npm, поэтому также прочитайте [основное использование](/ru/guide/getting-started).

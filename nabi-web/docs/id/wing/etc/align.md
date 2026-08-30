@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Perataan
+description: Ubah perataan horizontal untuk paragraf dan blok objek.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Perataan
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Ratakan paragraf saat ini, atau paragraf dalam rentang pilihan, ke kiri, tengah, atau kanan. Objek di dalam paragraf, seperti gambar, video, dan tabel, diratakan melalui paragraf pembungkusnya.
 
-[Open the Korean canonical page](/ko/guide/features)
+Perataan disimpan sebagai atribut paragraf, bukan pemformatan teks. Blok kode dikecualikan dari perataan karena inden di sana memiliki makna.
 
-</div>
+<WingDemo path="/wing/etc/align" />
+
+```ts
+const selected = wings().use('align').build()
+```

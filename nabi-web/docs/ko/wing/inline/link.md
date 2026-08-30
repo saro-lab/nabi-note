@@ -18,3 +18,25 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 ```ts
 const selected = wings().use('a').build()
 ```
+
+## CSS 스타일
+
+일반 링크는 `.nabi-content a`, 첨부 링크는 `.nabi-content a[data-nabi-file]`로 따로 꾸밀 수 있습니다.
+
+```css
+.article-body a:not([data-nabi-file]) {
+  color: var(--nabi-accent);
+  text-decoration-thickness: .08em;
+  text-underline-offset: .16em;
+}
+
+.article-body a[data-nabi-file] {
+  display: inline-flex;
+  gap: .35em;
+  padding: .25em .55em;
+  background: var(--nabi-soft);
+}
+```
+
+첨부 링크의 `::before`, `::after`는 파일 아이콘과 확장자를 표시하는 데 쓰이므로 `content`를
+바꾸거나 지우지 않는 편이 좋습니다.

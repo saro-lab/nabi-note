@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: बोल्ड
+description: चयनित पाठ को बोल्ड करें।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# बोल्ड
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+चयनित पाठ को बोल्ड करता है। उसी सीमा पर दोबारा लागू करने से फ़ॉर्मैटिंग हट जाती है। सहेजे गए दस्तावेज़ों में mark पाठ के साथ रहती है।
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/bold" />
 
-</div>
+```ts
+const selected = wings().use('b').build()
+```

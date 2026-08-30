@@ -1,14 +1,26 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Очистить форматирование
+description: Убирает форматирование символов и абзацев в выделенном диапазоне.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Очистить форматирование
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Одним действием убирает форматирование символов в выделенном диапазоне. Оно относится к зарегистрированным базовым mark, таким как жирный текст, цвет и гарнитура, а также к свойствам абзаца: заголовку, выравниванию и drop cap. То же действие выполняется быстрым двойным нажатием Esc.
 
-[Open the Korean canonical page](/ko/guide/features)
+При этом структура документа — списки, таблицы, цитаты и изображения — не превращается в простой текст. Внешнее выравнивание изображений и видео, а также ссылки-вложения, созданные загрузкой, остаются без изменений.
 
-</div>
+<WingDemo path="/wing/etc/clear-format" />
+
+```ts
+const selected = wings()
+  .use('b')
+  .use('i')
+  .use('clearFormat')
+  .build()
+```
+
+Чтобы форматирование можно было очистить, соответствующую wing форматирования тоже нужно выбрать.

@@ -1,12 +1,13 @@
 // 기본 toast — core 가 들고 오는 알림 그릇 하나 (084 ①). 계약은 editor/toast.ts 에 있고
-// 여기는 그 계약의 **몸**이다: 툴바가 이 mount 를 세우고, 그릇은 `nabi.$bindToast` 로
+// 여기는 그 계약의 **몸**이다: 툴바가 이 mount 를 세우고, 그릇은 `hostOf(nabi).bindToast` 로
 // 인스턴스에 스스로 선다. 호스트가 콜백(옵션 `toast`)을 끼운 인스턴스에서는 이 그릇이 한 번도
 // 안 불려 DOM 도 안 생긴다 — 표시만 갈아탄다는 것이 그 말이다.
 //
 // 자리는 **툴바 아래쯤의 고정 지점**이다 — 상황 줄(컨텍스트 툴바)의 유무·작동과 무관하다
 // (주인 답, 084 ask ②). 그래서 상황 줄 곁이 아니라 툴바 줄(`.nabi-toolbar-row`)에 절대 배치로
 // 붙는다: 상황 줄이 떴다 사라져도 이 자리는 안 움직인다.
-import type { Nabi, Toast } from '../editor/index.js';
+import { hostOf, type Nabi, type Toast } from '../editor/index.js';
+import { MOTION_TOAST_MS } from '../style/tokens.js';
 import { make } from './parts/dom.js';
 
 // --- 순수 판정 — 차례와 걷어낼 것 (DOM 없이 그물에 잡힌다) -----------------------------------
@@ -34,7 +35,7 @@ export function toastOverflow<T extends ToastSlot>(slots: readonly T[], max: num
 
 // 옅어지기 시작하는 지점 — 남은 시간이 이만큼일 때부터 0 까지 서서히 (084 ask ① 해석 2).
 // css.ts 의 `.nabi-toast` transition 시간과 같아야 한다.
-export const TOAST_FADE_MS = 500;
+export const TOAST_FADE_MS = MOTION_TOAST_MS;
 
 // --- 그릇 -------------------------------------------------------------------------------------
 
@@ -78,7 +79,7 @@ export function mountToast(options: ToastMountOptions): ToastMount {
   };
 
   const say: Toast = (level, message, ms) => {
-    const live = Math.max(0, ms ?? nabi.$toastMs);
+    const live = Math.max(0, ms ?? hostOf(nabi).toastMs);
     const el = make(owner, 'div', 'nabi-toast', { 'data-level': level });
     // `\n` 이 산다 — textContent + 시트의 pre-wrap. innerHTML 이 아니므로 말이 마크업이 될 길이 없다.
     el.textContent = message;
@@ -98,7 +99,7 @@ export function mountToast(options: ToastMountOptions): ToastMount {
     items.push(item);
 
     // 넘치면 남은 시간이 가장 적은 것부터 걷는다 — 방금 넣은 것이 가장 짧으면 그것이 걷힌다.
-    for (const gone of toastOverflow(items, nabi.$toastMax)) drop(gone);
+    for (const gone of toastOverflow(items, hostOf(nabi).toastMax)) drop(gone);
     if (!items.includes(item)) return;
 
     if (!shelf) {
@@ -115,7 +116,7 @@ export function mountToast(options: ToastMountOptions): ToastMount {
     el.addEventListener('click', () => drop(item));
   };
 
-  const unbind = nabi.$bindToast(say);
+  const unbind = hostOf(nabi).bindToast(say);
 
   return {
     toast: say,

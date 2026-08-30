@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: جداکار لائن
+description: دستاویز کے بہاؤ کو الگ کرنے کے لیے افقی لائن شامل کریں۔
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# جداکار لائن
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+یہ ایک افقی لائن ہے جو دستاویز کے بہاؤ کو الگ کرتی ہے۔ خالی پیراگراف میں تین یا زیادہ ہائفن لکھ کر Enter دبائیں، یا ٹول بار سے اسے شامل کریں۔
 
-[Open the Korean canonical page](/ko/guide/features)
+جداکار لائن متن کے بغیر ایک خودمختار بلاک ہے، اس لیے اس میں سرخی یا رنگ جیسی فارمیٹنگ نہیں ہوتی۔ اسے صرف پہلے اور بعد کے پیراگراف الگ کرنے کے لیے استعمال کریں۔
 
-</div>
+<WingDemo path="/wing/block/divider" />
+
+```ts
+const selected = wings().use('hr').build()
+```

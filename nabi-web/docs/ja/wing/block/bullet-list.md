@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: 箇条書き
+description: 複数の項目を番号なしで並べます。
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# 箇条書き
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+複数の項目を順序なしで並べるリストです。空の段落で `-` に続けて Space を入力するか、ツールバーから切り替えます。選択した複数の段落をまとめてリストにすることもできます。
 
-[Open the Korean canonical page](/ko/guide/features)
+リスト内では Tab で 1 段階インデントし、Shift+Tab で戻します。Enter は次の項目を作り、空の項目でもう一度 Enter を押すとリストを終了できます。
 
-</div>
+<WingDemo path="/wing/block/bullet-list" />
+
+```ts
+const selected = wings().use('ul').build()
+```

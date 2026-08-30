@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: বুলেট তালিকা
+description: একাধিক আইটেম ক্রম ছাড়াই সাজান।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# বুলেট তালিকা
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+একাধিক আইটেম ক্রম ছাড়াই সাজানোর তালিকা। খালি অনুচ্ছেদে `-`-এর পরে Space লিখুন, অথবা টুলবার থেকে বদলান। নির্বাচিত অনুচ্ছেদও একবারে তালিকায় বাঁধা যায়।
 
-[Open the Korean canonical page](/ko/guide/features)
+তালিকার ভেতরে Tab দিয়ে এক ধাপ ভেতরে নিন এবং Shift+Tab দিয়ে বাইরে আনুন। Enter পরের আইটেম বানায়; খালি আইটেমে আবার Enter চাপলে তালিকা শেষ হয়।
 
-</div>
+<WingDemo path="/wing/block/bullet-list" />
+
+```ts
+const selected = wings().use('ul').build()
+```

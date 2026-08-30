@@ -33,20 +33,49 @@ export interface CodePaintOptions {
 // 해제 뒤의 DOM 은 붙이기 전과 같다(표 정렬이 행 순서를 되돌리는 것과 같은 결).
 export function attachCodePaint(root: HTMLElement, options: CodePaintOptions = {}): () => void {
   const selector = 'pre > code';
-  const boxes = [
-    ...(root.matches(selector) ? [root as Element] : []),
-    ...root.querySelectorAll(selector),
-  ];
+  const boxes = [...(root.matches(selector) ? [root as Element] : []), ...root.querySelectorAll(selector)];
 
   const undo: (() => void)[] = [];
-  for (const code of boxes) {
-    const source = codeSourceOf(code);
-    // 빈 상자는 건드리지 않는다 — 받침 `<br>` 하나뿐인 속을 다시 지으면 없던 빈 줄이 생긴다.
-    if (source.trim() === '') continue;
-    const before = [...code.childNodes];
-    // 보는 쪽에는 캐럿이 없다 — 받침을 안 세운다(세우면 발행된 쪽보다 한 줄 길어진다).
-    applyTokens(code, tokensFor(source, codeLanguageOf(code), options.highlight), { filler: false });
-    undo.push(() => code.replaceChildren(...before));
+  try {
+    for (const code of boxes) {
+      const source = codeSourceOf(code);
+      // 빈 상자는 건드리지 않는다 — 받침 `<br>` 하나뿐인 속을 다시 지으면 없던 빈 줄이 생긴다.
+      if (source.trim() === '') continue;
+      const before = [...code.childNodes];
+      const beforeHtml = code.innerHTML;
+      // 보는 쪽에는 캐럿이 없다 — 받침을 안 세운다(세우면 발행된 쪽보다 한 줄 길어진다).
+      const tokens = tokensFor(source, codeLanguageOf(code), options.highlight);
+      const current = [...code.childNodes];
+      if (
+        code.innerHTML !== beforeHtml ||
+        current.length !== before.length ||
+        current.some((node, at) => node !== before[at])
+      )
+        continue;
+      applyTokens(code, tokens, { filler: false });
+      const painted = [...code.childNodes];
+      const paintedHtml = code.innerHTML;
+      undo.push(() => {
+        // A host can update the same code node before refresh. Restore only our still-current projection.
+        const current = [...code.childNodes];
+        if (
+          code.innerHTML !== paintedHtml ||
+          current.length !== painted.length ||
+          current.some((node, at) => node !== painted[at])
+        )
+          return;
+        code.replaceChildren(...before);
+      });
+    }
+  } catch (error) {
+    for (const back of undo.reverse()) {
+      try {
+        back();
+      } catch {
+        // Preserve the setup failure while restoring earlier code boxes.
+      }
+    }
+    throw error;
   }
 
   return () => {

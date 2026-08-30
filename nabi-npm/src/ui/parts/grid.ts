@@ -144,9 +144,16 @@ export function makeGrid(owner: Document, options: GridOptions): Grid {
     const byTab = options.aimBy === 'tab';
     // 우리 것이 아닌 키는 손도 안 댄다 — 탭 판의 방향키는 이름 칸의 캐럿을 옮기는 키이고,
     // 방향키 판의 Tab 은 브라우저의 것이다(붙여넣기 판은 옛 길 그대로 둔다).
-    const aimKey = event.key === 'Tab'
-      ? (byTab ? (event.shiftKey !== rtl ? 'ArrowLeft' : 'ArrowRight') : '')
-      : (byTab ? '' : event.key);
+    const aimKey =
+      event.key === 'Tab'
+        ? byTab
+          ? event.shiftKey !== rtl
+            ? 'ArrowLeft'
+            : 'ArrowRight'
+          : ''
+        : byTab
+          ? ''
+          : event.key;
     const next = aimKey === '' ? -1 : gridStep(aimed, rows.length, aimKey, GRID_COLS, rtl);
     if (next >= 0) {
       event.preventDefault();

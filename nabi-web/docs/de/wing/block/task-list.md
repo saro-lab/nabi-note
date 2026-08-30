@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Aufgabenliste
+description: Eine Liste, die den Abschlussstatus mit dem Dokument speichert.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Aufgabenliste
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Eine Liste mit Abschlussstatus. Geben Sie `[ ]` oder `[x]` gefolgt von einem Leerzeichen in einem leeren Absatz ein, oder erstellen Sie einen über die Symbolleiste, und klicken Sie dann auf das Kontrollkästchen, um seinen Status zu ändern.
 
-[Open the Korean canonical page](/ko/guide/features)
+Der geprüfte Zustand wird mit jedem Element im Dokument gespeichert. Wenn ein Element geteilt wird, folgt der geprüfte Zustand dem Element, das den Text behält, nicht dem leeren Element davor, sodass das Teilen einer abgeschlossenen Aufgabe den Status nicht unerwartet umkehrt.
 
-</div>
+<WingDemo path="/wing/block/task-list" />
+
+```ts
+const selected = wings().use('tl').build()
+```

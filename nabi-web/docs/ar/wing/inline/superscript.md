@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: نص علوي
+description: ارفع النص المحدد فوق خط الأساس.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# نص علوي
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+يرفع النص المحدد فوق خط الأساس للأسس وعلامات المراجع. تطبيقه مرة أخرى يزيل التنسيق.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/superscript" />
 
-</div>
+```ts
+const selected = wings().use('sup').build()
+```

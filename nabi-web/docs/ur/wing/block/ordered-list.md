@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: نمبر والی فہرست
+description: ترتیب اہم ہونے والے آئٹمز کو نمبر والی فہرست میں بنائیں۔
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# نمبر والی فہرست
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+ترتیب اہم ہونے والے آئٹمز کو نمبر والی فہرست میں بنائیں۔ خالی پیراگراف میں `1.` کی طرح نمبر اور نقطہ لکھ کر Space دبائیں، یا منتخب پیراگراف کو ٹول بار سے تبدیل کریں۔
 
-[Open the Korean canonical page](/ko/guide/features)
+دکھائی دینے والے نمبر آئٹم کی جگہ سے شمار ہوتے ہیں، اس لیے آئٹمز شامل کرنے یا اندر کرنے پر بھی خود بخود جاری رہتے ہیں۔ درج کردہ ابتدائی نمبر کو محفوظ کر کے کسی من چاہے نمبر سے گنتی شروع کرنے کی سہولت موجود نہیں ہے۔
 
-</div>
+<WingDemo path="/wing/block/ordered-list" />
+
+```ts
+const selected = wings().use('ol').build()
+```

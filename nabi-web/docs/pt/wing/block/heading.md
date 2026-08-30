@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Título
+description: Transforme um parágrafo em título e escolha seu nível.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Título
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Transforma o parágrafo atual em um título de nível 1 a 6. Digitar `#` e pressionar Espaço em um parágrafo vazio também o transforma em título. O nível é salvo como atributo de parágrafo, não como formatação de texto.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/block/heading" />
 
-</div>
+```ts
+const selected = wings().use('h').build()
+```

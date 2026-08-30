@@ -1,14 +1,39 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: تصویر
+description: تصویر کا URL شامل کریں اور چوڑائی اور سیدھ بدلیں۔
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# تصویر
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+تصویر کا URL شامل کریں اور اس کی چوڑائی اور سیدھ بدلیں۔ طے شدہ طور پر پتے `http:`، `https:` یا اسی سائٹ کے راستوں تک محدود ہوتے ہیں، اور نئی تصویر ابتدا میں 60٪ چوڑائی پر درمیان میں ہوتی ہے۔
 
-[Open the Korean canonical page](/ko/guide/features)
+چوڑائی صرف مقررہ درجوں میں محفوظ ہوتی ہے، اور سیدھ تصویر کو سمیٹنے والے پیراگراف پر محفوظ ہوتی ہے۔ `blob:` یا `data:image/...` پیش نظارے استعمال کرنے کے لیے تصویر ونگ اور ایڈیٹر اسمبلی، دونوں میں مقامی URLs کو واضح طور پر اجازت دیں۔ SVG data URLs کی اجازت نہیں ہے۔
 
-</div>
+<WingDemo path="/wing/block/image" />
+
+```ts
+const selected = wings().use('img', {
+  allowLocalUrls: false,
+}).build()
+```
+
+یہ ونگ دستاویز میں ایک پتہ شامل کرتا ہے؛ یہ فائلیں اپ لوڈ نہیں کرتا۔ فائلیں سرور کو بھیجنے کے لیے [اپ لوڈ ونگ](/ur/wing/etc/upload) جوڑیں۔
+
+## CSS طرزیں
+
+تصاویر کو `.nabi-content img` سے طرز دیں۔ محفوظ شدہ چوڑائی اور سیدھ برقرار رکھیں، اور صرف ظاہری تفصیلات جیسے بارڈر یا سائے تبدیل کریں۔
+
+```css
+.article-body img {
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.dark .article-body img { box-shadow: 0 8px 24px rgb(0 0 0 / 35%); }
+```
+
+`max-inline-size`، `block-size`، چوڑائی اور سیدھ کے طے شدہ قواعد برقرار رکھیں۔ تصویر کا حجم دستاویز میں محفوظ ہوتا ہے، اس لیے مقررہ CSS چوڑائی نافذ کرنا مصنف کی منتخب کردہ چوڑائی سے متصادم ہو سکتا ہے۔

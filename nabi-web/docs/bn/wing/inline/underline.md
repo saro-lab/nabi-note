@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: আন্ডারলাইন
+description: নির্বাচিত লেখার নিচে রেখা দিন।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# আন্ডারলাইন
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+নির্বাচিত লেখার নিচে রেখা দেয়। একই পরিসরে আবার প্রয়োগ করলে ফরম্যাটিং সরিয়ে যায়, এবং mark সংরক্ষিত ডকুমেন্টে থাকে।
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/underline" />
 
-</div>
+```ts
+const selected = wings().use('u').build()
+```

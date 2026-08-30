@@ -22,7 +22,6 @@ import {
   createNabiWith,
   mountSurface,
   mountToolbar,
-  parseNodes,
   wings,
 } from 'nabi-note';
 import 'nabi-note/nabi.css';
@@ -32,8 +31,10 @@ const content = document.querySelector<HTMLElement>('#content')!;
 const toolbarRoot = document.querySelector<HTMLElement>('#toolbar')!;
 
 const { nabi, registry } = createNabiWith(wings().allBasic(), {
-  parseHtml: parseNodes,
   locale: 'en',
+  onError: (error) => console.error(error),
+  undoLimit: 200,
+  typingMergeMs: 1000,
 });
 
 const surface = mountSurface({ nabi, registry, root: content, locale: 'en' });
@@ -50,9 +51,11 @@ const toolbar = mountToolbar({
 // surface.unmount();
 ```
 
-Do not set `contenteditable` yourself. `mountSurface()` sets it and adds `.nabi-editing`. The host supplies `.nabi`, `.nabi-toolbar`, and `.nabi-content` placement classes.
+Do not set `contenteditable` yourself. `mountSurface()` sets it and adds `.nabi-editing`. Give every active surface, toolbar, context toolbar, and standalone diff its own separate, non-overlapping root. A duplicate root or an active ancestor and descendant overlap throws. After the owning mount unmounts, the other root can be mounted. Mount roots should otherwise start without host-owned child DOM. Matching direct groups from `renderToolbarHtml()` are the package-owned SSR toolbar exception. The host supplies `.nabi`, `.nabi-toolbar`, and `.nabi-content` placement classes.
 
-`parseHtml` is required for nonblank `setHtml()`. `parseNodes` is the browser adapter. It uses `DOMParser`.
+The browser factory wires its internal `DOMParser` adapter automatically, so `setHtml()`, HTML files, and HTML paste need no parser option.
+
+`undoLimit` defaults to 200 and accepts integers of 1 or greater. `typingMergeMs` defaults to 1000 milliseconds; set it to 0 to keep every insertion as a separate undo step. Invalid values throw during editor creation. `onError` receives isolated command, repair, normalization, listener, and host callback failures.
 
 ## Choosing wings
 
@@ -120,7 +123,10 @@ const view = mountViewTools({
   root,
   container: toolbarRoot,
   locale: 'en',
-  onBody: (body) => attachViewer(body, { locale: 'en' }),
+  onBody: (body) => {
+    const viewer = attachViewer(body, { locale: 'en' });
+    return () => viewer.unmount();
+  },
 });
 ```
 
@@ -135,14 +141,12 @@ import {
   browserFileStore,
   mountFile,
   openSavePanel,
-  parseNodes,
 } from 'nabi-note';
 
 const file = mountFile({
   nabi,
   registry,
   store: browserFileStore(document),
-  parse: parseNodes,
   locale: 'en',
 });
 
@@ -190,7 +194,7 @@ Defaults: key `nabi-note.history`, limit 20, and at most one automatic snapshot 
 
 ## Locale
 
-Set the same locale on editor assembly and mounts. Default is `en`. Supported dictionary codes are `ko`, `en`, `ja`, `zh`, `de`, `fr`, `es`, `pt`, `ru`, `ar`, `hi`, `bn`, `ur`, and `id`; `ar` and `ur` are RTL.
+Set the same locale on editor assembly and mounts. Default is `en`. Supported dictionary codes are `en`, `zh`, `hi`, `es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `de`, `ja`, `fa`, `mr`, `vi`, `te`, `ha`, `tr`, `sw`, `ta`, `ko`, `th`, and `it`; regional tags normalize to their base language, and `ar`, `ur`, and `fa` (including regional variants) are RTL.
 
 ## Cleanup
 

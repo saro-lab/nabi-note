@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: 番号付きリスト
+description: 順序が重要な項目を番号付きリストにします。
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# 番号付きリスト
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+順序が重要な項目を番号付きリストにします。空の段落で `1.` のように数字とピリオドを入力してから Space を押すか、選択した段落をツールバーから切り替えます。
 
-[Open the Korean canonical page](/ko/guide/features)
+表示される番号は項目の位置から計算されるため、項目を追加したりインデントしたりしても自動で続きます。入力した開始番号を保存して任意の番号から数える機能はありません。
 
-</div>
+<WingDemo path="/wing/block/ordered-list" />
+
+```ts
+const selected = wings().use('ol').build()
+```

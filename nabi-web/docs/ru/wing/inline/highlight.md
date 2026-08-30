@@ -1,14 +1,40 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Выделение цветом
+description: Примените разрешённый цвет выделения за выбранным текстом.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Выделение цветом
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Примените разрешённый цвет выделения за выбранным текстом. Сохранённые данные хранят только разрешённые имена цветов, а не произвольные CSS-значения, поэтому данные документа и визуальный стиль остаются раздельными.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/highlight" />
 
-</div>
+```ts
+const selected = wings().use('hl', {
+  values: ['yellow', 'green', 'cyan'],
+}).build()
+```
+
+Если `values` не указан, используется палитра по умолчанию: `yellow`, `green`, `cyan`, `pink`, `purple` и `orange`. Если сузить список, незарегистрированные цвета не сохраняются даже при загрузке существующего документа.
+
+## CSS-стили
+
+Документ хранит только имена цветов. Меняйте цвета редактора и опубликованной версии через CSS-переменные.
+
+```css
+.nabi-content { --nabi-hl-yellow: #fff0a6; }
+```
+
+Изменяя несколько цветов вместе, можно сохранить имена цветов в документе и менять только настроение продукта.
+
+```css
+.article-body {
+  --nabi-hl-yellow: #fff0a6;
+  --nabi-hl-green: #c8f0d8;
+  --nabi-hl-pink: #ffd6e5;
+}
+```

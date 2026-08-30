@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: بلٹ فہرست
+description: متعدد آئٹمز کو بغیر ترتیب کے فہرست میں لائیں۔
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# بلٹ فہرست
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+یہ متعدد آئٹمز کو بغیر ترتیب کے فہرست میں لاتی ہے۔ خالی پیراگراف میں `-` کے بعد Space دبائیں یا ٹول بار سے اسے تبدیل کریں۔ منتخب پیراگرافوں کو بھی ایک ساتھ فہرست میں شامل کیا جا سکتا ہے۔
 
-[Open the Korean canonical page](/ko/guide/features)
+فہرست میں Tab سے ایک سطح اندر جائیں اور Shift+Tab سے باہر آئیں۔ Enter اگلا آئٹم بناتا ہے، اور خالی آئٹم میں دوبارہ Enter دبانے سے فہرست ختم ہو جاتی ہے۔
 
-</div>
+<WingDemo path="/wing/block/bullet-list" />
+
+```ts
+const selected = wings().use('ul').build()
+```

@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: শিরোনাম
+description: অনুচ্ছেদকে শিরোনামে বদলান এবং স্তর ঠিক করুন।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# শিরোনাম
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+অনুচ্ছেদকে শিরোনামে বদলান এবং স্তরও ঠিক করুন। টুলবারে শিরোনাম চালু করে H1 থেকে H6 বাছুন, অথবা খালি অনুচ্ছেদে `#` থেকে `######`-এর পরে Space লিখুন।
 
-[Open the Korean canonical page](/ko/guide/features)
+শিরোনাম আলাদা block ধরন নয়, অনুচ্ছেদে সংরক্ষিত একটি attribute। শিরোনামে আবার চাপলে সাধারণ অনুচ্ছেদে ফিরে আসে, তাই মূল লেখার কাঠামো রেখে শুধু স্তর বদলানো যায়।
 
-</div>
+<WingDemo path="/wing/block/heading" />
+
+```ts
+const selected = wings().use('h').build()
+```

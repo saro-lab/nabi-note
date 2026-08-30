@@ -18,3 +18,17 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 ```ts
 const selected = wings().use('table').build()
 ```
+
+## CSS 스타일
+
+표는 `.nabi-content table`, 셀은 `.nabi-content :is(th, td)`로 꾸밉니다. 셀의 구조와 viewer가 넣는 정렬 버튼은 바꾸지 마세요.
+
+```css
+.article-body table { inline-size: 100%; border-collapse: collapse; }
+.article-body :is(th, td) { padding: .6rem .75rem; border: 1px solid var(--nabi-line); }
+.article-body th { background: var(--nabi-soft); font-weight: 700; }
+.article-body tr:nth-child(even) td { background: color-mix(in srgb, var(--nabi-soft) 45%, transparent); }
+```
+
+viewer를 연결했다면 `.nabi-sort` 버튼은 남겨 두세요. 셀에 `position`이나 오른쪽 padding을
+강제로 덮어쓰면 정렬 버튼과 겹칠 수 있습니다.

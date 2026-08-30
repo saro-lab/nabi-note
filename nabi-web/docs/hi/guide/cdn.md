@@ -1,14 +1,24 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: CDN का उपयोग
+description: बिल्ड टूल के बिना ब्राउज़र के लिए NABI NOTE जोड़ने का उदाहरण।
 ---
 
-<div class="translation-shell">
+<script setup>
+import CdnDemo from '../../.vitepress/ui/CdnDemo.vue'
+</script>
 
-# Translation pending
+# CDN का उपयोग
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This route is reserved so navigation and language links do not lead to a missing page.
+ऐसे स्थिर पेज पर जहाँ पैकेज इंस्टॉल करना कठिन हो, आप CDN से NABI NOTE का ब्राउज़र बंडल और CSS लोड कर सकते हैं। नीचे का उदाहरण बिल्ड के समय पैकेज संस्करण को अपने-आप पढ़कर पते बनाता है और ग्लोबल ऑब्जेक्ट `NabiNote` से एडिटर तैयार करता है।
 
-[Open the Korean canonical page](/ko/guide/cdn)
+<CdnDemo />
 
-</div>
+## NABI NOTE में ध्यान देने योग्य बातें
+
+- डिप्लॉयमेंट कोड में CSS और ब्राउज़र JavaScript के लिए एक ही निश्चित संस्करण का उपयोग करें। `latest` जैसे बिना संस्करण वाले पते पर नया संस्करण आने के दिन व्यवहार बदल सकता है।
+- ब्राउज़र बंडल रूट API को `window.NabiNote` के रूप में देता है। `nabi-note/ssr`, `nabi-note/viewer`, और `nabi-note/diff` के लिए अलग ग्लोबल बंडल उपलब्ध नहीं हैं।
+- उदाहरण में फ़ाइल सहेजना और स्थानीय इतिहास उपयोगकर्ता के ब्राउज़र में काम करते हैं। सर्वर पर सहेजने या खाता सिंक की ज़रूरत हो तो `getJson()` का परिणाम अपने एप्लिकेशन API को भेजें।
+- अपलोड जोड़ते समय केवल `upload` wing नहीं, वास्तविक भेजने वाला फ़ंक्शन और आवश्यक image या link wings भी जोड़ें। फ़ाइल जाँच अपलोड सर्वर की ज़िम्मेदारी है।
+- ब्राउज़र बंडल में HTML parser पहले से जुड़ा होता है। इसलिए `setHtml()`, HTML फ़ाइल खोलने या HTML पेस्ट करने के लिए अलग parser विकल्प या निजी API की आवश्यकता नहीं है।
+
+CDN केवल लोड करने के तरीके में अलग है। सेव करने का फ़ॉर्मैट और इनपुट जाँच npm इंस्टॉल के समान हैं, इसलिए [बुनियादी उपयोग](/hi/guide/getting-started) भी देखें।

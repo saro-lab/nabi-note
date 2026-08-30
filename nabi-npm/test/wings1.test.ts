@@ -7,7 +7,8 @@
 import { cocoon, type ElementNode, type NabiDoc, type NabiNode } from '../src/schema/index.js';
 import { positionExists, type Position } from '../src/doc/index.js';
 import { caretAt, type Selection } from '../src/caret/index.js';
-import { createNabiWith, makeRegistry, routeKey, simpleMark, type Wing } from '../src/wing/index.js';
+import { $createNabiWith, createNabiWith, makeRegistry, routeKey, simpleMark, type Wing } from '../src/wing/index.js';
+import { hostOf } from '../src/editor/index.js';
 import {
   FONT_SIZES,
   HIGHLIGHT_COLORS,
@@ -34,7 +35,7 @@ const p = (ch: readonly NabiNode[], a?: Record<string, string | number>): Elemen
 const at = (path: readonly number[], offset: number): Position => ({ path, offset });
 const range = (a: Position, b: Position): Selection => ({ anchor: a, focus: b });
 
-const make = (doc: readonly unknown[]) => createNabiWith(defaultWings, { doc, parseHtml: tinyHtml }).nabi;
+const make = (doc: readonly unknown[]) => $createNabiWith(defaultWings, { doc, parseHtml: tinyHtml }).nabi;
 
 function throws(name: string, fn: () => void, wants?: string): void {
   try {
@@ -49,10 +50,35 @@ function throws(name: string, fn: () => void, wants?: string): void {
 // --- registry — 기본 묶음 전체가 계약을 지난다 -------------------------------------------------
 
 ok('defaultWings 가 makeRegistry 를 지난다', registry.wings.length === defaultWings.length);
-eq('마크·값 마크·링크가 조립을 갖는다', ['b', 'i', 'u', 's', 'sub', 'sup', 'hl', 'tc', 'fs', 'tf', 'a'].every((w) => registry.builders[w] !== undefined), true);
-eq('컨테이너와 부품이 조립을 갖는다', ['ul', 'li', 'ol', 'oli', 'tl', 'tli', 'quote', 'details', 'summary', 'code', 'hr'].every((w) => registry.builders[w] !== undefined), true);
-eq('문단 속성 wing 은 노드를 안 세운다(조립 없음)', [headingWing, alignWing].every((w) => w.toHtml === undefined), true);
-eq('lumps 접힘 — 물건 전부 (병합 묶음: 표·이미지·유튜브 포함)', [...env.lumps].sort(), ['code', 'details', 'hr', 'img', 'ol', 'quote', 'table', 'tl', 'ul', 'youtube']);
+eq(
+  '마크·값 마크·링크가 조립을 갖는다',
+  ['b', 'i', 'u', 's', 'sub', 'sup', 'hl', 'tc', 'fs', 'tf', 'a'].every((w) => registry.builders[w] !== undefined),
+  true,
+);
+eq(
+  '컨테이너와 부품이 조립을 갖는다',
+  ['ul', 'li', 'ol', 'oli', 'tl', 'tli', 'quote', 'details', 'summary', 'code', 'hr'].every(
+    (w) => registry.builders[w] !== undefined,
+  ),
+  true,
+);
+eq(
+  '문단 속성 wing 은 노드를 안 세운다(조립 없음)',
+  [headingWing, alignWing].every((w) => w.toHtml === undefined),
+  true,
+);
+eq('lumps 접힘 — 물건 전부 (병합 묶음: 표·이미지·유튜브 포함)', [...env.lumps].sort(), [
+  'code',
+  'details',
+  'hr',
+  'img',
+  'ol',
+  'quote',
+  'table',
+  'tl',
+  'ul',
+  'youtube',
+]);
 eq('voids 접힘 — 블록 단말 셋', [...env.voids].sort(), ['hr', 'img', 'youtube']);
 eq('inlineHolders 접힘 — 접기 제목과 코드', [...env.inlineHolders].sort(), ['code', 'summary']);
 eq('boolAttrs 접힘 — 체크·펼침·표 제목', [...env.boolAttrs].sort(), ['ck', 'o', 'th']);
@@ -62,8 +88,11 @@ ok('ownerOf — 접기 제목은 접기 wing 의 것', registry.ownerOf('summary
 eq('정렬 wing 의 이름은 align, 키는 a (링크 wing 이 이름 a 를 쓴다)', [alignWing.w, alignWing.attrKey], ['align', 'a']);
 throws('예약어를 얹으면 묶음째 죽는다', () => makeRegistry([...defaultWings, simpleMark({ w: 'p' })]), '예약어');
 throws('같은 이름을 두 번 얹으면 죽는다', () => makeRegistry([...defaultWings, simpleMark({ w: 'b' })]), '두 번');
-throws('이름 규칙 어긴 커맨드는 죽는다', () =>
-  makeRegistry([...defaultWings, {...simpleMark({ w: 'z' }), commands: { paint: () => null } } as Wing]), '이름 규칙');
+throws(
+  '이름 규칙 어긴 커맨드는 죽는다',
+  () => makeRegistry([...defaultWings, { ...simpleMark({ w: 'exZ' }), commands: { paint: () => null } } as Wing]),
+  '이름 규칙',
+);
 
 // --- 왕복 — wing 마다 트리 → HTML → 트리 -------------------------------------------------------
 
@@ -76,7 +105,15 @@ function roundTrip(name: string, doc: readonly unknown[]): void {
 }
 
 roundTrip('마크 여섯', [
-  p(['맨글 ', el('b', ['굵게']), el('i', ['기울임']), el('u', ['밑줄']), el('s', ['취소선']), el('sub', ['아래']), el('sup', ['위'])]),
+  p([
+    '맨글 ',
+    el('b', ['굵게']),
+    el('i', ['기울임']),
+    el('u', ['밑줄']),
+    el('s', ['취소선']),
+    el('sub', ['아래']),
+    el('sup', ['위']),
+  ]),
 ]);
 roundTrip('형광펜·글자색', [p([el('hl', ['형광'], { c: 'yellow' }), el('tc', ['글자색'], { c: 'coral' })])]);
 roundTrip('크기·서체', [p([el('fs', ['크게'], { v: 'lg' }), el('tf', ['세리프'], { v: 'serif' })])]);
@@ -87,12 +124,8 @@ roundTrip('제목·정렬·드롭캡', [p(['제목글'], { h: 2, a: 'c' }), p(['
 roundTrip('라인', [p(['첫 줄', el('br'), '둘째 줄'])]);
 roundTrip('글머리 목록', [el('ul', [el('li', [p(['하나'])]), el('li', [p(['둘'])])])]);
 roundTrip('번호 목록', [el('ol', [el('oli', [p(['하나'])])])]);
-roundTrip('체크 목록', [
-  el('tl', [el('tli', [p(['한 일'])], { ck: 1 }), el('tli', [p(['안 한 일'])])]),
-]);
-roundTrip('중첩 목록', [
-  el('ul', [el('li', [p(['위']), p([el('ul', [el('li', [p(['속'])])])])])]),
-]);
+roundTrip('체크 목록', [el('tl', [el('tli', [p(['한 일'])], { ck: 1 }), el('tli', [p(['안 한 일'])])])]);
+roundTrip('중첩 목록', [el('ul', [el('li', [p(['위']), p([el('ul', [el('li', [p(['속'])])])])])])]);
 roundTrip('인용', [el('quote', [p(['인용 글']), p(['둘째 줄'])])]);
 roundTrip('접기(펼침)', [el('details', [el('summary', ['제목']), p(['속 글'])], { o: 1 })]);
 roundTrip('접기(접힘)', [el('details', [el('summary', ['제목']), p(['속 글'])])]);
@@ -114,9 +147,15 @@ const FAMILIES: readonly Family[] = [
 // [0]=앞 문단, [1]=래퍼문단(리스트) — 항목 i 의 문단은 [1,0,i,0] 이다.
 const listDoc = (fam: Family, count: number): NabiDoc =>
   cocoon(
-    [p(['앞']), el(fam.list, Array.from({ length: count }, (_, i) => el(fam.item, [p([`항목${i + 1}`])])))],
+    [
+      p(['앞']),
+      el(
+        fam.list,
+        Array.from({ length: count }, (_, i) => el(fam.item, [p([`항목${i + 1}`])])),
+      ),
+    ],
     env,
-);
+  );
 
 const press = (name: 'backspace' | 'delete' | 'tab' | 'shiftTab' | 'enter', doc: NabiDoc, sel: Selection) =>
   routeKey({ key: name }, doc, sel, env, registry);
@@ -130,8 +169,11 @@ for (const fam of FAMILIES) {
       `${fam.list} — 나머지 둘은 리스트로 남는다`,
       r ? ((r.doc[2] as ElementNode).ch[0] as ElementNode).ch.length : 0,
       2,
-);
-    ok(`${fam.list} — 반환 자리가 반환 문서에 실재한다`, r !== null && positionExists(cocoon(r.doc, env), r.selection.focus, env));
+    );
+    ok(
+      `${fam.list} — 반환 자리가 반환 문서에 실재한다`,
+      r !== null && positionExists(cocoon(r.doc, env), r.selection.focus, env),
+    );
   }
   {
     // §2 (B) — 가운데 항목은 **앞 항목과 합쳐진다**. 목록은 쪼개지지 않는다.
@@ -143,9 +185,12 @@ for (const fam of FAMILIES) {
       `${fam.list} — 앞 항목의 글 끝에 이어 붙는다`,
       list ? ((list.ch[0] as ElementNode).ch[0] as ElementNode).ch : null,
       ['항목1항목2'],
-);
+    );
     eq(`${fam.list} — 캐럿은 이어 붙은 자리다`, r ? r.selection.focus.offset : -1, 3);
-    ok(`${fam.list} — 합친 자리가 반환 문서에 실재한다`, r !== null && positionExists(cocoon(r.doc, env), r.selection.focus, env));
+    ok(
+      `${fam.list} — 합친 자리가 반환 문서에 실재한다`,
+      r !== null && positionExists(cocoon(r.doc, env), r.selection.focus, env),
+    );
   }
   {
     // §6 (B) — Delete 는 그 거울이다: 항목 끝에서 **뒤 항목을 끌어올린다**.
@@ -158,7 +203,7 @@ for (const fam of FAMILIES) {
       `${fam.list} — 뒤 항목의 글이 끌려 올라온다`,
       list ? ((list.ch[0] as ElementNode).ch[0] as ElementNode).ch : null,
       ['항목1항목2'],
-);
+    );
   }
   {
     // §4 (B) — 첫 항목의 탭은 **아무 일도 안 하되 삼킨다**(코어의 스페이스 넷 금지).
@@ -232,7 +277,7 @@ for (const fam of FAMILIES) {
       inned !== null &&
         positionExists(cocoon(inned.doc, env), inned.selection.anchor, env) &&
         positionExists(cocoon(inned.doc, env), inned.selection.focus, env),
-);
+    );
 
     // 도로 내어쓰면 처음 트리다 — 들여쓰기와 내어쓰기가 서로의 역이라는 것이 이 한 줄이다.
     const back = inned ? press('shiftTab', cocoon(inned.doc, env), inned.selection) : null;
@@ -283,11 +328,25 @@ for (const fam of FAMILIES) {
   n.select(range(at([0], 0), at([1], 1)));
   ok('toggleBulletList 가 돈다', n.applyCommand('toggleBulletList'));
   eq('문단 둘이 항목 둘이 된다', n.getJson(), [
-    { w: 'p', ch: [{ w: 'ul', ch: [{ w: 'li', ch: [{ w: 'p', ch: ['하나'] }] }, { w: 'li', ch: [{ w: 'p', ch: ['둘'] }] }] }] },
+    {
+      w: 'p',
+      ch: [
+        {
+          w: 'ul',
+          ch: [
+            { w: 'li', ch: [{ w: 'p', ch: ['하나'] }] },
+            { w: 'li', ch: [{ w: 'p', ch: ['둘'] }] },
+          ],
+        },
+      ],
+    },
   ]);
   ok('선택이 범위로 살아남는다', n.getSelection().anchor.path.join('.') !== n.getSelection().focus.path.join('.'));
   ok('다시 누르면 리스트가 풀린다', n.applyCommand('toggleBulletList'));
-  eq('풀린 문단이 제자리', n.getJson(), [{ w: 'p', ch: ['하나'] }, { w: 'p', ch: ['둘'] }]);
+  eq('풀린 문단이 제자리', n.getJson(), [
+    { w: 'p', ch: ['하나'] },
+    { w: 'p', ch: ['둘'] },
+  ]);
 }
 {
   // 가족 갈아입기 — 항목째로 갈린다(항목 속이 한 겹 더 들어가지 않는다).
@@ -328,7 +387,11 @@ for (const fam of FAMILIES) {
   ok('크기 lg 는 걸린다', n.applyCommand('setFontSize', { v: 'lg' }));
   ok('서체 목록 밖은 거절', n.applyCommand('setTypeface', { v: 'comic' }) === false);
   ok('서체 serif 는 걸린다', n.applyCommand('setTypeface', { v: 'serif' }));
-  eq('값 목록은 old 에서 번역해 온 그대로다', [HIGHLIGHT_COLORS.length, TEXT_COLORS.length, FONT_SIZES, TYPEFACES], [6, 5, ['xs', 'sm', 'lg', 'xl'], ['sans', 'serif', 'mono', 'cursive']]);
+  eq(
+    '값 목록은 old 에서 번역해 온 그대로다',
+    [HIGHLIGHT_COLORS.length, TEXT_COLORS.length, FONT_SIZES, TYPEFACES],
+    [6, 5, ['xs', 'sm', 'lg', 'xl'], ['sans', 'serif', 'mono', 'cursive']],
+  );
 }
 {
   // 값 마크의 부른 손 (084 ⑨) — `result.arm` 을 답하는 커맨드도 문 앞에서 같은 규칙을 받는다.
@@ -341,7 +404,7 @@ for (const fam of FAMILIES) {
   // 포인터 · 접힘 · 마크 밖 = 예약이 설 자리 — 거절 + toast.
   n.select(caretAt(at([0], 2)));
   ok('포인터 접힘 값 마크 — 거절', n.applyCommand('setHighlight', { c: 'yellow' }, 'pointer') === false);
-  ok('포인터 접힘 값 마크 — 예약 없음', n.$armed.isEmpty());
+  ok('포인터 접힘 값 마크 — 예약 없음', hostOf(n).armed.isEmpty());
   eq('포인터 접힘 값 마크 — toast(info)', said, ['info']);
   n.applyCommand('insertText', { text: 'X' });
   eq('이어 친 글자는 맨몸이다', n.getJson()[0], { w: 'p', ch: ['가나X'] });
@@ -356,11 +419,11 @@ for (const fam of FAMILIES) {
   // 빈 문단의 크기는 걸 글자가 없다 — 키보드는 예약, 포인터는 거절.
   n.select(caretAt(at([1], 0)));
   ok('키보드 빈 문단 크기 — 예약', n.applyCommand('setFontSize', { v: 'lg' }, 'keyboard'));
-  ok('예약이 섰다', n.$armed.isArmed('fs'));
+  ok('예약이 섰다', hostOf(n).armed.isArmed('fs'));
   n.select(caretAt(at([1], 0))); // 몸짓으로 예약을 걷는다... 같은 자리라 안 걷힌다 — 직접 걷는다
-  n.$armed.clear();
+  hostOf(n).armed.clear();
   ok('포인터 빈 문단 크기 — 거절', n.applyCommand('setFontSize', { v: 'lg' }, 'pointer') === false);
-  ok('포인터 빈 문단 크기 — 예약 없음', n.$armed.isEmpty());
+  ok('포인터 빈 문단 크기 — 예약 없음', hostOf(n).armed.isEmpty());
   eq('toast 는 두 번 — 포인터 거절만 말한다', said, ['info', 'info']);
 
   // 포인터 · 범위 = 키보드 범위와 동일 동작.
@@ -399,11 +462,19 @@ for (const fam of FAMILIES) {
   eq('붙은 뒤에는 바꾼 조각이 범위로 남는다', [n.getSelection().anchor.offset, n.getSelection().focus.offset], [0, 4]);
   ok('이어서 다른 색을 고른다', n.applyCommand('setTextColor', { c: 'blue' }, 'pointer'));
   eq('이웃은 안 물든다 — 바꾼 그 조각만 갈아입는다', n.getJson(), [
-    { w: 'p', ch: [{ w: 'tc', a: { c: 'blue' }, ch: ['초록초록'] }, { w: 'tc', a: { c: 'coral' }, ch: ['코랄코랄'] }] },
+    {
+      w: 'p',
+      ch: [
+        { w: 'tc', a: { c: 'blue' }, ch: ['초록초록'] },
+        { w: 'tc', a: { c: 'coral' }, ch: ['코랄코랄'] },
+      ],
+    },
   ]);
   // 되돌리기 — 한 번 누른 것이 한 번에 돌아온다.
   ok('되돌리기 한 걸음 ①', n.undo());
-  eq('첫 걸음 — 붙었던 코랄로', n.getJson(), [{ w: 'p', ch: [{ w: 'tc', a: { c: 'coral' }, ch: ['초록초록코랄코랄'] }] }]);
+  eq('첫 걸음 — 붙었던 코랄로', n.getJson(), [
+    { w: 'p', ch: [{ w: 'tc', a: { c: 'coral' }, ch: ['초록초록코랄코랄'] }] },
+  ]);
   ok('되돌리기 한 걸음 ②', n.undo());
   eq('둘째 걸음 — 처음 그대로', n.getJson(), two());
 }
@@ -414,7 +485,13 @@ for (const fam of FAMILIES) {
   ok('형광펜 — 앞 조각을 뒤 조각의 색으로', n.applyCommand('setHighlight', { c: 'pink' }, 'pointer'));
   ok('형광펜 — 이어서 다른 색', n.applyCommand('setHighlight', { c: 'cyan' }, 'pointer'));
   eq('형광펜 — 이웃은 안 물든다', n.getJson(), [
-    { w: 'p', ch: [{ w: 'hl', a: { c: 'cyan' }, ch: ['노랑노랑'] }, { w: 'hl', a: { c: 'pink' }, ch: ['분홍분홍'] }] },
+    {
+      w: 'p',
+      ch: [
+        { w: 'hl', a: { c: 'cyan' }, ch: ['노랑노랑'] },
+        { w: 'hl', a: { c: 'pink' }, ch: ['분홍분홍'] },
+      ],
+    },
   ]);
 }
 {
@@ -423,17 +500,36 @@ for (const fam of FAMILIES) {
   n.select(caretAt(at([0], 2)));
   ok('가운데 캐럿 — 이웃과 다른 색으로', n.applyCommand('setTextColor', { c: 'blue' }, 'pointer'));
   eq('그 조각만 갈아입는다', n.getJson(), [
-    { w: 'p', ch: [{ w: 'tc', a: { c: 'blue' }, ch: ['초록초록'] }, { w: 'tc', a: { c: 'coral' }, ch: ['코랄코랄'] }] },
+    {
+      w: 'p',
+      ch: [
+        { w: 'tc', a: { c: 'blue' }, ch: ['초록초록'] },
+        { w: 'tc', a: { c: 'coral' }, ch: ['코랄코랄'] },
+      ],
+    },
   ]);
-  eq('안 붙었으니 캐럿은 있던 자리 그대로다', [n.getSelection().anchor, n.getSelection().focus], [at([0], 2), at([0], 2)]);
+  eq(
+    '안 붙었으니 캐럿은 있던 자리 그대로다',
+    [n.getSelection().anchor, n.getSelection().focus],
+    [at([0], 2), at([0], 2)],
+  );
 }
 {
   // 겨눔은 이어진 런까지다 — 같은 색이 끊겨 서 있으면 사이에 낀 남의 글은 겨눔에 안 든다.
-  const n = make([p([el('tc', ['초록'], { c: 'green' }), el('tc', ['코랄'], { c: 'coral' }), el('tc', ['초록'], { c: 'green' })])]);
+  const n = make([
+    p([el('tc', ['초록'], { c: 'green' }), el('tc', ['코랄'], { c: 'coral' }), el('tc', ['초록'], { c: 'green' })]),
+  ]);
   n.select(caretAt(at([0], 1)));
   ok('끊긴 같은 색 — 첫 조각 안에서 색을 바꾼다', n.applyCommand('setTextColor', { c: 'blue' }, 'pointer'));
   eq('건너편 같은 색도, 사이의 코랄도 그대로다', n.getJson(), [
-    { w: 'p', ch: [{ w: 'tc', a: { c: 'blue' }, ch: ['초록'] }, { w: 'tc', a: { c: 'coral' }, ch: ['코랄'] }, { w: 'tc', a: { c: 'green' }, ch: ['초록'] }] },
+    {
+      w: 'p',
+      ch: [
+        { w: 'tc', a: { c: 'blue' }, ch: ['초록'] },
+        { w: 'tc', a: { c: 'coral' }, ch: ['코랄'] },
+        { w: 'tc', a: { c: 'green' }, ch: ['초록'] },
+      ],
+    },
   ]);
 }
 {
@@ -444,11 +540,14 @@ for (const fam of FAMILIES) {
   // 중첩 모양은 setMark 의 마크 차례 규칙(갈아입는 마크가 뒤로 선다)의 것이다 — 여기서 못박는
   // 것은 겨눔이다: 세 런 전부가 분홍을 입고, 마크 밖으로는 아무것도 안 샌다.
   eq('마크가 덮은 글 전체가 갈아입는다', n.getJson(), [
-    { w: 'p', ch: [
-      { w: 'hl', a: { c: 'pink' }, ch: ['형'] },
-      { w: 'b', ch: [{ w: 'hl', a: { c: 'pink' }, ch: ['광'] }] },
-      { w: 'hl', a: { c: 'pink' }, ch: ['펜'] },
-    ] },
+    {
+      w: 'p',
+      ch: [
+        { w: 'hl', a: { c: 'pink' }, ch: ['형'] },
+        { w: 'b', ch: [{ w: 'hl', a: { c: 'pink' }, ch: ['광'] }] },
+        { w: 'hl', a: { c: 'pink' }, ch: ['펜'] },
+      ],
+    },
   ]);
 }
 
@@ -479,7 +578,10 @@ for (const fam of FAMILIES) {
 
   // 마크를 꼭 맞게 덮은 범위 — attachFileLink 가 첨부를 클릭했을 때 만드는 그 겨눔([from, to)).
   n.select(range(at([0], 0), at([0], 3)));
-  ok('범위가 마크를 꼭 맞게 덮어도(첨부를 통째로 고른 모양) 표시 이름을 바꾼다', n.applyCommand('renameLink', { text: '사아자' }));
+  ok(
+    '범위가 마크를 꼭 맞게 덮어도(첨부를 통째로 고른 모양) 표시 이름을 바꾼다',
+    n.applyCommand('renameLink', { text: '사아자' }),
+  );
   eq('통째로 고른 채로도 이름이 갈린다', n.getJson(), [
     { w: 'p', ch: [{ w: 'a', a: { href: '/f/x.png', file: 'x.png' }, ch: ['사아자'] }] },
   ]);
@@ -497,7 +599,14 @@ for (const fam of FAMILIES) {
     },
     removeEventListener: () => undefined,
   } as unknown as HTMLElement;
-  const stop = attachFileLink({ root, nabi: n, pathOfKey: () => null });
+  const stop = attachFileLink({
+    root,
+    nabi: n,
+    doc: hostOf(n).doc,
+    env: hostOf(n).env,
+    pathOfKey: () => null,
+    onDispose: () => undefined,
+  });
 
   const caret = (offset: number): void => void n.select(caretAt(at([0], offset)));
   const span = (): [number, number] => [n.getSelection().anchor.offset, n.getSelection().focus.offset];
@@ -546,20 +655,29 @@ for (const fam of FAMILIES) {
   eq('currentValue — 목록 밖 값은 없는 값', headingWing.currentValue?.({ w: 'p', a: { h: 9 }, ch: [] }), undefined);
   ok('같은 단계 다시는 해제다', n.applyCommand('setHeading', { value: 3 }));
   eq('제목이 걷혔다', n.getJson(), [{ w: 'p', ch: ['제목글'] }]);
-  ok('제목 출력은 태그가 된다', (() => {
-    n.applyCommand('setHeading', { value: 1 });
-    return n.getHtml().startsWith('<h1>');
-  })());
+  ok(
+    '제목 출력은 태그가 된다',
+    (() => {
+      n.applyCommand('setHeading', { value: 1 });
+      return n.getHtml().startsWith('<h1>');
+    })(),
+  );
 }
 {
   const n = make([p(['글']), el('hr')]);
   n.select(caretAt(at([1], 0)));
   ok('정렬은 래퍼문단에도 얹힌다', n.applyCommand('setAlign', { value: 'c' }));
-  eq('래퍼문단이 정렬을 든다', n.getJson(), [{ w: 'p', ch: ['글'] }, { w: 'p', a: { a: 'c' }, ch: [{ w: 'hr', ch: [] }] }]);
+  eq('래퍼문단이 정렬을 든다', n.getJson(), [
+    { w: 'p', ch: ['글'] },
+    { w: 'p', a: { a: 'c' }, ch: [{ w: 'hr', ch: [] }] },
+  ]);
   ok('제목은 래퍼문단에 안 얹힌다(무변화 침묵)', n.applyCommand('setHeading', { value: 2 }) === false);
   ok('드롭캡도 래퍼문단에 안 얹힌다', n.applyCommand('toggleDropCap') === false);
   ok('같은 정렬 다시는 해제', n.applyCommand('setAlign', { value: 'c' }));
-  eq('정렬이 걷혔다', n.getJson(), [{ w: 'p', ch: ['글'] }, { w: 'p', ch: [{ w: 'hr', ch: [] }] }]);
+  eq('정렬이 걷혔다', n.getJson(), [
+    { w: 'p', ch: ['글'] },
+    { w: 'p', ch: [{ w: 'hr', ch: [] }] },
+  ]);
 }
 // 여러 문단을 잡고 누르면 **그 전부**가 겨눔이다 — 문단 규칙 셋이 다 같은 규율을 쓴다.
 {
@@ -637,31 +755,82 @@ for (const fam of FAMILIES) {
   n.select(range(at([0], 0), at([1], 1)));
   ok('toggleQuote 가 돈다', n.applyCommand('toggleQuote'));
   eq('인용이 래퍼문단을 입고 선다', n.getJson(), [
-    { w: 'p', ch: [{ w: 'quote', ch: [{ w: 'p', ch: ['하나'] }, { w: 'p', ch: ['둘'] }] }] },
+    {
+      w: 'p',
+      ch: [
+        {
+          w: 'quote',
+          ch: [
+            { w: 'p', ch: ['하나'] },
+            { w: 'p', ch: ['둘'] },
+          ],
+        },
+      ],
+    },
   ]);
   ok('다시 누르면 풀린다', n.applyCommand('toggleQuote'));
-  eq('푼 문단이 제자리', n.getJson(), [{ w: 'p', ch: ['하나'] }, { w: 'p', ch: ['둘'] }]);
+  eq('푼 문단이 제자리', n.getJson(), [
+    { w: 'p', ch: ['하나'] },
+    { w: 'p', ch: ['둘'] },
+  ]);
 }
 {
   const n = make([p(['속 글'])]);
   n.select(caretAt(at([0], 0)));
   ok('toggleDetails 가 돈다', n.applyCommand('toggleDetails'));
   eq('접기는 제목 하나 + 문단 배열이다', n.getJson(), [
-    { w: 'p', ch: [{ w: 'details', a: { o: 1 }, ch: [{ w: 'summary', ch: [] }, { w: 'p', ch: ['속 글'] }] }] },
+    {
+      w: 'p',
+      ch: [
+        {
+          w: 'details',
+          a: { o: 1 },
+          ch: [
+            { w: 'summary', ch: [] },
+            { w: 'p', ch: ['속 글'] },
+          ],
+        },
+      ],
+    },
   ]);
   eq('캐럿은 제목에 선다', n.getSelection().focus, at([0, 0, 0], 0));
   ok('다시 누르면 풀리고 제목은 문단이 된다', n.applyCommand('toggleDetails'));
-  eq('제목 글도 안 사라진다', n.getJson(), [{ w: 'p', ch: [] }, { w: 'p', ch: ['속 글'] }]);
+  eq('제목 글도 안 사라진다', n.getJson(), [
+    { w: 'p', ch: [] },
+    { w: 'p', ch: ['속 글'] },
+  ]);
 }
 {
   // repair — 제목이 없으면 세우고, 둘이면 뒤엣것은 문단으로 내려온다.
   const n = make([el('details', [p(['속 글'])])]);
   eq('접기 repair — 제목이 없으면 빈 제목이 선다', n.getJson(), [
-    { w: 'p', ch: [{ w: 'details', ch: [{ w: 'summary', ch: [] }, { w: 'p', ch: ['속 글'] }] }] },
+    {
+      w: 'p',
+      ch: [
+        {
+          w: 'details',
+          ch: [
+            { w: 'summary', ch: [] },
+            { w: 'p', ch: ['속 글'] },
+          ],
+        },
+      ],
+    },
   ]);
   const two = make([el('details', [el('summary', ['첫 제목']), el('summary', ['둘째 제목'])])]);
   eq('접기 repair — 제목이 둘이면 뒤엣것은 문단이다', two.getJson(), [
-    { w: 'p', ch: [{ w: 'details', ch: [{ w: 'summary', ch: ['첫 제목'] }, { w: 'p', ch: ['둘째 제목'] }] }] },
+    {
+      w: 'p',
+      ch: [
+        {
+          w: 'details',
+          ch: [
+            { w: 'summary', ch: ['첫 제목'] },
+            { w: 'p', ch: ['둘째 제목'] },
+          ],
+        },
+      ],
+    },
   ]);
 }
 {
@@ -673,7 +842,10 @@ for (const fam of FAMILIES) {
   ]);
   eq('캐럿은 코드 상자 안', n.getSelection().focus.path, [0, 0]);
   ok('다시 누르면 줄마다 문단이 된다', n.applyCommand('toggleCode'));
-  eq('두 줄이 두 문단으로', n.getJson(), [{ w: 'p', ch: ['const x = 1'] }, { w: 'p', ch: ['const y = 2'] }]);
+  eq('두 줄이 두 문단으로', n.getJson(), [
+    { w: 'p', ch: ['const x = 1'] },
+    { w: 'p', ch: ['const y = 2'] },
+  ]);
 }
 {
   // repair — 코드 속에는 마크가 못 산다. 언어는 모양이 아니면 안 실린다.
@@ -748,8 +920,11 @@ for (const fam of FAMILIES) {
   ok('노출: 다른 물건의 래퍼문단에서는 정렬이 보인다', visibleAt(reach([2], 1), alignWing));
   ok('노출: 글 문단에서는 정렬이 보인다', visibleAt(reach([0], 0), alignWing));
 }
-throws('noAlign 은 물건만 든다 — 마크가 들면 묶음째 죽는다', () =>
-  makeRegistry([...defaultWings, {...simpleMark({ w: 'z' }), noAlign: true } as Wing]), 'noAlign');
+throws(
+  'noAlign 은 물건만 든다 — 마크가 들면 묶음째 죽는다',
+  () => makeRegistry([...defaultWings, { ...simpleMark({ w: 'exZ' }), noAlign: true } as Wing]),
+  'noAlign',
+);
 {
   const n = make([p([])]);
   n.select(caretAt(at([0], 0)));
@@ -773,7 +948,18 @@ throws('noAlign 은 물건만 든다 — 마크가 들면 묶음째 죽는다', 
   d.select(caretAt(at([0, 0, 0], 1)));
   ok('접기 제목 속 엔터가 돈다', d.applyCommand('splitParagraph'));
   eq('접기 제목 속 엔터도 라인이다', d.getJson(), [
-    { w: 'p', ch: [{ w: 'details', ch: [{ w: 'summary', ch: ['제', { w: 'br', ch: [] }, '목'] }, { w: 'p', ch: ['속'] }] }] },
+    {
+      w: 'p',
+      ch: [
+        {
+          w: 'details',
+          ch: [
+            { w: 'summary', ch: ['제', { w: 'br', ch: [] }, '목'] },
+            { w: 'p', ch: ['속'] },
+          ],
+        },
+      ],
+    },
   ]);
 }
 
@@ -787,7 +973,7 @@ throws('noAlign 은 물건만 든다 — 마크가 들면 묶음째 죽는다', 
       el('hr'),
     ],
     env,
-);
+  );
   ok('repair — 안 바뀐 문서는 새로 안 짓는다 (구조 공유)', cocoon(settled, env) === settled);
   const n = make(settled);
   n.select(caretAt(at([0, 0, 0], 0)));
@@ -798,8 +984,8 @@ throws('noAlign 은 물건만 든다 — 마크가 들면 묶음째 죽는다', 
 
 function hits(text: string, trigger: 'space' | 'enter'): string[] {
   return registry.inputRules
-.filter((rule) => rule.trigger === trigger && rule.pattern.test(text))
-.map((rule) => {
+    .filter((rule) => rule.trigger === trigger && rule.pattern.test(text))
+    .map((rule) => {
       const call = rule.run(rule.pattern.exec(text) as RegExpMatchArray);
       return call.args === undefined ? `${rule.w}:${call.name}` : `${rule.w}:${call.name}:${JSON.stringify(call.args)}`;
     });
@@ -830,6 +1016,10 @@ eq('오토포맷 — 맨 URL 은 링크', hits('https://a.com/x?y=1&z#f', 'space
   'a:setLink:{"href":"https://a.com/x?y=1&z#f"}',
 ]);
 eq('오토포맷 — ftp 는 안 잡힌다', hits('ftp://x', 'space'), []);
-eq('오토포맷 — 링크 규칙만 낱말 단위(scope word)다', registry.inputRules.filter((r) => r.scope === 'word').map((r) => r.w), ['a', 'a']);
+eq(
+  '오토포맷 — 링크 규칙만 낱말 단위(scope word)다',
+  registry.inputRules.filter((r) => r.scope === 'word').map((r) => r.w),
+  ['a', 'a'],
+);
 
 done('wings1');

@@ -18,3 +18,22 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 ```ts
 const selected = wings().use('details').build()
 ```
+
+## CSS 스타일
+
+접기 블록은 `.nabi-content details`, 제목은 `.nabi-content details > summary`로 꾸밀 수 있습니다.
+
+```css
+.article-body details {
+  padding: .75rem 1rem;
+  border: 1px solid var(--nabi-line);
+  border-radius: var(--nabi-radius);
+  background: var(--nabi-soft);
+}
+
+.article-body details > summary { cursor: pointer; font-weight: 700; }
+.article-body details[open] > summary { margin-block-end: .75rem; }
+```
+
+`open` 속성은 작성자가 저장한 처음 펼침 상태입니다. CSS는 이 상태를 꾸밀 수 있지만 상태를
+강제로 바꾸지는 않는 편이 좋습니다.

@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: बुलेट सूची
+description: कई मदों को बिना क्रम के सूचीबद्ध करती है।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# बुलेट सूची
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+कई मदों को बिना क्रम के सूचीबद्ध करती है। खाली अनुच्छेद में `-` के बाद Space दबाएँ या टूलबार से बदलें। चुने हुए अनुच्छेदों को भी एक साथ सूची में बाँधा जा सकता है।
 
-[Open the Korean canonical page](/ko/guide/features)
+सूची के भीतर Tab एक स्तर अंदर करता है और Shift+Tab बाहर लाता है। Enter अगला मद बनाता है; खाली मद पर दोबारा Enter दबाने से सूची समाप्त होती है।
 
-</div>
+<WingDemo path="/wing/block/bullet-list" />
+
+```ts
+const selected = wings().use('ul').build()
+```

@@ -8,14 +8,7 @@
 //
 // 두 절반으로 갈려 있다 — 순수부(`tokens.ts`: 글자열 → 토막)와 DOM 부(`apply.ts`: 토막 →
 // span, 그리고 그 반대). 갈라 두어서 무거운 절반을 언제든 옮길 수 있고, 순수부는 서버에서도 돈다.
-export {
-  CODE_TOKEN_ATTR,
-  CODE_TOKEN_TYPES,
-  dialectOf,
-  tokenize,
-  tokensFor,
-  usableTokens,
-} from './tokens.js';
+export { CODE_TOKEN_ATTR, CODE_TOKEN_TYPES, dialectOf, tokenize, tokensFor, usableTokens } from './tokens.js';
 export type { CodeDialect, CodeHighlighter, CodeToken } from './tokens.js';
 export { applyTokens, codeSourceOf } from './apply.js';
 export type { ApplyOptions } from './apply.js';

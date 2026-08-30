@@ -28,6 +28,7 @@
       <p class="note">
         내보내는 것 전부가 전역 <code>NabiNote</code> 하나에 걸린다.
         <label class="theme"><input type="checkbox" id="dark" /> 어두운 화면</label>
+        <label>언어 <select id="locale"><option value="en">English</option><option value="zh">中文</option><option value="hi">हिन्दी</option><option value="es">Español</option><option value="ar">العربية</option><option value="fr">Français</option><option value="bn">বাংলা</option><option value="pt">Português</option><option value="ru">Русский</option><option value="id">Indonesia</option><option value="ur">اردو</option><option value="de">Deutsch</option><option value="ja">日本語</option><option value="fa">فارسی</option><option value="mr">मराठी</option><option value="vi">Tiếng Việt</option><option value="te">తెలుగు</option><option value="ha">Hausa</option><option value="tr">Türkçe</option><option value="sw">Kiswahili</option><option value="ta">தமிழ்</option><option value="ko">한국어</option><option value="th">ไทย</option><option value="it">Italiano</option></select></label>
       </p>
     </header>
 
@@ -59,11 +60,12 @@
       'use strict';
       var N = NabiNote;
       var $ = function (id) { return document.getElementById(id); };
+      var locale = $('locale').value;
 
       // 1. 편집기 하나 — 날개 목록이 갈래 지식·커맨드·조립기를 함께 짓는다.
       var made = N.createNabiWith(N.wings().allBasic(), {
         doc: window.NABI_SAMPLE,
-        parseHtml: N.parseNodes,
+        locale: locale,
         // 묻는 길 — 안 주면 코어는 아무것도 안 묻고 "아니오" 로 답한다(머리 없는 곳에서도 도니까).
         ask: {
           message: function (text) { window.alert(text); },
@@ -79,9 +81,9 @@
       // 3. 표면과 줄 둘. 상황 줄은 캐럿이 선 자리를 따라 저 혼자 채워진다.
       N.mountSurface({ nabi: nabi, registry: registry, root: $('content') });
       var settle = N.watchSettle(document, { surface: $('content') });
-      var shared = { nabi: nabi, registry: registry, surface: $('content'), settle: settle, locale: 'ko' };
-      // 로컬 기록 — IndexedDB 에 지정된 간격으로 스냅샷을 남긴다. **저장소는 호스트가 준다**
-      // (`browserHistoryStorage`). `file://` 로 연 페이지에서는 브라우저가 저장소를 막으므로
+      var shared = { nabi: nabi, registry: registry, surface: $('content'), settle: settle, locale: locale };
+      // 로컬 기록 — localStorage 에 지정된 간격으로 스냅샷을 남긴다. **저장소는 호스트가 준다**
+      // (`browserHistoryStorage`). `file://` 로 연 페이지에서는 브라우저가 저장소를 막을 수 있으므로
       // 저장소가 살아 있지 않다고 답하고, 그때 단추를 누르면 `openHistoryPanel` 이 판 대신
       // toast 한 마디를 띄운다 — "서버에 올려서 열어라". 배선을 안 하면 단추가 무반응이다.
       var history = N.mountLocalHistory({ nabi: nabi, storage: N.browserHistoryStorage(window) });

@@ -1,3 +1,14 @@
+import {
+  MOTION_FAST_MS,
+  MOTION_PRESS_MS,
+  MOTION_PROGRESS_MS,
+  MOTION_TOAST_MS,
+  NARROW_REM,
+  Z_DIALOG,
+  Z_OVERLAY,
+  Z_STICKY,
+} from './tokens.js';
+
 // 시트 — 코어 시트 하나 + wing 이 들고 온 시트들. **맨 아래 층**이라 아무것도 안 문다:
 // 화면(ui)이 문서에 붙일 때도, io 가 `.html` 한 장을 지을 때도 같은 글을 본다.
 //
@@ -61,9 +72,17 @@ export const CORE_CSS = `
      층 자신뿐이고 그 **안**의 상자들은 각진 채로 흐른다. */
   --nabi-layer-radius: .25rem;
   --nabi-grid-cell: 1.125rem;
+  --nabi-control-size: 2rem;
+  --nabi-touch-control-size: 2.75rem;
+  --nabi-motion-press: ${MOTION_PRESS_MS}ms;
+  --nabi-motion-fast: ${MOTION_FAST_MS}ms;
+  --nabi-motion-progress: ${MOTION_PROGRESS_MS}ms;
+  --nabi-motion-toast: ${MOTION_TOAST_MS}ms;
   --nabi-shadow: 0 8px 24px rgb(16 24 40 / 12%);
   --nabi-scrim: rgb(12 14 18 / 72%);
-  --nabi-z-sticky: 20;
+  --nabi-z-sticky: ${Z_STICKY};
+  --nabi-z-overlay: ${Z_OVERLAY};
+  --nabi-z-dialog: ${Z_DIALOG};
 
   /* 글꼴 — 서체(tf) wing 이 고르는 갈래 넷의 실체다.
      **이름이 \`-fallback\` 인 것이 요점이다.** 호스트가 쓰는 이름은 \`--nabi-font\`* 넷이고, 코어는
@@ -293,7 +312,7 @@ export const CORE_CSS = `
 .nabi-btn:disabled { opacity: .4; cursor: default; }
 .nabi-btn:active:not(:disabled), .nabi-close:active, .nabi-input:active,
 .nabi-choose-row:active, .nabi-save-row:active {
-  transform: translateY(2px); transition: transform 60ms ease-out;
+  transform: translateY(2px); transition: transform var(--nabi-motion-press) ease-out;
 }
 .nabi-btn svg { inline-size: 1rem; block-size: 1rem; }
 .nabi-btn.nabi-word { inline-size: auto; padding: 0 .5rem; }
@@ -303,7 +322,7 @@ export const CORE_CSS = `
 .nabi-swatch {
   inline-size: 1.25rem; block-size: 1.25rem; min-inline-size: 0; border-radius: var(--nabi-radius-xs);
   border: 1px solid color-mix(in srgb, var(--nabi-line) 70%, transparent);
-  transition: transform .1s;
+  transition: transform var(--nabi-motion-fast);
 }
 .nabi-swatch:hover { transform: scale(1.18); }
 /* 눌린 견본 —.on 의 배경 규칙을 덮고 테두리만 강조색으로. */
@@ -409,7 +428,7 @@ export const CORE_CSS = `
    **폭 기준 40rem 은 표 격자(wings/table/table.ts 의 TABLE_CSS)와 같은 값이어야 한다** —
    거기서 격자가 5×5 로 줄고 칸이 손가락 크기가 되는 그 지점이다. 둘이 어긋나면 격자는
    5×5 인데 판은 아직 버튼에 붙어 있는(또는 그 반대의) 어중간한 화면이 생긴다. */
-@media (max-width: 40rem) {
+@media (max-width: ${NARROW_REM}rem) {
   .nabi-panel {
     /* \`!important\` 인 까닭 하나: 이 두 자리를 parts/panel.ts 가 **인라인 style** 로 박는다
        (버튼 곁에 세우는 그 셈이다). 인라인을 이기는 길은 이것뿐이다. */
@@ -491,7 +510,7 @@ export const CORE_CSS = `
   display: flex; flex-wrap: wrap; align-items: center;
   /* 세로 패딩은 안 준다 (주인 지시 2026-08-24) — 높이는 min-block-size 가 잡고 컨트롤은
      가운데 맞춤으로 선다. 세로 여백까지 있으면 줄이 그만큼 더 두꺼워질 뿐이다. */
-  gap: 0 .75rem; padding: 0 .375rem; min-block-size: 2rem;
+  gap: 0 .75rem; padding: 0 .375rem; min-block-size: var(--nabi-control-size);
   background: var(--nabi-soft);
 }
 .nabi-context[hidden] { display: none; }
@@ -521,14 +540,14 @@ export const CORE_CSS = `
    단추를 그보다 조금 작게 두어 **표적은 관례를 지키되 화면 무게는 안 늘린다** — 남는 4px 은
    이웃 줄과의 틈이라 잘못 눌림을 막는 데 그대로 쓰인다.
    데스크톱은 이 분기 밖이라 값이 하나도 안 바뀐다. */
-@media (pointer: coarse), (max-width: 40rem) {
+@media (pointer: coarse), (max-width: ${NARROW_REM}rem) {
   /* 세로 틈 — 겹쳐 붙은 두 줄을 갈라 놓는 것이 이 값 하나다(가로 틈은 그대로). */
   .nabi-context { gap: .25rem .75rem; }
   /* 접힌 줄 하나의 높이 — 단추는 그룹 속에 서므로 그룹이 표적의 높이를 잡는다.
      **줄바꿈은 그룹 안에서도 일어난다** — 표는 단추가 열 개라 좁은 화면에서 제 안에서 접힌다.
      그때의 줄 사이는 그룹의 세로 gap 이 잡으므로 그것도 함께 벌린다(단추 40 + 틈 4 = 44).
      가로 틈은 그대로 둔다 — 옆으로 벌리면 접히는 줄만 늘어난다. */
-  .nabi-ctx-group { min-block-size: 2.75rem; gap: .25rem .1875rem; }
+  .nabi-ctx-group { min-block-size: var(--nabi-touch-control-size); gap: .25rem .1875rem; }
   .nabi-context .nabi-btn { block-size: 2.5rem; min-inline-size: 2.5rem; }
   /* 눈금은 손잡이가 작아 더 어렵다 — 상자를 줄 높이만큼 세워 띠 전체가 손에 닿게 한다. */
   .nabi-context .nabi-range { block-size: 2.5rem; }
@@ -657,7 +676,7 @@ export const CORE_CSS = `
   border-radius: 0; box-shadow: var(--nabi-shadow);
   /* 남은 시간 0.5초부터 옅어져 0 에서 걷힌다 — 500ms 는 ui/toast.ts 의 TOAST_FADE_MS 와
      같아야 한다(그보다 짧게 사는 말은 JS 가 duration 을 제 수명으로 줄인다). */
-  transition: opacity 500ms linear;
+  transition: opacity var(--nabi-motion-toast) linear;
 }
 .nabi-toast[data-level="warn"] { border-inline-start-color: var(--nabi-tc-amber); }
 .nabi-toast[data-level="error"] { border-inline-start-color: var(--nabi-danger); }
@@ -681,7 +700,7 @@ export const CORE_CSS = `
      치환되므로, --nabi-per 를 가진 이 엘리먼트에서 조립해야 값이 따라온다. */
   --nabi-wipe: linear-gradient(to right, #000 0 calc(var(--nabi-per) * 1%), rgb(0 0 0 / 25%) calc(var(--nabi-per) * 1% + 10%));
 
-  transition: --nabi-per 140ms linear;
+  transition: --nabi-per var(--nabi-motion-progress) linear;
   position: relative;
   display: flex; align-items: center; justify-content: center;
   min-inline-size: 6rem; min-block-size: 6rem; max-inline-size: 100%;
@@ -996,7 +1015,7 @@ export const CORE_CSS = `
 /* 전체화면 — Fullscreen API 가 아니라 클래스 하나다(iframe 안에서도 산다). */
 .nabi.is-fullscreen {
   position: fixed; inset: 0; inset-block-end: var(--nabi-keyboard-bottom, 0px);
-  z-index: 2147483000; overflow: auto; background: var(--nabi-bg);
+  z-index: var(--nabi-z-overlay); overflow: auto; background: var(--nabi-bg);
 }
 
 /* 덮개 — 미리보기·라이트박스가 같은 부품 위에 선다.
@@ -1004,7 +1023,7 @@ export const CORE_CSS = `
    겹쳐 보인다. 흐리면 뒤가 "배경"이 되고 읽는 자리가 하나로 남는다. 약하게 — 뒤가 무엇이었는지는
    여전히 보여야 한다. */
 .nabi-scrim {
-  position: fixed; inset: 0; z-index: 2147483100; display: flex; align-items: center;
+  position: fixed; inset: 0; z-index: var(--nabi-z-dialog); display: flex; align-items: center;
   justify-content: center; padding: 4vmin; background: var(--nabi-scrim);
   -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
 }
@@ -1017,6 +1036,7 @@ export const CORE_CSS = `
   inline-size: var(--nabi-preview-width, 720px); max-inline-size: 100%; max-block-size: 100%;
   overflow: auto; outline: none;
 }
+.nabi-preview { min-block-size: min(50dvh, 100%); }
 /* 카드 위에 겹쳐 앉는 반투명 동그라미 — 제목 줄을 없애고 이것만 남겼다. 줄 하나가 통째로
    사라지니 그 줄의 테두리도 함께 없어지고, 내용이 카드 전체를 그대로 쓴다. */
 .nabi-close {

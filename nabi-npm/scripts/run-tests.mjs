@@ -16,13 +16,13 @@ const files = readdirSync(dir)
   .sort();
 
 // `npx` 는 Windows 에서 `npx.cmd` 로 풀리는데, shell 없이 `.cmd` 를 spawn 하면 거기서 EINVAL 이
-// 난다(Node 의 CVE-2024-27980 대응 이후 동작) — tsx 자신의 CLI 진입점을 이 `node` 로 직접 돌리면
-// npx·.cmd 를 거칠 일이 아예 없다.
-const tsxCli = createRequire(import.meta.url).resolve('tsx/cli');
+// 난다(Node 의 CVE-2024-27980 대응 이후 동작). tsx loader를 node의 `--import`로 직접 걸면
+// npx·.cmd도, CLI의 IPC 서버도 거칠 일이 없다.
+const tsxLoader = createRequire(import.meta.url).resolve('tsx');
 
 let failed = 0;
 for (const name of files) {
-  const result = spawnSync(process.execPath, [tsxCli, join(dir, name)], { stdio: 'inherit', cwd: root });
+  const result = spawnSync(process.execPath, ['--import', tsxLoader, join(dir, name)], { stdio: 'inherit', cwd: root });
   if (result.status !== 0) failed += 1;
 }
 

@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: 下付き
+description: 選択した文字を基準線より下に下げます。
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# 下付き
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+選択した文字を基準線より下に下げます。化学式や添字に使えます。もう一度適用すると解除されます。
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/subscript" />
 
-</div>
+```ts
+const selected = wings().use('sub').build()
+```

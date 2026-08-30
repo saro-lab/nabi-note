@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Liste à puces
+description: Listez plusieurs éléments sans les numéroter.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Liste à puces
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Une liste à puces présente plusieurs éléments sans ordre. Tapez `-` suivi d'un espace dans un paragraphe vide, ou basculez vers ce format depuis la barre d'outils. Les paragraphes sélectionnés peuvent également être regroupés en une liste en une seule fois.
 
-[Open the Korean canonical page](/ko/guide/features)
+À l'intérieur d'une liste, Tab indente d'un niveau et Shift+Tab désindente. Entrée crée l'élément suivant, et appuyer à nouveau sur Entrée depuis un élément vide termine la liste.
 
-</div>
+<WingDemo path="/wing/block/bullet-list" />
+
+```ts
+const selected = wings().use('ul').build()
+```

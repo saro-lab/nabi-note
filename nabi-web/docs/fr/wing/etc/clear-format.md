@@ -1,14 +1,26 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Effacer le formatage
+description: Supprimer le formatage du texte et le formatage des paragraphes de la sélection.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Effacer le formatage
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Supprimez le formatage du texte de la plage sélectionnée en une seule fois. Les marques par défaut enregistrées telles que le gras, la couleur et la police, ainsi que les attributs de paragraphe tels que l'en-tête, l'alignement et la lettrine sont incluses. Appuyer sur Échap deux fois rapidement effectue la même action.
 
-[Open the Korean canonical page](/ko/guide/features)
+Il ne convertit pas les structures du document telles que les listes, les tableaux, les citations ou les images en texte brut. L'alignement extérieur des images et des vidéos, ainsi que les liens de pièces jointes créés par les téléchargements, restent tels qu'ils sont.
 
-</div>
+<WingDemo path="/wing/etc/clear-format" />
+
+```ts
+const selected = wings()
+  .use('b')
+  .use('i')
+  .use('clearFormat')
+  .build()
+```
+
+Les wings de formatage que vous souhaitez effacer doivent également être sélectionnées, sinon leur formatage ne peut pas être supprimé.

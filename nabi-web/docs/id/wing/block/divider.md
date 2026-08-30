@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Pemisah
+description: Menyisipkan garis horizontal yang membagi alur dokumen.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Pemisah
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Ini adalah garis horizontal yang memisahkan alur dokumen. Pada paragraf kosong, ketik tiga atau lebih tanda hubung lalu tekan Enter, atau sisipkan melalui toolbar.
 
-[Open the Korean canonical page](/ko/guide/features)
+Pemisah adalah blok mandiri tanpa teks, sehingga tidak memuat format seperti judul atau warna. Gunakan hanya untuk memisahkan paragraf sebelum dan sesudahnya.
 
-</div>
+<WingDemo path="/wing/block/divider" />
+
+```ts
+const selected = wings().use('hr').build()
+```

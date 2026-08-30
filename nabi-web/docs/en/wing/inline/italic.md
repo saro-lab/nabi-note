@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Italic
+description: Italicize selected text.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Italic
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Italicizes selected text. Applying it again to the same range removes the formatting, and the mark is preserved in saved documents.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/italic" />
 
-</div>
+```ts
+const selected = wings().use('i').build()
+```

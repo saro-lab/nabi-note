@@ -16,7 +16,7 @@
 // 그래서 여전히 "몇 KB" 자리이고 런타임 의존성은 0 이다. 더 나은 색칠을 원하는 호스트는
 // `highlight` 훅으로 제 하이라이터를 꽂는다 — 그때 지는 값은 호스트의 것이다.
 export { attachViewer } from './attach.js';
-export type { ViewerOptions } from './attach.js';
+export type { ViewerAttachment, ViewerOptions } from './attach.js';
 export { CODE_LANG_ATTR, attachCodePaint, codeLanguageOf } from './code-paint.js';
 export type { CodePaintOptions } from './code-paint.js';
 export { SORTABLE_ATTR, attachTableSort, hasMergedCells, nextSortState, rankRows } from './table-sort.js';

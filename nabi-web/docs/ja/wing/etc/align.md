@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: 配置
+description: 段落とオブジェクトブロックの横方向の配置を変更します。
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# 配置
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+現在の段落、または選択範囲に含まれる段落を左、中央、右に配置します。画像、動画、表のように段落内に入るオブジェクトも、そのオブジェクトを包む段落を基準に配置されます。
 
-[Open the Korean canonical page](/ko/guide/features)
+配置は文字書式ではなく段落属性として保存されます。コードブロックはインデントそのものに意味があるため、配置の対象から除外されます。
 
-</div>
+<WingDemo path="/wing/etc/align" />
+
+```ts
+const selected = wings().use('align').build()
+```

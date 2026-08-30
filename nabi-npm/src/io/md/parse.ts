@@ -290,7 +290,12 @@ function itemAt(line: string, env: MdEnv): Item | null {
   const task = TASK_ITEM.exec(line);
   // 체크가 글머리보다 먼저다 — `- [ ]` 는 글머리 목록이 아니다.
   if (task && env.has('tl')) {
-    return { indent: widthOf(task[1] ?? ''), kind: 'tl', checked: (task[2] ?? '').toLowerCase() === 'x', text: task[3] ?? '' };
+    return {
+      indent: widthOf(task[1] ?? ''),
+      kind: 'tl',
+      checked: (task[2] ?? '').toLowerCase() === 'x',
+      text: task[3] ?? '',
+    };
   }
   const ordered = ORDERED_ITEM.exec(line);
   if (ordered && env.has('ol')) {

@@ -1,14 +1,26 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: مسح التنسيق
+description: يزيل تنسيق الحروف والفقرات من النطاق المحدد.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# مسح التنسيق
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+يزيل تنسيقات الحروف من التحديد دفعة واحدة. ويشمل ذلك marks الأساسية المسجلة مثل الغامق واللون ونمط الخط، وخصائص الفقرة مثل العنوان والمحاذاة والحرف الاستهلالي. ويمكن تنفيذ الأمر نفسه بالضغط السريع على Esc مرتين.
 
-[Open the Korean canonical page](/ko/guide/features)
+لا يحوّل بنية المستند، مثل القوائم والجداول والاقتباسات والصور، إلى نص عادي. كما تبقى المحاذاة الخارجية للصور والفيديو وروابط المرفقات التي أنشأها الرفع كما هي.
 
-</div>
+<WingDemo path="/wing/etc/clear-format" />
+
+```ts
+const selected = wings()
+  .use('b')
+  .use('i')
+  .use('clearFormat')
+  .build()
+```
+
+يجب اختيار wing التنسيق المراد مسحه أيضًا حتى يتمكن الأمر من إزالته.

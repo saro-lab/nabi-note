@@ -28,7 +28,22 @@ const SRC = fileURLToPath(new URL('../src', import.meta.url));
 // `style`(시트의 글·지문·접기)도 아무것도 안 무는 맨 아래다 — 화면(ui)이 문서에 붙일 때도,
 // io 가 `.html` 한 장을 지을 때도 같은 글을 봐야 해서 둘 모두의 아래에 세웠다. 붙이는 문
 // (`injectSheets`)만 DOM 이 필요해 ui 에 남았다.
-const ORDER = ['style', 'locale', 'code', 'schema', 'doc', 'caret', 'html', 'io', 'editor', 'wing', 'wings', 'surface', 'ui', 'viewer'];
+const ORDER = [
+  'style',
+  'locale',
+  'code',
+  'schema',
+  'doc',
+  'caret',
+  'html',
+  'io',
+  'editor',
+  'wing',
+  'wings',
+  'surface',
+  'ui',
+  'viewer',
+];
 
 // 예외 천장은 없다 — 07 결과 계약 타입(HtmlBuilder)은 html 자신이 정의하고 wing 이 그것을
 // 잇는 방향이 됐으므로, html 은 제 층 아래(schema)만 딛으면 된다. 낡은 `html: 'wing'` 천장은
@@ -180,7 +195,11 @@ function scan(source: string): { code: string; bare: string } {
 // import·export 가 가리키는 경로를 뽑는다 — 정적 문, 동적 `import`, 부작용 import 셋 다.
 function specifiers(code: string): { spec: string; index: number }[] {
   const found: { spec: string; index: number }[] = [];
-  const patterns = [/\bfrom\s*['"]([^'"]+)['"]/g, /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g, /\bimport\s+['"]([^'"]+)['"]/g];
+  const patterns = [
+    /\bfrom\s*['"]([^'"]+)['"]/g,
+    /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
+    /\bimport\s+['"]([^'"]+)['"]/g,
+  ];
   for (const pattern of patterns) {
     for (const match of code.matchAll(pattern)) found.push({ spec: match[1]!, index: match.index ?? 0 });
   }
@@ -196,7 +215,12 @@ function walk(dir: string, base: string): string[] {
       continue;
     }
     if (!entry.name.endsWith('.ts') || entry.name.endsWith('.d.ts')) continue;
-    out.push(full.slice(base.length + 1).split(sep).join('/'));
+    out.push(
+      full
+        .slice(base.length + 1)
+        .split(sep)
+        .join('/'),
+    );
   }
   return out;
 }
@@ -227,7 +251,13 @@ for (const file of sources) {
       wingsToUi.push(at);
       continue;
     }
-    if (file.layer === 'wings' && target === 'wings' && file.wing !== '' && targetWing !== '' && file.wing !== targetWing) {
+    if (
+      file.layer === 'wings' &&
+      target === 'wings' &&
+      file.wing !== '' &&
+      targetWing !== '' &&
+      file.wing !== targetWing
+    ) {
       siblingWing.push(`${at} (${file.wing} → ${targetWing})`);
       continue;
     }

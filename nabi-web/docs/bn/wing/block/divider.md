@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: বিভাজক রেখা
+description: নথির প্রবাহ আলাদা করতে একটি আড়াআড়ি রেখা সন্নিবেশ করুন।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# বিভাজক রেখা
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+নথির প্রবাহ আলাদা করা আড়াআড়ি রেখা। খালি অনুচ্ছেদে তিন বা বেশি hyphen লিখে Enter চাপুন, অথবা টুলবার থেকে সন্নিবেশ করুন।
 
-[Open the Korean canonical page](/ko/guide/features)
+বিভাজক অক্ষরবিহীন স্বতন্ত্র block, তাই এতে শিরোনাম বা রঙের মতো বিন্যাস রাখা যায় না। শুধু আগের ও পরের অনুচ্ছেদ আলাদা করতেই ব্যবহার করুন।
 
-</div>
+<WingDemo path="/wing/block/divider" />
+
+```ts
+const selected = wings().use('hr').build()
+```

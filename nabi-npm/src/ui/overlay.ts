@@ -3,27 +3,20 @@
 //
 // 미리보기의 알맹이는 **`renderHtml` + `nabi.css`** 다: 편집기 표식(`data-key`)이 없는 그대로의
 // 보기 HTML 을 `.nabi-content` 안에 넣는다. 보는 사람이 볼 것과 글자 하나까지 같아야 한다.
-import type { Nabi } from '../editor/index.js';
-import { makeTranslator, type Translator } from '../locale/index.js';
+import { hostOf, type Nabi } from '../editor/index.js';
+import { localeDirection, makeTranslator, type Translator } from '../locale/index.js';
 import { iconSvg, make } from './parts/dom.js';
-import {
-  FULLSCREEN_ENTER_ICON,
-  FULLSCREEN_EXIT_ICON,
-  renderViewToolsHtml,
-} from '../wing/toolbar-html.js';
+import { FULLSCREEN_ENTER_ICON, FULLSCREEN_EXIT_ICON, renderViewToolsHtml } from '../wing/toolbar-html.js';
 import { setPressed, wireIconButton } from './parts/button.js';
 import { openScrim, type Scrim } from './parts/scrim.js';
+import { acquireGestureRoot, HostElementBaseline, HostElementLease, ownsGestureRoot } from '../lifecycle.js';
 
 export const FULLSCREEN_CLASS = 'is-fullscreen';
 
 // 아이콘 셋 — 코어의 것이다(wing 이 아니다). old 번역.
 // 아이콘 셋과 뷰 도구의 글자는 **`wing/toolbar-html.ts` 가 든다** — 서버도 같은 줄을 그려야
 // 하고, ssr 엔트리는 ui 를 안 딛기 때문이다 (097). 부르던 자리를 위해 다시 내보낸다.
-export {
-  FULLSCREEN_ENTER_ICON,
-  FULLSCREEN_EXIT_ICON,
-  PREVIEW_ICON,
-} from '../wing/toolbar-html.js';
+export { FULLSCREEN_ENTER_ICON, FULLSCREEN_EXIT_ICON, PREVIEW_ICON } from '../wing/toolbar-html.js';
 
 // --- 전체화면 ---------------------------------------------------------------------------------
 // Fullscreen API 가 아니라 클래스 하나다 — iframe 안이나 API 가 막힌 자리에서도 산다.
@@ -63,8 +56,17 @@ export interface Overlay {
 export function openPreview(options: PreviewOptions): Overlay {
   const owner = options.surface.ownerDocument;
   const t = options.translator ?? makeTranslator(options.locale);
+  const direction =
+    options.locale !== undefined || options.translator !== undefined
+      ? localeDirection(t.locale)
+      : owner.defaultView?.getComputedStyle(options.surface).direction === 'rtl'
+        ? 'rtl'
+        : 'ltr';
 
-  const card = make(owner, 'div', 'nabi-card');
+  const card = make(owner, 'div', 'nabi-card nabi-preview');
+  if (!card.hasAttribute('aria-label') && !card.hasAttribute('aria-labelledby'))
+    card.setAttribute('aria-label', t.t('preview'));
+  if (!card.hasAttribute('dir')) card.setAttribute('dir', direction);
   card.style.setProperty('--nabi-preview-width', `${Math.round(options.surface.getBoundingClientRect().width)}px`);
 
   const close = make(owner, 'button', 'nabi-close', { type: 'button', 'aria-label': t.t('close') });
@@ -85,23 +87,11 @@ export function openPreview(options: PreviewOptions): Overlay {
   // 질의도 리스너도 그대로 걸린다(붙은 뒤에 부르면 화면이 한 번 깜빡인다).
   const detachBody = options.onBody?.(body);
 
-  const scrim: Scrim = openScrim(owner, {
-    card,
-    restore: options.surface,
-    onClose: () => {
-      // 덮개가 걷히면 건 것도 놓는다 — 카드는 버려지지만 리스너는 호스트가 단 것이라 되돌려 준다.
-      if (typeof detachBody === 'function') detachBody();
-      inner?.close();
-    },
-  });
-
-  // 카드가 문서에 **붙은 뒤**에 부른다 — 붙기 전에는 offset 도 높이도 0 이라 잴 것이 없다.
-  revealCaretBlock(card, body, options.nabi);
-
-  close.addEventListener('click', () => scrim.close());
-
-  // 미리보기에는 상황 줄이 없다 — 그림을 크게 보는 유일한 몸짓이 클릭이다.
-  body.addEventListener('click', (event) => {
+  let scrim: Scrim;
+  let disposed = false;
+  const onCloseButton = (): void => scrim.close();
+  const onBodyClick = (event: Event): void => {
+    if (disposed) return;
     const node = event.target as Node | null;
     if (node?.nodeType !== 1 || (node as Element).tagName !== 'IMG') return;
     const target = node as HTMLImageElement;
@@ -113,9 +103,53 @@ export function openPreview(options: PreviewOptions): Overlay {
       ...(options.translator ? { translator: options.translator } : {}),
       ...(options.locale ? { locale: options.locale } : {}),
     });
-  });
+  };
+  try {
+    scrim = openScrim(owner, {
+      card,
+      restore: options.surface,
+      onClose: () => {
+        // 덮개가 걷히면 건 것도 놓는다 — 카드는 버려지지만 리스너는 호스트가 단 것이라 되돌려 준다.
+        disposed = true;
+        close.removeEventListener('click', onCloseButton);
+        body.removeEventListener('click', onBodyClick);
+        let failure: unknown = null;
+        try {
+          if (typeof detachBody === 'function') detachBody();
+        } catch (error) {
+          failure = error;
+        }
+        try {
+          inner?.close();
+        } catch (error) {
+          failure ??= error;
+        }
+        if (failure) throw failure;
+      },
+    });
+  } catch (error) {
+    try {
+      if (typeof detachBody === 'function') detachBody();
+    } catch {}
+    throw error;
+  }
 
-  return { card, close: () => scrim.close() };
+  try {
+    // 카드가 문서에 **붙은 뒤**에 부른다 — 붙기 전에는 offset 도 높이도 0 이라 잴 것이 없다.
+    revealCaretBlock(card, body, options.nabi);
+
+    close.addEventListener('click', onCloseButton);
+
+    // 미리보기에는 상황 줄이 없다 — 그림을 크게 보는 유일한 몸짓이 클릭이다.
+    body.addEventListener('click', onBodyClick);
+
+    return { card, close: () => scrim.close() };
+  } catch (error) {
+    try {
+      scrim.close();
+    } catch {}
+    throw error;
+  }
 }
 
 // 미리보기는 **쓰던 자리에서 열린다** (053 — 주인 지시 "커서의 위치정도까지 스크롤해서 보여줘").
@@ -130,7 +164,7 @@ function revealCaretBlock(scroller: HTMLElement, body: HTMLElement, nabi: Nabi):
   if (typeof index !== 'number' || index <= 0) return;
   // **수가 어긋나면 손을 뗀다.** 아무것도 안 그리는 블록(주소가 거절된 그림)이나 껍데기를 잃은
   // 블록이 있으면 자리가 밀리는데, 그때는 엉뚱한 데로 데려가느니 맨 위가 낫다.
-  if (body.children.length !== nabi.$doc().length) return;
+  if (body.children.length !== hostOf(nabi).doc().length) return;
   const target = body.children[index];
   if (!target) return;
   // "위치 **정도**" 가 핵심이다 — 3분의 1 지점에 둔다. 맨 위에 딱 붙이면 그 블록이 첫 줄이 되어
@@ -158,7 +192,12 @@ export function openLightbox(options: LightboxOptions): Overlay {
   image.className = 'nabi-card nabi-lightbox';
   image.src = options.src;
   image.alt = options.alt ?? '';
-  if (!options.alt) image.setAttribute('aria-label', t.t('lightbox'));
+  if (!options.alt?.trim()) image.setAttribute('aria-label', t.t('lightbox'));
+  if (!image.hasAttribute('dir')) {
+    const explicitLocale = options.locale !== undefined || options.translator !== undefined;
+    const inherited = owner.defaultView?.getComputedStyle(options.surface).direction;
+    image.setAttribute('dir', explicitLocale ? localeDirection(t.locale) : inherited === 'rtl' ? 'rtl' : 'ltr');
+  }
 
   const scrim = openScrim(owner, { card: image, restore: options.surface });
   return { card: image, close: () => scrim.close() };
@@ -179,57 +218,57 @@ export interface ViewTools {
 }
 
 export function mountViewTools(options: ViewToolsOptions): ViewTools {
-  const owner = options.container.ownerDocument;
-  const t = options.translator ?? makeTranslator(options.locale);
-
-  // **제 상자를 스스로 세운다** — 받은 그릇을 `.nabi-tools` 로 만들지 않는다.
-  //
-  // 이 클래스는 오른쪽 끝으로 띄우는(float) 자리다. 받은 그릇이 툴바 자신이면 툴바 전체가
-  // 떠올라 단추 줄이 통째로 흐트러졌다(좁은 화면에서 특히). 호스트가 툴바를 그대로 넘기는 것은
-  // 가장 자연스러운 일이므로, 그 자리에서 깨지지 않는 것이 이쪽의 책임이다.
-  //
-  // **맨 앞에 꽂는다** — float 는 제 뒤의 인라인 내용이 비켜 흐르게 한다. 뒤에 두면 이미 자리를
-  // 잡은 단추들 위로 겹친다.
-  // 서 있는 줄이 있으면 **다시 안 그린다** — 서버가 미리 그려 보낸 뷰 도구를 이어받는 자리다
-  // (097). 견주는 것은 글자가 아니라 구조다: 이름 둘과 이름표가 맞으면 그대로 쓴다.
-  // 툴바(096)와 같은 규칙이고, 어긋나면 그 자리에서 새로 그리므로 조용히 안 깨진다.
-  const want = { preview: t.t('preview'), fullscreen: t.t('fullscreenEnter') };
-  const pick = (host: Element | null, name: string): HTMLButtonElement | null =>
-    host?.querySelector<HTMLButtonElement>(`button[data-name="${name}"]`) ?? null;
-
-  let box = options.container.querySelector<HTMLElement>(':scope > .nabi-tools');
-  let previewButton = pick(box, 'preview');
-  let fullButton = pick(box, 'fullscreen');
-  const fits =
-    previewButton?.getAttribute('aria-label') === want.preview &&
-    fullButton?.getAttribute('aria-label') === want.fullscreen;
-  if (!fits) {
-    box?.remove();
-    options.container.insertAdjacentHTML('afterbegin', renderViewToolsHtml({ translator: t }));
-    box = options.container.querySelector<HTMLElement>(':scope > .nabi-tools');
-    previewButton = pick(box, 'preview');
-    fullButton = pick(box, 'fullscreen');
-  }
-  // 그릇이 없을 리 없지만(방금 그렸다) 타입을 좁힌다 — 없으면 세울 것이 없으니 빈 손을 답한다.
-  if (!box || !previewButton || !fullButton) {
-    return { buttons: [], unmount() {} };
-  }
-
+  const root = options.root;
+  const container = options.container;
+  const surface = options.surface;
+  const translator = options.translator;
+  const locale = options.locale;
+  const owner = container.ownerDocument;
+  const baseline = new HostElementBaseline(container);
+  const releaseRoot = acquireGestureRoot(root, [surface]);
+  const rootLease = new HostElementLease(root);
+  let unmounted = false;
   let preview: Overlay | null = null;
+  let box: HTMLElement | null = null;
+  let previewButton: HTMLButtonElement | null = null;
+  let fullButton: HTMLButtonElement | null = null;
+  let unbindPreview = (): void => {};
+  let unbindFull = (): void => {};
+  let rootReleased = false;
+  const releaseGesture = (): void => {
+    if (rootReleased) return;
+    rootReleased = true;
+    releaseRoot();
+  };
+  const setOwnFullscreen = (on: boolean): void => rootLease.className(FULLSCREEN_CLASS, on);
 
-  wireIconButton(previewButton, () => {
-    preview?.close();
-    preview = openPreview(options);
-  });
+  const finish = (work: () => void, failure: { value: unknown }): void => {
+    try {
+      work();
+    } catch (error) {
+      failure.value ??= error;
+    }
+  };
+  const dispose = (): void => {
+    if (unmounted) return;
+    unmounted = true;
+    const failure: { value: unknown } = { value: null };
+    finish(() => owner.removeEventListener('keydown', onKey), failure);
+    finish(releaseGesture, failure);
+    finish(unbindPreview, failure);
+    finish(unbindFull, failure);
+    finish(() => preview?.close(), failure);
+    preview = null;
+    finish(() => rootLease.dispose(), failure);
+    finish(() => previewButton?.remove(), failure);
+    finish(() => fullButton?.remove(), failure);
+    finish(() => box?.remove(), failure);
+    if (failure.value) throw failure.value;
+  };
 
-  wireIconButton(fullButton, () => {
-    setFullscreen(options.root, !isFullscreen(options.root));
-    paint();
-  });
-
-  // 전체화면 단추는 상태를 말한다 — 아이콘·이름·`aria-pressed` 가 한 번에 바뀐다.
   const paint = (): void => {
-    const on = isFullscreen(options.root);
+    if (!fullButton) return;
+    const on = isFullscreen(root);
     const label = t.t(on ? 'fullscreenExit' : 'fullscreenEnter');
     fullButton.innerHTML = iconSvg(on ? FULLSCREEN_EXIT_ICON : FULLSCREEN_ENTER_ICON);
     fullButton.setAttribute('aria-label', label);
@@ -237,27 +276,79 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
     setPressed(fullButton, on);
   };
 
-  // 전체화면은 Escape 로도 나간다 — 미리보기가 열려 있으면 그쪽이 먼저 받는다(덮개가 위에 있다).
   const onKey = (event: Event): void => {
     if ((event as KeyboardEvent).key !== 'Escape') return;
-    if (!isFullscreen(options.root)) return;
-    setFullscreen(options.root, false);
+    const target = event.target;
+    if (target === null || typeof (target as Node).nodeType !== 'number' || !ownsGestureRoot(root, target, surface))
+      return;
+    if (!isFullscreen(root)) return;
+    setOwnFullscreen(false);
     paint();
   };
 
-  owner.addEventListener('keydown', onKey);
-  paint();
+  let t: Translator;
+  try {
+    t = translator ?? makeTranslator(locale);
 
-  return {
-    buttons: [previewButton, fullButton],
-    unmount() {
-      owner.removeEventListener('keydown', onKey);
+    // **제 상자를 스스로 세운다** — 받은 그릇을 `.nabi-tools` 로 만들지 않는다.
+    //
+    // 이 클래스는 오른쪽 끝으로 띄우는(float) 자리다. 받은 그릇이 툴바 자신이면 툴바 전체가
+    // 떠올라 단추 줄이 통째로 흐트러졌다(좁은 화면에서 특히). 호스트가 툴바를 그대로 넘기는 것은
+    // 가장 자연스러운 일이므로, 그 자리에서 깨지지 않는 것이 이쪽의 책임이다.
+    //
+    // **맨 앞에 꽂는다** — float 는 제 뒤의 인라인 내용이 비켜 흐르게 한다. 뒤에 두면 이미 자리를
+    // 잡은 단추들 위로 겹친다.
+    // 서 있는 줄이 있으면 **다시 안 그린다** — 서버가 미리 그려 보낸 뷰 도구를 이어받는 자리다
+    // (097). 견주는 것은 글자가 아니라 구조다: 이름 둘과 이름표가 맞으면 그대로 쓴다.
+    // 툴바(096)와 같은 규칙이고, 어긋나면 그 자리에서 새로 그리므로 조용히 안 깨진다.
+    const want = { preview: t.t('preview'), fullscreen: t.t('fullscreenEnter') };
+    const pick = (host: Element | null, name: string): HTMLButtonElement | null =>
+      host?.querySelector<HTMLButtonElement>(`button[data-name="${name}"]`) ?? null;
+
+    box = container.querySelector<HTMLElement>(':scope > .nabi-tools');
+    previewButton = pick(box, 'preview');
+    fullButton = pick(box, 'fullscreen');
+    const fits =
+      previewButton?.getAttribute('aria-label') === want.preview &&
+      fullButton?.getAttribute('aria-label') === want.fullscreen;
+    if (!fits) {
+      box?.remove();
+      container.insertAdjacentHTML('afterbegin', renderViewToolsHtml({ translator: t }));
+      box = container.querySelector<HTMLElement>(':scope > .nabi-tools');
+      previewButton = pick(box, 'preview');
+      fullButton = pick(box, 'fullscreen');
+    }
+    // 그릇이 없을 리 없지만(방금 그렸다) 타입을 좁힌다 — 없으면 세울 것이 없으니 빈 손을 답한다.
+    if (!box || !previewButton || !fullButton) {
+      releaseGesture();
+      unmounted = true;
+      return { buttons: [], unmount() {} };
+    }
+
+    unbindPreview = wireIconButton(previewButton, () => {
       preview?.close();
-      preview = null;
-      setFullscreen(options.root, false);
-      previewButton.remove();
-      fullButton.remove();
-      box.remove();
-    },
-  };
+      preview = openPreview(options);
+    });
+
+    unbindFull = wireIconButton(fullButton, () => {
+      setOwnFullscreen(!isFullscreen(root));
+      paint();
+    });
+
+    owner.addEventListener('keydown', onKey);
+    paint();
+
+    return {
+      buttons: [previewButton, fullButton],
+      unmount: dispose,
+    };
+  } catch (error) {
+    try {
+      dispose();
+    } catch {}
+    try {
+      baseline.restore();
+    } catch {}
+    throw error;
+  }
 }

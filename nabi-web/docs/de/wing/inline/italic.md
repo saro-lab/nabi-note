@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Kursiv
+description: Markierten Text kursiv formatieren.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Kursiv
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Formatiert den markierten Text kursiv. Wird die Formatierung erneut auf denselben Bereich angewendet, wird sie entfernt, und die Markierung in gespeicherten Dokumenten bleibt erhalten.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/italic" />
 
-</div>
+```ts
+const selected = wings().use('i').build()
+```

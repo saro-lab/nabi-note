@@ -23,6 +23,7 @@ import {
   type Rect,
 } from './band.js';
 import { watchSettle, type Settle } from './parts/settle.js';
+import { HostElementLease } from '../lifecycle.js';
 
 export const KEYBOARD_TOP_VAR = '--nabi-keyboard-top';
 export const KEYBOARD_BOTTOM_VAR = '--nabi-keyboard-bottom';
@@ -94,21 +95,41 @@ export interface Sticky {
 }
 
 export function mountSticky(options: StickyOptions): Sticky {
-  const owner = options.root.ownerDocument;
+  const root = options.root;
+  const surface = options.surface;
+  const chrome = options.chrome;
+  const nabi = options.nabi;
+  const iosBranch = options.iosBranch;
+  const suppliedSettle = options.settle;
+  const owner = root.ownerDocument;
   const view = owner.defaultView;
-  const settle = options.settle ?? watchSettle(owner, { surface: options.surface });
-  const ownSettle = options.settle === undefined;
-  const ios =
-    options.iosBranch !== false &&
-    view !== null &&
-    isIos(view.navigator.userAgent, view.navigator.platform ?? '', view.navigator.maxTouchPoints ?? 0);
+  const settle = suppliedSettle ?? watchSettle(owner, { surface });
+  const ownSettle = suppliedSettle === undefined;
+  let unmounted = false;
+  const styles = new HostElementLease(root);
+  let ios: boolean;
+  try {
+    ios =
+      iosBranch !== false &&
+      view !== null &&
+      isIos(view.navigator.userAgent, view.navigator.platform ?? '', view.navigator.maxTouchPoints ?? 0);
+  } catch (error) {
+    try {
+      styles.dispose();
+    } catch {}
+    if (ownSettle) {
+      try {
+        settle.unmount();
+      } catch {}
+    }
+    throw error;
+  }
 
   // --- 키보드 자리 → CSS 변수 -----------------------------------------------------------------
   // 0 이면 변수를 **지운다** — "키보드 없음"과 "높이 0 인 키보드"가 같은 상태여야 시트의 기본이 산다.
   const writeVar = (name: string, px: number): void => {
     const value = Math.round(px);
-    if (value <= 0) options.root.style.removeProperty(name);
-    else options.root.style.setProperty(name, `${value}px`);
+    styles.style(name, value <= 0 ? null : `${value}px`);
   };
 
   // --- 좌표계를 재는 자 (011 4차) ----------------------------------------------------------------
@@ -250,7 +271,7 @@ export function mountSticky(options: StickyOptions): Sticky {
     writeVar(KEYBOARD_BOTTOM_VAR, bottom);
 
     // 크롬의 실측 높이도 함께 내준다 — 브라우저 **자신의** 리빌이 보는 여백이 어림값이 아니게 된다.
-    const height = options.chrome ? Math.round(options.chrome.getBoundingClientRect().height) : 0;
+    const height = chrome ? Math.round(chrome.getBoundingClientRect().height) : 0;
     if (height !== barHeight) {
       barHeight = height;
       writeVar(BAR_HEIGHT_VAR, height);
@@ -320,7 +341,7 @@ export function mountSticky(options: StickyOptions): Sticky {
     const top = visual ? ruler + visual.offsetTop : 0;
     const height = visual ? visual.height : view.innerHeight;
     const viewport: Rect = { top, bottom: top + height };
-    const chromeBox = options.chrome ? options.chrome.getBoundingClientRect() : null;
+    const chromeBox = chrome ? chrome.getBoundingClientRect() : null;
     const chromeBottom = chromeBox ? chromeBox.bottom : null;
     // **띠 = 창 ∩ (툴바 아래). 그것이 비면 툴바를 무시하고 창만 본다** (011 5차).
     // 툴바 아랫변이 창 아래로 통째로 나가면(그릇이 덜 올라와 툴바가 그릇 머리에 붙어 있을 때)
@@ -354,8 +375,10 @@ export function mountSticky(options: StickyOptions): Sticky {
   };
 
   const aim = (): void => {
+    if (unmounted) return;
     follow();
     settle.afterViewport(() => {
+      if (unmounted) return;
       follow();
       measure();
     });
@@ -490,6 +513,7 @@ export function mountSticky(options: StickyOptions): Sticky {
     if (settling) return;
     settling = true;
     settle.afterViewport(() => {
+      if (unmounted) return;
       settling = false;
       // **사람이 굴렸으면 이 걸음은 취소된다** (015 규칙 1). 8차는 여기서 손이 멎기를 세 번까지
       // 더 기다렸다 **결국 밀었다** — `USER_QUIET` 을 "미루는 창"으로만 봤기 때문이다. 그래서
@@ -509,12 +533,19 @@ export function mountSticky(options: StickyOptions): Sticky {
 
   // 문서가 **정말 바뀐 때만**이다 — 선택만 옮긴 신호(`doc: false`)에는 안 선다. 전체선택처럼
   // 선택이 문서만큼 커진 순간에 겨누면 화면이 글 첫머리로 튄다.
-  const stopChange = options.nabi?.onChange((change) => {
-    if (!change.doc) return;
-    // **사람이 돌아왔다** — 굴려 떠나며 끝낸 세션을 편집이 다시 연다 (015 규칙 1의 ②).
-    armed = true;
-    afterEdit('edit');
-  });
+  let stopChange: (() => void) | undefined;
+  try {
+    stopChange = nabi?.onChange((change) => {
+      if (!change.doc) return;
+      // **사람이 돌아왔다** — 굴려 떠나며 끝낸 세션을 편집이 다시 연다 (015 규칙 1의 ②).
+      armed = true;
+      afterEdit('edit');
+    });
+  } catch (error) {
+    styles.dispose();
+    if (ownSettle) settle.unmount();
+    throw error;
+  }
 
   // --- 늦게 바뀌는 툴바 기하 (015 3차) -----------------------------------------------------------
   // **우리가 잰 뒤에 툴바가 자란다.** 000 이 "남은 흠" 으로 적어 둔 그 자리다 — 우리가 잴 때
@@ -533,7 +564,7 @@ export function mountSticky(options: StickyOptions): Sticky {
   let watcher: { observe(el: Element): void; disconnect(): void } | null = null;
   let seenBar = -1; // 관찰자가 마지막으로 본 크롬의 키
   const onChromeSize = (): void => {
-    const bar = options.chrome;
+    const bar = chrome;
     if (!bar || !view) return;
     const height = Math.round(bar.getBoundingClientRect().height);
     // 자를 `start()` 가 이미 세워 뒀다(`seenBar`). 그래서 관찰자가 걸리자마자 부르는 첫 콜백은
@@ -557,6 +588,7 @@ export function mountSticky(options: StickyOptions): Sticky {
   };
 
   const start = (): void => {
+    if (unmounted) return;
     if (watching) return;
     watching = true;
     armed = true; // 새 겨눔 — 세션이 여기서 시작한다
@@ -567,13 +599,14 @@ export function mountSticky(options: StickyOptions): Sticky {
     // 손이 굴리는 것을 듣는다 — 겨눔을 쥔 동안만 걸고 뗄 때 함께 뗀다(전역에 안 남긴다).
     view?.addEventListener('scroll', onScroll, { passive: true });
     // 툴바가 자라는 것도 듣는다. 없는 브라우저면 그냥 안 듣는다 — 나머지는 그대로 돈다.
-    const Observer = (view as unknown as { ResizeObserver?: new (fn: () => void) => { observe(el: Element): void; disconnect(): void } })
-      ?.ResizeObserver;
-    if (Observer && options.chrome) {
+    const Observer = (
+      view as unknown as { ResizeObserver?: new (fn: () => void) => { observe(el: Element): void; disconnect(): void } }
+    )?.ResizeObserver;
+    if (Observer && chrome) {
       // 지금 키를 자로 세워 둔다 — `follow()` 가 방금 잰 그 값이다.
-      seenBar = Math.round(options.chrome.getBoundingClientRect().height);
+      seenBar = Math.round(chrome.getBoundingClientRect().height);
       watcher = new Observer(onChromeSize);
-      watcher.observe(options.chrome);
+      watcher.observe(chrome);
     }
   };
   const stop = (): void => {
@@ -607,17 +640,45 @@ export function mountSticky(options: StickyOptions): Sticky {
     stuck = Number.NaN;
   };
 
-  options.surface.addEventListener('focus', start);
-  options.surface.addEventListener('blur', stop);
-  if (owner.activeElement === options.surface) start();
+  try {
+    surface.addEventListener('focus', start);
+    surface.addEventListener('blur', stop);
+    if (owner.activeElement === surface) start();
+  } catch (error) {
+    unmounted = true;
+    try {
+      stop();
+    } catch {}
+    try {
+      stopChange?.();
+    } catch {}
+    try {
+      surface.removeEventListener('focus', start);
+    } catch {}
+    try {
+      surface.removeEventListener('blur', stop);
+    } catch {}
+    try {
+      styles.dispose();
+    } catch {}
+    if (ownSettle) {
+      try {
+        settle.unmount();
+      } catch {}
+    }
+    throw error;
+  }
 
   return {
     aim,
     unmount() {
+      if (unmounted) return;
+      unmounted = true;
       stop();
       stopChange?.();
-      options.surface.removeEventListener('focus', start);
-      options.surface.removeEventListener('blur', stop);
+      surface.removeEventListener('focus', start);
+      surface.removeEventListener('blur', stop);
+      styles.dispose();
       // 자는 걷을 것이 없다 — 잴 때 만들었다 그 자리에서 곧바로 지운다(위 `probeTop`).
       if (ownSettle) settle.unmount();
     },

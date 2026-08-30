@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Заголовок
+description: Превратите абзац в заголовок и выберите уровень.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Заголовок
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Преобразует абзац в заголовок и задаёт его уровень. Включите заголовок на панели и выберите H1–H6 либо в пустом абзаце введите от `#` до `######` и нажмите Space.
 
-[Open the Korean canonical page](/ko/guide/features)
+Заголовок не является отдельным типом блока, а хранится как свойство абзаца. Повторное включение возвращает обычный абзац, поэтому уровень можно менять без нарушения структуры текста.
 
-</div>
+<WingDemo path="/wing/block/heading" />
+
+```ts
+const selected = wings().use('h').build()
+```

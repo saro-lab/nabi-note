@@ -2,6 +2,8 @@
 // 글 계열(08) + 표(10) + 물건·도구(11)를 합친 완전 묶음이다.
 import type { Wing } from '../wing/index.js';
 import { $catalogWings } from './builder.js';
+import { completeLocaleTree } from '../locale/complete.js';
+import { DICTIONARY } from '../locale/index.js';
 
 export {
   boldWing,
@@ -46,3 +48,5 @@ export type { WingName, WingUseOptions, WingsBuilder } from './builder.js';
 // 목록의 원본은 빌더의 차례표(builder.ts 의 CATALOG) **한 자리**다 — 여기 한 번 더 적으면
 // `.all()` 과 이 배열이 갈리고, 이름 유니온(WingName)도 딴 데를 보게 된다.
 export const defaultWings: readonly Wing[] = $catalogWings;
+completeLocaleTree(DICTIONARY);
+completeLocaleTree(defaultWings);

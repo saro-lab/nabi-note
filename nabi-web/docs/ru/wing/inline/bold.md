@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Жирный
+description: Сделайте выбранный текст жирным.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Жирный
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Делает выбранный текст жирным. Повторное применение к тому же диапазону удаляет форматирование. Метка остаётся с текстом в сохранённых документах.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/bold" />
 
-</div>
+```ts
+const selected = wings().use('b').build()
+```

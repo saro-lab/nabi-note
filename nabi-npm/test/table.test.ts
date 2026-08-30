@@ -6,7 +6,8 @@
 import { cocoon, isElement, type ElementNode, type NabiNode } from '../src/schema/index.js';
 import { nodeAt, positionExists, type Position } from '../src/doc/index.js';
 import { caretAt, type Selection } from '../src/caret/index.js';
-import { createNabiWith, makeRegistry, routeKey } from '../src/wing/index.js';
+import { $createNabiWith, createNabiWith, makeRegistry, routeKey } from '../src/wing/index.js';
+import { hostOf } from '../src/editor/index.js';
 import { defaultWings } from '../src/wings/index.js';
 import {
   boxBetween,
@@ -33,17 +34,15 @@ const env = registry.env;
 const el = (w: string, ch: readonly NabiNode[] = [], a?: Record<string, string | number>): ElementNode =>
   a ? { w, a, ch } : { w, ch };
 const p = (ch: readonly NabiNode[] = [], a?: Record<string, string | number>): ElementNode => el('p', ch, a);
-const td = (ch: readonly NabiNode[], a?: Record<string, string | number>): ElementNode =>
-  el('td', [p(ch)], a);
+const td = (ch: readonly NabiNode[], a?: Record<string, string | number>): ElementNode => el('td', [p(ch)], a);
 const tr = (...cells: ElementNode[]): ElementNode => el('tr', cells);
 const at = (path: readonly number[], offset: number): Position => ({ path, offset });
 const range = (a: Position, b: Position): Selection => ({ anchor: a, focus: b });
 
-const make = (doc: readonly unknown[]) => createNabiWith(WINGS, { doc, parseHtml: tinyHtml }).nabi;
+const make = (doc: readonly unknown[]) => $createNabiWith(WINGS, { doc, parseHtml: tinyHtml }).nabi;
 
 // 2×2 표(a·b / c·d)를 래퍼문단에 세운 문서.
-const grid22 = (): ElementNode =>
-  p([el('table', [tr(td(['a']), td(['b'])), tr(td(['c']), td(['d']))])]);
+const grid22 = (): ElementNode => p([el('table', [tr(td(['a']), td(['b'])), tr(td(['c']), td(['d']))])]);
 
 // --- registry — 표가 계약을 지난다 -------------------------------------------------------------
 
@@ -52,7 +51,10 @@ ok('tr·td 는 표의 부품이다', registry.ownerOf('tr') === tableWing && reg
 eq('td 는 문단 하나 고정이다', env.singleParagraph?.has('td'), true);
 eq('제목 표식 th 는 불리언 attr 로 접힌다', env.boolAttrs.has('th'), true);
 eq('표는 물건(lump)이다', env.lumps.has('table'), true);
-ok('칸 드래그 부속이 선언형으로 실린다', tableWing.attach !== undefined && registry.attaches.includes(tableWing.attach));
+ok(
+  '칸 드래그 부속이 선언형으로 실린다',
+  tableWing.attach !== undefined && registry.attaches.includes(tableWing.attach),
+);
 
 // --- grid 수학 ---------------------------------------------------------------------------------
 
@@ -60,18 +62,46 @@ ok('칸 드래그 부속이 선언형으로 실린다', tableWing.attach !== und
   const t = el('table', [tr(td(['a']), td(['b'])), tr(td(['c']), td(['d']))]);
   const g = cellGrid(t);
   eq('2×2 배치 — 행·열', [g.rows, g.columns], [2, 2]);
-  eq('2×2 배치 — 문서 순서', g.cells.map((c) => [c.row, c.column]), [[0, 0], [0, 1], [1, 0], [1, 1]]);
+  eq(
+    '2×2 배치 — 문서 순서',
+    g.cells.map((c) => [c.row, c.column]),
+    [
+      [0, 0],
+      [0, 1],
+      [1, 0],
+      [1, 1],
+    ],
+  );
 }
 {
   const t = el('table', [tr(td(['a'], { colspan: '2' })), tr(td(['b']), td(['c']))]);
   const g = cellGrid(t);
-  eq('colspan 배치', g.cells.map((c) => [c.row, c.column, c.colSpan]), [[0, 0, 2], [1, 0, 1], [1, 1, 1]]);
+  eq(
+    'colspan 배치',
+    g.cells.map((c) => [c.row, c.column, c.colSpan]),
+    [
+      [0, 0, 2],
+      [1, 0, 1],
+      [1, 1, 1],
+    ],
+  );
 }
 {
   const t = el('table', [tr(td(['a'], { rowspan: '2' }), td(['b'])), tr(td(['c']))]);
   const g = cellGrid(t);
-  eq('rowspan 이 아랫줄 자리를 먹는다 — c 는 (1,1)', g.cells.map((c) => [c.row, c.column]), [[0, 0], [0, 1], [1, 1]]);
-  ok('먹힌 자리도 주인을 답한다', cellCovering(g, 1, 0)?.cell === t.ch[0] && isElement(t.ch[0]) ? true : cellCovering(g, 1, 0) !== null);
+  eq(
+    'rowspan 이 아랫줄 자리를 먹는다 — c 는 (1,1)',
+    g.cells.map((c) => [c.row, c.column]),
+    [
+      [0, 0],
+      [0, 1],
+      [1, 1],
+    ],
+  );
+  ok(
+    '먹힌 자리도 주인을 답한다',
+    cellCovering(g, 1, 0)?.cell === t.ch[0] && isElement(t.ch[0]) ? true : cellCovering(g, 1, 0) !== null,
+  );
   const a = g.cells[0] as NonNullable<(typeof g.cells)[0]>;
   const c = g.cells[2] as NonNullable<(typeof g.cells)[2]>;
   const box = boxBetween(g, a, c);
@@ -90,6 +120,33 @@ eq('spanOf — 못 믿을 값은 1', [spanOf('0'), spanOf('abc'), spanOf(undefin
 eq('spanOf — 폭주는 1000 으로', spanOf('5000'), 1000);
 eq('spanOf — 숫자도 받는다', spanOf(3), 3);
 {
+  const rows = Array.from({ length: 1000 }, (_unused, row) =>
+    row === 0 ? tr(td(['x'], { colspan: '1000', rowspan: '1000' })) : tr(),
+  );
+  const table = el('table', rows);
+  const NativeSet = globalThis.Set;
+  let adds = 0;
+  class CountingSet<T> extends NativeSet<T> {
+    override add(value: T): this {
+      adds += 1;
+      if (adds > 16) throw new Error('coordinate Set expansion');
+      return super.add(value);
+    }
+  }
+  let grid: ReturnType<typeof cellGrid> | null = null;
+  let threw = false;
+  (globalThis as { Set: SetConstructor }).Set = CountingSet as SetConstructor;
+  try {
+    grid = cellGrid(table);
+  } catch {
+    threw = true;
+  } finally {
+    (globalThis as { Set: SetConstructor }).Set = NativeSet;
+  }
+  ok('1000x1000 span — 좌표 문자열 Set을 펼치지 않는다', !threw && adds === 0);
+  eq('1000x1000 span — 기존 배치 의미는 그대로다', [grid?.rows, grid?.columns, grid?.cells.length], [1000, 1000, 1]);
+}
+{
   const cell = td(['x'], { colspan: '3', rowspan: '2' });
   const reset = withSpans(cell, 1, 1);
   eq('withSpans — 기본값 1 은 안 적는다', reset.a, undefined);
@@ -105,6 +162,44 @@ eq('spanOf — 숫자도 받는다', spanOf(3), 3);
   const g = cellGrid(fixed);
   eq('들쭉 행 — 빈 칸을 채워 직사각형', [g.rows, g.columns, g.cells.length], [2, 2, 4]);
   ok('repair 는 멱등이다(참조 유지)', repairTable(fixed) === fixed);
+}
+{
+  const rows = Array.from({ length: 1000 }, (_unused, row) => (row === 0 ? tr(td(['x'], { colspan: '1000' })) : tr()));
+  const fixed = repairTable(el('table', rows));
+  const grid = cellGrid(fixed);
+  eq(
+    '큰 gap repair — 좌표 면적 대신 행마다 압축 filler 하나',
+    [grid.rows, grid.columns, grid.cells.length],
+    [1000, 1000, 1000],
+  );
+  ok('큰 gap repair — 압축 뒤에도 멱등이다', repairTable(fixed) === fixed);
+}
+{
+  const top = tr(
+    td(['a'], { rowspan: '2' }),
+    td(['b'], { colspan: '100' }),
+    td(['c'], { rowspan: '2' }),
+    td(['d'], { colspan: '100' }),
+    td(['e'], { rowspan: '2' }),
+  );
+  const fixed = repairTable(el('table', [top, tr()]));
+  const grid = cellGrid(fixed);
+  eq(
+    'disjoint gap repair — rowspan 사이 구간을 각각 압축한다',
+    [grid.rows, grid.columns, grid.cells.length],
+    [2, 203, 7],
+  );
+  ok('disjoint gap repair — 두 번째 repair가 더 붙이지 않는다', repairTable(fixed) === fixed);
+}
+{
+  const fixed = repairTable(el('table', [tr(td(['a'], { colspan: '1000' }), td(['b'], { colspan: '1000' })), tr()]));
+  const second = fixed.ch[1] as ElementNode;
+  eq(
+    '큰 단일 gap repair — 저장 span 상한 단위로 chunk한다',
+    second.ch.map((cell) => (isElement(cell) ? cell.a?.['colspan'] : null)),
+    ['1000', '1000'],
+  );
+  ok('큰 단일 gap repair — chunk 뒤에도 멱등이다', repairTable(fixed) === fixed);
 }
 {
   const overflow = el('table', [tr(td(['a'], { rowspan: '5' }), td(['b']))]);
@@ -153,9 +248,13 @@ eq('spanOf — 숫자도 받는다', spanOf(3), 3);
     'JSON 입구도 같은 자리 — td ch:[]',
     nabi.setJson([{ w: 'p', ch: [{ w: 'table', ch: [{ w: 'tr', ch: [{ w: 'td', ch: [] }] }] }] }]),
   );
-  eq('setJson 경유 — 같은 복구', nabi.getJson(), [{ w: 'p', ch: [{ w: 'table', ch: [{ w: 'tr', ch: [emptyCellShape] }] }] }]);
+  eq('setJson 경유 — 같은 복구', nabi.getJson(), [
+    { w: 'p', ch: [{ w: 'table', ch: [{ w: 'tr', ch: [emptyCellShape] }] }] },
+  ]);
   const seeded = make([{ w: 'p', ch: [{ w: 'table', ch: [{ w: 'tr', ch: [{ w: 'td', ch: [] }] }] }] }]);
-  eq('doc 옵션 입구도 같은 자리', seeded.getJson(), [{ w: 'p', ch: [{ w: 'table', ch: [{ w: 'tr', ch: [emptyCellShape] }] }] }]);
+  eq('doc 옵션 입구도 같은 자리', seeded.getJson(), [
+    { w: 'p', ch: [{ w: 'table', ch: [{ w: 'tr', ch: [emptyCellShape] }] }] },
+  ]);
   eq('repairCell 직접 — 빈 칸은 문단 하나', repairCell(el('td', [])).ch, [{ w: 'p', ch: [] }]);
 }
 {
@@ -185,7 +284,10 @@ eq('spanOf — 숫자도 받는다', spanOf(3), 3);
   const table = (withImg[0] as ElementNode).ch[0] as ElementNode;
   const cell = cellGrid(table).cells[0]?.cell;
   const para = cell?.ch[0];
-  ok('칸 속 그림은 걷힌다(칸은 글줄)', isElement(para) && para.ch.every((n) => typeof n === 'string' || (isElement(n) && n.w === 'br')));
+  ok(
+    '칸 속 그림은 걷힌다(칸은 글줄)',
+    isElement(para) && para.ch.every((n) => typeof n === 'string' || (isElement(n) && n.w === 'br')),
+  );
 }
 
 // --- HTML — th 왕복·횡스크롤 겉옷 --------------------------------------------------------------
@@ -202,7 +304,7 @@ eq('spanOf — 숫자도 받는다', spanOf(3), 3);
 
   const again = make([]);
   again.setHtml(withTh);
-  const table = (again.$doc()[0] as ElementNode).ch[0] as ElementNode;
+  const table = (hostOf(again).doc()[0] as ElementNode).ch[0] as ElementNode;
   const g = cellGrid(table);
   eq('th 가 제목 표식으로 되돌아온다', g.cells.filter((c) => c.cell.a?.['th'] === 1).length, 2);
   eq('되돌아온 표도 2×2 다', [g.rows, g.columns], [2, 2]);
@@ -210,7 +312,7 @@ eq('spanOf — 숫자도 받는다', spanOf(3), 3);
 {
   const nabi = make([]);
   nabi.setHtml('<table><tr><td>a</td><td>b</td></tr><tr><td>c</td></tr></table>');
-  const table = (nabi.$doc()[0] as ElementNode).ch[0] as ElementNode;
+  const table = (hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode;
   eq('setHtml 경로도 격자 복구를 탄다', cellGrid(table).cells.length, 4);
 }
 
@@ -218,14 +320,14 @@ eq('spanOf — 숫자도 받는다', spanOf(3), 3);
 
 const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   const sel = nabi.getSelection();
-  ok(name, positionExists(nabi.$doc(), sel.focus, env) && positionExists(nabi.$doc(), sel.anchor, env));
+  ok(name, positionExists(hostOf(nabi).doc(), sel.focus, env) && positionExists(hostOf(nabi).doc(), sel.anchor, env));
 };
 
 {
   const nabi = make([p([])]);
   nabi.applyCommand('insertTable', { rows: 2, cols: 2 });
-  const top = nabi.$doc()[0] as ElementNode;
-  eq('insertTable — 빈 문단이 래퍼문단으로 교체된다', nabi.$doc().length, 1);
+  const top = hostOf(nabi).doc()[0] as ElementNode;
+  eq('insertTable — 빈 문단이 래퍼문단으로 교체된다', hostOf(nabi).doc().length, 1);
   eq('insertTable — 2×2', cellGrid(top.ch[0] as ElementNode).cells.length, 4);
   caretExists('insertTable — 캐럿 실재', nabi);
   eq('insertTable — 캐럿은 첫 칸', nabi.getSelection().focus.path, [0, 0, 0, 0, 0]);
@@ -236,13 +338,20 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
 {
   const nabi = make([p([])]);
   nabi.applyCommand('insertTable', { rows: 3, cols: 2 });
-  const g = cellGrid((nabi.$doc()[0] as ElementNode).ch[0] as ElementNode);
+  const g = cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode);
   eq(
     '새 표 — 첫 행 전부가 제목 칸',
     g.cells.filter((c) => c.cell.a?.['th'] === 1).map((c) => [c.row, c.column]),
-    [[0, 0], [0, 1]],
+    [
+      [0, 0],
+      [0, 1],
+    ],
   );
-  eq('새 표 — 아랫줄은 제목이 아니다', g.cells.filter((c) => c.row > 0).every((c) => c.cell.a?.['th'] === undefined), true);
+  eq(
+    '새 표 — 아랫줄은 제목이 아니다',
+    g.cells.filter((c) => c.row > 0).every((c) => c.cell.a?.['th'] === undefined),
+    true,
+  );
   const html = nabi.getHtml();
   eq('새 표 — 발행 HTML 의 제목 칸은 th 둘', (html.match(/<th[ >]/g) ?? []).length, 2);
   ok('새 표 — 나머지는 td 그대로', html.includes('<td>'));
@@ -253,31 +362,47 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   nabi.applyCommand('insertTable', { rows: 2, cols: 2 });
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 0)));
   nabi.applyCommand('addColumnRight');
-  const g = cellGrid((nabi.$doc()[0] as ElementNode).ch[0] as ElementNode);
-  eq('열을 더해도 제목 행은 통째로 제목이다', g.cells.filter((c) => c.row === 0).every((c) => c.cell.a?.['th'] === 1), true);
-  eq('아랫줄에는 제목이 안 번진다', g.cells.filter((c) => c.row === 1).every((c) => c.cell.a?.['th'] === undefined), true);
+  const g = cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode);
+  eq(
+    '열을 더해도 제목 행은 통째로 제목이다',
+    g.cells.filter((c) => c.row === 0).every((c) => c.cell.a?.['th'] === 1),
+    true,
+  );
+  eq(
+    '아랫줄에는 제목이 안 번진다',
+    g.cells.filter((c) => c.row === 1).every((c) => c.cell.a?.['th'] === undefined),
+    true,
+  );
 
   // 행 추가는 따라가지 않는다 — 제목 행 하나뿐인 표에서 아래 새 행까지 제목이 되면 안 된다.
   nabi.applyCommand('addRowBelow');
-  const g2 = cellGrid((nabi.$doc()[0] as ElementNode).ch[0] as ElementNode);
-  eq('새 행은 제목이 아니다', g2.cells.filter((c) => c.row > 0).every((c) => c.cell.a?.['th'] === undefined), true);
+  const g2 = cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode);
+  eq(
+    '새 행은 제목이 아니다',
+    g2.cells.filter((c) => c.row > 0).every((c) => c.cell.a?.['th'] === undefined),
+    true,
+  );
 }
 {
   // 행 수를 안 본다 — 한 행짜리 표도 그 한 행이 제목이다(주인 답: 예외 없이).
   const nabi = make([p([])]);
   nabi.applyCommand('insertTable', { rows: 1, cols: 3 });
-  const g = cellGrid((nabi.$doc()[0] as ElementNode).ch[0] as ElementNode);
-  eq('한 행짜리 표도 그 한 행이 제목이다', g.cells.every((c) => c.cell.a?.['th'] === 1), true);
+  const g = cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode);
+  eq(
+    '한 행짜리 표도 그 한 행이 제목이다',
+    g.cells.every((c) => c.cell.a?.['th'] === 1),
+    true,
+  );
 }
 {
   // **생성 길에만 선다** — 들여온 문서·이미 있는 문서는 그대로다.
   const imported = make([]);
   imported.setHtml('<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>');
-  const g = cellGrid((imported.$doc()[0] as ElementNode).ch[0] as ElementNode);
+  const g = cellGrid((hostOf(imported).doc()[0] as ElementNode).ch[0] as ElementNode);
   eq('들여온 표에는 제목 행이 안 생긴다', g.cells.filter((c) => c.cell.a?.['th'] === 1).length, 0);
 
   const loaded = make([grid22()]);
-  const g2 = cellGrid((loaded.$doc()[0] as ElementNode).ch[0] as ElementNode);
+  const g2 = cellGrid((hostOf(loaded).doc()[0] as ElementNode).ch[0] as ElementNode);
   eq('setJson(cocoon) 로 들어온 표도 그대로다', g2.cells.filter((c) => c.cell.a?.['th'] === 1).length, 0);
 }
 
@@ -292,7 +417,13 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   const nabi = make([grid22()]);
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 0)));
   eq('deleteTable 커맨드는 여전히 표를 걷는다', nabi.applyCommand('deleteTable'), true);
-  eq('표가 걷힌 자리엔 빈 문단이 선다', nabi.$doc().every((n) => n.ch.every((c) => !isElement(c) || c.w !== 'table')), true);
+  eq(
+    '표가 걷힌 자리엔 빈 문단이 선다',
+    hostOf(nabi)
+      .doc()
+      .every((n) => n.ch.every((c) => !isElement(c) || c.w !== 'table')),
+    true,
+  );
 }
 
 // --- 표 만들기 격자 — 작은 화면에서는 5×5 (084 ②) ---------------------------------------------
@@ -302,42 +433,61 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   const css = tableWing.styles ?? '';
   ok('작은 화면 분기가 표 시트에 있다', css.includes('@media (max-width: 40rem)'));
   ok('작은 화면 격자는 5열이다', css.includes('grid-template-columns: repeat(5, var(--nabi-grid-cell)) !important'));
-  ok('작은 화면 칸은 커진다', css.includes('--nabi-grid-cell: 2.75rem'));
+  ok(
+    '작은 화면 칸은 공개 touch 크기 토큰을 쓴다',
+    css.includes('--nabi-grid-cell: var(--nabi-touch-control-size, 2.75rem)'),
+  );
   ok('여섯째 열·여섯째 줄부터는 걷힌다', css.includes('nth-child(8n + 6)') && css.includes('nth-child(n + 41)'));
 }
 {
   const nabi = make([grid22()]);
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 0))); // a 칸
   nabi.applyCommand('addRowBelow');
-  eq('addRowBelow — 행 셋', cellGrid((nabi.$doc()[0] as ElementNode).ch[0] as ElementNode).rows, 3);
+  eq('addRowBelow — 행 셋', cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode).rows, 3);
   caretExists('addRowBelow — 캐럿 실재(새 행)', nabi);
   nabi.applyCommand('addRowAbove');
-  eq('addRowAbove — 행 넷', cellGrid((nabi.$doc()[0] as ElementNode).ch[0] as ElementNode).rows, 4);
+  eq('addRowAbove — 행 넷', cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode).rows, 4);
   nabi.applyCommand('addColumnRight');
-  eq('addColumnRight — 열 셋', cellGrid((nabi.$doc()[0] as ElementNode).ch[0] as ElementNode).columns, 3);
+  eq('addColumnRight — 열 셋', cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode).columns, 3);
   nabi.applyCommand('addColumnLeft');
-  eq('addColumnLeft — 열 넷', cellGrid((nabi.$doc()[0] as ElementNode).ch[0] as ElementNode).columns, 4);
+  eq('addColumnLeft — 열 넷', cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode).columns, 4);
   caretExists('행·열 추가 뒤 캐럿 실재', nabi);
 }
 {
   const nabi = make([grid22()]);
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 0)));
   nabi.applyCommand('deleteRow');
-  const table = (nabi.$doc()[0] as ElementNode).ch[0] as ElementNode;
+  const table = (hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode;
   eq('deleteRow — 행 하나 남음', cellGrid(table).rows, 1);
-  eq('deleteRow — 남은 행은 c·d', cellGrid(table).cells.map((c) => (c.cell.ch[0] as ElementNode).ch[0]), ['c', 'd']);
+  eq(
+    'deleteRow — 남은 행은 c·d',
+    cellGrid(table).cells.map((c) => (c.cell.ch[0] as ElementNode).ch[0]),
+    ['c', 'd'],
+  );
   caretExists('deleteRow — 캐럿 실재', nabi);
   nabi.applyCommand('deleteRow');
-  eq('마지막 행 삭제 — 표(래퍼째)가 사라진다', nabi.$doc().every((n) => n.ch.every((c) => !isElement(c) || c.w !== 'table')), true);
+  eq(
+    '마지막 행 삭제 — 표(래퍼째)가 사라진다',
+    hostOf(nabi)
+      .doc()
+      .every((n) => n.ch.every((c) => !isElement(c) || c.w !== 'table')),
+    true,
+  );
   caretExists('표 전체 삭제 뒤 캐럿 실재', nabi);
 }
 {
   const nabi = make([grid22()]);
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 0)));
   nabi.applyCommand('deleteColumn');
-  eq('deleteColumn — 열 하나 남음', cellGrid((nabi.$doc()[0] as ElementNode).ch[0] as ElementNode).columns, 1);
+  eq('deleteColumn — 열 하나 남음', cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode).columns, 1);
   nabi.applyCommand('deleteColumn');
-  eq('마지막 열 삭제 — 표가 사라진다', nabi.$doc().every((n) => n.ch.every((c) => !isElement(c) || c.w !== 'table')), true);
+  eq(
+    '마지막 열 삭제 — 표가 사라진다',
+    hostOf(nabi)
+      .doc()
+      .every((n) => n.ch.every((c) => !isElement(c) || c.w !== 'table')),
+    true,
+  );
 }
 {
   // 위에서 내려온 rowspan 을 가진 행 삭제 — 병합 칸이 아랫줄로 옮겨 한 칸 준다.
@@ -345,9 +495,12 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   const nabi = make([p([t])]);
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 0))); // a(병합 시작 줄)
   nabi.applyCommand('deleteRow');
-  const g = cellGrid((nabi.$doc()[0] as ElementNode).ch[0] as ElementNode);
+  const g = cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode);
   eq('병합 시작 줄 삭제 — 남은 격자도 직사각형', [g.rows, g.columns], [2, 2]);
-  ok('옮겨 앉은 a 가 살아 있다', g.cells.some((c) => (c.cell.ch[0] as ElementNode).ch[0] === 'a'));
+  ok(
+    '옮겨 앉은 a 가 살아 있다',
+    g.cells.some((c) => (c.cell.ch[0] as ElementNode).ch[0] === 'a'),
+  );
   caretExists('병합 행 삭제 뒤 캐럿 실재', nabi);
 }
 
@@ -356,29 +509,40 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
 {
   const nabi = make([grid22()]);
   const sel = range(at([0, 0, 0, 0, 0], 0), at([0, 0, 1, 1, 0], 1)); // a 처음 ~ d 끝
-  const boxed = selectionBox(nabi.$doc(), sel);
+  const boxed = selectionBox(hostOf(nabi).doc(), sel);
   eq('selectionBox — 2×2 네 칸', boxed?.cells.length, 4);
-  eq('selectionBox — 접힌 캐럿은 null', selectionBox(nabi.$doc(), caretAt(at([0, 0, 0, 0, 0], 0))), null);
+  eq('selectionBox — 접힌 캐럿은 null', selectionBox(hostOf(nabi).doc(), caretAt(at([0, 0, 0, 0, 0], 0))), null);
 
   nabi.select(sel);
   nabi.applyCommand('mergeCells');
-  const table = (nabi.$doc()[0] as ElementNode).ch[0] as ElementNode;
+  const table = (hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode;
   const g = cellGrid(table);
   eq('병합 — 칸 하나', g.cells.length, 1);
   eq('병합 — 2×2 를 덮는다', [g.cells[0]?.colSpan, g.cells[0]?.rowSpan], [2, 2]);
   const merged = g.cells[0]?.cell.ch[0] as ElementNode;
-  eq('병합 — 글이 라인으로 이어진다', merged.ch.filter((n) => typeof n === 'string'), ['a', 'b', 'c', 'd']);
+  eq(
+    '병합 — 글이 라인으로 이어진다',
+    merged.ch.filter((n) => typeof n === 'string'),
+    ['a', 'b', 'c', 'd'],
+  );
   eq('병합 — 경계마다 라인 하나', merged.ch.filter((n) => isElement(n) && n.w === 'br').length, 3);
   caretExists('병합 뒤 캐럿 실재 (옛 mergeBox 버그)', nabi);
   eq('병합 칸의 눌림 표시', tableWing.currentValue?.(g.cells[0]?.cell as ElementNode), 'merged');
 
   // 같은 자리를 한 번 더 — 눌린 토글을 다시 누르면 풀린다.
   nabi.applyCommand('mergeCells');
-  const g2 = cellGrid((nabi.$doc()[0] as ElementNode).ch[0] as ElementNode);
+  const g2 = cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode);
   eq('해제 — 다시 2×2 네 칸', g2.cells.length, 4);
-  eq('해제 — span 이 걷혔다', g2.cells.every((c) => c.colSpan === 1 && c.rowSpan === 1), true);
+  eq(
+    '해제 — span 이 걷혔다',
+    g2.cells.every((c) => c.colSpan === 1 && c.rowSpan === 1),
+    true,
+  );
   caretExists('해제 뒤 캐럿 실재', nabi);
-  ok('해제 — 병합 칸이 글을 지킨다', ((g2.cells[0]?.cell.ch[0] as ElementNode).ch.filter((n) => typeof n === 'string')).length > 0);
+  ok(
+    '해제 — 병합 칸이 글을 지킨다',
+    (g2.cells[0]?.cell.ch[0] as ElementNode).ch.filter((n) => typeof n === 'string').length > 0,
+  );
 }
 {
   // 표 둘에 걸친 선택 — 병합은 pass.
@@ -393,33 +557,54 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   const nabi = make([grid22()]);
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 0)));
   nabi.applyCommand('toggleHeaderRow');
-  let table = (nabi.$doc()[0] as ElementNode).ch[0] as ElementNode;
+  let table = (hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode;
   let g = cellGrid(table);
-  eq('제목 행 — 첫 행 두 칸이 th', g.cells.filter((c) => c.cell.a?.['th'] === 1).map((c) => [c.row, c.column]), [[0, 0], [0, 1]]);
-  ok('headerLineOf — 눌림 판정 참', headerLineOf({ grid: g, cell: g.cells[0] as NonNullable<(typeof g.cells)[0]> }, 'row'));
+  eq(
+    '제목 행 — 첫 행 두 칸이 th',
+    g.cells.filter((c) => c.cell.a?.['th'] === 1).map((c) => [c.row, c.column]),
+    [
+      [0, 0],
+      [0, 1],
+    ],
+  );
+  ok(
+    'headerLineOf — 눌림 판정 참',
+    headerLineOf({ grid: g, cell: g.cells[0] as NonNullable<(typeof g.cells)[0]> }, 'row'),
+  );
   eq('제목 칸의 눌림 토큰', tableWing.currentValue?.(g.cells[0]?.cell as ElementNode), 'th');
 
   nabi.applyCommand('toggleHeaderRow');
-  table = (nabi.$doc()[0] as ElementNode).ch[0] as ElementNode;
+  table = (hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode;
   g = cellGrid(table);
   eq('토글 — 다시 누르면 벗는다', g.cells.filter((c) => c.cell.a?.['th'] === 1).length, 0);
 
   nabi.applyCommand('toggleHeaderColumn');
-  g = cellGrid((nabi.$doc()[0] as ElementNode).ch[0] as ElementNode);
-  eq('제목 열 — 첫 열 두 칸이 th', g.cells.filter((c) => c.cell.a?.['th'] === 1).map((c) => [c.row, c.column]), [[0, 0], [1, 0]]);
+  g = cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode);
+  eq(
+    '제목 열 — 첫 열 두 칸이 th',
+    g.cells.filter((c) => c.cell.a?.['th'] === 1).map((c) => [c.row, c.column]),
+    [
+      [0, 0],
+      [1, 0],
+    ],
+  );
 }
 {
   // 불리언 규칙 — th 는 1 만 남는다 (cocoon).
   const doc = cocoon([p([el('table', [tr(td(['a'], { th: 2 }), td(['b'], { th: 1 }))])])], env);
   const g = cellGrid((doc[0] as ElementNode).ch[0] as ElementNode);
-  eq('th=2 는 걷히고 th=1 만 남는다', g.cells.map((c) => c.cell.a?.['th'] ?? null), [null, 1]);
+  eq(
+    'th=2 는 걷히고 th=1 만 남는다',
+    g.cells.map((c) => c.cell.a?.['th'] ?? null),
+    [null, 1],
+  );
 }
 
 // --- onKey — tab 칸 이동· Shift+방향키/삭제는 pass (·7) ----------------------------------
 
 {
   const nabi = make([grid22()]);
-  const doc = nabi.$doc();
+  const doc = hostOf(nabi).doc();
   const a1 = caretAt(at([0, 0, 0, 0, 0], 0));
 
   const tabbed = routeKey({ key: 'tab' }, doc, a1, env, registry);
@@ -431,7 +616,10 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
 
   const last = caretAt(at([0, 0, 1, 1, 0], 1));
   const grown = routeKey({ key: 'tab' }, doc, last, env, registry);
-  ok('마지막 칸의 tab — 새 행이 선다', grown !== null && cellGrid((grown.doc[0] as ElementNode).ch[0] as ElementNode).rows === 3);
+  ok(
+    '마지막 칸의 tab — 새 행이 선다',
+    grown !== null && cellGrid((grown.doc[0] as ElementNode).ch[0] as ElementNode).rows === 3,
+  );
   eq('마지막 칸의 tab — 캐럿은 새 행 첫 칸', grown?.selection.focus.path, [0, 0, 2, 0, 0]);
 
   // 화살표는 **격자를 따라** 걷는다 — 화면 좌표를 따르는 브라우저 걸음은 칸 폭이 다르면 옆
@@ -457,19 +645,23 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   });
   eq('마지막 줄에서 ↓ 는 pass — 표 아래로 나간다', arrow('down', caretAt(at([0, 0, 1, 1, 0], 0))), null);
   eq('칸 안에 갈 자리가 남았으면 pass — 글자 걸음이다', arrow('right', caretAt(at([0, 0, 0, 0, 0], 0))), null);
-  eq('backspace·delete·enter pass', [
-    routeKey({ key: 'backspace' }, doc, a1, env, registry),
-    routeKey({ key: 'delete' }, doc, a1, env, registry),
-    routeKey({ key: 'enter' }, doc, a1, env, registry),
-  ], [null, null, null]);
+  eq(
+    'backspace·delete·enter pass',
+    [
+      routeKey({ key: 'backspace' }, doc, a1, env, registry),
+      routeKey({ key: 'delete' }, doc, a1, env, registry),
+      routeKey({ key: 'enter' }, doc, a1, env, registry),
+    ],
+    [null, null, null],
+  );
 }
 {
   // 칸 경계 보호 — 칸 첫머리의 백스페이스는 코어 삭제 표에서도 아무 일 없다(형제가 없는 문단).
   const nabi = make([grid22()]);
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 0)));
-  const before = nabi.$doc();
+  const before = hostOf(nabi).doc();
   eq('칸 첫머리 백스페이스 — 무변화', nabi.applyCommand('deleteBackward'), false);
-  ok('문서 참조 그대로', nabi.$doc() === before);
+  ok('문서 참조 그대로', hostOf(nabi).doc() === before);
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 1)));
   eq('칸 끝 Delete — 무변화', nabi.applyCommand('deleteForward'), false);
 }
@@ -478,9 +670,12 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   const nabi = make([grid22()]);
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 1)));
   nabi.applyCommand('splitParagraph');
-  const cell = cellGrid((nabi.$doc()[0] as ElementNode).ch[0] as ElementNode).cells[0]?.cell;
+  const cell = cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode).cells[0]?.cell;
   const para = cell?.ch[0] as ElementNode;
-  ok('칸의 엔터는 분할이 아니라 라인이다', para.ch.some((n) => isElement(n) && n.w === 'br'));
+  ok(
+    '칸의 엔터는 분할이 아니라 라인이다',
+    para.ch.some((n) => isElement(n) && n.w === 'br'),
+  );
   eq('칸은 여전히 문단 하나다', cell?.ch.length, 1);
 }
 

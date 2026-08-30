@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: 上付き
+description: 選択した文字を基準線より上に上げます。
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# 上付き
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+選択した文字を基準線より上に上げます。指数や参照番号に使えます。もう一度適用すると解除されます。
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/superscript" />
 
-</div>
+```ts
+const selected = wings().use('sup').build()
+```

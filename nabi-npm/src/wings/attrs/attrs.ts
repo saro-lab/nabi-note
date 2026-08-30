@@ -5,25 +5,119 @@
 // 이름 하나 — 정렬 wing 의 `w` 는 `align` 이다. attr 키는 `a` 가 맞지만, 그 이름은
 // 링크 마크 wing 이 이미 노드 타입으로 쓰고 있어 registry 가 충돌로 죽인다. 키는 `attrKey: 'a'` 다.
 import { P, takesAlign, type AttrValue, type ElementNode, type NabiDoc } from '../../schema/index.js';
-import { comparePositions, holderLength, holders, nodeAt, replaceAt, setParagraphAttr, type EditEnv } from '../../doc/index.js';
+import {
+  comparePositions,
+  holderLength,
+  holders,
+  nodeAt,
+  replaceAt,
+  setParagraphAttr,
+  type EditEnv,
+} from '../../doc/index.js';
 import { ordered, type Selection } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
 import type { InputRule, Wing } from '../../wing/index.js';
 import type { LocaleText } from '../../locale/index.js';
 
 // 이름들 — old 사전 이식(14 로케일).
-const HEADING_NAME: LocaleText = { ko: '제목', en: 'Heading', ja: '見出し', zh: '标题', de: 'Überschrift', fr: 'Titre', es: 'Encabezado', pt: 'Título', ru: 'Заголовок', ar: 'عنوان', hi: 'शीर्षक', bn: 'শিরোনাম', ur: 'سرخی', id: 'Judul' };
-const DROPCAP_NAME: LocaleText = { ko: '드롭 캡', en: 'Drop cap', ja: 'ドロップキャップ', zh: '首字下沉', de: 'Initiale', fr: 'Lettrine', es: 'Letra capital', pt: 'Capitular', ru: 'Буквица', ar: 'حرف استهلالي', hi: 'ड्रॉप कैप', bn: 'ড্রপ ক্যাপ', ur: 'ڈراپ کیپ', id: 'Drop cap' };
+const HEADING_NAME: LocaleText = {
+  ko: '제목',
+  en: 'Heading',
+  ja: '見出し',
+  zh: '标题',
+  de: 'Überschrift',
+  fr: 'Titre',
+  es: 'Encabezado',
+  pt: 'Título',
+  ru: 'Заголовок',
+  ar: 'عنوان',
+  hi: 'शीर्षक',
+  bn: 'শিরোনাম',
+  ur: 'سرخی',
+  id: 'Judul',
+};
+const DROPCAP_NAME: LocaleText = {
+  ko: '드롭 캡',
+  en: 'Drop cap',
+  ja: 'ドロップキャップ',
+  zh: '首字下沉',
+  de: 'Initiale',
+  fr: 'Lettrine',
+  es: 'Letra capital',
+  pt: 'Capitular',
+  ru: 'Буквица',
+  ar: 'حرف استهلالي',
+  hi: 'ड्रॉप कैप',
+  bn: 'ড্রপ ক্যাপ',
+  ur: 'ڈراپ کیپ',
+  id: 'Drop cap',
+};
 const ALIGN_LABELS: readonly LocaleText[] = [
-  { ko: '왼쪽 정렬', en: 'Align left', ja: '左揃え', zh: '左对齐', de: 'Linksbündig', fr: 'Aligner à gauche', es: 'Alinear a la izquierda', pt: 'Alinhar à esquerda', ru: 'По левому краю', ar: 'محاذاة لليسار', hi: 'बाएँ संरेखित', bn: 'বাঁয়ে সারিবদ্ধ', ur: 'بائیں سیدھ', id: 'Rata kiri' },
-  { ko: '가운데 정렬', en: 'Align center', ja: '中央揃え', zh: '居中对齐', de: 'Zentriert', fr: 'Centrer', es: 'Centrar', pt: 'Centralizar', ru: 'По центру', ar: 'توسيط', hi: 'बीच में संरेखित', bn: 'মাঝে সারিবদ্ধ', ur: 'درمیانی سیدھ', id: 'Rata tengah' },
-  { ko: '오른쪽 정렬', en: 'Align right', ja: '右揃え', zh: '右对齐', de: 'Rechtsbündig', fr: 'Aligner à droite', es: 'Alinear a la derecha', pt: 'Alinhar à direita', ru: 'По правому краю', ar: 'محاذاة لليمين', hi: 'दाएँ संरेखित', bn: 'ডানে সারিবদ্ধ', ur: 'دائیں سیدھ', id: 'Rata kanan' },
+  {
+    ko: '왼쪽 정렬',
+    en: 'Align left',
+    ja: '左揃え',
+    zh: '左对齐',
+    de: 'Linksbündig',
+    fr: 'Aligner à gauche',
+    es: 'Alinear a la izquierda',
+    pt: 'Alinhar à esquerda',
+    ru: 'По левому краю',
+    ar: 'محاذاة لليسار',
+    hi: 'बाएँ संरेखित',
+    bn: 'বাঁয়ে সারিবদ্ধ',
+    ur: 'بائیں سیدھ',
+    id: 'Rata kiri',
+  },
+  {
+    ko: '가운데 정렬',
+    en: 'Align center',
+    ja: '中央揃え',
+    zh: '居中对齐',
+    de: 'Zentriert',
+    fr: 'Centrer',
+    es: 'Centrar',
+    pt: 'Centralizar',
+    ru: 'По центру',
+    ar: 'توسيط',
+    hi: 'बीच में संरेखित',
+    bn: 'মাঝে সারিবদ্ধ',
+    ur: 'درمیانی سیدھ',
+    id: 'Rata tengah',
+  },
+  {
+    ko: '오른쪽 정렬',
+    en: 'Align right',
+    ja: '右揃え',
+    zh: '右对齐',
+    de: 'Rechtsbündig',
+    fr: 'Aligner à droite',
+    es: 'Alinear a la derecha',
+    pt: 'Alinhar à direita',
+    ru: 'По правому краю',
+    ar: 'محاذاة لليمين',
+    hi: 'दाएँ संरेखित',
+    bn: 'ডানে সারিবদ্ধ',
+    ur: 'دائیں سیدھ',
+    id: 'Rata kanan',
+  },
 ];
 // 레벨 이름 — 낱말 하나에 숫자만 붙는다. 열넷을 여섯 번 적지 않고 이 함수 하나가 짓는다.
 const headingLevel = (n: number): LocaleText => ({
-  ko: `제목 ${n}`, en: `Heading ${n}`, ja: `見出し ${n}`, zh: `标题 ${n}`, de: `Überschrift ${n}`,
-  fr: `Titre ${n}`, es: `Encabezado ${n}`, pt: `Título ${n}`, ru: `Заголовок ${n}`, ar: `عنوان ${n}`,
-  hi: `शीर्षक ${n}`, bn: `শিরোনাম ${n}`, ur: `سرخی ${n}`, id: `Judul ${n}`,
+  ko: `제목 ${n}`,
+  en: `Heading ${n}`,
+  ja: `見出し ${n}`,
+  zh: `标题 ${n}`,
+  de: `Überschrift ${n}`,
+  fr: `Titre ${n}`,
+  es: `Encabezado ${n}`,
+  pt: `Título ${n}`,
+  ru: `Заголовок ${n}`,
+  ar: `عنوان ${n}`,
+  hi: `शीर्षक ${n}`,
+  bn: `শিরোনাম ${n}`,
+  ur: `سرخی ${n}`,
+  id: `Judul ${n}`,
 });
 
 const LEVELS: readonly AttrValue[] = [1, 2, 3, 4, 5, 6];
@@ -66,7 +160,10 @@ function attrCommand(key: string, parse: (raw: unknown) => AttrValue | null): Co
     if (raw !== null) {
       const value = parse(raw);
       if (value === null) return null;
-      next = toggledValue(paragraphsIn(doc, sel, env).map((node) => node.a?.[key]), value);
+      next = toggledValue(
+        paragraphsIn(doc, sel, env).map((node) => node.a?.[key]),
+        value,
+      );
     }
     const r = setParagraphAttr(doc, { anchor: sel.anchor, focus: sel.focus }, key, next, env);
     return { doc: r.doc, selection: { anchor: r.anchor ?? r.caret, focus: r.caret } };
@@ -126,6 +223,7 @@ const headingRules: readonly InputRule[] = LEVELS.map((level): InputRule => ({
 export const headingWing: Wing = {
   w: 'h',
   place: 'attr',
+  clearable: true,
   basic: true,
   attrKey: 'h',
   attrValues: LEVELS,
@@ -136,7 +234,7 @@ export const headingWing: Wing = {
   commands: {
     setHeading: attrCommand('h', (raw) =>
       typeof raw === 'number' && Number.isInteger(raw) && raw >= 1 && raw <= 6 ? raw : null,
-),
+    ),
   },
   inputRules: headingRules,
   button: {
@@ -204,21 +302,27 @@ const setAlign: Command = (doc, sel, args, env) => {
   }
   if (tops.length === 0) return null; // 겨눌 문단이 없다 — 무변화 침묵
 
-  const next = value === null ? null : toggledValue(tops.map((top) => top.node.a?.['a']), value);
+  const next =
+    value === null
+      ? null
+      : toggledValue(
+          tops.map((top) => top.node.a?.['a']),
+          value,
+        );
 
   let out = doc;
   let moved = false;
   for (const top of tops) {
     const now = top.node.a?.['a'] ?? null;
     if (now === next) continue; // 이미 그대로다
-    const a: Record<string, AttrValue> = {...(top.node.a ?? {}) };
+    const a: Record<string, AttrValue> = { ...(top.node.a ?? {}) };
     if (next === null) delete a['a'];
     else a['a'] = next;
     const node: ElementNode = {
       w: P,
       ch: top.node.ch,
-...(Object.keys(a).length > 0 ? { a } : {}),
-...(top.node._id !== undefined ? { _id: top.node._id } : {}),
+      ...(Object.keys(a).length > 0 ? { a } : {}),
+      ...(top.node._id !== undefined ? { _id: top.node._id } : {}),
     };
     out = replaceAt(out, [top.index], [node]);
     moved = true;
@@ -230,6 +334,7 @@ const setAlign: Command = (doc, sel, args, env) => {
 export const alignWing: Wing = {
   w: 'align',
   place: 'attr',
+  clearable: true,
   basic: true,
   attrKey: 'a',
   attrValues: ALIGNS,
@@ -263,6 +368,7 @@ export const alignWing: Wing = {
 export const dropCapWing: Wing = {
   w: 'dc',
   place: 'attr',
+  clearable: true,
   basic: true,
   attrKey: 'dc',
   attrValues: [1],

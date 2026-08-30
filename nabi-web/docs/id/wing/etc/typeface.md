@@ -1,14 +1,37 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Jenis huruf
+description: Terapkan keluarga jenis huruf ke teks terpilih atau paragraf.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Jenis huruf
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Terapkan keluarga jenis huruf ke teks yang dipilih. Jika suatu rentang dipilih, hanya rentang itu yang berubah; jika hanya ada kursor, perubahan diterapkan pada teks di paragraf saat ini. Berkas font sebenarnya dan nilai `font-family` ditentukan oleh CSS layanan.
 
-[Open the Korean canonical page](/ko/guide/features)
+Keluarga bawaan adalah `sans`, `serif`, `mono`, dan `cursive`. Terutama pada layanan yang memuat bahasa Korea atau konten multibahasa lain, sebaiknya tentukan secara eksplisit font yang digunakan setiap keluarga.
 
-</div>
+<WingDemo path="/wing/etc/typeface" />
+
+```ts
+const selected = wings().use('tf', {
+  values: ['sans', 'serif', 'mono'],
+}).build()
+```
+
+Jika `values` dihilangkan, semua keluarga bawaan digunakan. Hanya nilai dalam `values` yang diizinkan pada dokumen.
+
+## Gaya CSS
+
+Dokumen hanya menyimpan nama keluarga, dan CSS memilih berkas font. Ubah variabel pada kontainer yang sama untuk editor dan tampilan terbit.
+
+```css
+.nabi-content {
+  --nabi-font-serif: "Noto Serif", "Noto Serif KR", serif;
+  --nabi-font-mono: "JetBrains Mono", monospace;
+}
+```
+
+Jika memakai font web, muat berkas font tersebut lebih dahulu. `cursive` sering tidak memiliki cakupan yang baik untuk banyak bahasa, jadi sebaiknya sediakan setelah memilih font sebenarnya yang akan dipakai layanan Anda.

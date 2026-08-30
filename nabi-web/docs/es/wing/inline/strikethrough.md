@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Tachado
+description: Tacha el texto seleccionado.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Tachado
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Tacha el texto seleccionado. Aplicarlo otra vez sobre el mismo rango quita el formato, y la marca se conserva en los documentos guardados.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/strikethrough" />
 
-</div>
+```ts
+const selected = wings().use('s').build()
+```

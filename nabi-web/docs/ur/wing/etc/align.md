@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: سیدھ
+description: پیراگراف اور آبجیکٹ بلاک کی افقی سیدھ بدلیں۔
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# سیدھ
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+موجودہ پیراگراف، یا منتخب حد کے پیراگراف کو بائیں، درمیان یا دائیں سیدھ دیں۔ تصاویر، ویڈیوز اور جدول جیسے آبجیکٹ جو پیراگراف کے اندر ہوتے ہیں، انہیں سمیٹنے والے پیراگراف کے ذریعے سیدھ دی جاتی ہے۔
 
-[Open the Korean canonical page](/ko/guide/features)
+سیدھ متن کی فارمیٹنگ کے بجائے پیراگراف کے وصف کے طور پر محفوظ ہوتی ہے۔ کوڈ بلاک سیدھ سے خارج ہیں کیونکہ وہاں انڈینٹیشن خود معنی رکھتی ہے۔
 
-</div>
+<WingDemo path="/wing/etc/align" />
+
+```ts
+const selected = wings().use('align').build()
+```

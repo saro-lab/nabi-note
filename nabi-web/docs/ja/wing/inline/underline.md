@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: 下線
+description: 選択した文字に下線を引きます。
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# 下線
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+選択した文字に下線を引きます。同じ範囲にもう一度適用すると解除され、保存した文書ではこの mark が保たれます。
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/underline" />
 
-</div>
+```ts
+const selected = wings().use('u').build()
+```

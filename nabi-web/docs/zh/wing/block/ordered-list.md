@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: 编号列表
+description: 将顺序重要的项目变成编号列表。
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# 编号列表
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+把顺序重要的项目变成编号列表。在空段落中输入 `1.` 这样的数字和句点后按 Space，或从工具栏切换选中的段落。
 
-[Open the Korean canonical page](/ko/guide/features)
+显示的编号根据项目位置计算，因此新增或缩进项目时会自动延续。不提供保存自定义起始编号并从该编号开始计数的功能。
 
-</div>
+<WingDemo path="/wing/block/ordered-list" />
+
+```ts
+const selected = wings().use('ol').build()
+```

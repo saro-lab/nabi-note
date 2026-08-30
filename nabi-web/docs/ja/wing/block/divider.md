@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: 区切り線
+description: 文書の流れを分ける横線を挿入します。
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# 区切り線
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+文書の流れを分ける横線です。空の段落にハイフンを 3 つ以上入力して Enter を押すか、ツールバーから挿入します。
 
-[Open the Korean canonical page](/ko/guide/features)
+区切り線は文字を持たない独立したブロックなので、見出しや色のような書式は持ちません。前後の段落を分ける目的でだけ使います。
 
-</div>
+<WingDemo path="/wing/block/divider" />
+
+```ts
+const selected = wings().use('hr').build()
+```

@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Subíndice
+description: Baja el texto seleccionado por debajo de la línea base.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Subíndice
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Baja el texto seleccionado por debajo de la línea base, para fórmulas químicas e índices. Aplicarlo otra vez quita el formato.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/subscript" />
 
-</div>
+```ts
+const selected = wings().use('sub').build()
+```

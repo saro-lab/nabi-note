@@ -65,7 +65,7 @@ export function markSpanAt(
       for (let j = i + 1; j < runs.length; j += 1) {
         const its = markIn(j);
         if (!its || !sameMark(its, mark)) break;
-        to = (j + 1 < runs.length ? (starts[j + 1] as number) : total);
+        to = j + 1 < runs.length ? (starts[j + 1] as number) : total;
       }
       return {
         selection: { anchor: { path: at.path, offset: from }, focus: { path: at.path, offset: to } },
@@ -106,17 +106,10 @@ export const LUMP_DEFAULT_ALIGN = 'c';
 // 그래서 "가운데 정렬된 그림" 이란 곧 "가운데 정렬된 문단 안의 그림" 이다.
 // 이미 서 있던 빈 문단을 교체하는 길에서는 **그 문단이 들고 있던 것이 이긴다** — 사람이 왼쪽으로
 // 맞춰 둔 자리에 그림을 넣었는데 가운데로 튕기면, 넣은 적 없는 결정이 끼어든 것이 된다.
-export function insertLump(
-  doc: NabiDoc,
-  caret: Position,
-  lump: ElementNode,
-  _env: EditEnv,
-  wrap?: Attrs,
-): EditResult {
+export function insertLump(doc: NabiDoc, caret: Position, lump: ElementNode, _env: EditEnv, wrap?: Attrs): EditResult {
   const top = caret.path[0] ?? doc.length - 1;
   const node = doc[top];
-  const empty =
-    node !== undefined && node.w === P && node.ch.length === 0;
+  const empty = node !== undefined && node.w === P && node.ch.length === 0;
   const dressed = (own: Attrs | undefined): Attrs | undefined => {
     const a = { ...(wrap ?? {}), ...(own ?? {}) };
     return Object.keys(a).length > 0 ? a : undefined;
@@ -198,4 +191,20 @@ export function toggleWrap(doc: NabiDoc, sel: Selection, containerW: string, env
 // 최상위 인덱스의 노드 — wings 가 자기 물건을 찾을 때 쓰는 잔 도우미.
 export function topNodeAt(doc: NabiDoc, path: readonly number[]): ElementNode | null {
   return nodeAt(doc, [path[0] ?? 0]);
+}
+
+export function blockOwnerAt(
+  doc: NabiDoc,
+  path: readonly number[],
+  w: string,
+): { readonly path: readonly number[]; readonly node: ElementNode } | null {
+  for (let depth = path.length; depth >= 1; depth -= 1) {
+    const at = path.slice(0, depth);
+    const node = nodeAt(doc, at);
+    if (!node) continue;
+    if (node.w === w) return { path: at, node };
+    const child = node.w === P && node.ch.length === 1 ? node.ch[0] : undefined;
+    if (isElement(child) && child.w === w) return { path: [...at, 0], node: child };
+  }
+  return null;
 }

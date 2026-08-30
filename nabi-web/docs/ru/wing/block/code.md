@@ -1,14 +1,74 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Код
+description: Хранит многострочный код и сведения о языке для подсветки синтаксиса.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Код
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Помещает многострочный код отдельно от обычного текста. В пустом абзаце введите три обратные кавычки и нажмите Space или Enter либо выполните преобразование с панели инструментов. Если после кавычек указать имя языка, например `ts`, оно также будет сохранено.
 
-[Open the Korean canonical page](/ko/guide/features)
+Имя языка служит идентификатором подсветки синтаксиса; вручную можно ввести и имя вне зарегистрированного списка. Блок кода не поддерживает выравнивание абзаца, поскольку содержимое и отступы кода должны сохраняться.
 
-</div>
+<WingDemo path="/wing/block/code" />
+
+```ts
+const selected = wings().use('code').build()
+```
+
+## Подключение подсветки кода
+
+После регистрации блока кода редактор использует базовую раскраску. Чтобы раскрашивать код и на опубликованной странице, подключите `nabi-note/viewer`. Viewer находит `pre > code` и читает значение `data-nabi-lang` родителя как имя языка. Если значения нет, он проверяет класс `language-...` элемента `code`.
+
+```ts
+import { attachViewer } from 'nabi-note/viewer'
+
+const viewer = attachViewer(article, {
+  locale: 'ru',
+})
+
+// После изменения опубликованного HTML
+viewer.refresh()
+
+// При закрытии экрана
+viewer.unmount()
+```
+
+Если отдельного подсветчика нет или он не умеет обрабатывать этот язык, код раскрашивает встроенный токенизатор без зависимостей. Добавленные подсветчиком токеновые span существуют только на экране и не попадают в сохранённый JSON или исходный опубликованный HTML. `refresh()` и `unmount()` удаляют эти span и заново подключаются к текущему исходному коду.
+
+### Как сайт NABI подключает Shiki
+
+Чтобы не включать Shiki в первый экран и SSR bundle, сайт NABI загружает подсветчик динамически. `loadCodeHighlighting()` из `nabi-web/docs/.vitepress/src/highlight.ts` создаёт Shiki core и загружает грамматику языка лишь тогда, когда в ней действительно возникает потребность. Ниже показан тот же способ подключения на опубликованной странице.
+
+```ts
+import { attachViewer } from 'nabi-note/viewer'
+import { loadCodeHighlighting } from '../src/highlight'
+
+const highlighting = await loadCodeHighlighting()
+const viewer = attachViewer(article, {
+  locale: 'ru',
+  highlight: highlighting?.highlight,
+})
+
+const stop = highlighting?.onGrammarLoaded(() => viewer.refresh())
+
+// При закрытии экрана
+stop?.()
+viewer.unmount()
+```
+
+При первой встрече с языком начинается загрузка его грамматики; до её завершения используется встроенный токенизатор или обычный текст. После загрузки `onGrammarLoaded()` вызывает `viewer.refresh()` и раскрашивает код заново. Поэтому скачиваются только нужные языки, а поздно загруженная грамматика применяется без перехода на другой экран.
+
+Редактор использует ту же функцию `highlight`. В демонстрации сайта NABI только `attach` базовой `codeWing` заменён на `makeCodeAttach({ highlight, version })`. Значение `version` меняется при загрузке каждой грамматики и сообщает, что уже отрисованный код нужно раскрасить заново. Отдельному сервису достаточно сначала подключить подсветку опубликованной страницы, а этот способ стоит добавлять лишь тогда, когда Shiki действительно нужен во время редактирования.
+
+## CSS-стили
+
+Блок кода оформляется через `.nabi-content pre`, а сам код — через `.nabi-content pre > code`. Не меняйте `white-space`: это влияет на переносы строк и редактирование кода. Цвета токенов можно изменить селектором `[data-nabi-token]`.
+
+```css
+.nabi-content [data-nabi-token="keyword"] { color: #7b4fd0; }
+.nabi-content [data-nabi-token="string"] { color: #a2543a; }
+```

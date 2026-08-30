@@ -10,14 +10,7 @@ import { fragmentOf, importDoc, type ImportOptions, type ParseNode } from '../ht
 import { textCandidate } from './candidates.js';
 import type { IoFilter, PasteCandidate } from './contract.js';
 import { NABI_FILE_EXTENSION, readNabiFile, writeNabiFile } from './file.js';
-import {
-  HTML_ICON,
-  HTML_LABEL,
-  MARKDOWN_ICON,
-  MARKDOWN_LABEL,
-  NABI_LABEL,
-  NHTML_FILE_EXTENSION,
-} from './marks.js';
+import { HTML_ICON, HTML_LABEL, MARKDOWN_ICON, MARKDOWN_LABEL, NABI_LABEL, NHTML_FILE_EXTENSION } from './marks.js';
 import { parseMarkdown, type MdEnv } from './md/parse.js';
 import { smellsMarkdown } from './md/sniff.js';
 
@@ -33,9 +26,29 @@ export interface BuiltinOptions {
 
 // md 문법 하나라도 받아 줄 wing 이 있는가 — 하나도 없으면 md 후보는 맨 글자와 같은 값이라
 // 판에 같은 줄을 둘 세우는 꼴이 된다.
-const MD_WINGS: readonly string[] = ['h', 'code', 'quote', 'ul', 'ol', 'tl', 'hr', 'table', 'a', 'img', 'b', 'i', 's', 'tf'];
+const MD_WINGS: readonly string[] = [
+  'h',
+  'code',
+  'quote',
+  'ul',
+  'ol',
+  'tl',
+  'hr',
+  'table',
+  'a',
+  'img',
+  'b',
+  'i',
+  's',
+  'tf',
+];
 
 const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
+const BUILTIN_HTML_FILTERS = new WeakSet<IoFilter>();
+
+export function $isBuiltinHtmlFilter(filter: IoFilter): boolean {
+  return BUILTIN_HTML_FILTERS.has(filter);
+}
 
 export function makeBuiltinFilters(options: BuiltinOptions): readonly IoFilter[] {
   const importOptions = (): ImportOptions => ({
@@ -50,10 +63,11 @@ export function makeBuiltinFilters(options: BuiltinOptions): readonly IoFilter[]
     label: NABI_LABEL,
     save: {
       extension: NABI_FILE_EXTENSION,
+      canonical: true,
       mime: 'application/json',
       write: (doc) => writeNabiFile(doc.json()),
     },
-    read: (_name, text) => readNabiFile(text),
+    read: { extensions: [NABI_FILE_EXTENSION], run: (_name, text) => readNabiFile(text) },
   };
 
   // --- html — 남의 편집기·웹페이지에서 오는 길. 클립보드의 `text/html` 이 그 자리다.
@@ -76,31 +90,17 @@ export function makeBuiltinFilters(options: BuiltinOptions): readonly IoFilter[]
       };
       return candidate;
     },
-    save: { extension: NHTML_FILE_EXTENSION, mime: 'text/html', write: (doc) => doc.html() },
-    read: (_name, text) => {
-      const parse = options.parse;
-      if (parse === undefined) return null;
-      return $toJson(importDoc(parse(text), importOptions()));
+    save: { extension: NHTML_FILE_EXTENSION, canonical: false, mime: 'text/html', write: (doc) => doc.html() },
+    read: {
+      extensions: [NHTML_FILE_EXTENSION, '.html', '.htm', '.xhtml', '.shtml'],
+      run: (_name, text) => {
+        const parse = options.parse;
+        if (parse === undefined) return null;
+        return $toJson(importDoc(parse(text), importOptions()));
+      },
     },
   };
-
-  // --- 밖에서 온 `.html` — **읽기만 하는 짝**이다.
-  //
-  // 저장하는 이름이 `.nhtml` 로 바뀌면서 생긴 자리다: 여는 쪽은 필터의 `save.extension` 으로
-  // 이름을 견주므로, 그것 하나만 두면 `.html` 파일이 아무에게도 안 걸린다 — 남의 편집기·웹에서
-  // 받아 온 평범한 html 을 못 여는 것은 주인이 막은 길이다("여는 길을 막지 마라").
-  // 그래서 **저장 칸이 없는 필터**를 하나 더 세운다: 저장 판에는 안 서고(형식은 여전히 셋),
-  // 확장자 문턱도 없이 제 이름 판정만 든다 — `.html` 이 아니면 조용히 다음 필터로 넘긴다.
-  // 읽는 몸은 위 필터의 것과 **같은 한 벌**이다(같은 파서·같은 옵션).
-  const htmlOpen: IoFilter = {
-    id: 'html-open',
-    label: HTML_LABEL,
-    read: (name, text) => {
-      const parse = options.parse;
-      if (parse === undefined || !name.toLowerCase().endsWith('.html')) return null;
-      return $toJson(importDoc(parse(text), importOptions()));
-    },
-  };
+  BUILTIN_HTML_FILTERS.add(html);
 
   // --- .md — 맨 글자에 문법이 섞여 있을 때만 선다.
   const md: IoFilter = {
@@ -124,14 +124,15 @@ export function makeBuiltinFilters(options: BuiltinOptions): readonly IoFilter[]
     },
     save: {
       extension: '.md',
+      canonical: false,
       mime: 'text/markdown',
       // 되돌아오지 못하는 것이 있다 — 정렬·드롭캡·병합된 표는 html 로 섞여 나가고 그림 폭은 잃는다.
       lossy: true,
       write: (doc) => doc.md(),
     },
-    read: (_name, text) => parseMarkdown(text, options.md),
+    read: { extensions: ['.md', '.markdown'], run: (_name, text) => parseMarkdown(text, options.md) },
   };
 
   // 순서가 곧 판의 순서다 — 저장 형식 셋(nabi·nhtml·md)이 먼저고, 읽기만 하는 짝은 맨 뒤다.
-  return [nabi, html, md, htmlOpen];
+  return [nabi, html, md];
 }

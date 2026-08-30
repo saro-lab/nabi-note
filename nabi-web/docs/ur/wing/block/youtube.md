@@ -1,14 +1,33 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: یوٹیوب
+description: دستاویز میں یوٹیوب ویڈیو شامل کریں اور اس کی چوڑائی بدلیں۔
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# یوٹیوب
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+یوٹیوب ویڈیو کا URL یا ویڈیو ID لے کر اسے ایمبیڈ بلاک میں بدلیں۔ دستاویز میں مکمل URL کے بجائے صرف 11 حرفی ویڈیو ID اور چوڑائی محفوظ ہوتی ہے، اور نئی ویڈیو ابتدا میں 70٪ چوڑائی پر درمیان میں ہوتی ہے۔
 
-[Open the Korean canonical page](/ko/guide/features)
+چوڑائی مقررہ درجوں میں سے چنی جاتی ہے، اور سیدھ ویڈیو کو سمیٹنے والے پیراگراف پر محفوظ ہوتی ہے۔ ایڈیٹر میں پہلا کلک ویڈیو کو منتخب کرتا ہے؛ منتخب ہونے کے بعد دوبارہ کلک کرنے سے اسے چلایا جا سکتا ہے۔ پتہ بدلنے کے لیے ویڈیو حذف کر کے نئی شامل کریں۔
 
-</div>
+<WingDemo path="/wing/block/youtube" />
+
+```ts
+const selected = wings().use('youtube').build()
+```
+
+## CSS طرزیں
+
+ویڈیو کا بارڈر یا کونے بدلنے کے لیے `.nabi-content iframe` استعمال کریں۔ محفوظ شدہ چوڑائی یا سیدھ نہ بدلیں۔
+
+```css
+.article-body iframe {
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 16%);
+}
+```
+
+پیکیج ویڈیو کا درست حجم برقرار رکھنے کے لیے `aspect-ratio`، چوڑائی اور سیدھ کے مارجن استعمال کرتا ہے، اس لیے انہیں اووررائیڈ نہ کریں۔

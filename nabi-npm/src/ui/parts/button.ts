@@ -49,43 +49,86 @@ export function iconButton(owner: Document, spec: IconButtonSpec): HTMLButtonEle
 
 // 이미 서 있는 단추에 **배선만** 건다 — 미리 그려 보낸 툴바를 이어받는 자리가 이것이다
 // (096). 만드는 쪽과 이어받는 쪽이 같은 한 줄을 쓰므로 둘의 동작이 갈릴 수 없다.
-export function wireIconButton(button: HTMLElement, press: (by: CommandHand) => void): void {
+export function wireIconButton(button: HTMLElement, press: (by: CommandHand) => void): () => void {
   // 겨눔을 지키는 한 줄 — 툴바를 눌러도 캐럿은 글 안에 그대로 있다.
   //
   // 그 한 줄의 값: `mousedown` 을 삼키면 브라우저의 `:active` 도 안 걸린다. 그래서 **누른 티가
   // 아무 데도 안 난다** — 마크처럼 눌림이 남는 단추는 그것으로 알겠지만, 그 자리에서 아무 일도
   // 안 하는 단추(침묵)는 화면이 통째로 조용해서 "이 단추 안 눌리나?" 가 된다.
   // 그래서 눌린 티를 우리가 낸다: 짧게 아래로 내려갔다 돌아오는 표식 하나.
-  suppressMousedownTap(button);
-  button.addEventListener('click', (event) => {
+  const releaseMouse = suppressMousedownTap(button);
+  const onClick = (event: MouseEvent): void => {
     event.preventDefault();
     // 손 판정은 `detail` 하나다 — 키보드가 만든 클릭(겨눈 버튼의 Enter/Space·`el.click()`)은
     // 0 이고 진짜 포인터는 1 이상이다. 견본판이 이미 쓰는 그 판정과 같다(`byKey`).
     press(event.detail === 0 ? 'keyboard' : 'pointer');
-  });
+  };
+  try {
+    button.addEventListener('click', onClick);
+  } catch (error) {
+    releaseMouse();
+    throw error;
+  }
+  let active = true;
+  return () => {
+    if (!active) return;
+    active = false;
+    releaseMouse();
+    button.removeEventListener('click', onClick);
+  };
 }
 
-export function suppressMousedownTap(element: HTMLElement): void {
-  element.addEventListener('mousedown', (event) => {
+export function suppressMousedownTap(element: HTMLElement): () => void {
+  const onMouseDown = (event: MouseEvent): void => {
     event.preventDefault();
     tap(element);
-  });
+  };
+  element.addEventListener('mousedown', onMouseDown);
+  let active = true;
+  return () => {
+    if (!active) return;
+    active = false;
+    clearTap(element);
+    element.removeEventListener('mousedown', onMouseDown);
+  };
 }
 
 // 눌렀다 뗀 티 — 시트가 그리는 짧은 움직임(`.nabi-tap`). 애니메이션이 끝나면 스스로 걷힌다.
 // 연타에도 매번 다시 시작해야 하므로 표식을 한 번 걷고 강제로 리플로를 태운 뒤 다시 단다.
 const TAP_CLASS = 'nabi-tap';
 const TAP_MS = 260; // 시트의 220ms + 여유
-function tap(button: HTMLElement): void {
+interface TapState {
+  readonly done: () => void;
+  readonly owner: Window & typeof globalThis;
+  timer: number | null;
+}
+const tapStates = new WeakMap<HTMLElement, TapState>();
+
+function clearTap(button: HTMLElement): void {
+  const state = tapStates.get(button);
+  if (!state) return;
+  if (state.timer !== null) state.owner.clearTimeout(state.timer);
+  button.removeEventListener('animationend', state.done);
   button.classList.remove(TAP_CLASS);
+  tapStates.delete(button);
+}
+
+function tap(button: HTMLElement): void {
+  clearTap(button);
   void button.offsetWidth; // 리플로 — 이것이 없으면 같은 애니메이션이 다시 안 돈다
   button.classList.add(TAP_CLASS);
   // 시계로도 걷는다 — `animationend` 는 애니메이션이 아예 안 도는 자리(화면 밖, 움직임 끄기
   // 시트를 안 건 호스트)에서는 오지 않는다. 표식이 남아 있으면 다음 누름의 티가 안 난다.
   const owner = button.ownerDocument.defaultView;
-  const done = (): void => button.classList.remove(TAP_CLASS);
+  if (!owner) {
+    button.classList.remove(TAP_CLASS);
+    return;
+  }
+  const done = (): void => clearTap(button);
+  const state: TapState = { done, owner, timer: null };
+  tapStates.set(button, state);
   button.addEventListener('animationend', done, { once: true });
-  owner?.setTimeout(done, TAP_MS);
+  state.timer = owner.setTimeout(done, TAP_MS);
 }
 
 // 눌림 표시 한 벌 — 클래스와 `aria-pressed` 가 늘 같이 간다(하나만 바꾸면 화면과 낭독이 갈린다).

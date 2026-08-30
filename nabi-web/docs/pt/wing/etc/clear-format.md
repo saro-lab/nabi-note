@@ -1,14 +1,26 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Limpar formatação
+description: Remove formatação de texto e de parágrafo da seleção.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Limpar formatação
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Remove de uma vez a formatação de texto do intervalo selecionado. Marcas padrão registradas, como negrito, cor e tipo de letra, e atributos de parágrafo, como título, alinhamento e capitular, estão incluídos. Pressionar Esc duas vezes rapidamente executa a mesma ação.
 
-[Open the Korean canonical page](/ko/guide/features)
+Ela não transforma estruturas do documento, como listas, tabelas, citações ou imagens, em texto simples. O alinhamento externo de imagens e vídeos, e links de anexo criados por uploads, permanecem como estão.
 
-</div>
+<WingDemo path="/wing/etc/clear-format" />
+
+```ts
+const selected = wings()
+  .use('b')
+  .use('i')
+  .use('clearFormat')
+  .build()
+```
+
+Os wings de formatação que você quer limpar também precisam estar selecionados; caso contrário, sua formatação não pode ser removida.

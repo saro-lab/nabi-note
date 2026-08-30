@@ -18,3 +18,19 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 ```ts
 const selected = wings().use('quote').build()
 ```
+
+## CSS 스타일
+
+인용은 `.nabi-content blockquote`로 테두리와 여백을 바꿀 수 있습니다.
+
+```css
+.article-body blockquote {
+  margin-inline: 0;
+  padding: .25rem 1rem;
+  border-inline-start: 4px solid var(--nabi-accent);
+  color: var(--nabi-muted);
+  background: color-mix(in srgb, var(--nabi-soft) 72%, transparent);
+}
+```
+
+`blockquote` 안의 문단 구조는 그대로 두고, 바깥 여백·테두리·색처럼 표현만 바꾸세요.

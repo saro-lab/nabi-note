@@ -17,6 +17,10 @@ export interface SchemaEnv {
   readonly inlineHolders: ReadonlySet<string>;
   // 값이 1/0 뿐인 불리언 attr 이름 — 0 과 숫자 아닌 값은 "없음"이므로 걷는다.
   readonly boolAttrs: ReadonlySet<string>;
+  readonly attrSchemas?: ReadonlyMap<string, ReadonlySet<string>>;
+  readonly boolAttrsByType?: ReadonlyMap<string, ReadonlySet<string>>;
+  readonly clearableMarks?: ReadonlySet<string>;
+  readonly clearableAttrs?: ReadonlySet<string>;
   // 정렬(a)을 마다하는 물건 — 이 물건을 입은 래퍼문단에는 정렬조차 안 실린다.
   // 래퍼문단이 드는 문단 속성은 정렬 하나뿐인데(Q11), 그 하나마저 뜻이 없는 물건이 있다:
   // 코드 상자는 속이 글자 자리로 말하는 평문이라 가운데로 밀면 코드가 흐트러질 뿐이다.
@@ -27,6 +31,69 @@ export interface SchemaEnv {
   readonly repair?: Readonly<Record<string, (node: ElementNode) => ElementNode | null>>;
 }
 
+const CLOSED_ATTR_TYPES = Symbol('nabi.closedAttrTypes');
+const BUILTIN_ATTR_OWNER = Symbol('nabi.builtinAttrOwner');
+const KNOWN_TYPES = Symbol('nabi.knownTypes');
+
+interface BuiltinAttrOwner {
+  readonly ownerW: string;
+  readonly attrTypes: readonly string[];
+}
+
+type InternalSchemaEnv = SchemaEnv & {
+  readonly [CLOSED_ATTR_TYPES]?: ReadonlySet<string>;
+  readonly [KNOWN_TYPES]?: ReadonlySet<string>;
+};
+
+export function $closeKnownTypes(env: SchemaEnv, types: Iterable<string>): void {
+  Object.defineProperty(env, KNOWN_TYPES, { value: new Set(types) });
+}
+
+export function $copyKnownTypes(from: SchemaEnv, to: SchemaEnv): void {
+  const types = (from as InternalSchemaEnv)[KNOWN_TYPES];
+  if (types) $closeKnownTypes(to, types);
+}
+
+export function $isKnownType(env: SchemaEnv, w: string): boolean {
+  const types = (env as InternalSchemaEnv)[KNOWN_TYPES];
+  return types === undefined || types.has(w);
+}
+
+export function $closeBuiltinAttrs(env: SchemaEnv, types: Iterable<string>): void {
+  Object.defineProperty(env, CLOSED_ATTR_TYPES, { value: new Set(types) });
+}
+
+export function $markBuiltinAttrOwner(owner: object, types: Iterable<string>): void {
+  const marked = $builtinAttrTypes(owner) ?? [];
+  const combined = [...new Set([...marked, ...types])];
+  if ($builtinAttrTypes(owner) !== undefined && combined.length === marked.length) return;
+  const ownerW = (owner as { readonly w?: unknown }).w;
+  if (typeof ownerW !== 'string') return;
+  Object.defineProperty(owner, BUILTIN_ATTR_OWNER, {
+    value: Object.freeze({ ownerW, attrTypes: Object.freeze(combined) }),
+    enumerable: true,
+    configurable: true,
+  });
+}
+
+export function $isBuiltinWing(owner: object): boolean {
+  return $builtinAttrTypes(owner) !== undefined;
+}
+
+export function $builtinAttrTypes(owner: object): readonly string[] | undefined {
+  const marker = (owner as { readonly [BUILTIN_ATTR_OWNER]?: BuiltinAttrOwner })[BUILTIN_ATTR_OWNER];
+  const currentW = (owner as { readonly w?: unknown }).w;
+  return marker && marker.ownerW === currentW ? marker.attrTypes : undefined;
+}
+
+export function $hasClosedBuiltinAttrs(env: SchemaEnv, w: string): boolean {
+  return (env as InternalSchemaEnv)[CLOSED_ATTR_TYPES]?.has(w) ?? false;
+}
+
+export function $usesClosedBuiltinAttrs(env: SchemaEnv): boolean {
+  return (env as InternalSchemaEnv)[CLOSED_ATTR_TYPES] !== undefined;
+}
+
 // 시험·상위 층이 같은 문으로 환경을 짓게 하는 도우미 — 배열을 집합으로 굳힌다.
 export function makeEnv(draft: {
   readonly lumps?: readonly string[];
@@ -34,6 +101,10 @@ export function makeEnv(draft: {
   readonly blockHolders?: readonly string[];
   readonly inlineHolders?: readonly string[];
   readonly boolAttrs?: readonly string[];
+  readonly attrSchemas?: ReadonlyMap<string, ReadonlySet<string>>;
+  readonly boolAttrsByType?: ReadonlyMap<string, ReadonlySet<string>>;
+  readonly clearableMarks?: readonly string[];
+  readonly clearableAttrs?: readonly string[];
   readonly noAlign?: readonly string[];
   readonly repair?: Readonly<Record<string, (node: ElementNode) => ElementNode | null>>;
 }): SchemaEnv {
@@ -43,6 +114,10 @@ export function makeEnv(draft: {
     blockHolders: new Set(draft.blockHolders ?? []),
     inlineHolders: new Set(draft.inlineHolders ?? []),
     boolAttrs: new Set(draft.boolAttrs ?? []),
+    ...(draft.attrSchemas ? { attrSchemas: draft.attrSchemas } : {}),
+    ...(draft.boolAttrsByType ? { boolAttrsByType: draft.boolAttrsByType } : {}),
+    ...(draft.clearableMarks ? { clearableMarks: new Set(draft.clearableMarks) } : {}),
+    ...(draft.clearableAttrs ? { clearableAttrs: new Set(draft.clearableAttrs) } : {}),
     ...(draft.noAlign && draft.noAlign.length > 0 ? { noAlign: new Set(draft.noAlign) } : {}),
     ...(draft.repair ? { repair: draft.repair } : {}),
   };

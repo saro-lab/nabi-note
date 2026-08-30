@@ -1,14 +1,37 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Tabla
+description: Crea filas y columnas, edita celdas y admite ordenación de columnas.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Tabla
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Inserta una tabla y edita filas, columnas y celdas. Las operaciones de añadir o eliminar filas y columnas, fusionar celdas y alternar celdas de encabezado actúan alrededor de las celdas seleccionadas. Para usar la ordenación de columnas en la vista publicada después de guardar una tabla como ordenable, conecta `attachViewer()` de `nabi-note/viewer`. Las tablas con celdas fusionadas no se ordenan.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/block/table" />
 
-</div>
+```ts
+const selected = wings().use('table').build()
+```
+
+## Estilos CSS
+
+Da estilo a la tabla con `.nabi-content table`, y a las celdas con `.nabi-content :is(th, td)`. No cambies la estructura de las celdas ni el botón de ordenación que inserta el viewer.
+
+```css
+.article-body table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.article-body :is(th, td) {
+  border: 1px solid var(--nabi-line);
+  padding: .55rem .7rem;
+}
+```
+
+Si el viewer está conectado, conserva el botón `.nabi-sort`. Si fuerzas `position` o el padding derecho de las celdas, puede superponerse con el botón de ordenación.

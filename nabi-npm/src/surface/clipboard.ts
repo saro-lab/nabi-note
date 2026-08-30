@@ -5,7 +5,7 @@
 // `user-select: none` 이 걸려 있고, 크롬은 그 서브트리를 클립보드에 **아예 안 싣는다** —
 // 실측으로 잰 답이다: 데모에서 첨부를 골라 복사하면 `text/html` 은 조각 주석만 든 빈 껍데기(60자)로
 // 오고 `text/plain` 은 빈 글자다. 앞서 실려 있던 글자마저 그 빈 것으로 덮인다. 그러니 판정
-// (`clip.ts`)을 아무리 넓혀도 붙일 것이 없다 — 실을 글자를 짓는 것이 유일한 길이었다.
+// 복사 출처를 추측하는 옛 판정을 아무리 넓혀도 붙일 것이 없다 — 실을 글자를 짓는 것이 유일한 길이었다.
 //
 // **덤으로 닫히는 것.** `cloneContents()` 는 조상을 안 든다 — `<h1>` 의 글자를 전부 골라
 // 복사해도 "제목이었다" 가 클립보드에 없었다(옛 코어가 `input/copy.ts` 를 둔 그 까닭).
@@ -17,7 +17,64 @@
 // **첨부(파일링크)만은 맥락 두르기가 아니라 문단 감싸기로 간다** (260823_010) — 아래
 // `loneFileLink`·`fileClipHtml` 이 그 예외이고, 그 까닭은 그 자리에 적었다.
 import { FILLER_ATTR } from '../html/index.js';
-import { rememberClip } from './clip.js';
+import {
+  comparePositions,
+  fromRuns,
+  holderLength,
+  holderRuns,
+  isHolder,
+  sliceRuns,
+  terminalOf,
+  type EditEnv,
+} from '../doc/index.js';
+import { ordered, type Selection } from '../caret/index.js';
+import { isElement, isWrapper, type ElementNode, type NabiDoc, type NabiNode } from '../schema/index.js';
+
+const samePath = (a: readonly number[], b: readonly number[]): boolean =>
+  a.length === b.length && a.every((value, index) => value === b[index]);
+
+const copyElement = (node: ElementNode, ch: readonly NabiNode[]): ElementNode => ({
+  w: node.w,
+  ...(node.a ? { a: node.a } : {}),
+  ch,
+});
+
+export function clipboardBodyOf(doc: NabiDoc, selection: Selection, env: EditEnv): readonly ElementNode[] {
+  const [start, end] = ordered(selection);
+  if (comparePositions(start, end) === 0) return [];
+  const terminal = terminalOf(env);
+
+  const walk = (node: ElementNode, path: readonly number[]): ElementNode | null => {
+    if (isHolder(node, env)) {
+      const first = { path, offset: 0 };
+      const last = { path, offset: holderLength(node, env) };
+      if (comparePositions(end, first) <= 0 || comparePositions(start, last) >= 0) return null;
+      if (!isWrapper(node, env)) {
+        const from = samePath(start.path, path) ? start.offset : 0;
+        const to = samePath(end.path, path) ? end.offset : last.offset;
+        return copyElement(node, fromRuns(sliceRuns(holderRuns(node, terminal), from, to)));
+      }
+      if (comparePositions(start, first) <= 0 && comparePositions(end, last) >= 0) {
+        return copyElement(node, node.ch);
+      }
+    }
+
+    const ch: NabiNode[] = [];
+    node.ch.forEach((child, index) => {
+      if (!isElement(child)) return;
+      const copied = walk(child, [...path, index]);
+      if (copied) ch.push(copied);
+    });
+    return ch.length === 0 ? null : copyElement(node, ch);
+  };
+
+  const body: ElementNode[] = [];
+  doc.forEach((node, index) => {
+    const copied = walk(node, [index]);
+    if (copied) body.push(copied);
+  });
+  return body;
+}
 
 // 화면에만 사는 표식 — 밖으로 나가는 글자에서는 걷는다.
 //
@@ -25,16 +82,16 @@ import { rememberClip } from './clip.js';
 //  - `data-nabi-picked` — `wings/link/attach.ts` 의 "지금 골라져 있다" 표시.
 //  - `data-nabi-dropcap-letter` — 편집기에서만 첫 글자를 실제 상자로 그리는 표시.
 //
-// `data-key` 는 **남긴다** — `sameClip` ③ 겹의 잣대이고, 다른 나비가 읽어도 해가 없다
-// (들여오기가 모르는 속성은 조용히 흘린다).
+// `data-key` 는 HTML fallback에 남겨도 해가 없다(들여오기가 모르는 속성은 조용히 흘린다).
 const DISPLAY_ONLY = ['contenteditable', 'draggable', 'data-nabi-picked', 'data-nabi-dropcap-letter'];
 const DISPLAY_ATTR = new RegExp(`\\s+(?:${DISPLAY_ONLY.join('|')})(?:\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]*))?`, 'gi');
 
 // 태그 하나 — 속성 자리는 따옴표 안의 `>` 를 삼킨다. 우리 조립이 낸 HTML 만 읽으면 되므로
-// 이만큼이면 넉넉하다(같은 뜻의 정규식 몇 줄이 `clip.ts` 의 포장 걷기에도 산다).
+// 이만큼이면 넉넉하다(우리 조립 결과에만 적용하며 외부 HTML 판정에는 쓰지 않는다).
 const TAG = /<(\/?)([a-z][a-z0-9-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)>/gi;
 const FILLER = new RegExp(`\\s${FILLER_ATTR}\\b`, 'i');
-const DROP_CAP_SPAN = /<span\b(?=[^>]*\bdata-nabi-dropcap-letter(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*))?)[^>]*>([^<]*)<\/span>/gi;
+const DROP_CAP_SPAN =
+  /<span\b(?=[^>]*\bdata-nabi-dropcap-letter(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*))?)[^>]*>([^<]*)<\/span>/gi;
 
 // 표시 전용 걷기 — 밖으로 나가는 글자에서 화면의 사정을 지운다.
 export function dressClipHtml(html: string): string {
@@ -85,7 +142,7 @@ export function loneFileLink(html: string): boolean {
 // 빈 문단의 `<br/>` 는 조립의 빈 문단 표기 그대로다(`html/render.ts` 의 FILLER) — 들여오기의
 // "혼자 선 br 하나 = 빈 것" 규칙이 그것을 도로 빈 문단으로 읽는다.
 export function fileClipHtml(inner: string): string {
-  return `<p>${inner.trim()}</p><p><br/></p>`;
+  return `<p>${inner.trim()}</p><p></p>`;
 }
 
 // 여는 태그 목록으로 조각을 두른다 — 목록은 **안쪽부터** 온다(`clipContextOf` 가 그 차례로 준다).
@@ -118,8 +175,7 @@ function coversAll(range: Range, el: Element): boolean {
     else break;
   }
   whole.setEnd(el, end);
-  return range.compareBoundaryPoints(START_TO_START, whole) <= 0
-    && range.compareBoundaryPoints(END_TO_END, whole) >= 0;
+  return range.compareBoundaryPoints(START_TO_START, whole) <= 0 && range.compareBoundaryPoints(END_TO_END, whole) >= 0;
 }
 
 // 조각 위에 되씌울 조상들 — **안쪽부터 바깥쪽으로** 준다.
@@ -173,9 +229,31 @@ export interface ClipTarget {
   setData(type: string, value: string): void;
 }
 
-// 실은 글자와 기억이 **같은 글자**다 — 그래야 `sameClip` 의 ① 겹이 언제나 선다.
-export function loadClipboard(target: ClipTarget, html: string, plain: string): void {
-  target.setData('text/html', html);
-  target.setData('text/plain', plain);
-  rememberClip(html);
+export const NABI_CLIPBOARD_MIME = 'application/vnd.nabi.tree+json';
+
+export function encodeClipboardBody(body: unknown): string {
+  return JSON.stringify({ version: 1, body });
+}
+
+export function loadClipboard(target: ClipTarget, body: unknown, html: string, plain: string): boolean {
+  let htmlWritten = false;
+  let plainWritten = false;
+  try {
+    target.setData(NABI_CLIPBOARD_MIME, encodeClipboardBody(body));
+  } catch {
+    /* MIME fallback continues. */
+  }
+  try {
+    target.setData('text/html', html);
+    htmlWritten = true;
+  } catch {
+    /* Plain fallback continues. */
+  }
+  try {
+    target.setData('text/plain', plain);
+    plainWritten = true;
+  } catch {
+    /* The caller keeps the source selection intact. */
+  }
+  return htmlWritten || plainWritten;
 }

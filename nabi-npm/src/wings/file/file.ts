@@ -12,8 +12,38 @@ import type { Wing } from '../../wing/index.js';
 import type { LocaleText } from '../../locale/index.js';
 
 // 이름 둘 — old 사전 이식(14 로케일).
-const SAVE_NAME: LocaleText = { ko: '저장', en: 'Save', ja: '保存', zh: '保存', de: 'Speichern', fr: 'Enregistrer', es: 'Guardar', pt: 'Salvar', ru: 'Сохранить', ar: 'حفظ', hi: 'सहेजें', bn: 'সংরক্ষণ করুন', ur: 'محفوظ کریں', id: 'Simpan' };
-const OPEN_NAME: LocaleText = { ko: '열기', en: 'Open', ja: '開く', zh: '打开', de: 'Öffnen', fr: 'Ouvrir', es: 'Abrir', pt: 'Abrir', ru: 'Открыть', ar: 'فتح', hi: 'खोलें', bn: 'খুলুন', ur: 'کھولیں', id: 'Buka' };
+const SAVE_NAME: LocaleText = {
+  ko: '저장',
+  en: 'Save',
+  ja: '保存',
+  zh: '保存',
+  de: 'Speichern',
+  fr: 'Enregistrer',
+  es: 'Guardar',
+  pt: 'Salvar',
+  ru: 'Сохранить',
+  ar: 'حفظ',
+  hi: 'सहेजें',
+  bn: 'সংরক্ষণ করুন',
+  ur: 'محفوظ کریں',
+  id: 'Simpan',
+};
+const OPEN_NAME: LocaleText = {
+  ko: '열기',
+  en: 'Open',
+  ja: '開く',
+  zh: '打开',
+  de: 'Öffnen',
+  fr: 'Ouvrir',
+  es: 'Abrir',
+  pt: 'Abrir',
+  ru: 'Открыть',
+  ar: 'فتح',
+  hi: 'खोलें',
+  bn: 'খুলুন',
+  ur: 'کھولیں',
+  id: 'Buka',
+};
 
 const SAVE_ICON =
   '<g transform="translate(8 8) scale(0.9565) translate(-8 -8.5)" stroke-width="1.464">' +

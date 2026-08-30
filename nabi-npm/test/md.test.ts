@@ -44,13 +44,31 @@ const br = { w: 'br', ch: [] };
 // --- 목록 ------------------------------------------------------------------------------------
 {
   eq('글머리 목록은 ul > li > p 다', md('- 하나\n- 둘'), [
-    { w: 'ul', ch: [{ w: 'li', ch: [p(['하나'])] }, { w: 'li', ch: [p(['둘'])] }] },
+    {
+      w: 'ul',
+      ch: [
+        { w: 'li', ch: [p(['하나'])] },
+        { w: 'li', ch: [p(['둘'])] },
+      ],
+    },
   ]);
   eq('번호 목록은 ol > oli > p 다', md('1. 하나\n2) 둘'), [
-    { w: 'ol', ch: [{ w: 'oli', ch: [p(['하나'])] }, { w: 'oli', ch: [p(['둘'])] }] },
+    {
+      w: 'ol',
+      ch: [
+        { w: 'oli', ch: [p(['하나'])] },
+        { w: 'oli', ch: [p(['둘'])] },
+      ],
+    },
   ]);
   eq('체크가 글머리보다 먼저다 — 켠 항목만 ck 를 든다', md('- [ ] 안 함\n- [x] 함'), [
-    { w: 'tl', ch: [{ w: 'tli', ch: [p(['안 함'])] }, { w: 'tli', a: { ck: 1 }, ch: [p(['함'])] }] },
+    {
+      w: 'tl',
+      ch: [
+        { w: 'tli', ch: [p(['안 함'])] },
+        { w: 'tli', a: { ck: 1 }, ch: [p(['함'])] },
+      ],
+    },
   ]);
   eq('들여쓴 항목은 앞 항목 속으로 들어간다', md('- 겉\n  - 속\n- 다시 겉'), [
     {
@@ -73,8 +91,20 @@ const br = { w: 'br', ch: [] };
     {
       w: 'table',
       ch: [
-        { w: 'tr', ch: [{ w: 'td', a: { th: 1 }, ch: [p(['a'])] }, { w: 'td', a: { th: 1 }, ch: [p(['b'])] }] },
-        { w: 'tr', ch: [{ w: 'td', ch: [p(['1'])] }, { w: 'td', ch: [p(['2'])] }] },
+        {
+          w: 'tr',
+          ch: [
+            { w: 'td', a: { th: 1 }, ch: [p(['a'])] },
+            { w: 'td', a: { th: 1 }, ch: [p(['b'])] },
+          ],
+        },
+        {
+          w: 'tr',
+          ch: [
+            { w: 'td', ch: [p(['1'])] },
+            { w: 'td', ch: [p(['2'])] },
+          ],
+        },
       ],
     },
   ]);
@@ -91,8 +121,20 @@ const br = { w: 'br', ch: [] };
     {
       w: 'table',
       ch: [
-        { w: 'tr', ch: [{ w: 'td', a: { th: 1 }, ch: [p(['a'])] }, { w: 'td', a: { th: 1 }, ch: [p(['b'])] }] },
-        { w: 'tr', ch: [{ w: 'td', ch: [p(['1'])] }, { w: 'td', ch: [{ w: 'p', ch: [] }] }] },
+        {
+          w: 'tr',
+          ch: [
+            { w: 'td', a: { th: 1 }, ch: [p(['a'])] },
+            { w: 'td', a: { th: 1 }, ch: [p(['b'])] },
+          ],
+        },
+        {
+          w: 'tr',
+          ch: [
+            { w: 'td', ch: [p(['1'])] },
+            { w: 'td', ch: [{ w: 'p', ch: [] }] },
+          ],
+        },
       ],
     },
   ]);
@@ -147,8 +189,14 @@ const br = { w: 'br', ch: [] };
 {
   const env = makeRegistry(defaultWings).env;
   const doc = cocoon([...md('- 하나\n\n---')], env);
-  ok('맨몸 목록·구분선이 cocoon 을 지나면 래퍼문단을 입는다', doc.length === 2 && doc.every((block) => block.w === 'p'));
-  ok('래퍼문단 속이 곧 파서가 세운 물건이다', (doc[0]?.ch[0] as ElementNode).w === 'ul' && (doc[1]?.ch[0] as ElementNode).w === 'hr');
+  ok(
+    '맨몸 목록·구분선이 cocoon 을 지나면 래퍼문단을 입는다',
+    doc.length === 2 && doc.every((block) => block.w === 'p'),
+  );
+  ok(
+    '래퍼문단 속이 곧 파서가 세운 물건이다',
+    (doc[0]?.ch[0] as ElementNode).w === 'ul' && (doc[1]?.ch[0] as ElementNode).w === 'hr',
+  );
 }
 
 // --- 조립 (실제 어휘로 — 진짜 wing 들이 든 toMd 를 잰다) ------------------------------------------
@@ -173,12 +221,28 @@ const reread = (text: string): NabiDoc => cocoon([...parseMarkdown(text, wingEnv
 {
   eq('제목은 # × n 이다', render([{ w: 'p', a: { h: 3 }, ch: ['셋'] }]), '### 셋');
   eq('맨 문단은 그대로다', render([{ w: 'p', ch: ['그냥 글'] }]), '그냥 글');
-  eq('블록 사이는 빈 줄 하나다', render([{ w: 'p', ch: ['위'] }, { w: 'p', ch: ['아래'] }]), '위\n\n아래');
+  eq(
+    '블록 사이는 빈 줄 하나다',
+    render([
+      { w: 'p', ch: ['위'] },
+      { w: 'p', ch: ['아래'] },
+    ]),
+    '위\n\n아래',
+  );
   eq('라인은 줄 끝 공백 둘이다', render([{ w: 'p', ch: ['위', { w: 'br', ch: [] }, '아래'] }]), '위  \n아래');
 
   eq(
     '강조 셋은 제 표식을 두른다',
-    render([{ w: 'p', ch: [{ w: 'b', ch: ['굵'] }, { w: 'i', ch: ['기'] }, { w: 's', ch: ['취'] }] }]),
+    render([
+      {
+        w: 'p',
+        ch: [
+          { w: 'b', ch: ['굵'] },
+          { w: 'i', ch: ['기'] },
+          { w: 's', ch: ['취'] },
+        ],
+      },
+    ]),
     '**굵***기*~~취~~',
   );
   eq('고정폭 서체는 코드 조각이다', render([{ w: 'p', ch: [{ w: 'tf', a: { v: 'mono' }, ch: ['x'] }] }]), '`x`');
@@ -187,12 +251,24 @@ const reread = (text: string): NabiDoc => cocoon([...parseMarkdown(text, wingEnv
     render([{ w: 'p', ch: [{ w: 'a', a: { href: 'https://nabi.example/a' }, ch: ['집'] }] }]),
     '[집](https://nabi.example/a)',
   );
-  eq('그림은 대체 글 없는 ![](주소) 다 — 폭은 잃는다', render([{ w: 'img', a: { src: 'https://n.example/a.png', w: '60' }, ch: [] }]), '![](https://n.example/a.png)');
+  eq(
+    '그림은 대체 글 없는 ![](주소) 다 — 폭은 잃는다',
+    render([{ w: 'img', a: { src: 'https://n.example/a.png', w: '60' }, ch: [] }]),
+    '![](https://n.example/a.png)',
+  );
   eq('구분선은 하이픈 셋이다', render([{ w: 'hr', ch: [] }]), '---');
 
   eq(
     '인용은 빈 줄에도 > 를 단다 — 그것이 속의 문단 경계다',
-    render([{ w: 'quote', ch: [{ w: 'p', ch: ['첫'] }, { w: 'p', ch: ['둘'] }] }]),
+    render([
+      {
+        w: 'quote',
+        ch: [
+          { w: 'p', ch: ['첫'] },
+          { w: 'p', ch: ['둘'] },
+        ],
+      },
+    ]),
     '> 첫\n>\n> 둘',
   );
   eq(
@@ -201,7 +277,13 @@ const reread = (text: string): NabiDoc => cocoon([...parseMarkdown(text, wingEnv
       {
         w: 'ul',
         ch: [
-          { w: 'li', ch: [{ w: 'p', ch: ['겉'] }, { w: 'ul', ch: [{ w: 'li', ch: [{ w: 'p', ch: ['속'] }] }] }] },
+          {
+            w: 'li',
+            ch: [
+              { w: 'p', ch: ['겉'] },
+              { w: 'ul', ch: [{ w: 'li', ch: [{ w: 'p', ch: ['속'] }] }] },
+            ],
+          },
           { w: 'li', ch: [{ w: 'p', ch: ['다시'] }] },
         ],
       },
@@ -210,12 +292,28 @@ const reread = (text: string): NabiDoc => cocoon([...parseMarkdown(text, wingEnv
   );
   eq(
     '번호는 목록이 매긴다 — 항목은 제가 몇 째인지 모른다',
-    render([{ w: 'ol', ch: [{ w: 'oli', ch: [{ w: 'p', ch: ['하나'] }] }, { w: 'oli', ch: [{ w: 'p', ch: ['둘'] }] }] }]),
+    render([
+      {
+        w: 'ol',
+        ch: [
+          { w: 'oli', ch: [{ w: 'p', ch: ['하나'] }] },
+          { w: 'oli', ch: [{ w: 'p', ch: ['둘'] }] },
+        ],
+      },
+    ]),
     '1. 하나\n2. 둘',
   );
   eq(
     '체크는 켠 것만 x 다',
-    render([{ w: 'tl', ch: [{ w: 'tli', ch: [{ w: 'p', ch: ['안'] }] }, { w: 'tli', a: { ck: 1 }, ch: [{ w: 'p', ch: ['함'] }] }] }]),
+    render([
+      {
+        w: 'tl',
+        ch: [
+          { w: 'tli', ch: [{ w: 'p', ch: ['안'] }] },
+          { w: 'tli', a: { ck: 1 }, ch: [{ w: 'p', ch: ['함'] }] },
+        ],
+      },
+    ]),
     '- [ ] 안\n- [x] 함',
   );
   eq(
@@ -229,8 +327,20 @@ const reread = (text: string): NabiDoc => cocoon([...parseMarkdown(text, wingEnv
       {
         w: 'table',
         ch: [
-          { w: 'tr', ch: [{ w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['a'] }] }, { w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['b'] }] }] },
-          { w: 'tr', ch: [{ w: 'td', ch: [{ w: 'p', ch: ['1'] }] }, { w: 'td', ch: [{ w: 'p', ch: ['2'] }] }] },
+          {
+            w: 'tr',
+            ch: [
+              { w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['a'] }] },
+              { w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['b'] }] },
+            ],
+          },
+          {
+            w: 'tr',
+            ch: [
+              { w: 'td', ch: [{ w: 'p', ch: ['1'] }] },
+              { w: 'td', ch: [{ w: 'p', ch: ['2'] }] },
+            ],
+          },
         ],
       },
     ]),
@@ -255,18 +365,38 @@ const reread = (text: string): NabiDoc => cocoon([...parseMarkdown(text, wingEnv
 
 // --- html 폴백 — md 에 자리가 없는 것은 그 노드만 html 로 떨어진다 --------------------------------
 {
-  eq('toMd 없는 마크는 html 이다 (밑줄)', render([{ w: 'p', ch: ['앞', { w: 'u', ch: ['밑'] }, '뒤'] }]), '앞<u>밑</u>뒤');
+  eq(
+    'toMd 없는 마크는 html 이다 (밑줄)',
+    render([{ w: 'p', ch: ['앞', { w: 'u', ch: ['밑'] }, '뒤'] }]),
+    '앞<u>밑</u>뒤',
+  );
   ok(
     'toMd 없는 물건은 html 이다 (유튜브)',
     render([{ w: 'youtube', a: { v: 'abcdefghijk' }, ch: [] }]).startsWith('<iframe'),
   );
   ok(
     'toMd 없는 컨테이너는 속째 html 이다 (접기)',
-    render([{ w: 'details', a: { o: 1 }, ch: [{ w: 'summary', ch: ['제목'] }, { w: 'p', ch: ['속'] }] }]) ===
-      '<details open><summary>제목</summary><p>속</p></details>',
+    render([
+      {
+        w: 'details',
+        a: { o: 1 },
+        ch: [
+          { w: 'summary', ch: ['제목'] },
+          { w: 'p', ch: ['속'] },
+        ],
+      },
+    ]) === '<details open><summary>제목</summary><p>속</p></details>',
   );
-  eq('정렬 문단은 html 이다 — md 에 정렬이 없다', render([{ w: 'p', a: { a: 'c' }, ch: ['가운데'] }]), '<p data-nabi-align="c">가운데</p>');
-  eq('드롭캡 문단도 html 이다', render([{ w: 'p', a: { dc: 1 }, ch: ['첫 글자'] }]), '<p data-nabi-dropcap="1">첫 글자</p>');
+  eq(
+    '정렬 문단은 html 이다 — md 에 정렬이 없다',
+    render([{ w: 'p', a: { a: 'c' }, ch: ['가운데'] }]),
+    '<p data-nabi-align="c">가운데</p>',
+  );
+  eq(
+    '드롭캡 문단도 html 이다',
+    render([{ w: 'p', a: { dc: 1 }, ch: ['첫 글자'] }]),
+    '<p data-nabi-dropcap="1">첫 글자</p>',
+  );
   ok(
     '병합된 표는 통째로 html 이다 — 반쯤 적으면 격자가 흐트러진다',
     render([
@@ -274,7 +404,13 @@ const reread = (text: string): NabiDoc => cocoon([...parseMarkdown(text, wingEnv
         w: 'table',
         ch: [
           { w: 'tr', ch: [{ w: 'td', a: { th: 1, colspan: '2' }, ch: [{ w: 'p', ch: ['한 칸'] }] }] },
-          { w: 'tr', ch: [{ w: 'td', ch: [{ w: 'p', ch: ['가'] }] }, { w: 'td', ch: [{ w: 'p', ch: ['나'] }] }] },
+          {
+            w: 'tr',
+            ch: [
+              { w: 'td', ch: [{ w: 'p', ch: ['가'] }] },
+              { w: 'td', ch: [{ w: 'p', ch: ['나'] }] },
+            ],
+          },
         ],
       },
     ]).includes('colspan="2"'),
@@ -285,15 +421,29 @@ const reread = (text: string): NabiDoc => cocoon([...parseMarkdown(text, wingEnv
       {
         w: 'table',
         ch: [
-          { w: 'tr', ch: [{ w: 'td', ch: [{ w: 'p', ch: ['가'] }] }, { w: 'td', ch: [{ w: 'p', ch: ['나'] }] }] },
-          { w: 'tr', ch: [{ w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['a'] }] }, { w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['b'] }] }] },
+          {
+            w: 'tr',
+            ch: [
+              { w: 'td', ch: [{ w: 'p', ch: ['가'] }] },
+              { w: 'td', ch: [{ w: 'p', ch: ['나'] }] },
+            ],
+          },
+          {
+            w: 'tr',
+            ch: [
+              { w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['a'] }] },
+              { w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['b'] }] },
+            ],
+          },
         ],
       },
     ]).startsWith('<div class="nabi-scroll">'),
   );
   ok(
     '첨부 링크는 html 이다 — 표식이 곧 뜻인데 md 에 실을 칸이 없다',
-    render([{ w: 'p', ch: [{ w: 'a', a: { href: 'https://n.example/a.pdf', file: 'pdf' }, ch: ['첨부'] }] }]).includes('data-nabi-file="pdf"'),
+    render([{ w: 'p', ch: [{ w: 'a', a: { href: 'https://n.example/a.pdf', file: 'pdf' }, ch: ['첨부'] }] }]).includes(
+      'data-nabi-file="pdf"',
+    ),
   );
   eq(
     '고정폭 아닌 서체는 html 이다',
@@ -314,26 +464,81 @@ const reread = (text: string): NabiDoc => cocoon([...parseMarkdown(text, wingEnv
 {
   const source: readonly ElementNode[] = [
     { w: 'p', a: { h: 1 }, ch: ['나비 문서'] },
-    { w: 'p', ch: ['평문에 ', { w: 'b', ch: ['굵게'] }, ' 와 ', { w: 'i', ch: ['기울임'] }, ' 와 ', { w: 's', ch: ['취소'] }, ' 가 있다.'] },
+    {
+      w: 'p',
+      ch: [
+        '평문에 ',
+        { w: 'b', ch: ['굵게'] },
+        ' 와 ',
+        { w: 'i', ch: ['기울임'] },
+        ' 와 ',
+        { w: 's', ch: ['취소'] },
+        ' 가 있다.',
+      ],
+    },
     { w: 'p', ch: ['별 * 과 밑줄 _ 과 대괄호 [x] 와 파이프 | 와 물결 ~ 와 부등호 <'] },
     { w: 'p', ch: ['- 목록처럼 보이는 글'] },
-    { w: 'p', ch: ['코드 ', { w: 'tf', a: { v: 'mono' }, ch: ['x = 1'] }, ' 와 ', { w: 'a', a: { href: 'https://nabi.example/a' }, ch: ['링크'] }] },
-    { w: 'quote', ch: [{ w: 'p', ch: ['첫 줄'] }, { w: 'p', ch: ['둘째 줄'] }] },
+    {
+      w: 'p',
+      ch: [
+        '코드 ',
+        { w: 'tf', a: { v: 'mono' }, ch: ['x = 1'] },
+        ' 와 ',
+        { w: 'a', a: { href: 'https://nabi.example/a' }, ch: ['링크'] },
+      ],
+    },
+    {
+      w: 'quote',
+      ch: [
+        { w: 'p', ch: ['첫 줄'] },
+        { w: 'p', ch: ['둘째 줄'] },
+      ],
+    },
     {
       w: 'ul',
       ch: [
-        { w: 'li', ch: [{ w: 'p', ch: ['겉'] }, { w: 'ul', ch: [{ w: 'li', ch: [{ w: 'p', ch: ['속'] }] }] }] },
+        {
+          w: 'li',
+          ch: [
+            { w: 'p', ch: ['겉'] },
+            { w: 'ul', ch: [{ w: 'li', ch: [{ w: 'p', ch: ['속'] }] }] },
+          ],
+        },
         { w: 'li', ch: [{ w: 'p', ch: ['다시 겉'] }] },
       ],
     },
-    { w: 'ol', ch: [{ w: 'oli', ch: [{ w: 'p', ch: ['하나'] }] }, { w: 'oli', ch: [{ w: 'p', ch: ['둘'] }] }] },
-    { w: 'tl', ch: [{ w: 'tli', ch: [{ w: 'p', ch: ['안 함'] }] }, { w: 'tli', a: { ck: 1 }, ch: [{ w: 'p', ch: ['함'] }] }] },
+    {
+      w: 'ol',
+      ch: [
+        { w: 'oli', ch: [{ w: 'p', ch: ['하나'] }] },
+        { w: 'oli', ch: [{ w: 'p', ch: ['둘'] }] },
+      ],
+    },
+    {
+      w: 'tl',
+      ch: [
+        { w: 'tli', ch: [{ w: 'p', ch: ['안 함'] }] },
+        { w: 'tli', a: { ck: 1 }, ch: [{ w: 'p', ch: ['함'] }] },
+      ],
+    },
     { w: 'code', a: { lang: 'ts' }, ch: ['const a = 1', { w: 'br', ch: [] }, 'const b = 2'] },
     {
       w: 'table',
       ch: [
-        { w: 'tr', ch: [{ w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['이름'] }] }, { w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['값'] }] }] },
-        { w: 'tr', ch: [{ w: 'td', ch: [{ w: 'p', ch: ['가'] }] }, { w: 'td', ch: [{ w: 'p', ch: ['나'] }] }] },
+        {
+          w: 'tr',
+          ch: [
+            { w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['이름'] }] },
+            { w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['값'] }] },
+          ],
+        },
+        {
+          w: 'tr',
+          ch: [
+            { w: 'td', ch: [{ w: 'p', ch: ['가'] }] },
+            { w: 'td', ch: [{ w: 'p', ch: ['나'] }] },
+          ],
+        },
       ],
     },
     { w: 'img', a: { src: 'https://nabi.example/a.png' }, ch: [] },
@@ -347,8 +552,24 @@ const reread = (text: string): NabiDoc => cocoon([...parseMarkdown(text, wingEnv
 {
   ok('평범한 산문은 마크다운이 아니다', !smellsMarkdown('평범한 산문이다. 표식이 하나도 없다.'));
   ok('여러 줄 산문도 마크다운이 아니다', !smellsMarkdown('첫째 줄이다.\n둘째 줄이다.\n셋째 줄이다.'));
-  const signals = ['## 제목', '> 인용', '- 목록', '1. 번호', '```ts', '---', '| a |\n|---|', '[t](u)', '![](u)', '**굵게**', '~~취소~~'];
-  ok('신호 하나면 마크다운이다', signals.every((text) => smellsMarkdown(text)), signals.filter((text) => !smellsMarkdown(text)));
+  const signals = [
+    '## 제목',
+    '> 인용',
+    '- 목록',
+    '1. 번호',
+    '```ts',
+    '---',
+    '| a |\n|---|',
+    '[t](u)',
+    '![](u)',
+    '**굵게**',
+    '~~취소~~',
+  ];
+  ok(
+    '신호 하나면 마크다운이다',
+    signals.every((text) => smellsMarkdown(text)),
+    signals.filter((text) => !smellsMarkdown(text)),
+  );
 }
 
 done('md');

@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Контрольный список
+description: Список, который сохраняет состояние выполнения в документе.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Контрольный список
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Это список со статусом выполнения. В пустом абзаце введите пробел после `[ ]` или `[x]` либо создайте список с панели; состояние меняется щелчком по флажку.
 
-[Open the Korean canonical page](/ko/guide/features)
+Статус хранится в документе как свойство элемента. При разделении он следует за элементом, в котором остаётся текст, а не за пустым элементом перед ним, поэтому разделение выполненной задачи не меняет статус неожиданно.
 
-</div>
+<WingDemo path="/wing/block/task-list" />
+
+```ts
+const selected = wings().use('tl').build()
+```

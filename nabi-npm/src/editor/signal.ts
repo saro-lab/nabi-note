@@ -22,11 +22,12 @@ export function diffParagraphs(
 ): { readonly paragraphs: readonly string[]; readonly removed: readonly string[] } {
   if (prev === next) return { paragraphs: [], removed: [] };
   const prevRefs = new Set(prev);
+  const prevIndexes = new Map(prev.map((node, index) => [node, index] as const));
   const nextIds = new Set<string>();
   const paragraphs: string[] = [];
-  for (const node of next) {
+  for (const [index, node] of next.entries()) {
     if (node._id !== undefined) nextIds.add(node._id);
-    if (!prevRefs.has(node) && node._id !== undefined) paragraphs.push(node._id);
+    if ((!prevRefs.has(node) || prevIndexes.get(node) !== index) && node._id !== undefined) paragraphs.push(node._id);
   }
   const removed: string[] = [];
   for (const node of prev) {

@@ -2,20 +2,67 @@
 // doc 이 그렇게 라우팅한다), 속에는 마크가 없다. 마크 금지는 말이 아니라 repair 가 지킨다
 // 어떤 길로 마크가 들어와도 cocoon 을 지나며 껍데기가 벗겨지고 글자만 남는다.
 import { BR, P, isElement, isWrapper, type ElementNode, type NabiNode } from '../../schema/index.js';
+import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import { DEFAULT_BUILDERS } from '../../html/index.js';
 import { language } from '../../html/values.js';
 import { caretAt, ordered } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
 import { replaceAt } from '../../doc/index.js';
-import { topNodeAt, type OnKey, type Wing } from '../../wing/index.js';
+import { blockOwnerAt } from '../../wing/ops.js';
+import { type OnKey, type Wing } from '../../wing/index.js';
 import type { MdBuilder } from '../../io/index.js';
 import type { LocaleText } from '../../locale/index.js';
 import { codeAttach } from './paint.js';
 
 // 이름들 — old 사전 이식(14 로케일).
-const CODE_NAME: LocaleText = { ko: '코드', en: 'Code', ja: 'コード', zh: '代码', de: 'Code', fr: 'Code', es: 'Código', pt: 'Código', ru: 'Код', ar: 'شيفرة', hi: 'कोड', bn: 'কোড', ur: 'کوڈ', id: 'Kode' };
-const LANGUAGE_NAME: LocaleText = { ko: '언어', en: 'Language', ja: '言語', zh: '语言', de: 'Sprache', fr: 'Langage', es: 'Lenguaje', pt: 'Linguagem', ru: 'Язык', ar: 'اللغة', hi: 'भाषा', bn: 'ভাষা', ur: 'زبان', id: 'Bahasa' };
-const LANGUAGE_CLEAR: LocaleText = { ko: '언어 없음', en: 'No language', ja: '言語なし', zh: '无语言', de: 'Keine Sprache', fr: 'Aucun langage', es: 'Sin lenguaje', pt: 'Sem linguagem', ru: 'Без языка', ar: 'بدون لغة', hi: 'कोई भाषा नहीं', bn: 'ভাষা নেই', ur: 'کوئی زبان نہیں', id: 'Tanpa bahasa' };
+const CODE_NAME: LocaleText = {
+  ko: '코드',
+  en: 'Code',
+  ja: 'コード',
+  zh: '代码',
+  de: 'Code',
+  fr: 'Code',
+  es: 'Código',
+  pt: 'Código',
+  ru: 'Код',
+  ar: 'شيفرة',
+  hi: 'कोड',
+  bn: 'কোড',
+  ur: 'کوڈ',
+  id: 'Kode',
+};
+const LANGUAGE_NAME: LocaleText = {
+  ko: '언어',
+  en: 'Language',
+  ja: '言語',
+  zh: '语言',
+  de: 'Sprache',
+  fr: 'Langage',
+  es: 'Lenguaje',
+  pt: 'Linguagem',
+  ru: 'Язык',
+  ar: 'اللغة',
+  hi: 'भाषा',
+  bn: 'ভাষা',
+  ur: 'زبان',
+  id: 'Bahasa',
+};
+const LANGUAGE_CLEAR: LocaleText = {
+  ko: '언어 없음',
+  en: 'No language',
+  ja: '言語なし',
+  zh: '无语言',
+  de: 'Keine Sprache',
+  fr: 'Aucun langage',
+  es: 'Sin lenguaje',
+  pt: 'Sem linguagem',
+  ru: 'Без языка',
+  ar: 'بدون لغة',
+  hi: 'कोई भाषा नहीं',
+  bn: 'ভাষা নেই',
+  ur: 'کوئی زبان نہیں',
+  id: 'Tanpa bahasa',
+};
 
 const CODE_ICON =
   '<g transform="translate(8 8) scale(1.2273) translate(-8 -8)" stroke-width="1.141">' +
@@ -24,13 +71,34 @@ const CODE_ICON =
 // 상황 줄에 단추로 서는 언어들 — old 목록 그대로다. 이름은 하이라이터에 넘어가는 **값**이라
 // 번역하지 않는다.
 const COMMON_LANGUAGES: readonly string[] = [
-  'javascript', 'typescript', 'jsx', 'tsx',
-  'python', 'java', 'kotlin', 'swift',
-  'c', 'cpp', 'csharp', 'go', 'rust',
-  'php', 'ruby', 'sql',
-  'html', 'xml', 'css', 'scss',
-  'json', 'yaml', 'toml', 'markdown',
-  'bash', 'powershell', 'dockerfile', 'diff',
+  'javascript',
+  'typescript',
+  'jsx',
+  'tsx',
+  'python',
+  'java',
+  'kotlin',
+  'swift',
+  'c',
+  'cpp',
+  'csharp',
+  'go',
+  'rust',
+  'php',
+  'ruby',
+  'sql',
+  'html',
+  'xml',
+  'css',
+  'scss',
+  'json',
+  'yaml',
+  'toml',
+  'markdown',
+  'bash',
+  'powershell',
+  'dockerfile',
+  'diff',
 ];
 
 const CODE_CSS = `
@@ -53,18 +121,18 @@ const CODE_CSS = `
 // 언어 하나를 갈아 끼운다 — 빈 값이면 표식을 걷는다(언어 없음). 코드 상자를 안 만들고 안 없앤다.
 const setCodeLanguage: Command = (doc, sel, args) => {
   const [start] = ordered(sel);
-  const top = topNodeAt(doc, start.path);
-  const box = top?.ch[0];
-  if (!top || box === undefined || !isElement(box) || box.w !== 'code') return null;
+  const owner = blockOwnerAt(doc, start.path, 'code');
+  const box = owner?.node;
+  if (!owner || !box) return null;
   const lang = typeof args['lang'] === 'string' ? language(args['lang']) : undefined;
   if ((box.a?.['lang'] ?? undefined) === lang) return null; // 같은 값 — 무변화 침묵
   const next: ElementNode = {
     w: 'code',
-...(lang !== undefined ? { a: { lang } } : {}),
+    ...(lang !== undefined ? { a: { lang } } : {}),
     ch: box.ch,
-...(box._id !== undefined ? { _id: box._id } : {}),
+    ...(box._id !== undefined ? { _id: box._id } : {}),
   };
-  return { doc: replaceAt(doc, [start.path[0] as number, 0], [next]), selection: sel };
+  return { doc: replaceAt(doc, owner.path, [next]), selection: sel };
 };
 
 // 평문으로 펴기 — 마크는 껍데기를 벗고, 라인은 라인으로 남고, 이웃한 글자는 이어진다.
@@ -104,9 +172,9 @@ function repairCode(node: ElementNode): ElementNode {
   if (sameCh && sameAttrs) return node;
   return {
     w: node.w,
-...(lang !== undefined ? { a: { lang } } : {}),
+    ...(lang !== undefined ? { a: { lang } } : {}),
     ch,
-...(node._id !== undefined ? { _id: node._id } : {}),
+    ...(node._id !== undefined ? { _id: node._id } : {}),
   };
 }
 
@@ -139,7 +207,7 @@ const toggleCode: Command = (doc, sel, args, env) => {
       }
       blocks.push({ w: P, ch: line });
     }
-    const next = [...doc.slice(0, a),...blocks,...doc.slice(b + 1)];
+    const next = [...doc.slice(0, a), ...blocks, ...doc.slice(b + 1)];
     return { doc: next, selection: caretAt({ path: [a], offset: 0 }) };
   }
 
@@ -149,8 +217,8 @@ const toggleCode: Command = (doc, sel, args, env) => {
     for (const piece of plainChildren(block.ch)) lines.push(piece);
   });
   const lang = typeof args['lang'] === 'string' ? language(args['lang']) : undefined;
-  const box: ElementNode = { w: 'code',...(lang !== undefined ? { a: { lang } } : {}), ch: lines };
-  const next = [...doc.slice(0, a), { w: P, ch: [box] } as ElementNode,...doc.slice(b + 1)];
+  const box: ElementNode = { w: 'code', ...(lang !== undefined ? { a: { lang } } : {}), ch: lines };
+  const next = [...doc.slice(0, a), { w: P, ch: [box] } as ElementNode, ...doc.slice(b + 1)];
   // 코드 상자 자신이 캐럿의 홀더다 (인라인 홀더 — 속은 글과 라인뿐이다).
   return { doc: next, selection: caretAt({ path: [a, 0], offset: 0 }) };
 };
@@ -238,9 +306,9 @@ const onKey: OnKey = (intent, doc, sel, _env, owner) => {
 
   // 접힌 캐럿의 탭은 **그 자리에** 넣는다 — 줄 앞으로 밀지 않는다(글자를 치는 것과 같다).
   if (intent.key === 'tab' && collapsed) {
-    const next = [...cells.slice(0, start.offset),...INDENT.split(''),...cells.slice(start.offset)];
+    const next = [...cells.slice(0, start.offset), ...INDENT.split(''), ...cells.slice(start.offset)];
     const at = { path: owner.path, offset: start.offset + INDENT.length };
-    return { doc: replaceAt(doc, owner.path, [{...owner.node, ch: codeChildren(next) }]), selection: caretAt(at) };
+    return { doc: replaceAt(doc, owner.path, [{ ...owner.node, ch: codeChildren(next) }]), selection: caretAt(at) };
   }
 
   const lines = touchedLines(cells, start.offset, end.offset);
@@ -255,7 +323,7 @@ const onKey: OnKey = (intent, doc, sel, _env, owner) => {
   const next = [...cells];
   for (const at of [...lines].reverse()) {
     const n = width.get(at) ?? 0;
-    if (n > 0) next.splice(at, 0,...INDENT.split(''));
+    if (n > 0) next.splice(at, 0, ...INDENT.split(''));
     else if (n < 0) next.splice(at, -n);
   }
 
@@ -273,7 +341,7 @@ const onKey: OnKey = (intent, doc, sel, _env, owner) => {
   const from = { path: owner.path, offset: move(start.offset) };
   const to = { path: owner.path, offset: move(end.offset) };
   return {
-    doc: replaceAt(doc, owner.path, [{...owner.node, ch: codeChildren(next) }]),
+    doc: replaceAt(doc, owner.path, [{ ...owner.node, ch: codeChildren(next) }]),
     selection: collapsed ? caretAt(from) : { anchor: from, focus: to },
   };
 };
@@ -282,7 +350,7 @@ const onKey: OnKey = (intent, doc, sel, _env, owner) => {
 const FENCE = /^```([\w+#.-]{1,24})?$/;
 const fenceArgs = (m: RegExpMatchArray): { name: string; args?: Record<string, unknown> } => ({
   name: 'toggleCode',
-...(m[1] ? { args: { lang: m[1] } } : {}),
+  ...(m[1] ? { args: { lang: m[1] } } : {}),
 });
 
 // ```lang … ``` — 속은 이미 평문과 라인뿐이라 **이스케이프를 안 한다**(코드는 글자 그대로다).
@@ -337,7 +405,7 @@ export const codeWing: Wing = {
         // 지울 것이 있을 때만 선다 — 없는 언어를 지우는 단추는 아무 말도 안 한다.
         visible: (node) => typeof node.a?.['lang'] === 'string' && node.a['lang'] !== '',
       },
-...COMMON_LANGUAGES.map((lang) => ({
+      ...COMMON_LANGUAGES.map((lang) => ({
         kind: 'button' as const,
         name: lang,
         command: 'setCodeLanguage',
@@ -360,3 +428,5 @@ export const codeWing: Wing = {
   },
   styles: CODE_CSS,
 };
+
+$markBuiltinAttrOwner(codeWing, ['code']);

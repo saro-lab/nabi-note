@@ -1,14 +1,35 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Ukuran huruf
+description: Ubah ukuran teks dalam langkah yang diizinkan.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Ukuran huruf
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Ubah teks yang dipilih ke suatu langkah ukuran. Jika rentang dipilih, langkah berlaku untuk rentang itu; jika hanya ada kursor, ukuran teks paragraf saat ini diubah. Data tersimpan hanya memuat langkah yang diizinkan, bukan nilai bebas seperti `px`.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/etc/font-size" />
 
-</div>
+```ts
+const selected = wings().use('fs', {
+  values: ['sm', 'lg', 'xl'],
+}).build()
+```
+
+Jika `values` dihilangkan, langkah `xs`, `sm`, `lg`, dan `xl` digunakan. Jika daftar dipersempit, langkah lain yang sudah ada dalam dokumen lama dihapus ketika dimuat.
+
+## Gaya CSS
+
+Ukuran dapat diubah melalui pemilih langkah tersimpan seperti `.nabi-content [data-nabi-size="xs"]`. Jangan membuat langkah bebas yang tidak ada di dokumen; sesuaikan CSS hanya dalam `values` yang terdaftar.
+
+```css
+.article-body [data-nabi-size="xs"] { font-size: .78em; }
+.article-body [data-nabi-size="sm"] { font-size: .9em; }
+.article-body [data-nabi-size="lg"] { font-size: 1.3em; }
+.article-body [data-nabi-size="xl"] { font-size: 1.65em; }
+```
+
+Menjaga perbedaan ukuran antarlangkah tetap konsisten mempertahankan maksud yang dipilih penulis di editor ketika dokumen diterbitkan.

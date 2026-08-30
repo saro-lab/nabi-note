@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Daftar berpoin
+description: Mencantumkan beberapa item tanpa urutan.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Daftar berpoin
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Ini adalah daftar yang mencantumkan beberapa item tanpa urutan. Pada paragraf kosong, ketik `-` lalu tekan Spasi, atau ubah melalui toolbar. Paragraf yang dipilih juga dapat sekaligus dijadikan daftar.
 
-[Open the Korean canonical page](/ko/guide/features)
+Di dalam daftar, tekan Tab untuk menjorokkan satu tingkat dan Shift+Tab untuk mengurangi inden. Enter membuat item berikutnya; tekan Enter sekali lagi pada item kosong untuk mengakhiri daftar.
 
-</div>
+<WingDemo path="/wing/block/bullet-list" />
+
+```ts
+const selected = wings().use('ul').build()
+```

@@ -4,8 +4,24 @@ import { DEFAULT_BUILDERS } from '../../html/index.js';
 import { caretAt } from '../../caret/index.js';
 import { toggleWrap, type Wing } from '../../wing/index.js';
 import type { LocaleText } from '../../locale/index.js';
+import { $markBuiltinAttrOwner } from '../../schema/env.js';
 
-const QUOTE_NAME: LocaleText = { ko: '인용', en: 'Quote', ja: '引用', zh: '引用', de: 'Zitat', fr: 'Citation', es: 'Cita', pt: 'Citação', ru: 'Цитата', ar: 'اقتباس', hi: 'उद्धरण', bn: 'উদ্ধৃতি', ur: 'اقتباس', id: 'Kutipan' };
+const QUOTE_NAME: LocaleText = {
+  ko: '인용',
+  en: 'Quote',
+  ja: '引用',
+  zh: '引用',
+  de: 'Zitat',
+  fr: 'Citation',
+  es: 'Cita',
+  pt: 'Citação',
+  ru: 'Цитата',
+  ar: 'اقتباس',
+  hi: 'उद्धरण',
+  bn: 'উদ্ধৃতি',
+  ur: 'اقتباس',
+  id: 'Kutipan',
+};
 
 const QUOTE_ICON =
   '<g transform="translate(8 8) scale(1.0185) translate(-8.1 -8)" stroke-width="1.375">' +
@@ -41,3 +57,5 @@ export const quoteWing: Wing = {
   },
   styles: QUOTE_CSS,
 };
+
+$markBuiltinAttrOwner(quoteWing, ['quote']);

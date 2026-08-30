@@ -6,7 +6,7 @@ export const SPAN_COL = 'colspan';
 export const SPAN_ROW = 'rowspan';
 
 // HTML 규격의 상한 — 격자 폭 폭주(패딩 폭탄)를 막는다. 브라우저도 이 값으로 조인다.
-const MAX_SPAN = 1000;
+export const $MAX_SPAN = 1000;
 
 // 왼쪽 위 모서리의 격자 좌표(row·column)와 문서상의 자리(trIndex·tdIndex) — 옛 판의
 // 중복 필드(rowIndex/row 동값)는 안 가져오고, 경로를 지을 자리 둘만 남긴다.
@@ -41,12 +41,47 @@ export interface GridBox {
 export function spanOf(value: AttrValue | undefined): number {
   const raw = typeof value === 'number' ? value : Number.parseInt(value ?? '', 10);
   if (!Number.isFinite(raw) || raw < 1) return 1;
-  return Math.min(Math.floor(raw), MAX_SPAN);
+  return Math.min(Math.floor(raw), $MAX_SPAN);
 }
 
 interface RowAt {
   readonly row: ElementNode;
   readonly trIndex: number;
+}
+
+interface Interval {
+  readonly start: number;
+  readonly end: number;
+}
+
+const occupancyOf = new WeakMap<TableGrid, readonly (readonly Interval[])[]>();
+
+function firstFree(intervals: readonly Interval[], start: number): number {
+  let column = start;
+  for (const interval of intervals) {
+    if (column < interval.start) break;
+    if (column < interval.end) column = interval.end;
+  }
+  return column;
+}
+
+function occupy(intervals: Interval[], start: number, end: number): void {
+  let left = start;
+  let right = end;
+  let at = 0;
+  while (at < intervals.length && (intervals[at] as Interval).end < left) at += 1;
+  const from = at;
+  while (at < intervals.length && (intervals[at] as Interval).start <= right) {
+    const interval = intervals[at] as Interval;
+    left = Math.min(left, interval.start);
+    right = Math.max(right, interval.end);
+    at += 1;
+  }
+  intervals.splice(from, at - from, { start: left, end: right });
+}
+
+function intervalWidth(intervals: readonly Interval[]): number {
+  return intervals.reduce((sum, interval) => sum + interval.end - interval.start, 0);
 }
 
 function rowsOf(table: ElementNode): RowAt[] {
@@ -61,7 +96,7 @@ function rowsOf(table: ElementNode): RowAt[] {
 // rowspan 은 읽는 시점에 조인다 — 격자는 언제나 실제 행 수 안에 있다.
 export function cellGrid(table: ElementNode): TableGrid {
   const rows = rowsOf(table);
-  const occupied = new Set<string>();
+  const occupied: Interval[][] = Array.from({ length: rows.length }, () => []);
   const cells: GridCell[] = [];
   let columns = 0;
 
@@ -69,12 +104,12 @@ export function cellGrid(table: ElementNode): TableGrid {
     let column = 0;
     row.ch.forEach((child, tdIndex) => {
       if (!isElement(child) || child.w !== 'td') return;
-      while (occupied.has(`${r}:${column}`)) column += 1;
+      column = firstFree(occupied[r] as Interval[], column);
 
       const colSpan = spanOf(child.a?.[SPAN_COL]);
       const rowSpan = Math.min(spanOf(child.a?.[SPAN_ROW]), rows.length - r);
       for (let dr = 0; dr < rowSpan; dr += 1) {
-        for (let dc = 0; dc < colSpan; dc += 1) occupied.add(`${r + dr}:${column + dc}`);
+        occupy(occupied[r + dr] as Interval[], column, column + colSpan);
       }
 
       cells.push({ cell: child, trIndex, tdIndex, row: r, column, rowSpan, colSpan });
@@ -83,7 +118,37 @@ export function cellGrid(table: ElementNode): TableGrid {
     });
   });
 
-  return { rows: rows.length, columns, cells };
+  const grid: TableGrid = { rows: rows.length, columns, cells };
+  occupancyOf.set(grid, occupied);
+  return grid;
+}
+
+function occupiedIntervals(grid: TableGrid, row: number): readonly Interval[] {
+  const cached = occupancyOf.get(grid)?.[row];
+  if (cached) return cached;
+  const intervals: Interval[] = [];
+  for (const item of grid.cells) {
+    if (row < item.row || row >= item.row + item.rowSpan) continue;
+    occupy(intervals, item.column, item.column + item.colSpan);
+  }
+  return intervals;
+}
+
+export function coveredColumns(grid: TableGrid, row: number): number {
+  return intervalWidth(occupiedIntervals(grid, row));
+}
+
+export function $columnGapWidths(grid: TableGrid, row: number, columns = grid.columns): readonly number[] {
+  const gaps: number[] = [];
+  let cursor = 0;
+  for (const interval of occupiedIntervals(grid, row)) {
+    if (cursor >= columns) break;
+    const start = Math.min(columns, interval.start);
+    if (start > cursor) gaps.push(start - cursor);
+    cursor = Math.max(cursor, Math.min(columns, interval.end));
+  }
+  if (cursor < columns) gaps.push(columns - cursor);
+  return gaps;
 }
 
 // 병합에 먹힌 자리도 그 주인을 돌려준다.
@@ -190,7 +255,12 @@ export function mapCells(
       if (Array.isArray(mapped)) cells.push(...(mapped as ElementNode[]));
       else cells.push(mapped as ElementNode);
     }
-    return { w: child.w, ch: cells, ...(child.a ? { a: child.a } : {}), ...(child._id !== undefined ? { _id: child._id } : {}) };
+    return {
+      w: child.w,
+      ch: cells,
+      ...(child.a ? { a: child.a } : {}),
+      ...(child._id !== undefined ? { _id: child._id } : {}),
+    };
   });
   return { w: table.w, ch, ...(table.a ? { a: table.a } : {}), ...(table._id !== undefined ? { _id: table._id } : {}) };
 }
@@ -208,7 +278,12 @@ export function insertCellInRow(table: ElementNode, trIndex: number, line: numbe
     const at = anchor ? anchor.tdIndex : -1;
     if (at === -1) cells.push(fresh);
     else cells.splice(at, 0, fresh);
-    return { w: child.w, ch: cells, ...(child.a ? { a: child.a } : {}), ...(child._id !== undefined ? { _id: child._id } : {}) };
+    return {
+      w: child.w,
+      ch: cells,
+      ...(child.a ? { a: child.a } : {}),
+      ...(child._id !== undefined ? { _id: child._id } : {}),
+    };
   });
   return { w: table.w, ch, ...(table.a ? { a: table.a } : {}), ...(table._id !== undefined ? { _id: table._id } : {}) };
 }

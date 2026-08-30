@@ -1,14 +1,17 @@
 ---
-title: Documentation review in progress
-description: Korean documentation is being reviewed before translation.
+layout: home
+title: NABI NOTE
+description: محرر WYSIWYG بنموذج مستند متين.
 ---
 
-<div class="translation-shell">
+<script setup>
+import EditorDemo from '../.vitepress/ui/EditorDemo.vue'
+import { mainHtml, toolbarHtml, viewToolsHtml } from '../.vitepress/trees/ar.ssr.ts'
+</script>
 
-# Documentation review in progress
-
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
-
-[Open the Korean canonical page](/ko/)
-
-</div>
+<EditorDemo
+  fold-wings
+  :ssr-html="mainHtml"
+  :toolbar-html="toolbarHtml"
+  :view-tools-html="viewToolsHtml"
+/>

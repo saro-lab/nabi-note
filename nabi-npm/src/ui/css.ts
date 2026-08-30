@@ -5,6 +5,7 @@
 // 기억은 **문서가 한다** — 모듈 전역 집합이 아니다. 붙은 시트의 지문이 `<style>` 의 표식으로
 // 남아 있어서, 같은 문서에 에디터가 둘 서도 두 번 안 붙는다.
 import { sheetKey } from '../style/index.js';
+import { acquireStyleSheet, DisposerStack } from '../lifecycle.js';
 
 export * from '../style/index.js';
 
@@ -12,17 +13,9 @@ const MARK = 'data-nabi-sheet';
 
 // 문서에 붙인다 — 이미 있는 지문은 건너뛴다. 답은 떼는 함수 하나다(이 부름이 새로 붙인 것만 뗀다).
 export function injectSheets(owner: Document, sheets: readonly string[]): () => void {
-  const mine: HTMLStyleElement[] = [];
-  for (const text of sheets) {
-    const key = sheetKey(text);
-    if (owner.head.querySelector(`style[${MARK}="${key}"]`)) continue;
-    const style = owner.createElement('style');
-    style.setAttribute(MARK, key);
-    style.textContent = text;
-    owner.head.append(style);
-    mine.push(style);
+  const releases = new DisposerStack();
+  for (const text of new Set(sheets)) {
+    releases.add(acquireStyleSheet(owner, text, { name: MARK, value: sheetKey(text) }));
   }
-  return () => {
-    for (const style of mine) style.remove();
-  };
+  return () => releases.dispose();
 }

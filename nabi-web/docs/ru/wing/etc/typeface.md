@@ -1,14 +1,37 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Гарнитура
+description: Применяет категорию гарнитуры к выбранному тексту или абзацу.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Гарнитура
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Применяет категорию гарнитуры к выбранному тексту. При выделенном диапазоне меняется только он, а при одной каретке — текст текущего абзаца. Фактические файлы шрифтов и `font-family` задаются CSS сервиса.
 
-[Open the Korean canonical page](/ko/guide/features)
+Базовые категории — `sans`, `serif`, `mono` и `cursive`. Для сервиса с несколькими системами письма лучше явно определить шрифт каждой категории.
 
-</div>
+<WingDemo path="/wing/etc/typeface" />
+
+```ts
+const selected = wings().use('tf', {
+  values: ['sans', 'serif', 'mono'],
+}).build()
+```
+
+Если `values` не указан, используются все базовые категории. В документе разрешены только значения, перечисленные в `values`.
+
+## CSS-стили
+
+В документе сохраняется только имя категории, а файл шрифта определяет CSS. Изменяйте переменные в одном контейнере редактора и опубликованной страницы.
+
+```css
+.nabi-content {
+  --nabi-font-serif: "Noto Serif", serif;
+  --nabi-font-mono: "JetBrains Mono", monospace;
+}
+```
+
+При использовании веб-шрифта сначала загрузите и сам файл шрифта. Для `cursive` часто нет подходящего шрифта для всех поддерживаемых письменностей, поэтому лучше предоставить категорию только после назначения шрифта, который действительно используется сервисом.

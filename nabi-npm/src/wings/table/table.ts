@@ -5,6 +5,7 @@
 //   병합: 토글 하나 — 잡은 사각형을 하나로, 병합 칸에서 다시 누르면 풀린다. 캐럿은 언제나 실재 자리로.
 //   제목: 행·열 토글 + currentValue 눌림. 칸의 제목 표식은 불리언 attr `th` 다.
 import { BR, P, isElement, type AttrValue, type ElementNode, type NabiNode } from '../../schema/index.js';
+import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import { holderLength, nodeAt, replaceAt, holders, type EditEnv, type Position } from '../../doc/index.js';
 import { caretAt, isCollapsed, ordered, type Selection } from '../../caret/index.js';
 import type { Command, CommandOutcome } from '../../editor/index.js';
@@ -13,7 +14,9 @@ import type { MdBuilder } from '../../io/index.js';
 import type { KeyIntent, OnKey, Wing } from '../../wing/index.js';
 import { insertLump } from '../../wing/index.js';
 import type { LocaleText } from '../../locale/index.js';
+import { NARROW_REM } from '../../style/tokens.js';
 import {
+  $columnGapWidths,
   SPAN_COL,
   SPAN_ROW,
   boxBetween,
@@ -29,29 +32,14 @@ import {
   type GridCell,
   type TableGrid,
 } from './grid.js';
-
-// 칸의 제목 표식 — 값 1 뿐인 불리언. `br` 예약어와 헷갈릴 이름(hr 류)을 피해 HTML 의 th 를 그대로 쓴다.
+import { emptyCell, emptyCells, headerCell } from './helpers.js';
 export const TH = 'th';
-
-// 보는 쪽(nabi-note/viewer)의 열 정렬을 켜는 표식 — 값이 1 뿐인 불리언이다.
-// **어느 열을 어느 방향으로 정렬했는지는 저장하지 않는다** — 그것은 읽는 사람의 일이고 문서의
-// 것이 아니다. 문서에 남는 것은 "이 표는 정렬해도 된다" 한 마디뿐이다.
 export const SORTABLE = 'sort';
-
-const emptyParagraph = (): ElementNode => ({ w: P, ch: [] });
-const emptyCell = (): ElementNode => ({ w: 'td', ch: [emptyParagraph()] });
-// 제목 칸 — 표식만 다른 같은 칸이다(칸의 이름은 언제나 td 고, 제목은 attr 하나가 말한다).
-const headerCell = (): ElementNode => ({ w: 'td', a: { [TH]: 1 }, ch: [emptyParagraph()] });
-
 function rebuilt(node: ElementNode, ch: readonly NabiNode[]): ElementNode {
-  return {
-    w: node.w,
-    ch,
-...(node.a ? { a: node.a } : {}),
-...(node._id !== undefined ? { _id: node._id } : {}),
-  };
+  return { w: node.w, ch, ...(node.a ? { a: node.a } : {}), ...(node._id !== undefined ? { _id: node._id } : {}) };
 }
 
+// 칸의 제목 표식 — 값 1 뿐인 불리언. `br` 예약어와 헷갈릴 이름(hr 류)을 피해 HTML 의 th 를 그대로 쓴다.
 // --- 칸 속 = 문단 하나 (repair) ---------------------------------------------------------------
 
 // 속이 이미 "문단 하나 + 깨끗한 인라인"인가 — 매 커맨드 cocoon 위에서 공짜여야 하므로
@@ -115,10 +103,7 @@ export function repairCell(cell: ElementNode): ElementNode {
   const inline: NabiNode[] = [];
   pressInline(cell.ch, inline, { pending: false });
   const first = cell.ch[0];
-  const paragraph: ElementNode =
-    isElement(first) && first.w === P
-      ? rebuilt(first, inline)
-      : { w: P, ch: inline };
+  const paragraph: ElementNode = isElement(first) && first.w === P ? rebuilt(first, inline) : { w: P, ch: inline };
   return rebuilt(cell, [paragraph]);
 }
 
@@ -162,7 +147,10 @@ export function repairTable(table: ElementNode): ElementNode {
     return { w: 'tr', ch: [{ w: 'td', ch: [{ w: P, ch: pressed }] }] } as ElementNode;
   });
   const base = wrappedAny
-    ? rebuilt(table, rowsOnly.filter((child): child is ElementNode => child !== null))
+    ? rebuilt(
+        table,
+        rowsOnly.filter((child): child is ElementNode => child !== null),
+      )
     : table;
 
   // 2) 행이 하나도 없으면 1×1 로 세운다 — 캐럿의 집.
@@ -173,17 +161,18 @@ export function repairTable(table: ElementNode): ElementNode {
   const clamped = clampSpans(seeded);
   const grid = cellGrid(clamped);
   const columns = Math.max(1, grid.columns);
+  const gapsByRow = Array.from({ length: grid.rows }, (_unused, row) => $columnGapWidths(grid, row, columns));
+  const gapWidth = gapsByRow.reduce((sum, gaps) => sum + gaps.reduce((rowSum, width) => rowSum + width, 0), 0);
+  const expand = gapWidth <= grid.cells.length + grid.rows;
   let padded = false;
   let r = -1;
   const ch = clamped.ch.map((child) => {
     if (!isElement(child) || child.w !== 'tr') return child;
     r += 1;
-    let covered = 0;
-    for (let c = 0; c < columns; c += 1) if (cellCovering(grid, r, c)) covered += 1;
-    const missing = columns - covered;
-    if (missing <= 0) return child;
+    const gaps = gapsByRow[r] ?? [];
+    if (gaps.length === 0) return child;
     padded = true;
-    return rebuilt(child, [...child.ch,...Array.from({ length: missing }, emptyCell)]);
+    return rebuilt(child, [...child.ch, ...gaps.flatMap((width) => emptyCells(width, expand))]);
   });
   return padded ? rebuilt(clamped, ch) : clamped;
 }
@@ -247,19 +236,24 @@ function insertRowAt(table: ElementNode, line: number): ElementNode {
       ? table
       : mapCells(table, (item) =>
           spanningCells.has(item.cell) ? withSpans(item.cell, item.colSpan, item.rowSpan + 1) : item.cell,
-);
+        );
 
-  const coveredCols = new Set<number>();
-  for (const item of spanning) {
-    for (let c = item.column; c < item.column + item.colSpan; c += 1) coveredCols.add(c);
+  const ranges = spanning
+    .map((item) => ({ start: item.column, end: item.column + item.colSpan }))
+    .sort((a, b) => a.start - b.start);
+  const gaps: number[] = [];
+  let cursor = 0;
+  for (const range of ranges) {
+    if (range.start > cursor) gaps.push(range.start - cursor);
+    cursor = Math.max(cursor, range.end);
   }
-  const fresh: ElementNode[] = [];
-  for (let c = 0; c < columns; c += 1) if (!coveredCols.has(c)) fresh.push(emptyCell());
+  if (cursor < columns) gaps.push(columns - cursor);
+  const fresh = gaps.flatMap((width) => emptyCells(width, true));
   const row: ElementNode = { w: 'tr', ch: fresh };
 
   const anchorTr = line < grid.rows ? trIndexOfRow(widened, line) : null;
   const at = anchorTr ?? widened.ch.length;
-  return rebuilt(widened, [...widened.ch.slice(0, at), row,...widened.ch.slice(at)]);
+  return rebuilt(widened, [...widened.ch.slice(0, at), row, ...widened.ch.slice(at)]);
 }
 
 // 격자 열 `line` 자리에 새 열을 넣는다 (line === columns 면 오른끝).
@@ -272,15 +266,17 @@ function insertColumnAt(table: ElementNode, line: number): ElementNode {
       ? table
       : mapCells(table, (item) =>
           spanningCells.has(item.cell) ? withSpans(item.cell, item.colSpan + 1, item.rowSpan) : item.cell,
-);
+        );
 
-  const coveredRows = new Set<number>();
-  for (const item of spanning) {
-    for (let r = item.row; r < item.row + item.rowSpan; r += 1) coveredRows.add(r);
-  }
+  const coveredRows = spanning
+    .map((item) => ({ start: item.row, end: item.row + item.rowSpan }))
+    .sort((a, b) => a.start - b.start);
+  let rangeIndex = 0;
   let next = widened;
   for (let r = 0; r < grid.rows; r += 1) {
-    if (coveredRows.has(r)) continue;
+    while (coveredRows[rangeIndex] && (coveredRows[rangeIndex]?.end ?? 0) <= r) rangeIndex += 1;
+    const range = coveredRows[rangeIndex];
+    if (range && range.start <= r && r < range.end) continue;
     const trIndex = trIndexOfRow(next, r);
     if (trIndex === null) continue;
     // 제목 줄에는 제목 칸이 선다 — 새 표는 첫 행이 늘 제목이라(084 ③), 여기서 빈 칸을 넣으면
@@ -299,9 +295,7 @@ function deleteRowAt(table: ElementNode, line: number): ElementNode | null {
   const grid = cellGrid(table);
   if (grid.rows <= 1) return null;
 
-  const movers = grid.cells
-.filter((item) => item.row === line && item.rowSpan > 1)
-.sort((a, b) => a.column - b.column);
+  const movers = grid.cells.filter((item) => item.row === line && item.rowSpan > 1).sort((a, b) => a.column - b.column);
   const t1 = mapCells(table, (item) => {
     if (item.row === line) return null; // 지워지는 줄에서 시작 — movers 는 아래서 되심는다
     if (item.row < line && item.row + item.rowSpan - 1 >= line) {
@@ -312,7 +306,7 @@ function deleteRowAt(table: ElementNode, line: number): ElementNode | null {
 
   const trIndex = trIndexOfRow(t1, line);
   if (trIndex === null) return null;
-  let t2 = rebuilt(t1, [...t1.ch.slice(0, trIndex),...t1.ch.slice(trIndex + 1)]);
+  let t2 = rebuilt(t1, [...t1.ch.slice(0, trIndex), ...t1.ch.slice(trIndex + 1)]);
 
   for (const item of movers) {
     const target = trIndexOfRow(t2, line);
@@ -337,7 +331,10 @@ function deleteColumnAt(table: ElementNode, line: number): ElementNode | null {
 // --- 병합 (토글 하나) -----------------------------------------------------------------
 
 // 선택이 걸친 두 칸 — 같은 표 안일 때만.
-function cellsOfSelection(doc: readonly ElementNode[], sel: Selection): { readonly ctx: CellCtx; readonly other: GridCell } | null {
+function cellsOfSelection(
+  doc: readonly ElementNode[],
+  sel: Selection,
+): { readonly ctx: CellCtx; readonly other: GridCell } | null {
   const [start, end] = ordered(sel);
   const a = cellCtxOf(doc, start);
   const b = cellCtxOf(doc, end);
@@ -349,7 +346,10 @@ function cellsOfSelection(doc: readonly ElementNode[], sel: Selection): { readon
 }
 
 // 병합 상자의 칸들 — 화면 칠(부속)과 병합 커맨드가 같은 판정을 쓴다.
-export function selectionBox(doc: readonly ElementNode[], sel: Selection): { readonly tablePath: readonly number[]; readonly box: GridBox; readonly cells: readonly GridCell[] } | null {
+export function selectionBox(
+  doc: readonly ElementNode[],
+  sel: Selection,
+): { readonly tablePath: readonly number[]; readonly box: GridBox; readonly cells: readonly GridCell[] } | null {
   const found = cellsOfSelection(doc, sel);
   if (!found) return null;
   const box = boxBetween(found.ctx.grid, found.ctx.cell, found.other);
@@ -371,11 +371,7 @@ function mergeBox(table: ElementNode, grid: TableGrid, box: GridBox): ElementNod
   const originParagraph = origin.cell.ch[0];
   const paragraph: ElementNode =
     isElement(originParagraph) && originParagraph.w === P ? rebuilt(originParagraph, inline) : { w: P, ch: inline };
-  const merged = withSpans(
-    rebuilt(origin.cell, [paragraph]),
-    box.right - box.left + 1,
-    box.bottom - box.top + 1,
-);
+  const merged = withSpans(rebuilt(origin.cell, [paragraph]), box.right - box.left + 1, box.bottom - box.top + 1);
   const insideCells = new Set(inside.map((item) => item.cell));
   return mapCells(table, (item) => {
     if (item.cell === origin.cell) return merged;
@@ -419,7 +415,11 @@ function settle(
 }
 
 // 래퍼문단(표)을 통째로 걷은 뒤의 답 — 마지막 행·열 삭제가 표 자체 삭제로 이어진다.
-function removeWholeTable(doc: readonly ElementNode[], tablePath: readonly number[], env: EditEnv): CommandOutcome | null {
+function removeWholeTable(
+  doc: readonly ElementNode[],
+  tablePath: readonly number[],
+  env: EditEnv,
+): CommandOutcome | null {
   const wrapperPath = tablePath.slice(0, -1);
   if (wrapperPath.length === 0) return null;
   const next = replaceAt(doc, wrapperPath, []);
@@ -437,9 +437,7 @@ function removeWholeTable(doc: readonly ElementNode[], tablePath: readonly numbe
 }
 
 const withCtx =
-  (
-    run: (ctx: CellCtx, doc: readonly ElementNode[], sel: Selection, env: EditEnv) => CommandOutcome | null,
-): Command =>
+  (run: (ctx: CellCtx, doc: readonly ElementNode[], sel: Selection, env: EditEnv) => CommandOutcome | null): Command =>
   (doc, sel, _args, env) => {
     const ctx = cellCtxOf(doc, sel.focus);
     if (!ctx) return null;
@@ -478,7 +476,7 @@ const commands: Readonly<Record<string, Command>> = {
 
   addRowAbove: withCtx((ctx, doc) =>
     settle(doc, ctx.tablePath, insertRowAt(ctx.table, ctx.cell.row), ctx.cell.row + 1, ctx.cell.column),
-),
+  ),
   addRowBelow: withCtx((ctx, doc) =>
     settle(
       doc,
@@ -486,11 +484,11 @@ const commands: Readonly<Record<string, Command>> = {
       insertRowAt(ctx.table, ctx.cell.row + ctx.cell.rowSpan),
       ctx.cell.row + ctx.cell.rowSpan,
       ctx.cell.column,
-),
-),
+    ),
+  ),
   addColumnLeft: withCtx((ctx, doc) =>
     settle(doc, ctx.tablePath, insertColumnAt(ctx.table, ctx.cell.column), ctx.cell.row, ctx.cell.column + 1),
-),
+  ),
   addColumnRight: withCtx((ctx, doc) =>
     settle(
       doc,
@@ -498,8 +496,8 @@ const commands: Readonly<Record<string, Command>> = {
       insertColumnAt(ctx.table, ctx.cell.column + ctx.cell.colSpan),
       ctx.cell.row,
       ctx.cell.column + ctx.cell.colSpan,
-),
-),
+    ),
+  ),
   deleteRow: withCtx((ctx, doc, _sel, env) => {
     const next = deleteRowAt(ctx.table, ctx.cell.row);
     if (next === null) return removeWholeTable(doc, ctx.tablePath, env);
@@ -542,14 +540,14 @@ const commands: Readonly<Record<string, Command>> = {
     const ctx = cellCtxOf(doc, ordered(sel)[0]);
     if (!ctx) return null;
     const on = ctx.table.a?.[SORTABLE] === 1;
-    const a: Record<string, AttrValue> = {...(ctx.table.a ?? {}) };
+    const a: Record<string, AttrValue> = { ...(ctx.table.a ?? {}) };
     if (on) delete a[SORTABLE];
     else a[SORTABLE] = 1;
     const next: ElementNode = {
       w: 'table',
       ch: ctx.table.ch,
-...(Object.keys(a).length > 0 ? { a } : {}),
-...(ctx.table._id !== undefined ? { _id: ctx.table._id } : {}),
+      ...(Object.keys(a).length > 0 ? { a } : {}),
+      ...(ctx.table._id !== undefined ? { _id: ctx.table._id } : {}),
     };
     return { doc: replaceAt(doc, ctx.tablePath, [next]), selection: sel };
   },
@@ -567,7 +565,12 @@ const commands: Readonly<Record<string, Command>> = {
   },
 };
 
-function toggleHeader(ctx: CellCtx, doc: readonly ElementNode[], sel: Selection, axis: 'row' | 'column'): CommandOutcome {
+function toggleHeader(
+  ctx: CellCtx,
+  doc: readonly ElementNode[],
+  sel: Selection,
+  axis: 'row' | 'column',
+): CommandOutcome {
   const line = axis === 'row' ? ctx.cell.row : ctx.cell.column;
   const inLine = (item: GridCell): boolean =>
     axis === 'row'
@@ -577,7 +580,7 @@ function toggleHeader(ctx: CellCtx, doc: readonly ElementNode[], sel: Selection,
   const all = lineCells.length > 0 && lineCells.every((item) => item.cell.a?.[TH] === 1);
   const next = mapCells(ctx.table, (item) => {
     if (!inLine(item)) return item.cell;
-    const a: Record<string, AttrValue> = {...(item.cell.a ?? {}) };
+    const a: Record<string, AttrValue> = { ...(item.cell.a ?? {}) };
     if (all) delete a[TH];
     else a[TH] = 1;
     const cell: { w: string; a?: typeof a; ch: ElementNode['ch']; _id?: string } = { w: item.cell.w, ch: item.cell.ch };
@@ -596,11 +599,14 @@ function headerLine(grid: TableGrid, axis: 'row' | 'column', line: number): bool
     axis === 'row'
       ? item.row <= line && line <= item.row + item.rowSpan - 1
       : item.column <= line && line <= item.column + item.colSpan - 1,
-);
+  );
   return cells.length > 0 && cells.every((item) => item.cell.a?.[TH] === 1);
 }
 
-export function headerLineOf(ctx: { readonly grid: TableGrid; readonly cell: GridCell }, axis: 'row' | 'column'): boolean {
+export function headerLineOf(
+  ctx: { readonly grid: TableGrid; readonly cell: GridCell },
+  axis: 'row' | 'column',
+): boolean {
   return headerLine(ctx.grid, axis, axis === 'row' ? ctx.cell.row : ctx.cell.column);
 }
 
@@ -616,7 +622,12 @@ export function headerLineOf(ctx: { readonly grid: TableGrid; readonly cell: Gri
 // 칸 **안**에서 갈 곳이 남아 있으면 우리 일이 아니다(null → 코어·브라우저의 글자 걸음). 칸의
 // 끝에 닿았을 때만 옆 칸으로 넘긴다. 격자 밖으로 나가는 걸음도 우리 일이 아니다 — 표를 벗어나는
 // 착지는 코어의 홀더 걸음이 안다.
-function arrowStep(intent: KeyIntent, doc: readonly ElementNode[], sel: Selection, env: EditEnv): CommandOutcome | null {
+function arrowStep(
+  intent: KeyIntent,
+  doc: readonly ElementNode[],
+  sel: Selection,
+  env: EditEnv,
+): CommandOutcome | null {
   const ctx = cellCtxOf(doc, sel.focus);
   if (!ctx) return null;
   const dir = intent.dir;
@@ -634,7 +645,7 @@ function arrowStep(intent: KeyIntent, doc: readonly ElementNode[], sel: Selectio
     if (!next) return null; // 표의 첫(끝) 칸 — 표 밖으로 나가는 것은 코어의 걸음이다
     const head = caretInCell(ctx.tablePath, next);
     // 왼쪽으로 넘어가면 그 칸의 **끝**에 선다 — 넘어간 자리가 곧 다음에 지울 자리다.
-    return { doc, selection: caretAt(back ? {...head, offset: lengthAt(head) } : head) };
+    return { doc, selection: caretAt(back ? { ...head, offset: lengthAt(head) } : head) };
   }
 
   // 위·아래 — 같은 열의 이웃 줄. 병합 칸은 자기가 덮은 줄 전체가 자기 자리라, 아래로는 덮은
@@ -683,7 +694,7 @@ const tableHtml: HtmlBuilder = (node, children, ctx) =>
     'div',
     ctx.element('table', children(), { 'data-nabi-sortable': node.a?.[SORTABLE] === 1 ? '' : undefined }),
     { class: 'nabi-scroll' },
-);
+  );
 
 const trHtml: HtmlBuilder = (_node, children, ctx) => ctx.element('tr', children());
 
@@ -744,7 +755,6 @@ function claim(el: ParseElement, inner: (block: boolean) => NabiNode[]): NabiNod
 
 // --- wing --------------------------------------------------------------------------------------
 
-
 // --- 버튼·상황 줄 선언 (12) ----------------------------------------------------------------------
 // 아이콘 속은 old 번역이다. 눌림은 `currentValue` 가 답하는 상태 토큰('merged'·'th')으로 읽는다.
 
@@ -770,18 +780,183 @@ const TABLE_ICONS = {
 } as const;
 
 // 이름들 — old 사전 이식(14 로케일).
-const TABLE_NAME: LocaleText = { ko: '표', en: 'Table', ja: '表', zh: '表格', de: 'Tabelle', fr: 'Tableau', es: 'Tabla', pt: 'Tabela', ru: 'Таблица', ar: 'جدول', hi: 'तालिका', bn: 'টেবিল', ur: 'جدول', id: 'Tabel' };
+const TABLE_NAME: LocaleText = {
+  ko: '표',
+  en: 'Table',
+  ja: '表',
+  zh: '表格',
+  de: 'Tabelle',
+  fr: 'Tableau',
+  es: 'Tabla',
+  pt: 'Tabela',
+  ru: 'Таблица',
+  ar: 'جدول',
+  hi: 'तालिका',
+  bn: 'টেবিল',
+  ur: 'جدول',
+  id: 'Tabel',
+};
 const TABLE_TEXT: Readonly<Record<string, LocaleText>> = {
-  rowAbove: { ko: '위에 행 추가', en: 'Insert row above', ja: '上に行を挿入', zh: '在上方插入行', de: 'Zeile darüber einfügen', fr: 'Insérer une ligne au-dessus', es: 'Insertar fila arriba', pt: 'Inserir linha acima', ru: 'Вставить строку выше', ar: 'إدراج صف أعلى', hi: 'ऊपर पंक्ति जोड़ें', bn: 'উপরে সারি যোগ করুন', ur: 'اوپر قطار شامل کریں', id: 'Sisipkan baris di atas' },
-  rowBelow: { ko: '아래에 행 추가', en: 'Insert row below', ja: '下に行を挿入', zh: '在下方插入行', de: 'Zeile darunter einfügen', fr: 'Insérer une ligne en dessous', es: 'Insertar fila debajo', pt: 'Inserir linha abaixo', ru: 'Вставить строку ниже', ar: 'إدراج صف أسفل', hi: 'नीचे पंक्ति जोड़ें', bn: 'নিচে সারি যোগ করুন', ur: 'نیچے قطار شامل کریں', id: 'Sisipkan baris di bawah' },
-  sortable: { ko: '정렬 켜기/끄기', en: 'Toggle sorting', ja: '並べ替えの切り替え', zh: '切换排序', de: 'Sortierung umschalten', fr: 'Activer le tri', es: 'Alternar ordenación', pt: 'Alternar ordenação', ru: 'Переключить сортировку', ar: 'تبديل الفرز', hi: 'क्रमबद्धता टॉगल करें', bn: 'সাজানো চালু/বন্ধ', ur: 'ترتیب آن/آف', id: 'Aktifkan pengurutan' },
-  rowDelete: { ko: '행 삭제', en: 'Delete row', ja: '行を削除', zh: '删除行', de: 'Zeile löschen', fr: 'Supprimer la ligne', es: 'Eliminar fila', pt: 'Excluir linha', ru: 'Удалить строку', ar: 'حذف الصف', hi: 'पंक्ति हटाएँ', bn: 'সারি মুছুন', ur: 'قطار حذف کریں', id: 'Hapus baris' },
-  colLeft: { ko: '왼쪽에 열 추가', en: 'Insert column left', ja: '左に列を挿入', zh: '在左侧插入列', de: 'Spalte links einfügen', fr: 'Insérer une colonne à gauche', es: 'Insertar columna a la izquierda', pt: 'Inserir coluna à esquerda', ru: 'Вставить столбец слева', ar: 'إدراج عمود على اليسار', hi: 'बाएँ स्तंभ जोड़ें', bn: 'বাঁয়ে কলাম যোগ করুন', ur: 'بائیں کالم شامل کریں', id: 'Sisipkan kolom di kiri' },
-  colRight: { ko: '오른쪽에 열 추가', en: 'Insert column right', ja: '右に列を挿入', zh: '在右侧插入列', de: 'Spalte rechts einfügen', fr: 'Insérer une colonne à droite', es: 'Insertar columna a la derecha', pt: 'Inserir coluna à direita', ru: 'Вставить столбец справа', ar: 'إدراج عمود على اليمين', hi: 'दाएँ स्तंभ जोड़ें', bn: 'ডানে কলাম যোগ করুন', ur: 'دائیں کالم شامل کریں', id: 'Sisipkan kolom di kanan' },
-  colDelete: { ko: '열 삭제', en: 'Delete column', ja: '列を削除', zh: '删除列', de: 'Spalte löschen', fr: 'Supprimer la colonne', es: 'Eliminar columna', pt: 'Excluir coluna', ru: 'Удалить столбец', ar: 'حذف العمود', hi: 'स्तंभ हटाएँ', bn: 'কলাম মুছুন', ur: 'کالم حذف کریں', id: 'Hapus kolom' },
-  merge: { ko: '칸 병합', en: 'Merge cells', ja: 'セルを結合', zh: '合并单元格', de: 'Zellen verbinden', fr: 'Fusionner les cellules', es: 'Combinar celdas', pt: 'Mesclar células', ru: 'Объединить ячейки', ar: 'دمج الخلايا', hi: 'सेल मर्ज करें', bn: 'ঘর মার্জ করুন', ur: 'خانے ضم کریں', id: 'Gabungkan sel' },
-  headerRow: { ko: '이 행을 제목으로', en: 'Header this row', ja: 'この行を見出しに', zh: '将此行设为标题行', de: 'Diese Zeile als Kopfzeile', fr: 'Cette ligne en en-tête', es: 'Esta fila como encabezado', pt: 'Esta linha como cabeçalho', ru: 'Сделать строку заголовком', ar: 'جعل هذا الصف رأسًا', hi: 'इस पंक्ति को शीर्षक बनाएँ', bn: 'এই সারিকে শিরোনাম করুন', ur: 'اس قطار کو سرخی بنائیں', id: 'Jadikan baris ini header' },
-  headerColumn: { ko: '이 열을 제목으로', en: 'Header this column', ja: 'この列を見出しに', zh: '将此列设为标题列', de: 'Diese Spalte als Kopfspalte', fr: 'Cette colonne en en-tête', es: 'Esta columna como encabezado', pt: 'Esta coluna como cabeçalho', ru: 'Сделать столбец заголовком', ar: 'جعل هذا العمود رأسًا', hi: 'इस स्तंभ को शीर्षक बनाएँ', bn: 'এই কলামকে শিরোনাম করুন', ur: 'اس کالم کو سرخی بنائیں', id: 'Jadikan kolom ini header' },
+  rowAbove: {
+    ko: '위에 행 추가',
+    en: 'Insert row above',
+    ja: '上に行を挿入',
+    zh: '在上方插入行',
+    de: 'Zeile darüber einfügen',
+    fr: 'Insérer une ligne au-dessus',
+    es: 'Insertar fila arriba',
+    pt: 'Inserir linha acima',
+    ru: 'Вставить строку выше',
+    ar: 'إدراج صف أعلى',
+    hi: 'ऊपर पंक्ति जोड़ें',
+    bn: 'উপরে সারি যোগ করুন',
+    ur: 'اوپر قطار شامل کریں',
+    id: 'Sisipkan baris di atas',
+  },
+  rowBelow: {
+    ko: '아래에 행 추가',
+    en: 'Insert row below',
+    ja: '下に行を挿入',
+    zh: '在下方插入行',
+    de: 'Zeile darunter einfügen',
+    fr: 'Insérer une ligne en dessous',
+    es: 'Insertar fila debajo',
+    pt: 'Inserir linha abaixo',
+    ru: 'Вставить строку ниже',
+    ar: 'إدراج صف أسفل',
+    hi: 'नीचे पंक्ति जोड़ें',
+    bn: 'নিচে সারি যোগ করুন',
+    ur: 'نیچے قطار شامل کریں',
+    id: 'Sisipkan baris di bawah',
+  },
+  sortable: {
+    ko: '정렬 켜기/끄기',
+    en: 'Toggle sorting',
+    ja: '並べ替えの切り替え',
+    zh: '切换排序',
+    de: 'Sortierung umschalten',
+    fr: 'Activer le tri',
+    es: 'Alternar ordenación',
+    pt: 'Alternar ordenação',
+    ru: 'Переключить сортировку',
+    ar: 'تبديل الفرز',
+    hi: 'क्रमबद्धता टॉगल करें',
+    bn: 'সাজানো চালু/বন্ধ',
+    ur: 'ترتیب آن/آف',
+    id: 'Aktifkan pengurutan',
+  },
+  rowDelete: {
+    ko: '행 삭제',
+    en: 'Delete row',
+    ja: '行を削除',
+    zh: '删除行',
+    de: 'Zeile löschen',
+    fr: 'Supprimer la ligne',
+    es: 'Eliminar fila',
+    pt: 'Excluir linha',
+    ru: 'Удалить строку',
+    ar: 'حذف الصف',
+    hi: 'पंक्ति हटाएँ',
+    bn: 'সারি মুছুন',
+    ur: 'قطار حذف کریں',
+    id: 'Hapus baris',
+  },
+  colLeft: {
+    ko: '왼쪽에 열 추가',
+    en: 'Insert column left',
+    ja: '左に列を挿入',
+    zh: '在左侧插入列',
+    de: 'Spalte links einfügen',
+    fr: 'Insérer une colonne à gauche',
+    es: 'Insertar columna a la izquierda',
+    pt: 'Inserir coluna à esquerda',
+    ru: 'Вставить столбец слева',
+    ar: 'إدراج عمود على اليسار',
+    hi: 'बाएँ स्तंभ जोड़ें',
+    bn: 'বাঁয়ে কলাম যোগ করুন',
+    ur: 'بائیں کالم شامل کریں',
+    id: 'Sisipkan kolom di kiri',
+  },
+  colRight: {
+    ko: '오른쪽에 열 추가',
+    en: 'Insert column right',
+    ja: '右に列を挿入',
+    zh: '在右侧插入列',
+    de: 'Spalte rechts einfügen',
+    fr: 'Insérer une colonne à droite',
+    es: 'Insertar columna a la derecha',
+    pt: 'Inserir coluna à direita',
+    ru: 'Вставить столбец справа',
+    ar: 'إدراج عمود على اليمين',
+    hi: 'दाएँ स्तंभ जोड़ें',
+    bn: 'ডানে কলাম যোগ করুন',
+    ur: 'دائیں کالم شامل کریں',
+    id: 'Sisipkan kolom di kanan',
+  },
+  colDelete: {
+    ko: '열 삭제',
+    en: 'Delete column',
+    ja: '列を削除',
+    zh: '删除列',
+    de: 'Spalte löschen',
+    fr: 'Supprimer la colonne',
+    es: 'Eliminar columna',
+    pt: 'Excluir coluna',
+    ru: 'Удалить столбец',
+    ar: 'حذف العمود',
+    hi: 'स्तंभ हटाएँ',
+    bn: 'কলাম মুছুন',
+    ur: 'کالم حذف کریں',
+    id: 'Hapus kolom',
+  },
+  merge: {
+    ko: '칸 병합',
+    en: 'Merge cells',
+    ja: 'セルを結合',
+    zh: '合并单元格',
+    de: 'Zellen verbinden',
+    fr: 'Fusionner les cellules',
+    es: 'Combinar celdas',
+    pt: 'Mesclar células',
+    ru: 'Объединить ячейки',
+    ar: 'دمج الخلايا',
+    hi: 'सेल मर्ज करें',
+    bn: 'ঘর মার্জ করুন',
+    ur: 'خانے ضم کریں',
+    id: 'Gabungkan sel',
+  },
+  headerRow: {
+    ko: '이 행을 제목으로',
+    en: 'Header this row',
+    ja: 'この行を見出しに',
+    zh: '将此行设为标题行',
+    de: 'Diese Zeile als Kopfzeile',
+    fr: 'Cette ligne en en-tête',
+    es: 'Esta fila como encabezado',
+    pt: 'Esta linha como cabeçalho',
+    ru: 'Сделать строку заголовком',
+    ar: 'جعل هذا الصف رأسًا',
+    hi: 'इस पंक्ति को शीर्षक बनाएँ',
+    bn: 'এই সারিকে শিরোনাম করুন',
+    ur: 'اس قطار کو سرخی بنائیں',
+    id: 'Jadikan baris ini header',
+  },
+  headerColumn: {
+    ko: '이 열을 제목으로',
+    en: 'Header this column',
+    ja: 'この列を見出しに',
+    zh: '将此列设为标题列',
+    de: 'Diese Spalte als Kopfspalte',
+    fr: 'Cette colonne en en-tête',
+    es: 'Esta columna como encabezado',
+    pt: 'Esta coluna como cabeçalho',
+    ru: 'Сделать столбец заголовком',
+    ar: 'جعل هذا العمود رأسًا',
+    hi: 'इस स्तंभ को शीर्षक बनाएँ',
+    bn: 'এই কলামকে শিরোনাম করুন',
+    ur: 'اس کالم کو سرخی بنائیں',
+    id: 'Jadikan kolom ini header',
+  },
 };
 
 const TABLE_CSS = `
@@ -867,11 +1042,11 @@ const TABLE_CSS = `
    **이 40rem 은 코어 시트(ui/css.ts)의 판 규칙과 같은 값이어야 한다** — 거기서 판이 버튼을
    놓고 화면 한가운데 90% 로 서는 그 지점이다. 둘이 어긋나면 격자는 5×5 인데 판은 아직 버튼에
    붙어 있는(또는 그 반대의) 어중간한 화면이 생긴다. */
-@media (max-width: 40rem) {
+@media (max-width: ${NARROW_REM}rem) {
   .nabi-grid {
     /* 칸 크기 토큰을 격자 자신에게 다시 매긴다 — 칸(.nabi-cell)이 상속으로 받으므로 코어 시트의
        규칙을 안 건드리고도 커진다. 2.75rem 은 손가락 표적 관례(44px)다. */
-    --nabi-grid-cell: 2.75rem;
+    --nabi-grid-cell: var(--nabi-touch-control-size, 2.75rem);
     gap: .25rem;
     /* !important 인 까닭 하나: 열 수를 툴바가 **인라인 style** 로 박는다. 인라인을 이기는 길은
        이것뿐이고, 여기서 안 이기면 남은 칸 스물다섯이 여덟 열로 흘러 5×5 가 깨진다. */
@@ -933,19 +1108,83 @@ export const tableWing: Wing = {
   context: {
     title: TABLE_NAME,
     controls: [
-      { kind: 'button', name: 'rowAbove', command: 'addRowAbove', svg: TABLE_ICONS.rowAbove, label: TABLE_TEXT.rowAbove },
-      { kind: 'button', name: 'rowBelow', command: 'addRowBelow', svg: TABLE_ICONS.rowBelow, label: TABLE_TEXT.rowBelow },
-      { kind: 'button', name: 'rowDelete', command: 'deleteRow', svg: TABLE_ICONS.rowDelete, label: TABLE_TEXT.rowDelete },
-      { kind: 'button', name: 'colLeft', command: 'addColumnLeft', svg: TABLE_ICONS.colLeft, label: TABLE_TEXT.colLeft },
-      { kind: 'button', name: 'colRight', command: 'addColumnRight', svg: TABLE_ICONS.colRight, label: TABLE_TEXT.colRight },
-      { kind: 'button', name: 'colDelete', command: 'deleteColumn', svg: TABLE_ICONS.colDelete, label: TABLE_TEXT.colDelete },
-      { kind: 'toggle', name: 'merge', command: 'mergeCells', token: 'merged', svg: TABLE_ICONS.merge, label: TABLE_TEXT.merge },
-      { kind: 'toggle', name: 'headerRow', command: 'toggleHeaderRow', token: 'th', svg: TABLE_ICONS.headerRow, label: TABLE_TEXT.headerRow },
-      { kind: 'toggle', name: 'headerColumn', command: 'toggleHeaderColumn', token: 'th', svg: TABLE_ICONS.headerColumn, label: TABLE_TEXT.headerColumn },
+      {
+        kind: 'button',
+        name: 'rowAbove',
+        command: 'addRowAbove',
+        svg: TABLE_ICONS.rowAbove,
+        label: TABLE_TEXT.rowAbove,
+      },
+      {
+        kind: 'button',
+        name: 'rowBelow',
+        command: 'addRowBelow',
+        svg: TABLE_ICONS.rowBelow,
+        label: TABLE_TEXT.rowBelow,
+      },
+      {
+        kind: 'button',
+        name: 'rowDelete',
+        command: 'deleteRow',
+        svg: TABLE_ICONS.rowDelete,
+        label: TABLE_TEXT.rowDelete,
+      },
+      {
+        kind: 'button',
+        name: 'colLeft',
+        command: 'addColumnLeft',
+        svg: TABLE_ICONS.colLeft,
+        label: TABLE_TEXT.colLeft,
+      },
+      {
+        kind: 'button',
+        name: 'colRight',
+        command: 'addColumnRight',
+        svg: TABLE_ICONS.colRight,
+        label: TABLE_TEXT.colRight,
+      },
+      {
+        kind: 'button',
+        name: 'colDelete',
+        command: 'deleteColumn',
+        svg: TABLE_ICONS.colDelete,
+        label: TABLE_TEXT.colDelete,
+      },
+      {
+        kind: 'toggle',
+        name: 'merge',
+        command: 'mergeCells',
+        token: 'merged',
+        svg: TABLE_ICONS.merge,
+        label: TABLE_TEXT.merge,
+      },
+      {
+        kind: 'toggle',
+        name: 'headerRow',
+        command: 'toggleHeaderRow',
+        token: 'th',
+        svg: TABLE_ICONS.headerRow,
+        label: TABLE_TEXT.headerRow,
+      },
+      {
+        kind: 'toggle',
+        name: 'headerColumn',
+        command: 'toggleHeaderColumn',
+        token: 'th',
+        svg: TABLE_ICONS.headerColumn,
+        label: TABLE_TEXT.headerColumn,
+      },
       // 정렬도 **토글**이다 — 표에 상태가 둘(켜짐·꺼짐)뿐이라 켜 놓은 것이 화면에 보여야 한다.
       // 이 토큰('sort')은 칸이 아니라 **표**가 답한다. 상황 줄이 조상 줄기의 토큰을 합쳐 읽으므로
       // (ui/press 의 `stackValue`) 칸 안에 선 단추가 표의 상태로 눌린다.
-      { kind: 'toggle', name: 'sortable', command: 'toggleSortable', token: SORTABLE, svg: TABLE_ICONS.sortable, label: TABLE_TEXT.sortable },
+      {
+        kind: 'toggle',
+        name: 'sortable',
+        command: 'toggleSortable',
+        token: SORTABLE,
+        svg: TABLE_ICONS.sortable,
+        label: TABLE_TEXT.sortable,
+      },
       // **표 삭제 단추는 여기 없다** (084 ④). 줄 맨 끝에 두어도 손이 미끄러져 닿는 자리였고,
       // 표를 통째로 지우는 길은 이미 블록 선택 + 삭제로 나 있다 — 같은 일을 하는 문이 둘일
       // 필요가 없다. 커맨드(`deleteTable`) 는 남는다: 호스트가 제 화면에서 부를 길이다.
@@ -953,3 +1192,5 @@ export const tableWing: Wing = {
   },
   styles: TABLE_CSS,
 };
+
+$markBuiltinAttrOwner(tableWing, ['table', 'tr', 'td']);

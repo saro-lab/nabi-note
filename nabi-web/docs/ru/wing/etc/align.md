@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Выравнивание
+description: Меняет горизонтальное выравнивание абзацев и объектных блоков.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Выравнивание
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Выравнивает текущий абзац и абзацы в выделенном диапазоне по левому краю, по центру или по правому краю. Объекты внутри абзаца, например изображения, видео и таблицы, также выравниваются по абзацу, который их содержит.
 
-[Open the Korean canonical page](/ko/guide/features)
+Выравнивание сохраняется как свойство абзаца, а не как форматирование символов. Блоки кода исключены из выравнивания, поскольку их отступ имеет собственный смысл.
 
-</div>
+<WingDemo path="/wing/etc/align" />
+
+```ts
+const selected = wings().use('align').build()
+```

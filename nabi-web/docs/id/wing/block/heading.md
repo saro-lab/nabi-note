@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Judul
+description: Mengubah paragraf menjadi judul dan menentukan tingkatnya.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Judul
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Mengubah paragraf menjadi judul dan menentukan tingkatnya. Aktifkan judul melalui toolbar lalu pilih dari H1 hingga H6, atau pada paragraf kosong, ketik `#` hingga `######` lalu tekan Spasi.
 
-[Open the Korean canonical page](/ko/guide/features)
+Judul bukan jenis blok terpisah, melainkan atribut yang disimpan pada paragraf. Menekan judul sekali lagi mengembalikannya menjadi paragraf biasa, sehingga Anda dapat mengubah tingkatnya sambil mempertahankan struktur isi.
 
-</div>
+<WingDemo path="/wing/block/heading" />
+
+```ts
+const selected = wings().use('h').build()
+```

@@ -11,7 +11,12 @@ export interface CharRange {
 }
 
 const NAMED: Readonly<Record<string, string>> = {
-  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
 };
 
 // 텍스트 조각 맨 앞의 토큰 하나 — 엔티티 한 덩이 또는 코드포인트 하나.
@@ -38,11 +43,7 @@ function tokenAt(source: string, i: number): { readonly src: string; readonly te
 }
 
 // 태그·텍스트 구간을 차례로 부른다. 텍스트는 토큰(코드포인트) 단위로 온다.
-function walk(
-  html: string,
-  onTag: (src: string) => void,
-  onToken: (src: string, text: string) => void,
-): void {
+function walk(html: string, onTag: (src: string) => void, onToken: (src: string, text: string) => void): void {
   let i = 0;
   while (i < html.length) {
     if (html[i] === '<') {
@@ -51,7 +52,11 @@ function walk(
         onTag(html.slice(i));
         return;
       }
-      onTag(html.slice(i, end + 1));
+      const tag = html.slice(i, end + 1);
+      // A real line break is part of the compared text, unlike markup tags.
+      // Keep its source intact so painting can wrap it without changing output.
+      if (/^<br(?:\s[^>]*)?\s*\/?\s*>$/i.test(tag)) onToken(tag, '\n');
+      else onTag(tag);
       i = end + 1;
       continue;
     }
@@ -61,12 +66,17 @@ function walk(
   }
 }
 
-// 조립 HTML 의 순수 글자 내용 — 브라우저 textContent 와 같은 값이 나온다(우리 조립 한정).
+// Nabi semantic text extraction from assembled HTML; unlike DOM textContent,
+// this deliberately represents a real br as a newline token.
 export function htmlText(html: string): string {
   let out = '';
-  walk(html, () => {}, (_src, text) => {
-    out += text;
-  });
+  walk(
+    html,
+    () => {},
+    (_src, text) => {
+      out += text;
+    },
+  );
   return out;
 }
 

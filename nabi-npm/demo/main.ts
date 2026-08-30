@@ -17,22 +17,32 @@ const el = <T extends HTMLElement>(id: string): T => {
 
 // --- 언어 -------------------------------------------------------------------------------------
 // 패키지는 "무슨 언어를 아는가" 를 안 내보낸다 — 사전이 wing 마다 흩어져 있어서다. 그래서 쓸 말은
-// 호스트가 고른다. 이 데모는 열넷을 다 보라고 있는 자리다.
+// 호스트가 고른다. 이 데모는 지원 언어를 모두 보라고 있는 자리다.
 const LOCALES: readonly (readonly [string, string])[] = [
-  ['ko', '한국어'],
   ['en', 'English'],
-  ['ja', '日本語'],
   ['zh', '中文'],
-  ['de', 'Deutsch'],
-  ['fr', 'Français'],
+  ['hi', 'हिन्दी'],
   ['es', 'Español'],
+  ['ar', 'العربية'],
+  ['fr', 'Français'],
+  ['bn', 'বাংলা'],
   ['pt', 'Português'],
   ['ru', 'Русский'],
-  ['ar', 'العربية'],
-  ['hi', 'हिन्दी'],
-  ['bn', 'বাংলা'],
-  ['ur', 'اردو'],
   ['id', 'Indonesia'],
+  ['ur', 'اردو'],
+  ['de', 'Deutsch'],
+  ['ja', '日本語'],
+  ['fa', 'فارسی'],
+  ['mr', 'मराठी'],
+  ['vi', 'Tiếng Việt'],
+  ['te', 'తెలుగు'],
+  ['ha', 'Hausa'],
+  ['tr', 'Türkçe'],
+  ['sw', 'Kiswahili'],
+  ['ta', 'தமிழ்'],
+  ['ko', '한국어'],
+  ['th', 'ไทย'],
+  ['it', 'Italiano'],
 ];
 
 // 화면이 뜰 때 **한 번만** 섞는다 — 다시 그릴 때마다 섞으면 고르러 가는 손 밑에서 칩이 늘어선다.
@@ -235,15 +245,10 @@ el('wings-none').addEventListener('click', () => {
 });
 
 // --- toast ------------------------------------------------------------------------------------
-// 편집기의 알리는 문($toast)을 그대로 두드린다 — 진짜 부르는 쪽은 wing·업로드·Ask.message 이고
-// 이 단추 셋은 그 말이 서는 모습을 보려고 있는 데모의 것이다. 시간이 다른 셋을 이어 누르면
-// 남은 시간이 많은 것이 위로 가는 차례가 보이고, 같은 단추를 넷 누르면 상한(3)이 아래부터 걷는다.
-
-el('toast-info').addEventListener('click', () => editor?.nabi.$toast('info', 'Saved.'));
-el('toast-warn').addEventListener('click', () =>
-  editor?.nabi.$toast('warn', 'Line breaks survive:\nthis is the second line.', 3000),
-);
-el('toast-error').addEventListener('click', () => editor?.nabi.$toast('error', 'Upload failed — try again.', 5000));
+// 이 단추 셋은 데모 페이지 자신의 알림 견본이다. 편집기 내부 host sink는 공개 Nabi API가 아니다.
+el('toast-info').addEventListener('click', () => window.alert('Saved.'));
+el('toast-warn').addEventListener('click', () => window.alert('Line breaks survive:\nthis is the second line.'));
+el('toast-error').addEventListener('click', () => window.alert('Upload failed - try again.'));
 
 // --- 테마 -------------------------------------------------------------------------------------
 // 편집기 API 가 아니다 — `html` 의 `dark`/`light` 클래스로 갈린다. 편집기는 아무것도 모르고 시트가

@@ -11,15 +11,10 @@
 // 목록을 띄우는 대신 toast 한 마디로 왜 안 되는지 말한다 (084 ⑤) — 없는 것과 못 여는 것은
 // 다른 이야기이고, "기록이 없다" 로 얼버무리면 사람이 제 기록을 잃은 줄 안다.
 import type { HistoryMount } from '../surface/index.js';
-import {
-  exactTime,
-  historyView,
-  showsCreated,
-  type HistoryRecord,
-} from '../wings/local-history/local-history.js';
-import { makeTranslator, type Translator } from '../locale/index.js';
+import { exactTime, historyView, showsCreated, type HistoryRecord } from '../wings/local-history/local-history.js';
+import { localeDirection, makeTranslator, type Translator } from '../locale/index.js';
 import { make } from './parts/dom.js';
-import { openScrim } from './parts/scrim.js';
+import { openScrim, type Scrim } from './parts/scrim.js';
 import type { Overlay } from './overlay.js';
 
 const CLOSE_ICON = '✕';
@@ -73,7 +68,11 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
     return null;
   }
 
-  const card = make(owner, 'div', 'nabi-card nabi-history', { tabindex: '-1' });
+  const card = make(owner, 'div', 'nabi-card nabi-history', {
+    tabindex: '-1',
+    'aria-label': t.t('history.title'),
+    dir: localeDirection(t.locale),
+  });
   const head = make(owner, 'div', 'nabi-history-head');
   const title = make(owner, 'div', 'nabi-history-title');
   title.textContent = t.t('history.title');
@@ -82,8 +81,15 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
   const list = make(owner, 'div', 'nabi-history-list');
   card.append(head, list);
 
-  const scrim = openScrim(owner, { card, restore: options.surface });
-  const close = (): void => scrim.close();
+  let disposed = false;
+  let scrim: Scrim | null = null;
+  let preview: Scrim | null = null;
+  let previewGeneration = 0;
+  const close = (): void => scrim?.close();
+  const closePreview = (): void => {
+    const active = preview;
+    if (active) active.close();
+  };
 
   // 모서리에 뜨는 단추 둘 — 전체 지우기와 닫기. 머리줄에 안 끼운다(미리보기 카드와 같은 자리).
   const corner = make(owner, 'div', 'nabi-history-corner');
@@ -107,7 +113,7 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
 
   // 되돌리기가 못 닿는 곳이라 먼저 묻는다 — 되돌리기는 **문서**의 것이고, 기록은 저장소에 산다.
   //
-  // 묻는 상자는 **인스턴스의 것**이다(`nabi.$ask`, 부속이 물려준다). 브라우저의 `confirm` 을
+  // 묻는 상자는 **인스턴스의 것**이다(`hostOf(nabi).ask`, 부속이 물려준다). 브라우저의 `confirm` 을
   // 부르지 않는다: 제 대화상자를 가진 페이지에 회색 상자가 끼어들면 안 되고, 플러그인
   // (인텔리제이·VS Code)에는 그것이 아예 없다. 아무도 안 물어 주면 답은 "아니오" 라
   // 기록은 그대로 남는다(silentAsk) — 말없이 지우는 것보다 안 지우는 쪽이 낫다.
@@ -115,12 +121,13 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
   // 답을 기다리는 동안 단추를 잠근다 — 두 번 눌러 두 번 묻는 일이 없게.
   let asking = false;
   const wipeIf = async (key: string, run: () => boolean): Promise<void> => {
-    if (asking) return;
+    if (disposed || asking) return;
     asking = true;
     try {
       if (!(await options.history.ask.confirm(t.t(key)))) return;
+      if (disposed) return;
       run();
-      draw();
+      if (!disposed) draw();
     } finally {
       asking = false;
     }
@@ -129,6 +136,7 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
   // --- 목록 ------------------------------------------------------------------------------------
 
   const draw = (): void => {
+    if (disposed) return;
     list.replaceChildren();
     const drawn = options.history.list();
     // 판이 선 시점에 저장소는 살아 있음이 이미 확인됐다(막힌 자리는 위에서 되돌아갔다) — 그래서
@@ -174,6 +182,7 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
       open.append(summary, when);
       open.disabled = mine;
       open.addEventListener('click', () => {
+        if (disposed) return;
         options.history.restore(record);
         close();
       });
@@ -186,10 +195,29 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
       }) as HTMLButtonElement;
       view.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${VIEW_ICON}</svg>`;
       view.addEventListener('click', () => {
-        const body = make(owner, 'div', 'nabi-card nabi-content nabi-history-preview');
+        if (disposed) return;
+        const generation = ++previewGeneration;
+        closePreview();
+        const body = make(owner, 'div', 'nabi-card nabi-content nabi-history-preview', {
+          'aria-label': t.t('preview'),
+          dir: localeDirection(t.locale),
+        });
         body.innerHTML = options.render(record);
+        if (disposed || generation !== previewGeneration || !scrim?.root.isConnected) return;
         // 이 판보다 **위**에 선다 — 어느 줄의 미리보기든 목록을 덮는다.
-        openScrim(owner, { card: body, restore: card });
+        let opened: Scrim | null = null;
+        opened = openScrim(owner, {
+          card: body,
+          restore: card,
+          onClose: () => {
+            if (preview === opened) preview = null;
+          },
+        });
+        if (disposed || generation !== previewGeneration || !scrim?.root.isConnected) {
+          opened.close();
+          return;
+        }
+        preview = opened;
       });
 
       // 그 줄만 지우기.
@@ -200,6 +228,7 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
       }) as HTMLButtonElement;
       drop.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${WIPE_ICON}</svg>`;
       drop.addEventListener('click', () => {
+        if (disposed) return;
         void wipeIf('history.removeAsk', () => options.history.remove(record.sessionId));
       });
 
@@ -209,10 +238,34 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
   };
 
   wipe.addEventListener('click', () => {
+    if (disposed) return;
     void wipeIf('history.clearAsk', () => options.history.clear());
   });
 
   draw();
-  card.focus();
-  return { card, close };
+  try {
+    scrim = openScrim(owner, {
+      card,
+      restore: options.surface,
+      onClose: () => {
+        disposed = true;
+        previewGeneration += 1;
+        try {
+          closePreview();
+        } catch {}
+        preview = null;
+      },
+    });
+    card.focus();
+    return { card, close };
+  } catch (error) {
+    disposed = true;
+    try {
+      scrim?.close();
+    } catch {}
+    try {
+      closePreview();
+    } catch {}
+    throw error;
+  }
 }

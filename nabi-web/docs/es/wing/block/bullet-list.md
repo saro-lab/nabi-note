@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Lista con viñetas
+description: Enumera varios elementos sin numerarlos.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Lista con viñetas
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Convierte varios párrafos en una lista sin orden. Tab y Shift+Tab cambian la profundidad del elemento, y Enter crea el siguiente elemento. En un párrafo vacío, escribir `-` y pulsar Espacio también crea una lista con viñetas.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/block/bullet-list" />
 
-</div>
+```ts
+const selected = wings().use('ul').build()
+```

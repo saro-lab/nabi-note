@@ -41,7 +41,6 @@ export default defineConfig([
     dts: false,
     sourcemap: true,
     splitting: true,
-    treeshake: true,
     clean: false,
   },
   {
@@ -54,7 +53,6 @@ export default defineConfig([
     dts: false,
     sourcemap: true,
     splitting: false,
-    treeshake: true,
     minify: true,
     clean: false,
     // 기본 iife 확장자는 `.global.js` 다 — 엔트리 이름 그대로 `nabi-note.min.js` 로 낸다.

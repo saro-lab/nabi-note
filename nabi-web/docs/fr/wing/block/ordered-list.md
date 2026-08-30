@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Liste ordonnée
+description: Transformez les éléments ordonnés en une liste numérotée.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Liste ordonnée
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Transformez les éléments dont l'ordre est important en une liste numérotée. Saisissez un chiffre suivi d'un point, comme `1.`, puis appuyez sur Espace dans un paragraphe vide, ou basculez depuis la barre d'outils pour convertir les paragraphes sélectionnés.
 
-[Open the Korean canonical page](/ko/guide/features)
+Les chiffres affichés sont calculés à partir de la position des éléments, donc ils continuent automatiquement lorsque vous ajoutez ou indentez des éléments. La sauvegarde d'un numéro de départ personnalisé et le comptage à partir de ce nombre ne sont pas fournis.
 
-</div>
+<WingDemo path="/wing/block/ordered-list" />
+
+```ts
+const selected = wings().use('ol').build()
+```

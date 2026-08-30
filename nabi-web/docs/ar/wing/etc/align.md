@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: المحاذاة
+description: تغيّر المحاذاة الأفقية للفقرات وكتل العناصر.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# المحاذاة
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+تحاذي الفقرة الحالية والفقرات الواقعة ضمن التحديد إلى اليسار أو الوسط أو اليمين. وتُحاذى العناصر الموجودة داخل الفقرة، مثل الصور ومقاطع الفيديو والجداول، بحسب الفقرة التي تحتويها.
 
-[Open the Korean canonical page](/ko/guide/features)
+تُحفظ المحاذاة كخاصية للفقرة لا كتنسيق للحروف. وتُستثنى كتل الشفرة لأن للمسافة البادئة فيها معنى بذاتها.
 
-</div>
+<WingDemo path="/wing/etc/align" />
+
+```ts
+const selected = wings().use('align').build()
+```

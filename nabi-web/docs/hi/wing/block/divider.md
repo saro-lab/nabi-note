@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: विभाजक
+description: दस्तावेज़ के प्रवाह को बाँटने वाली क्षैतिज रेखा डालता है।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# विभाजक
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+दस्तावेज़ के प्रवाह को बाँटने वाली क्षैतिज रेखा है। खाली अनुच्छेद में तीन या अधिक hyphen लिखकर Enter दबाएँ या टूलबार से डालें।
 
-[Open the Korean canonical page](/ko/guide/features)
+विभाजक बिना अक्षरों वाला स्वतंत्र block है, इसलिए इसमें heading या रंग जैसा formatting नहीं रहता। इसका उपयोग केवल आगे और पीछे के अनुच्छेदों को अलग करने के लिए करें।
 
-</div>
+<WingDemo path="/wing/block/divider" />
+
+```ts
+const selected = wings().use('hr').build()
+```

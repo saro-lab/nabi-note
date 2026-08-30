@@ -1,14 +1,39 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Cor do texto
+description: Aplica um nome de cor permitido ao texto selecionado.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Cor do texto
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Aplique um nome de cor ao texto selecionado. O valor salvo não é uma string de cor CSS; é um nome permitido, e a cor real é definida pela variável CSS `--nabi-tc-<name>`. Assim o mesmo documento continua legível em temas claros e escuros.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/text-color" />
 
-</div>
+```ts
+const selected = wings().use('tc', {
+  values: ['green', 'coral', 'blue'],
+}).build()
+```
+
+Se `values` for omitido, a paleta padrão é `green`, `coral`, `violet`, `amber` e `blue`. Se você reduzir a lista, outras cores são rejeitadas por comandos e ao carregar documentos.
+
+## Estilos CSS
+
+O documento guarda apenas nomes de cor. Defina as cores reais do editor e da vista publicada com variáveis CSS.
+
+```css
+.nabi-content { --nabi-tc-blue: #2563eb; }
+```
+
+Verifique o contraste junto com a cor de fundo. Em um tema escuro, o mesmo nome de cor pode receber outro valor.
+
+```css
+.dark .article-body {
+  --nabi-tc-blue: #93c5fd;
+  --nabi-tc-green: #86efac;
+}
+```

@@ -29,7 +29,7 @@ export interface NabiFileBody {
 //
 // 여기 손으로 적는 까닭: 코어는 `package.json` 을 안 읽는다(번들러마다 읽는 법이 다르고, 서버에서
 // 도 돌아야 한다). 판을 올릴 때 이 줄도 함께 올린다(`scripts/sync-version.mjs` 가 맞춘다).
-export const NABI_VERSION = '0.8.5';
+export const NABI_VERSION = '0.9.1';
 export const NABI_FILE_VERSION = NABI_VERSION.split('.').slice(0, 2).join('.');
 
 export function writeNabiFile(body: unknown): string {
@@ -76,13 +76,12 @@ export interface NabiFileText {
   readonly name: string;
   readonly text: string;
   // 이 글자가 어떤 형식인가 — 필터가 말한다(`.nabi` 는 application/json, `.md` 는 text/markdown).
-  // 안 오면 `.nabi` 로 본다: 옛 저장소는 이 칸을 모르고 우리 파일만 받았다.
   readonly mime?: string;
 }
 
 export interface FileStore {
-  save(file: NabiFileText): void | Promise<void>;
-  // **이름까지 답한다** — 확장자가 어느 필터로 읽을지를 정하므로, 이름 없이는 `.html`·`.md` 를
-  // 못 연다. 옛 모양(글자만)도 계속 받는다: 그때는 `.nabi` 로 본다.
-  open(): Promise<string | NabiFileText | null>;
+  save(file: NabiFileText): void | PromiseLike<void>;
+  // **이름까지 답한다** — 확장자가 어느 필터로 읽을지를 정한다. 확장자가 없거나 모르는 이름은
+  // plain text로 읽는다.
+  open(signal?: AbortSignal): PromiseLike<NabiFileText | null>;
 }

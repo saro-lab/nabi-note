@@ -4,15 +4,14 @@
 // 있으면 데모는 열 때마다 들여오기(파싱·화이트리스트·정리)를 한 번 더 돌아야 하고, 그 문을
 // 거치기 전까지는 무엇이 문서인지도 알 수 없다. 굳혀 두면 데모가 하는 일은 넣는 것뿐이다.
 //
-// 사람이 고치는 자리는 여기가 아니라 **로케일 사전**(`../locales/<lang>.ts` 의 `demo_html`·
-// `demo_html_*`)이고, `npm run build:trees` 가 그것을 `../trees/<lang>.ts` 로 굳힌다.
-// 예문은 번역문이라 다른 글과 함께 사전에 산다 — 트리는 거기서 뽑은 생성물일 뿐이다.
+// 한국어는 `../trees/ko.ts`의 NABI TREE를 사람이 직접 고친다. 다른 언어는 아직 로케일 사전의
+// `demo_html`·`demo_html_*`을 원본으로 두고 `npm run build:trees`가 트리로 굳힌다. 한국어 문서와
+// 영어 문서를 확정한 뒤 나머지 번역도 직접 트리 원본으로 차례로 옮긴다.
 //
 // 로케일마다 한 벌이라 **읽는 쪽 언어의 한 벌만** 늦게 부른다 — 데모 자체가 그렇게 온다
 // (`onMounted` 안 동적 import, SSR 밖).
 
-// 예문 이름표 — 사전 키·트리·페이지 짝이 전부 이 목록을 따른다. 사전 키는 `demo_html_<이름>`
-// 이고 `main` 만 `demo_html` 이다(홈의 큰 예문이라 이름이 먼저 있었다).
+// 예문 이름표 — 트리·페이지 짝과 아직 HTML 원본을 쓰는 로케일의 사전 키가 이 목록을 따른다.
 export const SAMPLE_KEYS = [
   'main',
   'small',
@@ -112,6 +111,16 @@ const TREES: Readonly<Record<string, () => Promise<{ trees: SampleTrees }>>> = {
   bn: () => import('../trees/bn.ts'),
   ur: () => import('../trees/ur.ts'),
   id: () => import('../trees/id.ts'),
+  fa: () => import('../trees/fa.ts'),
+  mr: () => import('../trees/mr.ts'),
+  vi: () => import('../trees/vi.ts'),
+  te: () => import('../trees/te.ts'),
+  ha: () => import('../trees/ha.ts'),
+  tr: () => import('../trees/tr.ts'),
+  sw: () => import('../trees/sw.ts'),
+  ta: () => import('../trees/ta.ts'),
+  th: () => import('../trees/th.ts'),
+  it: () => import('../trees/it.ts'),
 }
 
 // 그 언어의 예문 한 벌. 모르는 언어는 영어로 떨어진다 — 사전의 폴백 규칙과 같은 결이다.

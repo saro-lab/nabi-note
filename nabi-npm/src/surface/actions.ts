@@ -15,7 +15,7 @@ import {
   stepBackward,
   stepForward,
 } from '../caret/index.js';
-import type { Nabi } from '../editor/index.js';
+import { hostOf, type Nabi } from '../editor/index.js';
 import { routeKey, type KeyIntent, type Registry } from '../wing/index.js';
 import { tryInputRule } from './autoformat.js';
 import { canEscape, escapeVesselOp, vesselAt } from './vessel.js';
@@ -69,7 +69,7 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
   let escapeTaps = 0;
 
   // 연타를 받아도 되는 자리인가 — 위에 뜬 것도 없고 문서가 잠기지도 않았다.
-  const plain = (): boolean => nabi.$lockedBy() === null && (options.plain?.() ?? true);
+  const plain = (): boolean => hostOf(nabi).lockedBy() === null && (options.plain?.() ?? true);
 
   // 소유자 wing 에게 묻는다 — null 이면 pass. 답한 결과가 무변화면 문의 침묵으로 false 가
   // 되어 코어 규칙으로 떨어진다(wing 은 "내 일 아님"을 null 로만 말한다는 계약의 다른 반쪽).
@@ -80,25 +80,34 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
   // 한 답**이 "임자가 없다" 로 읽혔다 — 목록 첫 항목의 탭이 그래서 코어의 스페이스 넷까지
   // 흘러갔다. 임자가 `null` 이 아닌 것을 답했으면 거기서 끝이다.
   const route = (intent: KeyIntent): boolean => {
-    const outcome = routeKey(intent, nabi.$doc(), nabi.getSelection(), nabi.$env, registry);
+    const outcome = routeKey(intent, hostOf(nabi).doc(), nabi.getSelection(), hostOf(nabi).env, registry);
     if (outcome === null) return false;
-    nabi.$applyRaw(() => outcome, `key:${intent.key}`);
+    hostOf(nabi).applyRaw(() => outcome, `key:${intent.key}`);
     return true;
   };
 
   const enter = (): boolean => {
     const t = now();
     const quick = t - lastEnterAt <= doubleMs;
-    lastEnterAt = t;
     // 엔터 트리거 오토포맷(구분선 ---·코드 펜스)이 먼저 — 아무도 안 잡을 때만 분할로 간다.
-    if (tryInputRule(nabi, registry, 'enter')) return true;
-    if (route({ key: 'enter' })) return true;
+    if (tryInputRule(nabi, registry, 'enter')) {
+      lastEnterAt = 0;
+      return true;
+    }
+    if (route({ key: 'enter' })) {
+      lastEnterAt = 0;
+      return true;
+    }
+    lastEnterAt = t;
     if (quick) {
       const sel = nabi.getSelection();
       if (isCollapsed(sel)) {
-        const vessel = vesselAt(nabi.$doc(), sel.focus, registry);
-        if (vessel && canEscape(nabi.$doc(), sel.focus, vessel, nabi.$env)) {
-          if (nabi.$applyRaw(escapeVesselOp(vessel), 'escapeVessel')) return true;
+        const vessel = vesselAt(hostOf(nabi).doc(), sel.focus, registry);
+        if (vessel && canEscape(hostOf(nabi).doc(), sel.focus, vessel, hostOf(nabi).env)) {
+          if (hostOf(nabi).applyRaw(escapeVesselOp(vessel), 'escapeVessel')) {
+            lastEnterAt = 0;
+            return true;
+          }
         }
       }
     }
@@ -107,11 +116,12 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
   };
 
   const arrow = (dir: ArrowDir): boolean => {
+    lastEnterAt = 0;
     if (route({ key: 'arrow', dir })) return true;
     const sel = nabi.getSelection();
     if (!isCollapsed(sel)) return false; // 범위 걸음(Shift 등)은 브라우저의 것
-    const doc = nabi.$doc();
-    const env = nabi.$env;
+    const doc = hostOf(nabi).doc();
+    const env = hostOf(nabi).env;
     const holder = nodeAt(doc, sel.focus.path);
     if (!holder) return false;
     const wrapped = isWrapper(holder, env);
@@ -145,8 +155,8 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
   const aimVessel = (): boolean => {
     const sel = nabi.getSelection();
     if (!isCollapsed(sel) || sel.focus.offset !== 0) return false;
-    const doc = nabi.$doc();
-    const env = nabi.$env;
+    const doc = hostOf(nabi).doc();
+    const env = hostOf(nabi).env;
     const vessel = vesselAt(doc, sel.focus, registry);
     if (!vessel) return false;
 
@@ -169,11 +179,13 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
   return {
     enter,
     shiftEnter() {
+      lastEnterAt = 0;
       if (route({ key: 'enter' })) return true; // 그릇·리스트가 Shift+Enter 도 자기 규칙으로 받을 수 있다
       nabi.applyCommand('insertLine');
       return true;
     },
     tab(shift) {
+      lastEnterAt = 0;
       if (route({ key: shift ? 'shiftTab' : 'tab' })) return true;
       // 아무도 안 가져간 Tab = 스페이스 넷 — **다만 캐럿이 접혀 있을 때만.**
       //
@@ -186,6 +198,7 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
       return true; // Tab 이 포커스를 편집기 밖으로 내보내지 않는다
     },
     backspace() {
+      lastEnterAt = 0;
       // **wing 이 먼저다.** 제 규칙을 가진 그릇에서는 그 규칙이 겨누기보다 앞선다 — 목록의 첫
       // 항목 첫머리에서 백스페이스는 "목록 전체를 고른다" 가 아니라 **그 항목의 표식을 벗긴다**
       // 이고, 그것이 목록에서 오래된 답이다. 겨누기가 먼저 서면 글이 든 목록이 통째로 골라져
@@ -201,14 +214,16 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
       return true; // 삭제 표(§2.5)는 전부 우리 규칙이다
     },
     deleteForward() {
+      lastEnterAt = 0;
       if (route({ key: 'delete' })) return true;
       nabi.applyCommand('deleteForward');
       return true;
     },
     arrow,
     selectAll() {
-      const doc = nabi.$doc();
-      const env = nabi.$env;
+      lastEnterAt = 0;
+      const doc = hostOf(nabi).doc();
+      const env = hostOf(nabi).env;
       const start = docStart(doc, env);
       const end = docEnd(doc, env);
       if (!start || !end) return false;
@@ -216,6 +231,7 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
       return true;
     },
     escapeKey(key, repeat) {
+      lastEnterAt = 0;
       // --- 연타 셈 (맨 앞에 선다 — **앞 갈래의 소비와 무관하게 센다**) ------------------------
       //
       // 세는 것은 이 키 자신뿐이다: 사이에 다른 키가 오면 끊기고(글자를 치는 손은 연타가 아니다),
@@ -238,24 +254,24 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
       // 갈래 셋 — 예약 걷기·마크 탈출. 몸은 그대로고, 답하는 것은 **키를 삼켰는가** 하나다.
       const escapeStages = (): boolean => {
         // 양수 예약이 서 있으면 Escape 는 그것부터 걷는다 — 가장 최근의 명시 상태다 (②).
-        if (key === 'Escape' && nabi.$armed.peek().plus.length > 0) {
-          nabi.$armed.clear();
+        if (key === 'Escape' && hostOf(nabi).armed.peek().plus.length > 0) {
+          hostOf(nabi).armed.clear();
           return true;
         }
         const sel = nabi.getSelection();
         const declared = registry.escapes.get(key);
         // 선언된 탈출 키 — 캐럿이 그 마크 안일 때만 음수 예약이 선다 (④).
         if (declared && isCollapsed(sel)) {
-          const marks = marksAt(nabi.$doc(), sel.focus, nabi.$env);
+          const marks = marksAt(hostOf(nabi).doc(), sel.focus, hostOf(nabi).env);
           const hit = declared.filter((w) => marks.some((mark) => mark.w === w));
           if (hit.length > 0) {
-            for (const w of hit) nabi.$armed.escape(w);
+            for (const w of hit) hostOf(nabi).armed.escape(w);
             return true;
           }
         }
         // 남은 것(음수 예약)도 Escape 로 걷는다 — 걷은 것이 있을 때만 소비한다.
-        if (key === 'Escape' && !nabi.$armed.isEmpty()) {
-          nabi.$armed.clear();
+        if (key === 'Escape' && !hostOf(nabi).armed.isEmpty()) {
+          hostOf(nabi).armed.clear();
           return true;
         }
         return false;
@@ -271,17 +287,19 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
       return consumed;
     },
     breakDouble() {
+      lastEnterAt = 0;
       escapeTaps = 0;
       lastEscapeAt = 0;
     },
     afterSpace() {
+      lastEnterAt = 0;
       return tryInputRule(nabi, registry, 'space');
     },
     dropcapBelow() {
       const sel = nabi.getSelection();
       if (!isCollapsed(sel)) return null;
-      const doc = nabi.$doc();
-      const env = nabi.$env;
+      const doc = hostOf(nabi).doc();
+      const env = hostOf(nabi).env;
       const all = holders(doc, env);
       const at = all.findIndex(
         (h) => h.path.length === sel.focus.path.length && h.path.every((v, i) => v === sel.focus.path[i]),

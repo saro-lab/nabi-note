@@ -1,14 +1,39 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Цвет текста
+description: Примените разрешённое имя цвета к выбранному тексту.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Цвет текста
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Примените разрешённое имя цвета к выбранному тексту. Сохранённое значение не является CSS-строкой цвета; это разрешённое имя, а фактический цвет задаётся CSS-переменной `--nabi-tc-<name>`. Благодаря этому один документ остаётся читаемым в светлой и тёмной темах.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/text-color" />
 
-</div>
+```ts
+const selected = wings().use('tc', {
+  values: ['green', 'coral', 'blue'],
+}).build()
+```
+
+Если `values` не указан, используется палитра по умолчанию: `green`, `coral`, `violet`, `amber` и `blue`. Если сократить список, другие цвета отклоняются командами и при загрузке документов.
+
+## CSS-стили
+
+Документ хранит только имена цветов. Задавайте реальные цвета редактора и опубликованной версии через CSS-переменные.
+
+```css
+.nabi-content { --nabi-tc-blue: #2563eb; }
+```
+
+Проверяйте контраст вместе с цветом фона. В тёмной теме то же имя цвета может получить другое значение.
+
+```css
+.dark .article-body {
+  --nabi-tc-blue: #93c5fd;
+  --nabi-tc-green: #86efac;
+}
+```

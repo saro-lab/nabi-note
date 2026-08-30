@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Encabezado
+description: Convierte un párrafo en encabezado y elige su nivel.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Encabezado
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Convierte el párrafo actual en un encabezado de nivel 1 a 6. Escribir `#` y pulsar Espacio en un párrafo vacío también lo convierte en encabezado. El nivel se guarda como atributo de párrafo, no como formato de texto.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/block/heading" />
 
-</div>
+```ts
+const selected = wings().use('h').build()
+```

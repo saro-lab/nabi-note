@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Aufzählungsliste
+description: Listen Sie mehrere Elemente ohne Nummerierung auf.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Aufzählungsliste
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Eine Aufzählungsliste stellt mehrere Elemente ohne Reihenfolge dar. Geben Sie `-` gefolgt von einem Leerzeichen in einem leeren Absatz ein oder wechseln Sie dazu über die Symbolleiste. Ausgewählte Absätze können auch gleichzeitig zu einer Liste gruppiert werden.
 
-[Open the Korean canonical page](/ko/guide/features)
+Innerhalb einer Liste rückt Tab eine Ebene ein und Shift+Tab eine Ebene aus. Enter erstellt das nächste Element, und das erneute Drücken von Enter bei einem leeren Element beendet die Liste.
 
-</div>
+<WingDemo path="/wing/block/bullet-list" />
+
+```ts
+const selected = wings().use('ul').build()
+```

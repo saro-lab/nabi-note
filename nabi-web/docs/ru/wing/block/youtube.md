@@ -1,14 +1,33 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: YouTube
+description: Встраивает видео YouTube в документ и позволяет настроить его ширину.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# YouTube
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Принимает адрес видео YouTube или его ID и создаёт встраиваемый блок. В документе сохраняются только 11-символьный ID видео и ширина, а новое видео создаётся с выравниванием по центру и шириной 70%.
 
-[Open the Korean canonical page](/ko/guide/features)
+Ширина выбирается из заданных ступеней, а выравнивание сохраняется в абзаце, содержащем видео. В редакторе первый щелчок выбирает видео, а повторный щелчок после выбора запускает воспроизведение. Чтобы изменить адрес, удалите видео и вставьте новое.
 
-</div>
+<WingDemo path="/wing/block/youtube" />
+
+```ts
+const selected = wings().use('youtube').build()
+```
+
+## CSS-стили
+
+Через `.nabi-content iframe` можно изменить рамку и скругление видео. Не меняйте сохранённые ширину и выравнивание.
+
+```css
+.article-body iframe {
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 16%);
+}
+```
+
+Пакет использует `aspect-ratio`, ширину и выравнивающие margin для сохранения размера видео, поэтому не переопределяйте их.

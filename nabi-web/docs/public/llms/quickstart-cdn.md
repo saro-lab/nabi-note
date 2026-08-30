@@ -3,23 +3,20 @@
 The browser build exposes the root API as a single global. Pin a package version in production.
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@0.8.5/dist/nabi.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@0.9.0/dist/nabi.css">
 
 <div id="editor" class="nabi">
   <div id="toolbar" class="nabi-toolbar"></div>
   <div id="content" class="nabi-content"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/nabi-note@0.8.5/dist/browser/nabi-note.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/nabi-note@0.9.0/dist/browser/nabi-note.min.js"></script>
 <script>
   const N = window.NabiNote;
   const content = document.querySelector('#content');
   const toolbarRoot = document.querySelector('#toolbar');
 
-  const built = N.createNabiWith(N.wings().allBasic(), {
-    parseHtml: N.parseNodes,
-    locale: 'en'
-  });
+  const built = N.createNabiWith(N.wings().allBasic(), { locale: 'en' });
 
   const surface = N.mountSurface({
     nabi: built.nabi,
@@ -50,7 +47,7 @@ const chosen = N.wings()
   .drop('open')
   .use('fs', { values: ['sm', 'lg'] });
 
-const built = N.createNabiWith(chosen, { parseHtml: N.parseNodes });
+const built = N.createNabiWith(chosen);
 ```
 
 The picker throws descriptive runtime errors because CDN JavaScript has no TypeScript check. `N.wingNames()` returns all official names.
@@ -58,7 +55,7 @@ The picker throws descriptive runtime errors because CDN JavaScript has no TypeS
 ## Published HTML
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@0.8.5/dist/nabi.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@0.9.0/dist/nabi.css">
 <article id="article" class="nabi-content"></article>
 <script>
   article.innerHTML = built.nabi.getHtml();
@@ -69,8 +66,10 @@ The root bundle does not include `attachViewer`. Use an ESM CDN import for the v
 
 ```html
 <script type="module">
-  import { attachViewer } from 'https://cdn.jsdelivr.net/npm/nabi-note@0.8.5/dist/viewer/index.js';
-  attachViewer(document.querySelector('#article'), { locale: 'en' });
+  import { attachViewer } from 'https://cdn.jsdelivr.net/npm/nabi-note@0.9.0/dist/viewer/index.js';
+  const viewer = attachViewer(document.querySelector('#article'), { locale: 'en' });
+  // Call viewer.refresh() after replacing article HTML.
+  // Call viewer.unmount() before removing the page.
 </script>
 ```
 

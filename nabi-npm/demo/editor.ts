@@ -27,7 +27,6 @@ import {
   mountUploadView,
   openHistoryPanel,
   mountViewTools,
-  parseNodes,
   renderStoredHtml,
   watchSettle,
   wings,
@@ -145,7 +144,6 @@ export function standEditor(hosts: EditorHosts, options: StandOptions = {}): Sto
     // 문이 제 이름으로 하는 말("적용할 대상이 없다", 084 ⑨)도 화면의 언어를 따라간다.
     ...(locale ? { locale } : {}),
     allowLocalUrls: true,
-    parseHtml: parseNodes,
   });
 
   // 2. 시트 — 발행 패키지를 쓰는 호스트는 `nabi-note/nabi.css` 를 걸면 되고, 여기서는 런타임에 붙인다.
@@ -185,8 +183,6 @@ export function standEditor(hosts: EditorHosts, options: StandOptions = {}): Sto
         registry,
         store: browserFileStore(owner),
         name: () => 'nabi-note',
-        // 붙여넣기와 같은 파서다 — `.html` 파일을 여는 길이 그것으로 열린다.
-        parse: parseNodes,
         allowLocalUrls: true,
         ...(locale ? { locale } : {}),
       });
@@ -256,7 +252,10 @@ export function standEditor(hosts: EditorHosts, options: StandOptions = {}): Sto
         // 발행 페이지에서 안 도는 표가 미리보기에서만 돌아, 미리보기가 거짓말을 하게 된다.
         // 색칠에 `highlight` 를 안 넘긴다 — **내장 토크나이저로 색이 뜨는지**가 데모가 보일 것이다
         // (하이라이터를 꽂는 견본은 nabi-web 의 데모가 shiki 로 보인다).
-        onBody: (body) => attachViewer(body, ...(locale ? [{ locale }] : [])),
+        onBody: (body) => {
+          const viewer = attachViewer(body, ...(locale ? [{ locale }] : []));
+          return () => viewer.unmount();
+        },
       });
   // 붙는 크롬의 셋 중 **보정**만 mount 다 — 붙을지 말지는 `.nabi-toolbar` 클래스이고, 얼마나
   // 내려 붙을지는 `--nabi-sticky-top` 토큰이다. 둘은 호스트가 DOM·CSS 로 직접 만진다.

@@ -109,7 +109,7 @@ function renderNode(node: NabiNode, job: Job): string {
   if (node.w === P) return renderParagraph(node, job);
   // 라인은 코어의 것이라 조립 맵을 안 거친다 — md 의 굳은 줄바꿈은 줄 끝 공백 둘이다.
   if (node.w === BR) return '  \n';
-  const builder = job.builders[node.w];
+  const builder = Object.prototype.hasOwnProperty.call(job.builders, node.w) ? job.builders[node.w] : undefined;
   // md 를 모르는 타입 — 그 노드만 html 로 떨어진다(껍데기를 벗기지 않는다: 벗기면 뜻이 사라진다).
   if (!builder) return renderParagraphHtml(node, job.html);
   return builder(node, contextFor(node, job));

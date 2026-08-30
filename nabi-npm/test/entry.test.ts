@@ -28,9 +28,6 @@ import {
   mountUpload,
   mountViewTools,
   openPreview,
-  parseNodes,
-  renderEditorHtml,
-  renderHtml,
   renderStoredEditorHtml,
   renderStoredHtml,
   simpleMark,
@@ -74,7 +71,12 @@ ok('코어 엔트리가 있다', has('src/index.ts'));
 // 딛는 층 셋 — `locale`(말)·`code`(색칠의 지식)·제 층이다. `code` 가 는 자리다(088): 색칠은
 // 편집 화면과 발행 페이지가 **같은 토크나이저**로 해야 해서, 그 지식이 둘 모두의 아래층에 산다.
 // 여기서 지키는 값은 그대로다 — 이 셋 중 어느 것도 편집기를 안 끌고 온다.
-eq('viewer 가 딛는 층은 viewer·locale·code 뿐이다', viewerLayers, ['code', 'locale', 'viewer']);
+eq('viewer 가 딛는 층은 viewer·locale·code·lifecycle 뿐이다', viewerLayers, [
+  'code',
+  'lifecycle.ts',
+  'locale',
+  'viewer',
+]);
 ok(
   'viewer 가 editor·surface·ui·wing 파일을 하나도 안 문다',
   viewerFiles.every((rel) => !/^src\/(editor|surface|ui|wing|wings|html|doc|caret|schema)\//.test(rel)),
@@ -82,7 +84,9 @@ ok(
 );
 ok(
   'viewer 소스에 코어 조립 어휘가 없다',
-  !/\b(createNabi|mountSurface|defaultWings|makeRegistry)\b/.test(viewerFiles.map((rel) => strip(read(rel))).join('\n')),
+  !/\b(createNabi|mountSurface|defaultWings|makeRegistry)\b/.test(
+    viewerFiles.map((rel) => strip(read(rel))).join('\n'),
+  ),
 );
 
 // --- 1-b. ssr 엔트리는 화면을 한 파일도 안 문다 (095) ------------------------------------------
@@ -98,10 +102,7 @@ ok(
 );
 // 코어 엔트리보다 정말로 작은가 — 작지 않다면 나눈 뜻이 없다.
 const coreFiles = closure('src/index.ts');
-ok(
-  `ssr 이 코어 엔트리보다 작다 (${ssrFiles.length} < ${coreFiles.length} 파일)`,
-  ssrFiles.length < coreFiles.length,
-);
+ok(`ssr 이 코어 엔트리보다 작다 (${ssrFiles.length} < ${coreFiles.length} 파일)`, ssrFiles.length < coreFiles.length);
 // 그리는 문이 실제로 나간다.
 ok(
   'ssr 엔트리: 저장본 문과 어휘',
@@ -125,26 +126,47 @@ ok(
   [mountToolbar, mountContextToolbar, mountHints, mountSticky, mountViewTools, openPreview].every(isFn),
 );
 ok('엔트리: 표면과 그 부속 셋', [mountSurface, mountUpload, mountFile, mountLocalHistory].every(isFn));
-ok('엔트리: 조립 HTML(SSR)과 들여오기 어댑터', [renderHtml, renderEditorHtml, renderStoredHtml, renderStoredEditorHtml, parseNodes].every(isFn));
+ok('엔트리: 정규화된 저장본 HTML', [renderStoredHtml, renderStoredEditorHtml].every(isFn));
+ok(
+  '엔트리: parser와 저수준 renderer 및 옛 extra 묶음은 공개하지 않는다',
+  ['parseNodes', 'parseHtml', 'renderHtml', 'renderEditorHtml', 'extraWings'].every((name) => !(name in entry)) &&
+    ['renderHtml', 'renderEditorHtml', 'extraWings'].every((name) => !(name in ssrEntry)),
+);
 ok('엔트리: 팩토리와 말', isFn(simpleMark) && translate('close', 'ko') === '닫기');
-ok('엔트리: defaultWings 가 비지 않고 전부 w 를 든다', defaultWings.length > 0 && defaultWings.every((wing) => typeof wing.w === 'string'));
+ok(
+  '엔트리: defaultWings 가 비지 않고 전부 w 를 든다',
+  defaultWings.length > 0 && defaultWings.every((wing) => typeof wing.w === 'string'),
+);
 
 // 엔트리만으로 정말 조립되는가 — 데모가 하는 그 걸음을 DOM 없이 한 번 밟는다.
 const { nabi, registry } = createNabiWith(defaultWings, { doc: [{ w: 'p', a: { h: 1 }, ch: ['나비'] }] });
-ok('엔트리로 세운 에디터가 문서를 든다', JSON.stringify(nabi.getJson()) === JSON.stringify([{ w: 'p', a: { h: 1 }, ch: ['나비'] }]));
+ok(
+  '엔트리로 세운 에디터가 문서를 든다',
+  JSON.stringify(nabi.getJson()) === JSON.stringify([{ w: 'p', a: { h: 1 }, ch: ['나비'] }]),
+);
 ok('엔트리로 세운 에디터가 보기 HTML 을 낸다', nabi.getHtml().includes('<h1'), nabi.getHtml());
-ok('엔트리로 세운 에디터의 커맨드 문이 이름을 가린다', nabi.applyCommand('없는커맨드') === false && nabi.undo() === false);
+ok(
+  '엔트리로 세운 에디터의 커맨드 문이 이름을 가린다',
+  nabi.applyCommand('없는커맨드') === false && nabi.undo() === false,
+);
 
 // 저장본 문 (090) — 에디터가 낼 것과 같은 HTML 을 registry 만으로 낸다. 편집기 HTML 의
 // data-key 가 에디터의 것과 같아야 hydrate 가 산다 (cocoon 의 _id 가 결정적이라 같다).
 ok('저장본 문이 에디터와 같은 보기 HTML 을 낸다', renderStoredHtml(nabi.getJson(), registry) === nabi.getHtml());
-ok('저장본 문이 에디터와 같은 편집기 HTML(data-key 포함)을 낸다', renderStoredEditorHtml(nabi.getJson(), registry) === nabi.getEditorHtml());
-ok('저장본 문의 편집기 HTML 이 data-key 를 든다', (renderStoredEditorHtml(nabi.getJson(), registry) ?? '').includes('data-key='));
+ok(
+  '저장본 문이 에디터와 같은 편집기 HTML(data-key 포함)을 낸다',
+  renderStoredEditorHtml(nabi.getJson(), registry) === nabi.getEditorHtml(),
+);
+ok(
+  '저장본 문의 편집기 HTML 이 data-key 를 든다',
+  (renderStoredEditorHtml(nabi.getJson(), registry) ?? '').includes('data-key='),
+);
 ok('저장본이 아니면 null 로 거절한다', renderStoredHtml({ not: 'tree' }, registry) === null);
 {
   // 조립 중에 던지는 값도 같은 답(null)이다 — 읽기 쪽 문이라 예외가 페이지로 못 번진다.
   const real = console.error;
   let told = 0;
+  let getterCalls = 0;
   console.error = () => {
     told += 1;
   };
@@ -152,13 +174,15 @@ ok('저장본이 아니면 null 로 거절한다', renderStoredHtml({ not: 'tree
     const poison = [
       {
         get w(): string {
+          getterCalls += 1;
           throw new Error('독이 든 getter');
         },
       },
     ];
     ok('던지는 값 — renderStoredHtml 은 null', renderStoredHtml(poison, registry) === null);
     ok('던지는 값 — renderStoredEditorHtml 도 null', renderStoredEditorHtml(poison, registry) === null);
-    ok('둘 다 console.error 로 알렸다', told === 2);
+    ok('저장본 renderer도 getter를 실행하지 않는다', getterCalls === 0);
+    ok('모양 거절은 예외 보고를 만들지 않는다', told === 0);
   } finally {
     console.error = real;
   }
@@ -166,7 +190,19 @@ ok('저장본이 아니면 null 로 거절한다', renderStoredHtml({ not: 'tree
 
 // 안쪽 것은 안 나간다 — 이름이 엔트리 소스에 없으면 나갈 길도 없다.
 const entrySource = strip(read('src/index.ts'));
-const INTERNAL = ['planRedraw', 'pressedOf', 'fromDomPoint', 'tryInputRule', 'contextGroupsAt', 'bandOf', 'revealFix', 'revealWalk', 'underWalk', 'placeWalk', 'iconButton'];
+const INTERNAL = [
+  'planRedraw',
+  'pressedOf',
+  'fromDomPoint',
+  'tryInputRule',
+  'contextGroupsAt',
+  'bandOf',
+  'revealFix',
+  'revealWalk',
+  'underWalk',
+  'placeWalk',
+  'iconButton',
+];
 ok(
   '엔트리가 내부 잡동사니를 안 내보낸다',
   INTERNAL.every((name) => !entrySource.includes(name)),
@@ -183,12 +219,19 @@ const dedup = nabiCss(['.a { color: red; }', '.b { color: blue; }', '.a { color:
 ok('CSS: 같은 시트는 한 번만 실린다', dedup.split('.a { color: red; }').length === 2, dedup);
 ok(
   'CSS: 빈 시트는 버린다 (머리말 + 시트 하나)',
-  nabiCss(['', '   ', '.a{}']).split('\n').filter((line) => line !== '').length === 2,
+  nabiCss(['', '   ', '.a{}'])
+    .split('\n')
+    .filter((line) => line !== '').length === 2,
 );
 
 const published = nabiCss(collectSheets(makeRegistry(defaultWings), CORE_CSS));
 ok('CSS: 코어 시트가 실린다', published.includes('.nabi-content {') && published.includes('.nabi-btn {'));
-ok('CSS: wing 시트가 실린다 (표·목록·코드)', published.includes('.nabi-content table {') && published.includes('.nabi-sort {') && published.includes('.nabi-content li'));
+ok(
+  'CSS: wing 시트가 실린다 (표·목록·코드)',
+  published.includes('.nabi-content table {') &&
+    published.includes('.nabi-sort {') &&
+    published.includes('.nabi-content li'),
+);
 ok(
   'CSS: 한 시트를 나눠 쓰는 가족이 한 번만 실린다 (제목·정렬·드롭캡)',
   published.split('.nabi-content h1 { font-size: 1.9em; }').length === 2,
@@ -199,7 +242,10 @@ ok('CSS: 머리말 한 줄로 시작한다', published.startsWith('/* nabi-note'
 ok('데모: 파일 셋이 있다', ['demo/index.html', 'demo/editor.ts', 'demo/main.ts'].every(has));
 const page = read('demo/index.html');
 ok('데모: 뷰포트 메타가 있다', /<meta\s+name="viewport"[^>]*width=device-width/.test(page));
-ok('데모: 편집기 선언부가 갈려 있다 (main 이 editor.ts 를 부른다)', read('demo/main.ts').includes("from './editor.js'"));
+ok(
+  '데모: 편집기 선언부가 갈려 있다 (main 이 editor.ts 를 부른다)',
+  read('demo/main.ts').includes("from './editor.js'"),
+);
 // 무는 것은 **발행되는 엔트리뿐**이다 — `nabi-note` 와 `nabi-note/viewer` 둘. 층 소스를 직접
 // 파는 것(`../src/ui/parts/…`)만 막는 규칙이라 엔트리는 둘 다 열려 있다. 보는 쪽 런타임을
 // 여기서 무는 까닭: 미리보기의 표 정렬은 **호스트의 일**이다(viewer 는 ui 의 위층이라 코어가
@@ -223,8 +269,18 @@ ok('데모: 시작 문서가 제 파일에 산다 (CDN 예문과 나눠 쓴다)'
 ok('CDN: 파일 셋이 있다', ['cdn/index.html', 'cdn/cdn.css'].every(has) && has('scripts/build-cdn.mjs'));
 const cdnPage = read('cdn/index.html');
 ok('CDN: 뷰포트 메타가 있다', /<meta\s+name="viewport"[^>]*width=device-width/.test(cdnPage));
-ok('CDN: 묶음과 시트를 태그로 문다 (모듈이 아니다)', cdnPage.includes('src="./nabi-note.min.js"') && cdnPage.includes('href="./nabi.css"'));
+ok(
+  'CDN: 묶음과 시트를 태그로 문다 (모듈이 아니다)',
+  cdnPage.includes('src="./nabi-note.min.js"') && cdnPage.includes('href="./nabi.css"'),
+);
 ok('CDN: 시작 문서는 생성물을 쓴다 (예문을 손으로 안 베낀다)', cdnPage.includes('window.NABI_SAMPLE'));
+ok(
+  'CDN: 실제 build 명령과 localStorage 기록 저장소를 설명한다',
+  cdnPage.includes('npm run build:cdn') &&
+    cdnPage.includes('localStorage') &&
+    !cdnPage.includes('IndexedDB') &&
+    cdnPage.includes('browserHistoryStorage(window)'),
+);
 {
   // `N` 은 전역 `NabiNote` 의 별명이다 — 이 페이지가 부르는 이름 전부를 뽑는다.
   const called = new Set([...cdnPage.matchAll(/\bN\.([A-Za-z_$][\w$]*)/g)].map((m) => m[1] as string));
@@ -242,17 +298,32 @@ const pkg = JSON.parse(read('package.json')) as {
   unpkg: string;
   scripts: Record<string, string>;
 };
-ok('package: exports 가 코어·viewer·시트 셋을 연다', ['.', './viewer', './nabi.css'].every((key) => key in pkg.exports));
+ok(
+  'package: exports 가 코어·viewer·시트 셋을 연다',
+  ['.', './viewer', './nabi.css'].every((key) => key in pkg.exports),
+);
 ok('package: files 에 dist 가 든다', pkg.files.includes('dist'));
-ok('package: unpkg 가 tsup 이 내는 자리를 가리킨다', pkg.unpkg === './dist/browser/nabi-note.min.js' && read('tsup.config.mjs').includes("'nabi-note.min'"));
+ok(
+  'package: unpkg 가 tsup 이 내는 자리를 가리킨다',
+  pkg.unpkg === './dist/browser/nabi-note.min.js' && read('tsup.config.mjs').includes("'nabi-note.min'"),
+);
 // 발행 판과 **파일 형식 판**이 같아야 한다 — `NABI_VERSION` 은 저장되는 `.nabi` 파일에 박히는
 // 값이고(앞 둘만 쓴다: `1.2.3` → `1.2`), 코어가 package.json 을 안 읽으므로 손으로 맞춘다
 // (번들러마다 JSON 을 읽는 법이 다르고 서버에서도 돌아야 한다). 판을 올리면서 이 한 줄을
 // 빠뜨리면 **내보낸 파일이 남의 판을 자기 판이라고 적는다** — 나중에 "이 판을 읽을 수 있나" 를
 // 물을 때 답할 것이 없어진다. 발행 전에 여기서 걸린다.
-eq('package: 발행 판과 NABI_VERSION 이 같다', /NABI_VERSION = '([^']+)'/.exec(read('src/io/file.ts'))?.[1], pkg.version);
+eq(
+  'package: 발행 판과 NABI_VERSION 이 같다',
+  /NABI_VERSION = '([^']+)'/.exec(read('src/io/file.ts'))?.[1],
+  pkg.version,
+);
 
-ok('package: build 가 tsup·선언·CSS 셋을 잇는다', /tsup/.test(pkg.scripts['build'] ?? '') && /emitDeclarationOnly/.test(pkg.scripts['build'] ?? '') && /build-css/.test(pkg.scripts['build'] ?? ''));
+ok(
+  'package: build 가 tsup·선언·CSS 셋을 잇는다',
+  /tsup/.test(pkg.scripts['build'] ?? '') &&
+    /emitDeclarationOnly/.test(pkg.scripts['build'] ?? '') &&
+    /build-css/.test(pkg.scripts['build'] ?? ''),
+);
 
 done(`entry(viewer 소스 ${viewerFiles.length}개)`);
 

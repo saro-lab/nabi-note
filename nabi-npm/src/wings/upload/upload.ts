@@ -5,10 +5,11 @@
 // **배치 하나 = 커맨드 한 번 = undo 한 점.** 진행 중에는 문서를 전혀 안 만진다 — 진행률은
 // 트리 밖(mount 부속의 임시 엘리먼트)에 살고, 문서가 바뀌는 순간은 마지막 커밋 하나뿐이다.
 //
-// **업로드 중 편집 잠금**은 editor 인스턴스의 `$lock` 이 든다 — 이 파일은 순수부라
+// **업로드 중 편집 잠금**은 package 내부 editor capability가 든다 — 이 파일은 순수부라
 // 잠그는 손이 아니라 잠긴 뒤에 무엇이 들어오는가만 안다. 배선은 surface 의 mountUpload 다.
 import type { AttrValue, ElementNode, NabiNode } from '../../schema/index.js';
 import { P } from '../../schema/index.js';
+import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import { ordered } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
 import { safeUrl } from '../../html/url.js';
@@ -39,7 +40,12 @@ const MB = 1024 * 1024;
 // 맨 앞의 `.` 은 확장자가 아니다 (`.gitignore` → '').
 export function extensionOf(name: string): string {
   const dot = name.lastIndexOf('.');
-  return dot > 0 ? name.slice(dot + 1).trim().toLowerCase() : '';
+  return dot > 0
+    ? name
+        .slice(dot + 1)
+        .trim()
+        .toLowerCase()
+    : '';
 }
 
 // 첨부 표식에 실리는 값의 모양 — 시트가 이 값으로 배지를 그린다.
@@ -156,7 +162,22 @@ function itemsArg(raw: unknown): UploadItem[] {
   return out;
 }
 
-const UPLOAD_NAME: LocaleText = { ko: '파일 업로드', en: 'Upload', ja: 'ファイルをアップロード', zh: '上传文件', de: 'Datei hochladen', fr: 'Téléverser un fichier', es: 'Subir archivo', pt: 'Enviar arquivo', ru: 'Загрузить файл', ar: 'رفع ملف', hi: 'फ़ाइल अपलोड करें', bn: 'ফাইল আপলোড করুন', ur: 'فائل اپ لوڈ کریں', id: 'Unggah berkas' };
+const UPLOAD_NAME: LocaleText = {
+  ko: '파일 업로드',
+  en: 'Upload',
+  ja: 'ファイルをアップロード',
+  zh: '上传文件',
+  de: 'Datei hochladen',
+  fr: 'Téléverser un fichier',
+  es: 'Subir archivo',
+  pt: 'Enviar arquivo',
+  ru: 'Загрузить файл',
+  ar: 'رفع ملف',
+  hi: 'फ़ाइल अपलोड करें',
+  bn: 'ফাইল আপলোড করুন',
+  ur: 'فائل اپ لوڈ کریں',
+  id: 'Unggah berkas',
+};
 
 const UPLOAD_ICON =
   '<g transform="translate(8 8) scale(1) translate(-8 -8)" stroke-width="1.4">' +
@@ -195,7 +216,7 @@ export function makeUploadWing(options: CommitOptions = {}): Wing {
     return { doc: next, selection: { anchor: caret, focus: caret } };
   };
 
-  return {
+  const wing: Wing = {
     w: 'upload',
     place: 'tool',
     // 파일이 갈 곳이 하나는 있어야 한다 — 그림이면 img, 그 밖은 링크의 첨부다.
@@ -209,6 +230,8 @@ export function makeUploadWing(options: CommitOptions = {}): Wing {
       action: { kind: 'file' },
     },
   };
+  $markBuiltinAttrOwner(wing, []);
+  return wing;
 }
 
 // 글 문단의 칸 수 — 마크 속 글자까지 센다(단말은 커밋이 안 만든다).

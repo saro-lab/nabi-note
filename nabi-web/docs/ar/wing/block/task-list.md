@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: قائمة تحقق
+description: قائمة تحفظ حالة الإنجاز مع المستند.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# قائمة تحقق
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+هي قائمة تحمل حالة إنجاز. في فقرة فارغة، اكتب `[ ]` أو `[x]` ثم اضغط Space، أو أنشئها من شريط الأدوات، واضغط مربع الاختيار لتغيير الحالة.
 
-[Open the Korean canonical page](/ko/guide/features)
+تُحفظ حالة الاختيار في المستند كخاصية للعنصر. عند تقسيم عنصر، تتبع الحالة العنصر الذي يبقى فيه النص لا العنصر الفارغ الذي يسبقه، لذلك لا يؤدي تقسيم مهمة مكتملة إلى قلب حالتها على نحو غير متوقع.
 
-</div>
+<WingDemo path="/wing/block/task-list" />
+
+```ts
+const selected = wings().use('tl').build()
+```

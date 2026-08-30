@@ -11,17 +11,18 @@ export type { TextChange } from './text.js';
 export { insertFragmentOp } from './fragment.js';
 export { ioFiltersOf, mdEnvOf } from './filters.js';
 export type { FilterListOptions } from './filters.js';
-// 나비가 방금 낸 조각인가 — 복사·잘라내기의 전역 기억과 그 순수 판정 (260823_007).
-export { clipMemory, clipText, forgetClip, fromNabi, normalizeClipHtml, rememberClip, sameClip } from './clip.js';
 // 복사·잘라내기가 클립보드에 **직접 싣는** 글자를 짓는 자리 (260823_008).
 // 첨부 하나는 문단으로 감싸고 빈 문단을 잇는다 (260823_010).
 export {
   clipContextOf,
+  clipboardBodyOf,
   clipHtmlOf,
   dressClipHtml,
+  encodeClipboardBody,
   fileClipHtml,
   loadClipboard,
   loneFileLink,
+  NABI_CLIPBOARD_MIME,
   wrapClipHtml,
 } from './clipboard.js';
 export type { ClipTarget } from './clipboard.js';

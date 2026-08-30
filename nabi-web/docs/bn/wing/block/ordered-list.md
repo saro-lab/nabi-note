@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: ক্রমসংখ্যার তালিকা
+description: ক্রম গুরুত্বপূর্ণ আইটেমগুলোকে সংখ্যার তালিকায় বানান।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# ক্রমসংখ্যার তালিকা
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+ক্রম গুরুত্বপূর্ণ আইটেমগুলোকে সংখ্যার তালিকায় বানান। খালি অনুচ্ছেদে `1.`-এর মতো সংখ্যা ও দাঁড়ি লিখে Space চাপুন, অথবা নির্বাচিত অনুচ্ছেদ টুলবার থেকে বদলান।
 
-[Open the Korean canonical page](/ko/guide/features)
+দেখানো সংখ্যা আইটেমের অবস্থান থেকে হিসাব হয়; তাই আইটেম যোগ বা ভেতরে নিলেও স্বয়ংক্রিয়ভাবে চলতে থাকে। লেখা শুরুর সংখ্যা সংরক্ষণ করে ইচ্ছামতো সংখ্যা থেকে গণনার সুবিধা নেই।
 
-</div>
+<WingDemo path="/wing/block/ordered-list" />
+
+```ts
+const selected = wings().use('ol').build()
+```

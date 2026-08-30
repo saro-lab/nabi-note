@@ -1,14 +1,35 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Tamaño de texto
+description: Cambia el tamaño del texto dentro de los pasos permitidos.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Tamaño de texto
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Cambia el texto seleccionado a un paso de tamaño. Si hay un rango seleccionado, el paso se aplica a ese rango; si solo hay cursor, cambia el tamaño del texto del párrafo actual. Los datos guardados conservan solo pasos permitidos, no valores arbitrarios como `px`.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/etc/font-size" />
 
-</div>
+```ts
+const selected = wings().use('fs', {
+  values: ['sm', 'lg', 'xl'],
+}).build()
+```
+
+Si se omite `values`, se usan los pasos `xs`, `sm`, `lg` y `xl`. Si reduces la lista, los demás pasos que ya existan en documentos antiguos se eliminan al cargarlos.
+
+## Estilos CSS
+
+Puedes cambiar los tamaños con selectores de pasos guardados como `.nabi-content [data-nabi-size="xs"]`. No inventes pasos arbitrarios que no estén en el documento; ajusta el CSS solo dentro de los `values` registrados.
+
+```css
+.article-body [data-nabi-size="xs"] { font-size: .78em; }
+.article-body [data-nabi-size="sm"] { font-size: .9em; }
+.article-body [data-nabi-size="lg"] { font-size: 1.3em; }
+.article-body [data-nabi-size="xl"] { font-size: 1.65em; }
+```
+
+Mantener consistente la diferencia entre pasos conserva el significado que eligió el autor en el editor cuando el documento se publica.

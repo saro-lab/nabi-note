@@ -16,7 +16,7 @@ export const CELL_SELECTED = 'data-nabi-cell-selected';
 // 상자가 선 표 — 그 동안 브라우저의 글 선택을 지우는 손잡이다.
 export const CELL_BOXED = 'data-nabi-cell-boxed';
 
-export const attachCellRange: Attach = ({ root, nabi, pathOfKey }) => {
+export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey }) => {
   let painted: Element[] = [];
   let boxedTable: Element | null = null;
 
@@ -30,7 +30,7 @@ export const attachCellRange: Attach = ({ root, nabi, pathOfKey }) => {
   // 지금 선택이 두 칸에 걸치면 그 사각형(병합이 걸치는 칸까지 넓힌 상자)을 칠한다.
   const paint = (): void => {
     clear();
-    const boxed = selectionBox(nabi.$doc(), nabi.getSelection());
+    const boxed = selectionBox(doc(), nabi.getSelection());
     if (!boxed) return;
     for (const item of boxed.cells) {
       const id = item.cell._id;

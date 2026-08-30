@@ -1,14 +1,38 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: كتلة قابلة للطي
+description: تجمع ملخصًا ومحتوى وتحفظ حالة الفتح الأولية.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# كتلة قابلة للطي
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+تجمع ملخصًا قصيرًا ومحتوى في كتلة واحدة. عند إنشائها من شريط الأدوات، اكتب الملخص أولًا ثم تابع كتابة المحتوى تحته.
 
-[Open the Korean canonical page](/ko/guide/features)
+تُحفظ حالة الفتح التي يحددها المثلث في المستند وتصبح الحالة الأولية في صفحة النشر. أثناء التحرير يبقى المحتوى مفتوحًا لتعديله، من دون تغيير قيمة الحالة المحفوظة.
 
-</div>
+<WingDemo path="/wing/block/details" />
+
+```ts
+const selected = wings().use('details').build()
+```
+
+## أنماط CSS
+
+يمكن تنسيق الكتلة عبر `.nabi-content details` وعنوانها عبر `.nabi-content details > summary`.
+
+```css
+.article-body details {
+  padding: .75rem 1rem;
+  border: 1px solid var(--nabi-line);
+  border-radius: var(--nabi-radius);
+  background: var(--nabi-soft);
+}
+
+.article-body details > summary { cursor: pointer; font-weight: 700; }
+.article-body details[open] > summary { margin-block-end: .75rem; }
+```
+
+تمثل السمة `open` حالة الفتح الأولية التي حفظها الكاتب. يمكن لـCSS تنسيق الحالة، لكن يُفضّل ألا تفرض تغييرها.

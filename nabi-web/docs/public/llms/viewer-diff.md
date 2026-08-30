@@ -7,13 +7,14 @@ These features live in separate package entry points so a published page does no
 ```ts
 import { attachViewer } from 'nabi-note/viewer';
 
-const detach = attachViewer(article, {
+const viewer = attachViewer(article, {
   locale: 'en',
   tables: 'marked',
   highlight: customHighlighter,
 });
 
-detach();
+viewer.refresh();
+viewer.unmount();
 ```
 
 `ViewerOptions` combines table-sort and code-paint options:
@@ -26,7 +27,7 @@ interface ViewerOptions {
 }
 ```
 
-The detach function restores original code child nodes, table row order, attributes, and controls.
+One viewer may be attached to a root at a time. `refresh()` first removes its current reader projection, then attaches to the current host HTML. `unmount()` is idempotent and restores the still-current code nodes, table row order, attributes, and controls without overwriting intervening host changes.
 
 ### Table sorting
 
@@ -98,9 +99,9 @@ diff.update(nextBefore, nextAfter);
 diff.unmount();
 ```
 
-The mount creates a read-only two-pane view, previous/next navigation, change count, unchanged-region folding, scroll mapping, and connector graphics. Folding keeps one context block around each change. The mount injects `DIFF_CSS` once per document, so it can stand alone; load `nabi.css` too when rendered document content uses wing styles.
+The mount creates a read-only two-pane view, previous/next navigation, change count, unchanged-region folding, scroll mapping, and connector graphics. Folding keeps one context block around each change. The mount injects `DIFF_CSS` with exact-string reference counting per document, so it can stand alone; load `nabi.css` too when rendered document content uses wing styles.
 
-`unmount()` removes generated content and the `.nabi-diff` class but leaves the shared injected diff style.
+`unmount()` removes generated content and the `.nabi-diff` class. The final reference also removes the package-owned injected diff style; a matching style supplied by the host is never removed.
 
 ### Diff tool wing integration
 

@@ -1,10 +1,20 @@
 // io 층의 문 — 필터 계약과 후보 수집, 그리고 md 부분집합 파서가 여기서 나간다.
 // 이 층은 html 위 editor 아래에 선다: 다루는 값이 전부 schema·html·locale 의 것이고,
 // 편집기도 표면도 안 문다. wing 계약이 `ioFilter`·`toMd` 를 무는 방향이 그래서 선다.
-export type { ClipFile, DocSource, IoFilter, MdBuilder, MdBuilders, MdContext, PasteCandidate, PasteData } from './contract.js';
+export type {
+  ClipFile,
+  DocSource,
+  IoFilter,
+  MdBuilder,
+  MdBuilders,
+  MdContext,
+  PasteCandidate,
+  PasteData,
+} from './contract.js';
+export { $assertIoFilter } from './contract.js';
 export { collectCandidates, textCandidate } from './candidates.js';
 export type { CollectOptions } from './candidates.js';
-export { makeBuiltinFilters } from './filters.js';
+export { $isBuiltinHtmlFilter, makeBuiltinFilters } from './filters.js';
 export type { BuiltinOptions } from './filters.js';
 // 내장 형식의 얼굴 — 영어 고정 이름과 16×16 아이콘 속.
 export {

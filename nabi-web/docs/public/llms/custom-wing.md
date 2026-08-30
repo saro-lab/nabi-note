@@ -47,7 +47,9 @@ interface Wing {
   readonly basic?: boolean;
   readonly holds?: 'blocks' | 'inline';
   readonly singleParagraph?: boolean;
+  readonly attrs?: readonly string[];
   readonly boolAttrs?: readonly string[];
+  readonly clearable?: boolean;
   readonly parts?: Readonly<Record<string, StructureDecl>>;
   readonly allows?: readonly string[];
   readonly noAlign?: boolean;
@@ -97,7 +99,9 @@ interface Wing {
 - `noAlign` is valid only on `void` or `container` objects.
 - `requiresAnyOf` requires at least one named wing at registration.
 
-Names become durable document vocabulary. Custom names passed through `wings().use(customWing)` must match `ex[A-Z0-9]...`, for example `exNote`. This prevents a future official word from reinterpreting stored content. Apply the same namespace discipline to custom part and attribute names.
+Names become durable document vocabulary. Every custom wing, part, and declared attribute name must match the complete pattern `^ex[A-Z0-9][A-Za-z0-9]*$`, for example `exNote` or `ex2Column`. This prevents a future official word from reinterpreting stored content. Official names are accepted only from package-owned declarations and their same-name object spread clones.
+
+`clearable: true` is valid only on a mark or paragraph-attribute wing. It declares that `clearFormat` removes that capability. Boolean attributes must also appear in the owning type's `attrs` list. `holds` must be exactly `blocks` or `inline`, and `singleParagraph` is valid only on a block holder.
 
 ## Pure commands
 
@@ -136,7 +140,22 @@ When `toMd` is absent, Markdown export falls back to the wing's generated HTML. 
 
 `onKey` runs when the selection is owned by the wing. Return a command outcome or `null`.
 
-`attach(host)` is the only wing-level DOM lifecycle hook. It receives the surface root, editor, and `pathOfKey()`; return a detach function. Use it for behavior that cannot be expressed as a pure command, such as table drag selection or code paint. Avoid changing composing DOM.
+`attach(host)` is the only wing-level DOM lifecycle hook. It receives the surface root, editor, `pathOfKey()`, and the cleanup registration hook `onDispose()`; return a detach function. Use it for behavior that cannot be expressed as a pure command, such as table drag selection or code paint. Avoid changing composing DOM.
+
+```ts
+interface AttachHost {
+  readonly root: HTMLElement;
+  readonly nabi: Nabi;
+  doc(): NabiDoc;
+  readonly env: EditEnv;
+  pathOfKey(id: string): readonly number[] | null;
+  onDispose(dispose: () => void): void;
+}
+
+type Attach = (host: AttachHost) => () => void;
+```
+
+Call `host.onDispose()` immediately after every direct side effect and before later setup can throw. The returned detach function remains supported for a successful attachment. If `attach()` throws, the surface rolls back cleanup that was already registered with `onDispose()`. A direct side effect that a trusted attachment does not register cannot be observed or rolled back automatically. `onDispose()` is valid only during the synchronous `attach()` call.
 
 ## UI declaration
 

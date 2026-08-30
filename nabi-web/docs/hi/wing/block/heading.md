@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: शीर्षक
+description: अनुच्छेद को शीर्षक में बदलकर उसका स्तर तय करता है।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# शीर्षक
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+अनुच्छेद को शीर्षक में बदलकर उसका स्तर तय करता है। टूलबार में शीर्षक चालू करके H1 से H6 चुनें, या खाली अनुच्छेद में `#` से `######` तक लिखकर Space दबाएँ।
 
-[Open the Korean canonical page](/ko/guide/features)
+शीर्षक अलग block प्रकार नहीं, बल्कि अनुच्छेद में सहेजा गया गुण है। शीर्षक को फिर चुनने पर वह सामान्य अनुच्छेद बन जाता है, इसलिए मुख्य पाठ की संरचना रखते हुए केवल स्तर बदला जा सकता है।
 
-</div>
+<WingDemo path="/wing/block/heading" />
+
+```ts
+const selected = wings().use('h').build()
+```

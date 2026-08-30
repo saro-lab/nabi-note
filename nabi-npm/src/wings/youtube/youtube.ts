@@ -6,24 +6,64 @@
 // (mount 의 onClick), 화면에서 iframe 이 첫 클릭을 안 삼키게 하는 것은 시트의 몫이다.
 // 여기서는 그 규칙을 선언으로만 든다 — wing 은 화면 도구를 모른다.
 import type { AttrValue } from '../../schema/index.js';
+import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import { caretAt, ordered } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
 import { videoId, youtubeId } from '../../html/url.js';
 import { replaceAt } from '../../doc/index.js';
-import {
-  LUMP_DEFAULT_ALIGN,
-  boxObject,
-  insertLump,
-  topNodeAt,
-  type Wing,
-  type WingChoice,
-} from '../../wing/index.js';
+import { blockOwnerAt } from '../../wing/ops.js';
+import { LUMP_DEFAULT_ALIGN, boxObject, insertLump, type Wing, type WingChoice } from '../../wing/index.js';
 import type { LocaleText } from '../../locale/index.js';
 
 // 이름들 — old 사전 이식(14 로케일). 서비스 이름은 어느 말에서도 같다.
-const YOUTUBE_NAME: LocaleText = { ko: '유튜브', en: 'YouTube', ja: 'YouTube', zh: 'YouTube', de: 'YouTube', fr: 'YouTube', es: 'YouTube', pt: 'YouTube', ru: 'YouTube', ar: 'YouTube', hi: 'YouTube', bn: 'YouTube', ur: 'YouTube', id: 'YouTube' };
-const WIDTH_NAME: LocaleText = { ko: '유튜브 너비', en: 'YouTube width', ja: 'YouTube の幅', zh: 'YouTube 宽度', de: 'YouTube-Breite', fr: 'Largeur YouTube', es: 'Ancho de YouTube', pt: 'Largura do YouTube', ru: 'Ширина YouTube', ar: 'عرض YouTube', hi: 'YouTube की चौड़ाई', bn: 'YouTube-এর প্রস্থ', ur: 'YouTube کی چوڑائی', id: 'Lebar YouTube' };
-const ADDRESS_NAME: LocaleText = { ko: '주소', en: 'Address', ja: 'リンク先', zh: '链接地址', de: 'Adresse', fr: 'Adresse', es: 'Dirección', pt: 'Endereço', ru: 'Адрес', ar: 'عنوان الرابط', hi: 'लिंक का पता', bn: 'লিঙ্কের ঠিকানা', ur: 'لنک کا پتہ', id: 'Alamat' };
+const YOUTUBE_NAME: LocaleText = {
+  ko: '유튜브',
+  en: 'YouTube',
+  ja: 'YouTube',
+  zh: 'YouTube',
+  de: 'YouTube',
+  fr: 'YouTube',
+  es: 'YouTube',
+  pt: 'YouTube',
+  ru: 'YouTube',
+  ar: 'YouTube',
+  hi: 'YouTube',
+  bn: 'YouTube',
+  ur: 'YouTube',
+  id: 'YouTube',
+};
+const WIDTH_NAME: LocaleText = {
+  ko: '유튜브 너비',
+  en: 'YouTube width',
+  ja: 'YouTube の幅',
+  zh: 'YouTube 宽度',
+  de: 'YouTube-Breite',
+  fr: 'Largeur YouTube',
+  es: 'Ancho de YouTube',
+  pt: 'Largura do YouTube',
+  ru: 'Ширина YouTube',
+  ar: 'عرض YouTube',
+  hi: 'YouTube की चौड़ाई',
+  bn: 'YouTube-এর প্রস্থ',
+  ur: 'YouTube کی چوڑائی',
+  id: 'Lebar YouTube',
+};
+const ADDRESS_NAME: LocaleText = {
+  ko: '주소',
+  en: 'Address',
+  ja: 'リンク先',
+  zh: '链接地址',
+  de: 'Adresse',
+  fr: 'Adresse',
+  es: 'Dirección',
+  pt: 'Endereço',
+  ru: 'Адрес',
+  ar: 'عنوان الرابط',
+  hi: 'लिंक का पता',
+  bn: 'লিঙ্কের ঠিকানা',
+  ur: 'لنک کا پتہ',
+  id: 'Alamat',
+};
 
 const YOUTUBE_ICON =
   '<g transform="translate(8 8) scale(1.2857) translate(-8 -7.995)" stroke-width="1.089">' +
@@ -108,19 +148,25 @@ const setYoutubeWidth: Command = (doc, sel, args) => {
   const width = widthAttr((args['w'] ?? '') as AttrValue);
   if (width === null) return null;
   const [start] = ordered(sel);
-  const top = topNodeAt(doc, start.path);
-  const lump = top?.ch[0];
-  if (!top || lump === undefined || typeof lump === 'string' || lump.w !== 'youtube') return null;
+  const owner = blockOwnerAt(doc, start.path, 'youtube');
+  const lump = owner?.node;
+  if (!owner || !lump) return null;
   if (lump.a?.['w'] === width) return null; // 같은 값 — 무변화 침묵
-  const at = [start.path[0] as number, 0];
   return {
-    doc: replaceAt(doc, at, [{ w: 'youtube', a: {...(lump.a ?? {}), w: width }, ch: [] }]),
+    doc: replaceAt(doc, owner.path, [
+      {
+        w: 'youtube',
+        a: { ...(lump.a ?? {}), w: width },
+        ch: [],
+        ...(lump._id !== undefined ? { _id: lump._id } : {}),
+      },
+    ]),
     selection: sel,
   };
 };
 
 export const youtubeWing: Wing = {
-...boxObject({
+  ...boxObject({
     w: 'youtube',
     attrs: { v: videoAttr, w: widthAttr },
     // 영상 id 없는 영상은 영상이 아니다 — 그림의 src 와 같은 규칙이다.
@@ -160,3 +206,5 @@ export const youtubeWing: Wing = {
   },
   commands: { insertYoutube, setYoutubeWidth },
 };
+
+$markBuiltinAttrOwner(youtubeWing, ['youtube']);

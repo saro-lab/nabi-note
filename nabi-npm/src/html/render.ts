@@ -24,7 +24,8 @@ function escapeTextRun(text: string, preserveEnd = false): string {
     const atEnd = preserveEnd && offset + spaces.length === escaped.length;
     if (spaces.length === 1) return atEnd ? '&nbsp;' : spaces;
     return Array.from(spaces, (_space, at) =>
-      at % 2 === 0 || (atEnd && at === spaces.length - 1) ? '&nbsp;' : ' ').join('');
+      at % 2 === 0 || (atEnd && at === spaces.length - 1) ? '&nbsp;' : ' ',
+    ).join('');
   });
 }
 
@@ -37,7 +38,19 @@ function escapeAttr(value: string): string {
 // HTML 의 void 엘리먼트 — 자식을 못 갖고, 닫는 태그를 적는 것은 HTML 이 아니다.
 // `/` 는 HTML5 에서 있어도 되고 XML·XHTML 에서는 있어야 하므로 `<br/>` 가 양쪽이 다 읽는 한 표기다.
 const VOID_TAGS: ReadonlySet<string> = new Set([
-  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr',
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'source',
+  'track',
+  'wbr',
 ]);
 
 // 태그·속성 이름은 값이 아니라 문법이라 이스케이프로 막을 수 없다 — 모양이 아니면 아예 안 적는다.
@@ -60,10 +73,8 @@ function tagOf(tag: string, inner: string, attrs: HtmlAttrs): string {
   return VOID_TAGS.has(tag) ? `${open}/>` : `${open}>${inner}</${tag}>`;
 }
 
-// 빈 문단·빈 칸의 받침 — 줄 상자가 없으면 화면에서 한 줄이 사라진다.
-// 라인(br)과 같은 표기다: 되읽을 때 "혼자 선 br 하나 = 빈 것"이라는 한 줄 규칙으로 풀린다.
-const FILLER = '<br/>';
 // 화면 전용 받침 — 표식이 붙어 있어 캐럿 사상이 셈에서 건너뛴다.
+const REAL_BR = '<br/>';
 const FILLER_BR = `<br ${FILLER_ATTR}/>`;
 
 // 홀더의 속 — 받침이 붙는 자리가 **둘**이다.
@@ -91,7 +102,7 @@ function trailingLine(nodes: readonly NabiNode[], env: SchemaEnv): boolean {
 }
 
 function bodyOf(inner: string, job: Job, nodes: readonly NabiNode[]): string {
-  if (inner === '') return FILLER;
+  if (inner === '') return job.keys ? FILLER_BR : '';
   if (job.keys && trailingLine(nodes, job.env)) return inner + FILLER_BR;
   return inner;
 }
@@ -173,32 +184,25 @@ function contextFor(job: Job, node: ElementNode, block: boolean, preserveEnd: bo
 
 function renderNode(node: NabiNode, job: Job, preserveEnd = false, dropCap?: DropCapState): string {
   if (!isElement(node)) {
-    return dropCap?.pending === true
-      ? renderDropCapText(node, preserveEnd, dropCap)
-      : escapeTextRun(node, preserveEnd);
+    return dropCap?.pending === true ? renderDropCapText(node, preserveEnd, dropCap) : escapeTextRun(node, preserveEnd);
   }
   if (node.w === P) return renderParagraph(node, job);
   // 라인은 코어의 것이라 조립 맵을 안 거친다 — wing 이 예약어를 못 쓰기 때문이다.
   if (node.w === BR) {
     if (dropCap) dropCap.pending = false;
-    return FILLER;
+    return REAL_BR;
   }
 
   const block = isBlockGrade(node.w, job.env);
   const childEnd = block || preserveEnd;
   const children = (): string => renderChildren(node.ch, job, childEnd, dropCap);
-  const builder = job.builders[node.w];
+  const builder = Object.prototype.hasOwnProperty.call(job.builders, node.w) ? job.builders[node.w] : undefined;
   // 조립을 아는 이가 없는 타입 — 껍데기를 벗기고 속만 남긴다. 낯선 태그가 문서로 새지 않는다.
   if (!builder) return children();
   return builder(node, children, contextFor(job, node, block, childEnd));
 }
 
-function renderChildren(
-  nodes: readonly NabiNode[],
-  job: Job,
-  preserveEnd = false,
-  dropCap?: DropCapState,
-): string {
+function renderChildren(nodes: readonly NabiNode[], job: Job, preserveEnd = false, dropCap?: DropCapState): string {
   let out = '';
   for (let i = 0; i < nodes.length; i += 1) {
     out += renderNode(nodes[i] as NabiNode, job, preserveEnd && i === nodes.length - 1, dropCap);

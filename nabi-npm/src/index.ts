@@ -16,7 +16,7 @@ export { createNabiWith, makeRegistry } from './wing/index.js';
 export type { Registry, RegisteredRule } from './wing/index.js';
 
 // --- wing — 기본 묶음·개별 wing·팩토리 -------------------------------------------------------
-// wings 층의 문을 그대로 연다: 기본 묶음(defaultWings·extraWings)·개별 wing·wing 이 딸린
+// wings 층의 문을 그대로 연다: 기본 묶음(defaultWings)·개별 wing·wing 이 딸린
 // 지식(색·크기 목록, 코드 토크나이저,.nabi 파일 읽고 쓰기, 로컬 기록 저장소)까지가 전부
 // 호스트가 손대는 것들이다.
 export * from './wings/index.js';
@@ -61,7 +61,14 @@ export type {
 export { mountSurface } from './surface/index.js';
 export type { EditSurfacePort, Surface, SurfaceActions, SurfaceOptions } from './surface/index.js';
 // mount 부속 — 호스트 배선(전송 훅·저장소)이 있어야 사는 것들.
-export { browserFileStore, browserHistoryStorage, mountFile, mountLocalHistory, mountUpload, readExtensions } from './surface/index.js';
+export {
+  browserFileStore,
+  browserHistoryStorage,
+  mountFile,
+  mountLocalHistory,
+  mountUpload,
+  readExtensions,
+} from './surface/index.js';
 export type {
   FileMount,
   FileMountOptions,
@@ -128,15 +135,12 @@ export { renderToolbarHtml, renderViewToolsHtml, toolbarSlots } from './wing/too
 export type { ToolbarHtmlOptions, ToolbarSlot } from './wing/toolbar-html.js';
 
 // --- 조립된 HTML (서버에서도 그대로 돈다) ------------------------------------------------
-export { renderEditorHtml, renderHtml, safeUrl } from './html/index.js';
+export { safeUrl } from './html/index.js';
 // 저장본 문 — 나비트리 JSON 을 에디터·DOM 없이 (보기|편집기) HTML 로. 거절 규칙은 setJson 과
 // 같다(나비트리가 아니면 null). 댓글 목록·SSR 이 registry 하나로 저장본 여럿을 그린다 (090).
 export { renderStoredEditorHtml, renderStoredHtml } from './wing/index.js';
 export type { StoredHtmlOptions } from './wing/index.js';
-// 들여오기 어댑터 — `createNabiWith(wings, { parseHtml: parseNodes })` 로 꽂으면 `setHtml` 이 산다.
-// (브라우저 전용이다 — DOMParser 가 없는 곳에서는 부르지 않는다.)
-export { parseNodes } from './html/index.js';
-export type { HtmlAttrs, HtmlBuilder, HtmlBuilders, HtmlContext, HtmlOptions, ParseNode } from './html/index.js';
+export type { HtmlAttrs, HtmlBuilder, HtmlBuilders, HtmlContext } from './html/index.js';
 
 // --- 계약 타입 (에디터·문서·좌표) --------------------------------------------------------------
 export type { Nabi, NabiChange, NabiOptions } from './editor/index.js';
@@ -160,5 +164,13 @@ export { BR, P } from './schema/index.js';
 export type { Attrs, AttrValue, ElementNode, NabiDoc, NabiNode } from './schema/index.js';
 
 // --- 말 ------------------------------------------------------------------------------------------
-export { DICTIONARY, LOCALES, RTL_LOCALES, localeDirection, localeOf, makeTranslator, translate } from './locale/index.js';
+export {
+  DICTIONARY,
+  LOCALES,
+  RTL_LOCALES,
+  localeDirection,
+  localeOf,
+  makeTranslator,
+  translate,
+} from './locale/index.js';
 export type { Dictionary, LocaleText, Translator } from './locale/index.js';

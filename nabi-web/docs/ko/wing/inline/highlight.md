@@ -20,3 +20,21 @@ const selected = wings().use('hl', {
 ```
 
 `values`를 생략하면 `yellow`, `green`, `cyan`, `pink`, `purple`, `orange`를 사용합니다. 목록을 좁히면 등록하지 않은 색은 불러온 문서에서도 유지되지 않습니다.
+
+## CSS 스타일
+
+문서에는 색 이름만 저장됩니다. 편집기와 게시 화면의 색은 CSS 변수로 바꿉니다.
+
+```css
+.nabi-content { --nabi-hl-yellow: #fff0a6; }
+```
+
+여러 색을 함께 바꾸면 문서의 색 이름은 그대로 두고 서비스 분위기만 바꿀 수 있습니다.
+
+```css
+.article-body {
+  --nabi-hl-yellow: #fff0a6;
+  --nabi-hl-green: #c8f0d8;
+  --nabi-hl-pink: #ffd6e5;
+}
+```

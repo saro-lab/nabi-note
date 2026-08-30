@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Checklist
+description: Una lista que guarda el estado de completado con el documento.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Checklist
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Convierte elementos en una lista con casillas. El estado marcado o sin marcar se guarda en el documento, de modo que vuelve igual al cargarlo. En un párrafo vacío, escribir `[ ]` o `[x]` y pulsar Espacio también crea una checklist.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/block/task-list" />
 
-</div>
+```ts
+const selected = wings().use('tl').build()
+```

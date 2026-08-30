@@ -33,15 +33,11 @@ export type { ToolbarHtmlOptions, ToolbarSlot } from './wing/toolbar-html.js';
 
 // --- 어휘 — 무엇을 아는 문서인가 ---------------------------------------------------------------
 // registry 를 짓는 재료다. 서버와 브라우저가 **같은 목록**을 써야 hydrate 가 성립한다.
-export { defaultWings, extraWings, wingNames, wings } from './wings/index.js';
+export { defaultWings, wingNames, wings } from './wings/index.js';
 export type { WingName, WingsBuilder } from './wings/index.js';
 export type { Wing } from './wing/index.js';
 
-// --- 트리를 직접 든 자리의 문 -------------------------------------------------------------------
-// 이미 내부 트리를 손에 쥔 곳(그물·직접 조립)이 쓰는 한 걸음 아래의 문이다. 보통은 위의
-// `renderStoredHtml` 이면 된다 — 그쪽이 사용자 JSON 을 받고 정규화까지 함께 한다.
-export { renderEditorHtml, renderHtml, safeUrl } from './html/index.js';
-export type { HtmlOptions } from './html/index.js';
+export { safeUrl } from './html/index.js';
 
 // --- 문서의 모양 -------------------------------------------------------------------------------
 export { isElement, isText } from './schema/index.js';

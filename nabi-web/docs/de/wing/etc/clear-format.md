@@ -1,14 +1,26 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Formatierung löschen
+description: Entfernt die Textformatierung und die Absatzformatierung aus der Auswahl.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Formatierung löschen
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Entfernt die Textformatierung aus dem ausgewählten Bereich auf einmal. Zu den registrierten Standardmarkierungen wie Fettdruck, Farbe und Schriftart sowie zu den Absatzattributen wie Überschrift, Ausrichtung und Initialbuchstabe gehören diese ebenfalls. Ein schnaches zweimaliges Drücken der Esc-Taste führt dieselbe Aktion aus.
 
-[Open the Korean canonical page](/ko/guide/features)
+Es wandelt Dokumentstrukturen wie Listen, Tabellen, Zitate oder Bilder nicht in reinen Text um. Die äußere Ausrichtung von Bildern und Videos sowie die durch Uploads erstellten Anhangslinks bleiben unverändert.
 
-</div>
+<WingDemo path="/wing/etc/clear-format" />
+
+```ts
+const selected = wings()
+  .use('b')
+  .use('i')
+  .use('clearFormat')
+  .build()
+```
+
+Die Formatierungsflügel, die Sie löschen möchten, müssen ebenfalls ausgewählt sein, da sonst ihre Formatierung nicht entfernt werden kann.

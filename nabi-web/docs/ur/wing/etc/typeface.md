@@ -1,14 +1,37 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: ٹائپ فیس
+description: منتخب متن یا پیراگراف پر ٹائپ فیس خاندان لاگو کریں۔
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# ٹائپ فیس
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+منتخب متن پر ٹائپ فیس خاندان لاگو کریں۔ اگر حد منتخب ہے تو صرف وہی حد بدلتی ہے؛ اگر صرف کرسر ہے تو یہ موجودہ پیراگراف کے متن پر لاگو ہوتا ہے۔ اصل فونٹ فائلیں اور `font-family` اقدار سروس CSS میں متعین ہوتی ہیں۔
 
-[Open the Korean canonical page](/ko/guide/features)
+طے شدہ خاندان `sans`، `serif`، `mono` اور `cursive` ہیں۔ خاص طور پر کورین یا دوسرے کثیر لسانی مواد والی سروسز میں واضح طور پر طے کرنا بہتر ہے کہ ہر خاندان کون سے فونٹس استعمال کرے گا۔
 
-</div>
+<WingDemo path="/wing/etc/typeface" />
+
+```ts
+const selected = wings().use('tf', {
+  values: ['sans', 'serif', 'mono'],
+}).build()
+```
+
+اگر `values` حذف ہو تو تمام طے شدہ خاندان استعمال ہوتے ہیں۔ دستاویزات میں صرف `values` میں شامل اقدار کی اجازت ہے۔
+
+## CSS طرزیں
+
+دستاویز صرف خاندان کا نام محفوظ کرتی ہے، اور CSS فونٹ فائلیں منتخب کرتی ہے۔ ایڈیٹر اور شائع شدہ منظر دونوں کے لیے ایک ہی کنٹینر پر متغیرات بدلیں۔
+
+```css
+.nabi-content {
+  --nabi-font-serif: "Noto Serif", "Noto Serif KR", serif;
+  --nabi-font-mono: "JetBrains Mono", monospace;
+}
+```
+
+ویب فونٹس استعمال کریں تو پہلے ان کی فونٹ فائلیں لوڈ کریں۔ `cursive` میں اکثر بہت سی زبانوں کی مناسب سپورٹ نہیں ہوتی، اس لیے اپنی سروس کے اصل استعمال ہونے والے فونٹ کے انتخاب کے بعد ہی اسے فراہم کرنا بہتر ہے۔

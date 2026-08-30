@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: چیک لسٹ
+description: تکمیل کی حالت کو دستاویز کے ساتھ محفوظ رکھنے والی فہرست۔
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# چیک لسٹ
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+یہ تکمیل کی حالت رکھنے والی فہرست ہے۔ خالی پیراگراف میں `[ ]` یا `[x]` کے بعد Space دبائیں یا ٹول بار سے بنائیں، اور چیک باکس دبا کر حالت تبدیل کریں۔
 
-[Open the Korean canonical page](/ko/guide/features)
+چیک ہونے کی حالت آئٹم کی خصوصیت کے طور پر دستاویز کے ساتھ محفوظ ہوتی ہے۔ آئٹم تقسیم کرنے پر چیک کی حالت خالی ابتدائی آئٹم کے بجائے اس آئٹم کے ساتھ رہتی ہے جس میں متن باقی ہو، اس لیے مکمل کام کو دو حصوں میں بانٹنے پر حالت الٹتی نہیں۔
 
-</div>
+<WingDemo path="/wing/block/task-list" />
+
+```ts
+const selected = wings().use('tl').build()
+```

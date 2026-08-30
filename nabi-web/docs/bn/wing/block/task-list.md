@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: চেকলিস্ট
+description: সম্পন্ন অবস্থা নথির সঙ্গে সংরক্ষণ করা তালিকা।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# চেকলিস্ট
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+সম্পন্ন হওয়ার অবস্থা থাকা তালিকা। খালি অনুচ্ছেদে `[ ]` বা `[x]`-এর পরে Space লিখুন, অথবা টুলবারে তৈরি করে check box চেপে অবস্থা বদলান।
 
-[Open the Korean canonical page](/ko/guide/features)
+চেক করার অবস্থা আইটেমের attribute হিসেবে নথিতে একসঙ্গে সংরক্ষিত হয়। আইটেম ভাগ করলে চেক অবস্থা খালি আগের আইটেমের বদলে লেখা থাকা আইটেমকে অনুসরণ করে; তাই সম্পন্ন কাজ দুটো করলেও অবস্থা উল্টে যায় না।
 
-</div>
+<WingDemo path="/wing/block/task-list" />
+
+```ts
+const selected = wings().use('tl').build()
+```

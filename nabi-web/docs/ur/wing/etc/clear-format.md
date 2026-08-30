@@ -1,14 +1,26 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: فارمیٹنگ صاف کریں
+description: انتخاب سے متن اور پیراگراف کی فارمیٹنگ ہٹائیں۔
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# فارمیٹنگ صاف کریں
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+منتخب حد سے متن کی فارمیٹنگ ایک ساتھ ہٹائیں۔ رجسٹر شدہ طے شدہ مارکس، جیسے بولڈ، رنگ اور ٹائپ فیس، نیز پیراگراف کے اوصاف، جیسے سرخی، سیدھ اور ڈراپ کیپ، شامل ہوتے ہیں۔ Esc کو تیزی سے دو بار دبانے سے بھی یہی عمل ہوتا ہے۔
 
-[Open the Korean canonical page](/ko/guide/features)
+یہ فہرست، جدول، اقتباس یا تصویر جیسی دستاویز کی ساخت کو سادہ متن میں نہیں بدلتا۔ تصاویر اور ویڈیوز کی بیرونی سیدھ، اور اپ لوڈ سے بننے والے اٹیچمنٹ لنکس، جیسے کے ویسے رہتے ہیں۔
 
-</div>
+<WingDemo path="/wing/etc/clear-format" />
+
+```ts
+const selected = wings()
+  .use('b')
+  .use('i')
+  .use('clearFormat')
+  .build()
+```
+
+جن فارمیٹنگ ونگز کو صاف کرنا ہو انہیں بھی منتخب کرنا ضروری ہے، ورنہ ان کی فارمیٹنگ ہٹائی نہیں جا سکتی۔

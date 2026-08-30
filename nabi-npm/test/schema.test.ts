@@ -51,9 +51,7 @@ const EX = [
         ch: [
           {
             w: 'tr',
-            ch: [
-              { w: 'td', a: { colspan: '2' }, ch: [{ w: 'p', ch: ['칸 글', { w: 'br', ch: [] }, '둘째 줄'] }] },
-            ],
+            ch: [{ w: 'td', a: { colspan: '2' }, ch: [{ w: 'p', ch: ['칸 글', { w: 'br', ch: [] }, '둘째 줄'] }] }],
           },
         ],
       },
@@ -66,7 +64,14 @@ const EX = [
   {
     w: 'p',
     ch: [
-      { w: 'details', a: { o: 1 }, ch: [{ w: 'summary', ch: ['접기 제목'] }, { w: 'p', ch: ['접기 속 글'] }] },
+      {
+        w: 'details',
+        a: { o: 1 },
+        ch: [
+          { w: 'summary', ch: ['접기 제목'] },
+          { w: 'p', ch: ['접기 속 글'] },
+        ],
+      },
     ],
   },
   { w: 'p', ch: [{ w: 'code', a: { lang: 'ts' }, ch: ['const x = 1', { w: 'br', ch: [] }, 'const y = 2'] }] },
@@ -120,7 +125,10 @@ const dupe = cocoon(
   ],
   ENV,
 );
-ok('겹친 _id 는 둘째가 새 키를 받는다', dupe[0]?._id === 'same' && dupe[1]?._id !== 'same' && dupe[1]?._id !== undefined);
+ok(
+  '겹친 _id 는 둘째가 새 키를 받는다',
+  dupe[0]?._id === 'same' && dupe[1]?._id !== 'same' && dupe[1]?._id !== undefined,
+);
 const unsafe = cocoon([{ w: 'p', ch: [], _id: '"><script>' }], ENV);
 ok('위험한 글자의 _id 는 다시 짓는다', unsafe[0]?._id === 'n0');
 
@@ -137,22 +145,67 @@ eq('물건+글 문단은 셋으로 쪼개진다', $toJson(mixed), [
   { w: 'p', ch: ['뒤'] },
 ]);
 
-const two = $fromJson([{ w: 'p', ch: [{ w: 'img', a: { src: '/1.png' }, ch: [] }, { w: 'img', a: { src: '/2.png' }, ch: [] }] }], ENV) ?? [];
-ok('이미지 둘이 든 문단은 래퍼문단 둘이 된다', two.length === 2 && isWrapper(two[0] as ElementNode, ENV) && isWrapper(two[1] as ElementNode, ENV));
+const two =
+  $fromJson(
+    [
+      {
+        w: 'p',
+        ch: [
+          { w: 'img', a: { src: '/1.png' }, ch: [] },
+          { w: 'img', a: { src: '/2.png' }, ch: [] },
+        ],
+      },
+    ],
+    ENV,
+  ) ?? [];
+ok(
+  '이미지 둘이 든 문단은 래퍼문단 둘이 된다',
+  two.length === 2 && isWrapper(two[0] as ElementNode, ENV) && isWrapper(two[1] as ElementNode, ENV),
+);
 
-const wrapAttrs = $fromJson([{ w: 'p', a: { a: 'c', h: 2, dc: 1 }, ch: [{ w: 'img', a: { src: '/x.png' }, ch: [] }] }], ENV) ?? [];
+const wrapAttrs =
+  $fromJson([{ w: 'p', a: { a: 'c', h: 2, dc: 1 }, ch: [{ w: 'img', a: { src: '/x.png' }, ch: [] }] }], ENV) ?? [];
 eq('래퍼문단의 attrs 는 정렬만 남는다', (wrapAttrs[0] as ElementNode).a, { a: 'c' });
 
-const inDetails = $fromJson([{ w: 'p', ch: [{ w: 'details', ch: [{ w: 'summary', ch: ['제목'] }, { w: 'table', ch: [{ w: 'tr', ch: [{ w: 'td', ch: [] }] }] }] }] }], ENV) ?? [];
+const inDetails =
+  $fromJson(
+    [
+      {
+        w: 'p',
+        ch: [
+          {
+            w: 'details',
+            ch: [
+              { w: 'summary', ch: ['제목'] },
+              { w: 'table', ch: [{ w: 'tr', ch: [{ w: 'td', ch: [] }] }] },
+            ],
+          },
+        ],
+      },
+    ],
+    ENV,
+  ) ?? [];
 const detailsNode = (inDetails[0] as ElementNode).ch[0] as ElementNode;
-ok('컨테이너 속 맨몸 물건도 래퍼문단을 입는다 (재귀)', isElement(detailsNode.ch[1] as NabiNode) && isWrapper(detailsNode.ch[1] as NabiNode, ENV));
+ok(
+  '컨테이너 속 맨몸 물건도 래퍼문단을 입는다 (재귀)',
+  isElement(detailsNode.ch[1] as NabiNode) && isWrapper(detailsNode.ch[1] as NabiNode, ENV),
+);
 
-const inMark = $fromJson([{ w: 'p', ch: [{ w: 'b', ch: ['글', { w: 'img', a: { src: '/x.png' }, ch: [] }] }] }], ENV) ?? [];
+const inMark =
+  $fromJson([{ w: 'p', ch: [{ w: 'b', ch: ['글', { w: 'img', a: { src: '/x.png' }, ch: [] }] }] }], ENV) ?? [];
 eq('마크 속에 잘못 선 물건은 걷힌다', $toJson(inMark), [{ w: 'p', ch: [{ w: 'b', ch: ['글'] }] }]);
 
 // --- 빈 문단·문단 규칙 ----------------------------------------------------------------------
 
-const blanks = $fromJson([{ w: 'p', ch: [] }, { w: 'p', ch: [] }, { w: 'p', ch: [] }], ENV) ?? [];
+const blanks =
+  $fromJson(
+    [
+      { w: 'p', ch: [] },
+      { w: 'p', ch: [] },
+      { w: 'p', ch: [] },
+    ],
+    ENV,
+  ) ?? [];
 ok('빈 문단은 걷지 않는다 (엔터 연타 공백)', blanks.length === 3 && blanks.every((p) => p.ch.length === 0));
 const empty = $fromJson([], ENV) ?? [];
 eq('빈 문서에는 캐럿이 설 빈 문단 하나가 선다', $toJson(empty), [{ w: 'p', ch: [] }]);
@@ -167,19 +220,48 @@ eq('문단 속 문단은 껍데기를 벗는다', $toJson(nested), [{ w: 'p', ch
 
 // --- attrs 정책 -----------------------------------------------------------------------------
 
-const pAttrs = $fromJson([{ w: 'p', a: { h: 3, a: 'c', dc: 1, tf: 'serif', fs: 'lg', x: 'y' }, ch: ['글'] }], ENV) ?? [];
-eq('글 문단 attrs 는 h·a·dc 화이트리스트다 (서체·크기는 마크로 갔다)', (pAttrs[0] as ElementNode).a, { h: 3, a: 'c', dc: 1 });
+const pAttrs =
+  $fromJson([{ w: 'p', a: { h: 3, a: 'c', dc: 1, tf: 'serif', fs: 'lg', x: 'y' }, ch: ['글'] }], ENV) ?? [];
+eq('글 문단 attrs 는 h·a·dc 화이트리스트다 (서체·크기는 마크로 갔다)', (pAttrs[0] as ElementNode).a, {
+  h: 3,
+  a: 'c',
+  dc: 1,
+});
 const badAttrs = $fromJson([{ w: 'p', a: { h: 7, a: 'center', dc: 0 }, ch: ['글'] }], ENV) ?? [];
 ok('h 는 1~6, a 는 첫 글자, dc 는 1 만 — 어긋난 값은 걷는다', (badAttrs[0] as ElementNode).a === undefined);
 const hString = $fromJson([{ w: 'p', a: { h: '1' }, ch: ['글'] }], ENV) ?? [];
 ok('h 의 문자열 값은 걷는다 (숫자만)', (hString[0] as ElementNode).a === undefined);
 
-const boolAttr = $fromJson([{ w: 'p', ch: [{ w: 'tl', ch: [{ w: 'tli', a: { ck: 0 }, ch: [{ w: 'p', ch: ['a'] }] }, { w: 'tli', a: { ck: '1' }, ch: [{ w: 'p', ch: ['b'] }] }, { w: 'tli', a: { ck: 1 }, ch: [{ w: 'p', ch: ['c'] }] }] }] }], ENV) ?? [];
+const boolAttr =
+  $fromJson(
+    [
+      {
+        w: 'p',
+        ch: [
+          {
+            w: 'tl',
+            ch: [
+              { w: 'tli', a: { ck: 0 }, ch: [{ w: 'p', ch: ['a'] }] },
+              { w: 'tli', a: { ck: '1' }, ch: [{ w: 'p', ch: ['b'] }] },
+              { w: 'tli', a: { ck: 1 }, ch: [{ w: 'p', ch: ['c'] }] },
+            ],
+          },
+        ],
+      },
+    ],
+    ENV,
+  ) ?? [];
 const tlNode = (boolAttr[0] as ElementNode).ch[0] as ElementNode;
 const ckOf = (i: number): unknown => (tlNode.ch[i] as ElementNode).a?.['ck'];
-ok('불리언 attr 는 숫자 1 만 남는다 (0·"1" 은 걷는다)', ckOf(0) === undefined && ckOf(1) === undefined && ckOf(2) === 1);
+ok(
+  '불리언 attr 는 숫자 1 만 남는다 (0·"1" 은 걷는다)',
+  ckOf(0) === undefined && ckOf(1) === undefined && ckOf(2) === 1,
+);
 
-const junk = $fromJson([{ w: 'p', ch: [], foo: { bad: true }, _sneak: 'x' } as unknown as Record<string, unknown>], ENV);
+const junk = $fromJson(
+  [{ w: 'p', ch: [], foo: { bad: true }, _sneak: 'x' } as unknown as Record<string, unknown>],
+  ENV,
+);
 eq('모르는 여벌 키와 _ 키는 벗긴다', junk === null ? null : $toJson(junk), [{ w: 'p', ch: [] }]);
 
 // --- 블록 자리 정리 ------------------------------------------------------------------------
@@ -204,7 +286,7 @@ const repaired = cocoon(
   makeEnv({
     lumps: ['table'],
     blockHolders: ['table'],
-    repair: { table: (node) => ({...node, a: {...node.a, fixed: '1' } }) },
+    repair: { table: (node) => ({ ...node, a: { ...node.a, fixed: '1' } }) },
   }),
 );
 const tableNode = (repaired[0] as ElementNode).ch[0] as ElementNode;
@@ -222,22 +304,39 @@ ok('ch 를 뺀 말단은 받는다', $fromJson([{ w: 'p', ch: [{ w: 'img', a: { 
 
 // --- 런 뷰 ----------------------------------------------------------------------------------
 
-const runsDoc = $fromJson(
-  [{ w: 'p', ch: ['12', { w: 'b', ch: ['34', { w: 'br', ch: [] }, '5'] }, '6'] }],
-  ENV,
-) ?? [];
+const runsDoc = $fromJson([{ w: 'p', ch: ['12', { w: 'b', ch: ['34', { w: 'br', ch: [] }, '5'] }, '6'] }], ENV) ?? [];
 const runsP = runsDoc[0] as ElementNode;
 const runs = runsOf(runsP);
 eq(
   '런 뷰 — 중첩 마크가 평평하게 펴진다',
-  runs.map((run) => (run.kind === 'text' ? `${run.text}/${run.marks.map((m) => m.w).join('')}` : `[${run.node.w}]/${run.marks.map((m) => m.w).join('')}`)),
+  runs.map((run) =>
+    run.kind === 'text'
+      ? `${run.text}/${run.marks.map((m) => m.w).join('')}`
+      : `[${run.node.w}]/${run.marks.map((m) => m.w).join('')}`,
+  ),
   ['12/', '34/b', '[br]/b', '5/b', '6/'],
 );
 eq('칸 수 — 글자 하나·단말 하나가 각각 한 칸', lengthOf(runsP), 7);
-eq('오프셋 0 앞에는 마크가 없다', marksBefore(runsP, 0).map((m) => m.w), []);
-eq('글자 앞 마크 — b 속 글자', marksBefore(runsP, 3).map((m) => m.w), ['b']);
-eq('라인(br)도 마크 안에 선다', marksBefore(runsP, 5).map((m) => m.w), ['b']);
-eq('마크 밖 글자 앞에는 마크가 없다', marksBefore(runsP, 7).map((m) => m.w), []);
+eq(
+  '오프셋 0 앞에는 마크가 없다',
+  marksBefore(runsP, 0).map((m) => m.w),
+  [],
+);
+eq(
+  '글자 앞 마크 — b 속 글자',
+  marksBefore(runsP, 3).map((m) => m.w),
+  ['b'],
+);
+eq(
+  '라인(br)도 마크 안에 선다',
+  marksBefore(runsP, 5).map((m) => m.w),
+  ['b'],
+);
+eq(
+  '마크 밖 글자 앞에는 마크가 없다',
+  marksBefore(runsP, 7).map((m) => m.w),
+  [],
+);
 
 const wrapperP = bare[0] as ElementNode;
 const withLumps = (w: string): boolean => w === 'br' || ENV.lumps.has(w);

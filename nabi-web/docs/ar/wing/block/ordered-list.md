@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: قائمة مرقمة
+description: تنشئ قائمة مرقمة للعناصر التي يهم ترتيبها.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# قائمة مرقمة
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+تنشئ قائمة مرقمة للعناصر التي يهم ترتيبها. في فقرة فارغة، اكتب رقمًا ونقطة مثل `1.` ثم اضغط Space، أو حوّل الفقرات المحددة من شريط الأدوات.
 
-[Open the Korean canonical page](/ko/guide/features)
+يُحسب الرقم المعروض من موضع العنصر، لذلك يستمر تلقائيًا عند إضافة العناصر أو تغيير مستوى إزاحتها. لا تدعم القائمة حفظ رقم بداية مخصص والعد انطلاقًا منه.
 
-</div>
+<WingDemo path="/wing/block/ordered-list" />
+
+```ts
+const selected = wings().use('ol').build()
+```

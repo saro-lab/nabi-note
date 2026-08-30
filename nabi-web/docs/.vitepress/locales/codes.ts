@@ -7,7 +7,10 @@
 // Locale codes live apart from the dictionaries so the edge worker can import the list without
 // dragging ~360KB of translations into its bundle. Adding a language means editing this list and
 // the `messages` map in `index.ts`; the `satisfies` there fails the typecheck if they drift.
-const CODES = ['en', 'ko', 'ja', 'zh', 'de', 'fr', 'es', 'pt', 'ru', 'ar', 'hi', 'bn', 'ur', 'id'] as const
+const CODES = [
+  'en', 'ko', 'ja', 'zh', 'de', 'fr', 'es', 'pt', 'ru', 'ar', 'hi', 'bn', 'ur', 'id',
+  'fa', 'mr', 'vi', 'te', 'ha', 'tr', 'sw', 'ta', 'th', 'it',
+] as const
 
 export type LocaleCode = (typeof CODES)[number]
 

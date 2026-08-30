@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: يتوسطه خط
+description: اشطب النص المحدد.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# يتوسطه خط
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+يشطب النص المحدد. تطبيقه مرة أخرى على النطاق نفسه يزيل التنسيق، وتبقى العلامة محفوظة في المستندات.
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/strikethrough" />
 
-</div>
+```ts
+const selected = wings().use('s').build()
+```

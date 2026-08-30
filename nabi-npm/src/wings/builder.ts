@@ -13,6 +13,7 @@
 // 온다). CDN 묶음은 어차피 통짜라 손해가 없고, npm 으로 몇 개만 쓰는 사람의 가벼운 길은
 // 예전 그대로 **배열**이다 — `createNabiWith([boldWing])`. 배열 길은 계속 산다.
 import type { Wing } from '../wing/index.js';
+import { $isBuiltinWing, $markBuiltinAttrOwner } from '../schema/env.js';
 import { boldWing, italicWing, strikeWing, subscriptWing, superscriptWing, underlineWing } from './marks/marks.js';
 import {
   fontSizeWing,
@@ -87,9 +88,8 @@ type Catalog = typeof CATALOG;
 export type WingName = Catalog[number]['w'];
 type EntryOf<N extends WingName> = Extract<Catalog[number], { readonly w: N }>;
 // 이름별 옵션 타입 — 팩토리의 인자 타입을 그대로 비춘다. 옵션 없는 wing 은 never(못 준다).
-export type WingUseOptions<N extends WingName> = EntryOf<N> extends { readonly make: (options?: infer O) => Wing }
-  ? NonNullable<O>
-  : never;
+export type WingUseOptions<N extends WingName> =
+  EntryOf<N> extends { readonly make: (options?: infer O) => Wing } ? NonNullable<O> : never;
 
 export interface WingsBuilder {
   // 공식 wing 전부 — 이미 든 것은 그대로 두고 빈자리만 채운다(`.use(w, options)` 로 좁힌
@@ -124,6 +124,7 @@ interface Entry {
 }
 
 const ENTRIES: readonly Entry[] = CATALOG;
+for (const entry of ENTRIES) $markBuiltinAttrOwner(entry.wing, []);
 const NAME_LIST = ENTRIES.map((entry) => entry.w).join('·');
 
 // 공식 이름 목록 — CDN 사용자가 `console.log(N.wingNames())` 로 훑는 문. 오류 말에 목록을
@@ -176,7 +177,10 @@ function hintOf(w: string): string {
 }
 
 function unknownName(name: string): never {
-  const guess = suggest(name, ENTRIES.map((entry) => entry.w));
+  const guess = suggest(
+    name,
+    ENTRIES.map((entry) => entry.w),
+  );
   const maybe = guess === null ? '' : ` 혹시 ${hintOf(guess)}?`;
   // ex 로 시작하는 글자열 — 커스텀을 이름으로 부르려던 것이다. 커스텀은 객체가 들어와야
   // 계약(조립·커맨드)이 함께 온다.
@@ -200,7 +204,9 @@ function optioned(entry: Entry, options: object): Wing {
     const shape = takes[key];
     if (shape === undefined) {
       const guess = suggest(key, keys);
-      die(`'${entry.w}' 가 모르는 옵션: '${key}'.${guess === null ? '' : ` 혹시 '${guess}'?`} 받는 것: ${keys.join('·')}`);
+      die(
+        `'${entry.w}' 가 모르는 옵션: '${key}'.${guess === null ? '' : ` 혹시 '${guess}'?`} 받는 것: ${keys.join('·')}`,
+      );
     }
     if (shape === 'boolean' && typeof value !== 'boolean') {
       die(`'${entry.w}' 의 ${key} 는 true/false 다: { ${key}: true }`);
@@ -210,14 +216,16 @@ function optioned(entry: Entry, options: object): Wing {
     }
   }
   // 키·모양을 다 지났다 — 팩토리의 옵션 타입은 wing 마다 달라 여기서 한 번 좁힌다.
-  return (entry.make as (given: object) => Wing)(options);
+  const wing = (entry.make as (given: object) => Wing)(options);
+  $markBuiltinAttrOwner(wing, []);
+  return wing;
 }
 
 // `w` 가 ex 로 시작하는가 — 뒤는 카멜이다(exNote). 까닭은 이름 충돌이 아니라 **문서 손상**이다:
 // `w` 는 저장값에 박히므로, 남의 `note` 와 나중의 공식 `note` 가 겹치면 그 사람이 저장해 둔
 // 문서가 다른 뜻으로 읽힌다. 코드는 다시 짜면 되지만 남의 글은 못 되돌린다(087 §4).
 // 같은 까닭이 커스텀 wing 이 만드는 attr 키에도 한 겹 아래에 그대로 있다 — 그 검사는 다음 판이다.
-const EX_SHAPE = /^ex[A-Z0-9]/;
+const EX_SHAPE = /^ex[A-Z0-9][A-Za-z0-9]*$/;
 
 // `allBasic()` 의 유일한 잣대 — **선언만 본다.** `if (w === 'upload')` 같은 줄은 어디에도 안
 // 짓는다. 공식이든 커스텀이든 같은 문이다: 안 적으면 false(모르는 것은 안 든다).
@@ -292,6 +300,7 @@ export function wings(): WingsBuilder {
       }
       if (ENTRIES.some((entry) => entry.w === target.w)) {
         // 공식 이름을 든 객체 — 팩토리로 미리 지은 인스턴스다. 공식 자리(차례 포함)에 앉는다.
+        if (!$isBuiltinWing(target)) die(`'${target.w}' 는 package 공식 wing 인스턴스만 객체로 넣을 수 있다`);
         add(target.w, target);
         return self;
       }
@@ -307,7 +316,8 @@ export function wings(): WingsBuilder {
   };
 
   const drop = (target: WingName | (string & {}) | Wing): WingsBuilder => {
-    const w = typeof target === 'string' ? target : typeof target === 'object' && target !== null ? target.w : undefined;
+    const w =
+      typeof target === 'string' ? target : typeof target === 'object' && target !== null ? target.w : undefined;
     if (typeof w !== 'string') die('drop 은 wing 이름(글자열) 또는 wing 객체를 받는다');
     if (!has(w)) {
       // 공식 이름이나 ex 꼴이면 "안 들었다" 가 답이고, 그 밖은 오타다 — 각각의 고칠 길을 준다.

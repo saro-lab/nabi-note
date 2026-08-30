@@ -6,15 +6,14 @@
 // 사전은 언어 단위로 산다. 자리표(`{name}`)는 넘긴 값으로 바꾸고, 못 채운 자리는 그대로 둔다
 // (빈 칸으로 지우면 문장이 조용히 망가진다).
 import { DICTIONARY, type Dictionary, type LocaleText } from './dict.js';
+import { FALLBACK_LOCALE, normalizedLocale } from './normalize.js';
 
 // 마지막 보루 — 이 언어에 없으면 여기를 본다. 여기에도 없으면 키가 나온다.
-export const FALLBACK = 'en';
+export const FALLBACK = FALLBACK_LOCALE;
 
 // `ko-KR`·`KO` → `ko`. 모양이 아니면 en 으로 떨어진다.
 export function localeOf(raw: string | undefined | null): string {
-  if (typeof raw !== 'string') return FALLBACK;
-  const head = raw.trim().toLowerCase().split(/[-_]/)[0] ?? '';
-  return /^[a-z]{2,3}$/.test(head) ? head : FALLBACK;
+  return normalizedLocale(raw);
 }
 
 function fill(text: string, vars: Readonly<Record<string, string | number>> | undefined): string {

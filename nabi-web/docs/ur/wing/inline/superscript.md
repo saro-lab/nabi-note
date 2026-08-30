@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: سپر اسکرپٹ
+description: منتخب متن کو baseline سے اوپر کریں۔
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# سپر اسکرپٹ
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+قوتوں اور حوالہ نشانوں کے لیے منتخب متن کو baseline سے اوپر کرتا ہے۔ دوبارہ لگانے سے فارمیٹنگ ہٹ جاتی ہے۔
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/superscript" />
 
-</div>
+```ts
+const selected = wings().use('sup').build()
+```

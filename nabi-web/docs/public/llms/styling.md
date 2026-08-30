@@ -25,7 +25,7 @@ const sheets = collectSheets(registry, CORE_CSS);
 const detachStyles = injectSheets(document, sheets);
 ```
 
-`collectSheets()` places core CSS first, then registered wing CSS, and removes duplicate strings. `injectSheets()` fingerprints each sheet, skips matching styles already in that document, and returns a function that removes only styles created by that call.
+`collectSheets()` places core CSS first, then registered wing CSS, and removes duplicate strings. `injectSheets()` shares each exact CSS string by `Document` with reference counting. Its disposer removes a package-owned style only after the final reference; it never removes a matching style supplied by the host.
 
 Do not use runtime injection in SSR. Link or bundle `nabi-note/nabi.css`.
 
@@ -65,7 +65,12 @@ Never put `.nabi-editing` on published content.
 | `--nabi-layer-radius` | Panel/overlay corner radius |
 | `--nabi-shadow`, `--nabi-scrim` | Floating layer shadow and backdrop |
 | `--nabi-z-sticky` | Sticky toolbar layer, default 20 |
+| `--nabi-z-overlay`, `--nabi-z-dialog` | Fullscreen and modal overlay layers |
+| `--nabi-z-diff-fullscreen` | Standalone fullscreen diff layer, default 80 |
 | `--nabi-grid-cell` | Table picker cell size |
+| `--nabi-control-size`, `--nabi-touch-control-size` | Standard and touch control heights |
+| `--nabi-motion-press`, `--nabi-motion-fast` | Press and short UI transitions |
+| `--nabi-motion-progress`, `--nabi-motion-toast` | Upload progress and toast fade transitions |
 | `--nabi-hl-<name>` | Six highlight colors |
 | `--nabi-tc-<name>` | Five text colors |
 

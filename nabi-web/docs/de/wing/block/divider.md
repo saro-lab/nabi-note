@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Trennlinie
+description: Fügt eine horizontale Linie ein, die den Dokumentfluss trennt.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Trennlinie
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Eine horizontale Linie, die den Fluss des Dokuments trennt. Geben Sie drei oder mehr Bindestriche in einen leeren Absatz ein und drücken Sie die Eingabetaste, oder fügen Sie eine über die Symbolleiste ein.
 
-[Open the Korean canonical page](/ko/guide/features)
+Eine Trennlinie ist ein unabhängiger Block ohne Text, daher übernimmt sie keine Formatierungen wie Überschriften oder Farben. Verwenden Sie sie nur, um die Absätze vor und nach ihr zu trennen.
 
-</div>
+<WingDemo path="/wing/block/divider" />
+
+```ts
+const selected = wings().use('hr').build()
+```

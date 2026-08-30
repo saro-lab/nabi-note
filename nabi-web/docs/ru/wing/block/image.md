@@ -1,14 +1,39 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Изображение
+description: Добавляет адрес изображения и позволяет настроить ширину и выравнивание.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Изображение
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Добавляет адрес изображения и позволяет настроить ширину и выравнивание. По умолчанию разрешены только адреса `http:`, `https:` и пути того же сайта; новое изображение создаётся с выравниванием по центру и шириной 60%.
 
-[Open the Korean canonical page](/ko/guide/features)
+Ширина сохраняется только как одна из заданных ступеней, а выравнивание — в абзаце, содержащем изображение. Чтобы использовать предварительный просмотр через `blob:` или `data:image/...`, явно разрешите локальные URL и в image wing, и при сборке редактора. SVG data URL не разрешены.
 
-</div>
+<WingDemo path="/wing/block/image" />
+
+```ts
+const selected = wings().use('img', {
+  allowLocalUrls: false,
+}).build()
+```
+
+Эта wing помещает адрес в документ, но не передаёт файл. Чтобы отправить файл на сервер, подключите [wing загрузки](/ru/wing/etc/upload).
+
+## CSS-стили
+
+Изображение оформляется через `.nabi-content img`. Сохраняйте записанные ширину и выравнивание, изменяя только внешний вид — например, рамку или тень.
+
+```css
+.article-body img {
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.dark .article-body img { box-shadow: 0 8px 24px rgb(0 0 0 / 35%); }
+```
+
+Не переопределяйте базовые правила `max-inline-size`, `block-size`, ширины и выравнивания. Размер изображения сохранён в документе, поэтому принудительное значение в CSS может противоречить ширине, выбранной автором.

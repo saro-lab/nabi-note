@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Нумерованный список
+description: Создайте автоматически нумеруемый список.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Нумерованный список
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Создаёт нумерованный список для элементов, где важен порядок. В пустом абзаце введите число с точкой, например `1.`, и нажмите Space либо преобразуйте выбранные абзацы на панели.
 
-[Open the Korean canonical page](/ko/guide/features)
+Показанный номер вычисляется из позиции элемента, поэтому продолжается автоматически при добавлении и изменении отступа. Пользовательский начальный номер не сохраняется, и отсчёт с произвольного числа не поддерживается.
 
-</div>
+<WingDemo path="/wing/block/ordered-list" />
+
+```ts
+const selected = wings().use('ol').build()
+```

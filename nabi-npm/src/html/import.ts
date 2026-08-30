@@ -6,6 +6,7 @@
 // schema 의 cocoon 이 한다. 여기서 다시 구현하면 두 벌이 어긋난다.
 import { cocoon } from '../schema/cocoon.js';
 import type { SchemaEnv } from '../schema/env.js';
+import { $guarded, $ownDataArray, $ownDataObject, $snapshotNodes } from '../schema/json.js';
 import { BR, P } from '../schema/reserved.js';
 import type { AttrValue, Attrs, ElementNode, NabiDoc, NabiNode } from '../schema/types.js';
 import { safeUrl, youtubeId } from './url.js';
@@ -27,6 +28,64 @@ export interface ParseElement {
 }
 
 export type ParseNode = ParseText | ParseElement;
+
+function snapshotParseNode(value: unknown, active: WeakSet<object>): ParseNode | null {
+  const raw = $ownDataObject(value);
+  if (!raw || active.has(value as object)) return null;
+  const kind = raw['kind']?.value;
+  active.add(value as object);
+  try {
+    if (kind === 'text') {
+      const content = raw['text']?.value;
+      return typeof content === 'string' ? { kind: 'text', text: content } : null;
+    }
+    if (kind !== 'element') return null;
+    const tag = raw['tag']?.value;
+    const attrs = $ownDataObject(raw['attrs']?.value);
+    const childrenValue = raw['children']?.value;
+    const children = $ownDataArray(childrenValue);
+    if (typeof tag !== 'string' || !attrs || !children || active.has(childrenValue as object)) return null;
+    const copiedAttrs: Record<string, string> = {};
+    for (const [name, descriptor] of Object.entries(attrs)) {
+      if (typeof descriptor.value !== 'string') return null;
+      const normalized = name.toLowerCase();
+      if (Object.prototype.hasOwnProperty.call(copiedAttrs, normalized)) return null;
+      copiedAttrs[normalized] = descriptor.value;
+    }
+    active.add(childrenValue as object);
+    const copiedChildren: ParseNode[] = [];
+    try {
+      for (const child of children) {
+        const copied = snapshotParseNode(child, active);
+        if (!copied) return null;
+        copiedChildren.push(copied);
+      }
+    } finally {
+      active.delete(childrenValue as object);
+    }
+    return { kind: 'element', tag: tag.toLowerCase(), attrs: copiedAttrs, children: copiedChildren };
+  } finally {
+    active.delete(value as object);
+  }
+}
+
+export function $snapshotParseNodes(value: unknown): ParseNode[] | null {
+  const nodes = $ownDataArray(value);
+  if (!nodes) return null;
+  const active = new WeakSet<object>();
+  active.add(value as object);
+  const out: ParseNode[] = [];
+  try {
+    for (const node of nodes) {
+      const copied = snapshotParseNode(node, active);
+      if (!copied) return null;
+      out.push(copied);
+    }
+  } finally {
+    active.delete(value as object);
+  }
+  return out;
+}
 
 export interface ImportOptions {
   readonly env: SchemaEnv;
@@ -50,9 +109,36 @@ const PARAGRAPH_TAGS: ReadonlySet<string> = new Set(['p', 'div', 'h1', 'h2', 'h3
 
 // 속까지 통째로 버리는 태그 — 껍데기만 벗기면 스크립트 본문이 글자로 되살아난다.
 const DROP_TAGS: ReadonlySet<string> = new Set([
-  'script', 'style', 'noscript', 'template', 'head', 'title', 'meta', 'link', 'base',
-  'object', 'embed', 'applet', 'form', 'input', 'button', 'select', 'option', 'textarea',
-  'svg', 'canvas', 'audio', 'video', 'source', 'track', 'param', 'frame', 'frameset', 'map', 'area',
+  'script',
+  'style',
+  'noscript',
+  'template',
+  'head',
+  'title',
+  'meta',
+  'link',
+  'base',
+  'object',
+  'embed',
+  'applet',
+  'form',
+  'input',
+  'button',
+  'select',
+  'option',
+  'textarea',
+  'svg',
+  'math',
+  'canvas',
+  'audio',
+  'video',
+  'source',
+  'track',
+  'param',
+  'frame',
+  'frameset',
+  'map',
+  'area',
 ]);
 
 const HEADING = /^h([1-6])$/;
@@ -89,12 +175,9 @@ function node(w: string, a: Record<string, AttrValue | undefined>, ch: readonly 
   return Object.keys(attrs).length > 0 ? { w, a: attrs as Attrs, ch } : { w, ch };
 }
 
-// 받침 걷기 — 혼자 선 라인 하나는 조립이 댄 받침이다(빈 문단·빈 칸). 되읽을 때 도로 빈 속이 된다.
+// 화면 받침은 `data-nabi-filler` 표식을 단 br만 아래 단말 문에서 걷는다. 표식 없는 sole br은
+// 사용자가 넣은 실제 줄이라 보존한다.
 function dropFiller(nodes: readonly NabiNode[]): NabiNode[] {
-  if (nodes.length === 1) {
-    const only = nodes[0];
-    if (typeof only !== 'string' && only.w === BR) return [];
-  }
   return [...nodes];
 }
 
@@ -195,14 +278,24 @@ function languageOf(el: ParseElement): string | undefined {
 }
 
 function importElement(el: ParseElement, block: boolean, cx: Cx): NabiNode[] {
-  const claimed = cx.claim?.(el, (asBlock) => importNodes(el.children, asBlock, cx));
-  if (claimed) return claimed;
   if (DROP_TAGS.has(el.tag)) return [];
+  if (el.tag === 'iframe') {
+    if ('srcdoc' in el.attrs) return [];
+    const id = youtubeId(el.attrs['src']);
+    if (id === null) return [];
+    return [node('youtube', { v: id, w: width(el.attrs['data-nabi-width']) }, [])];
+  }
+  const claimed = cx.claim?.(el, (asBlock) => importNodes(el.children, asBlock, cx));
+  if (claimed) {
+    const copied = $snapshotNodes(claimed);
+    if (!copied) throw new TypeError('invalid custom HTML claim result');
+    return copied;
+  }
 
   switch (el.tag) {
     // --- 단말 ---
     case 'br':
-      return [{ w: BR, ch: [] }];
+      return 'data-nabi-filler' in el.attrs ? [] : [{ w: BR, ch: [] }];
     case 'hr':
       return [{ w: 'hr', ch: [] }];
     case 'img': {
@@ -212,13 +305,6 @@ function importElement(el: ParseElement, block: boolean, cx: Cx): NabiNode[] {
       // `alt` 는 안 읽는다 — 대체 글이 없는 갈래다(옛 문서의 것도 여기서 떨어진다).
       return [node('img', { src, w: width(el.attrs['data-nabi-width']) }, [])];
     }
-    case 'iframe': {
-      const id = youtubeId(el.attrs['src']);
-      // 유튜브가 아닌 임베드는 안 받는다 — 낯선 문서를 우리 문서 안에 세우지 않는다.
-      if (id === null) return [];
-      return [node('youtube', { v: id, w: width(el.attrs['data-nabi-width']) }, [])];
-    }
-
     // --- 마크 여섯 ---
     case 'b':
     case 'strong':
@@ -326,11 +412,19 @@ function importElement(el: ParseElement, block: boolean, cx: Cx): NabiNode[] {
 // --- 문 -------------------------------------------------------------------------------------
 
 // 엘리먼트 트리 → 나비트리. 마지막 한 걸음(감싸기·쪼개기·_id)은 cocoon 이 맡는다.
+export function $importDoc(nodes: unknown, options: ImportOptions): NabiDoc | null {
+  return $guarded('importDoc', null, () => {
+    const copied = $snapshotParseNodes(nodes);
+    if (!copied) return null;
+    const cx: Cx = {
+      allowLocal: options.allowLocalUrls === true,
+      claim: options.claim,
+      item: 'li',
+    };
+    return cocoon(importNodes(copied, true, cx), options.env);
+  });
+}
+
 export function importDoc(nodes: readonly ParseNode[], options: ImportOptions): NabiDoc {
-  const cx: Cx = {
-    allowLocal: options.allowLocalUrls === true,
-    claim: options.claim,
-    item: 'li',
-  };
-  return cocoon(importNodes(nodes, true, cx), options.env);
+  return $importDoc(nodes, options) ?? cocoon([], options.env);
 }

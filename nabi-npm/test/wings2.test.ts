@@ -11,7 +11,8 @@
 import type { ElementNode, NabiNode } from '../src/schema/index.js';
 import { positionExists, type Position } from '../src/doc/index.js';
 import type { Selection } from '../src/caret/index.js';
-import { createNabiWith, makeRegistry, type Wing } from '../src/wing/index.js';
+import { createNabiWith, makeRegistry, nabiOptionsOf, simpleMark, type Wing } from '../src/wing/index.js';
+import { createNabi, hostOf } from '../src/editor/index.js';
 import { defaultWings, makeTypefaceWing, wingNames, wings } from '../src/wings/index.js';
 import { $isBasic } from '../src/wings/builder.js';
 import {
@@ -26,7 +27,6 @@ import {
   clearFormatWing,
   exactTime,
   extensionOf,
-  extraWings,
   historyStorageAlive,
   historyView,
   imageWing,
@@ -47,10 +47,11 @@ import {
 } from '../src/wings/extra.js';
 import { ioFiltersOf, mountFile, mountLocalHistory, mountUpload, readExtensions } from '../src/surface/index.js';
 import { LOCALES, translate } from '../src/locale/index.js';
+import type { IoFilter } from '../src/io/index.js';
 import { tinyHtml } from './tiny-html.js';
 import { done, eq, ok } from './net.js';
 
-// defaultWings 가 이제 extraWings 를 품는다(코디네이터 병합) — 그대로 쓴다.
+// media와 integration wing까지 포함한 공식 기본 목록을 그대로 쓴다.
 const allWings = [...defaultWings];
 const registry = makeRegistry(allWings);
 const env = registry.env;
@@ -61,17 +62,51 @@ const p = (ch: readonly NabiNode[], a?: Record<string, string | number>): Elemen
 const at = (path: readonly number[], offset: number): Position => ({ path, offset });
 const range = (a: Position, b: Position): Selection => ({ anchor: a, focus: b });
 
-const make = (doc: readonly unknown[]) => createNabiWith(allWings, { doc, parseHtml: tinyHtml }).nabi;
+const make = (doc: readonly unknown[]) => createNabiWith(allWings, { doc }).nabi;
 
 // --- registry — 2차 묶음이 계약을 지난다 --------------------------------------------------------
 
-ok('defaultWings + extraWings 가 makeRegistry 를 지난다', registry.wings.length === allWings.length);
-eq('물건 둘이 조립을 갖는다', ['img', 'youtube'].every((w) => registry.builders[w] !== undefined), true);
-eq('도구 wing 은 노드를 안 세운다(조립 없음)', [uploadWing, clearFormatWing].every((w) => w.toHtml === undefined), true);
-eq('lumps 에 img·youtube 가 들었다', ['img', 'youtube'].every((w) => env.lumps.has(w)), true);
-eq('voids 에 img·youtube 가 들었다', ['img', 'youtube'].every((w) => env.voids.has(w)), true);
-eq('가속키 — 저장은 mod+s, 열기는 mod+o', [registry.wingOf('save')?.button?.accelerator, registry.wingOf('open')?.button?.accelerator], ['mod+s', 'mod+o']);
-eq('2차 커맨드가 전부 등록됐다', ['insertImage', 'setImageWidth', 'insertYoutube', 'commitUpload', 'saveFile', 'openFile', 'restoreHistory', 'clearFormat', 'toggleCheck'].every((name) => registry.commands[name] !== undefined), true);
+ok('defaultWings 전체가 makeRegistry 를 지난다', registry.wings.length === allWings.length);
+eq(
+  '물건 둘이 조립을 갖는다',
+  ['img', 'youtube'].every((w) => registry.builders[w] !== undefined),
+  true,
+);
+eq(
+  '도구 wing 은 노드를 안 세운다(조립 없음)',
+  [uploadWing, clearFormatWing].every((w) => w.toHtml === undefined),
+  true,
+);
+eq(
+  'lumps 에 img·youtube 가 들었다',
+  ['img', 'youtube'].every((w) => env.lumps.has(w)),
+  true,
+);
+eq(
+  'voids 에 img·youtube 가 들었다',
+  ['img', 'youtube'].every((w) => env.voids.has(w)),
+  true,
+);
+eq(
+  '가속키 — 저장은 mod+s, 열기는 mod+o',
+  [registry.wingOf('save')?.button?.accelerator, registry.wingOf('open')?.button?.accelerator],
+  ['mod+s', 'mod+o'],
+);
+eq(
+  '2차 커맨드가 전부 등록됐다',
+  [
+    'insertImage',
+    'setImageWidth',
+    'insertYoutube',
+    'commitUpload',
+    'saveFile',
+    'openFile',
+    'restoreHistory',
+    'clearFormat',
+    'toggleCheck',
+  ].every((name) => registry.commands[name] !== undefined),
+  true,
+);
 // 표면 부속은 선언이다 — DOM 에 손을 대는 셋이 리스너를 직접 안 달고 mount 에 맡긴다.
 for (const w of ['img', 'code', 'tl']) {
   const wing = registry.wingOf(w);
@@ -93,26 +128,57 @@ function imgOf(doc: readonly unknown[]): Record<string, unknown> | undefined {
   return lump?.w === 'img' ? (lump.a ?? {}) : undefined;
 }
 
-eq('img — 목록 안의 폭은 그대로 산다', imgOf([p([el('img', [], { src: '/a.png', w: '40' })])]), { src: '/a.png', w: '40' });
-eq('img — 목록 밖 폭(55)은 **거절**된다(가까운 단계로 스냅하지 않는다)', imgOf([p([el('img', [], { src: '/a.png', w: '55' })])]), { src: '/a.png' });
-eq('img — 폭 999 도 100 으로 깎이지 않고 거절된다', imgOf([p([el('img', [], { src: '/a.png', w: '999' })])]), { src: '/a.png' });
-eq('img — 숫자 40 은 문자열 표기로 맞춰진다(값은 같다)', imgOf([p([el('img', [], { src: '/a.png', w: 40 })])]), { src: '/a.png', w: '40' });
-eq('img — 정렬 attr 은 계약 밖이라 떨어진다 (정렬은 래퍼문단의 것)', imgOf([p([el('img', [], { src: '/a.png', a: 'center' })])]), { src: '/a.png' });
+eq('img — 목록 안의 폭은 그대로 산다', imgOf([p([el('img', [], { src: '/a.png', w: '40' })])]), {
+  src: '/a.png',
+  w: '40',
+});
+eq(
+  'img — 목록 밖 폭(55)은 **거절**된다(가까운 단계로 스냅하지 않는다)',
+  imgOf([p([el('img', [], { src: '/a.png', w: '55' })])]),
+  { src: '/a.png' },
+);
+eq('img — 폭 999 도 100 으로 깎이지 않고 거절된다', imgOf([p([el('img', [], { src: '/a.png', w: '999' })])]), {
+  src: '/a.png',
+});
+eq('img — 숫자 40 은 문자열 표기로 맞춰진다(값은 같다)', imgOf([p([el('img', [], { src: '/a.png', w: 40 })])]), {
+  src: '/a.png',
+  w: '40',
+});
+eq(
+  'img — 정렬 attr 은 계약 밖이라 떨어진다 (정렬은 래퍼문단의 것)',
+  imgOf([p([el('img', [], { src: '/a.png', a: 'center' })])]),
+  { src: '/a.png' },
+);
 // 주소를 잃은 그림은 **노드째 사라진다** — 빈 껍데기를 남기면 HTML 입구는 안 들이는 것을
 // JSON 입구만 유령으로 남기게 된다 (의 경로 대칭· boxObject 의 `requires`).
-ok('img — javascript: 주소를 문 그림은 안 선다', imgOf([p([el('img', [], { src: 'javascript:alert(1)' })])]) === undefined);
-ok('img — data:text/html 을 문 그림은 안 선다', imgOf([p([el('img', [], { src: 'data:text/html,<b>x' })])]) === undefined);
+ok(
+  'img — javascript: 주소를 문 그림은 안 선다',
+  imgOf([p([el('img', [], { src: 'javascript:alert(1)' })])]) === undefined,
+);
+ok(
+  'img — data:text/html 을 문 그림은 안 선다',
+  imgOf([p([el('img', [], { src: 'data:text/html,<b>x' })])]) === undefined,
+);
 ok('img — 기본 wing 은 blob: 을 안 받는다', imgOf([p([el('img', [], { src: 'blob:https://x/1' })])]) === undefined);
-eq('img — 낯선 attr(srcset)은 떨어진다', imgOf([p([el('img', [], { src: '/a.png', srcset: '/a2.png' })])]), { src: '/a.png' });
+eq('img — 낯선 attr(srcset)은 떨어진다', imgOf([p([el('img', [], { src: '/a.png', srcset: '/a2.png' })])]), {
+  src: '/a.png',
+});
 // 대체 글은 갈래에서 걷혔다 — 들어와도 안 실린다(깨진 그림 자리에 우리 그림이 선다).
 eq('img — 대체 글은 안 실린다', imgOf([p([el('img', [], { src: '/a.png', alt: '설명' })])]), { src: '/a.png' });
-eq('img — 폭 단계 목록은 30~100', [IMAGE_WIDTHS[0], IMAGE_WIDTHS[IMAGE_WIDTHS.length - 1], IMAGE_WIDTHS.length], ['30', '100', 8]);
+eq(
+  'img — 폭 단계 목록은 30~100',
+  [IMAGE_WIDTHS[0], IMAGE_WIDTHS[IMAGE_WIDTHS.length - 1], IMAGE_WIDTHS.length],
+  ['30', '100', 8],
+);
 
 {
   // 로컬 주소는 옵션으로만 열린다 — 업로드 미리보기의 길이다.
-  const local = createNabiWith([...defaultWings.filter((w) => w.w !== 'img'), makeImageWing({ allowLocalUrls: true })], {
-    doc: [p([el('img', [], { src: 'blob:https://x/1' })])],
-  }).nabi;
+  const local = createNabiWith(
+    [...defaultWings.filter((w) => w.w !== 'img'), makeImageWing({ allowLocalUrls: true })],
+    {
+      doc: [p([el('img', [], { src: 'blob:https://x/1' })])],
+    },
+  ).nabi;
   const json = local.getJson() as { ch?: { a?: Record<string, unknown> }[] }[];
   eq('img — allowLocalUrls 를 켜면 blob: 이 산다', json[0]?.ch?.[0]?.a, { src: 'blob:https://x/1' });
 }
@@ -127,10 +193,13 @@ eq('img — 폭 단계 목록은 30~100', [IMAGE_WIDTHS[0], IMAGE_WIDTHS[IMAGE_W
     { w: 'p', a: { a: 'c' }, ch: [{ w: 'img', a: { src: '/a.png', w: '40' }, ch: [] }] },
   ]);
   ok('insertImage — 폭을 안 주면 기본 60 이 붙는다', make([p(['글'])]).applyCommand('insertImage', { src: '/a.png' }));
-  ok('insertImage — 반환 자리는 반환 트리에 실재한다', positionExists(n.$doc(), n.getSelection().focus, env));
+  ok('insertImage — 반환 자리는 반환 트리에 실재한다', positionExists(hostOf(n).doc(), n.getSelection().focus, env));
   ok('setImageWidth — 목록 밖 값은 안 돈다', !n.applyCommand('setImageWidth', { w: '55' }));
   ok('setImageWidth — 목록 안 값은 돈다', n.applyCommand('setImageWidth', { w: '70' }));
-  eq('setImageWidth — 폭만 갈린다', (n.getJson() as { ch?: { a?: Record<string, unknown> }[] }[])[1]?.ch?.[0]?.a, { src: '/a.png', w: '70' });
+  eq('setImageWidth — 폭만 갈린다', (n.getJson() as { ch?: { a?: Record<string, unknown> }[] }[])[1]?.ch?.[0]?.a, {
+    src: '/a.png',
+    w: '70',
+  });
   ok('setImageWidth — 같은 값이면 침묵한다 (무변화면 침묵)', !n.applyCommand('setImageWidth', { w: '70' }));
 }
 
@@ -145,9 +214,17 @@ function youtubeOf(doc: readonly unknown[]): Record<string, unknown> | undefined
 eq('youtube — 11 글자 id 는 산다', youtubeOf([p([el('youtube', [], { v: '6j-gQmaZ9Zk' })])]), { v: '6j-gQmaZ9Zk' });
 // 영상 id 를 잃은 영상도 노드째 사라진다 — 그림의 `src` 와 같은 규칙이다.
 ok('youtube — 짧은 id 를 문 영상은 안 선다', youtubeOf([p([el('youtube', [], { v: 'abc' })])]) === undefined);
-ok('youtube — 주소를 그대로 담은 v 는 거절된다(값은 id 다)', youtubeOf([p([el('youtube', [], { v: 'https://youtu.be/6j-gQmaZ9Zk' })])]) === undefined);
-eq('youtube — 목록 밖 폭(30)은 거절된다', youtubeOf([p([el('youtube', [], { v: '6j-gQmaZ9Zk', w: '30' })])]), { v: '6j-gQmaZ9Zk' });
-eq('youtube — 폭 50 은 산다', youtubeOf([p([el('youtube', [], { v: '6j-gQmaZ9Zk', w: '50' })])]), { v: '6j-gQmaZ9Zk', w: '50' });
+ok(
+  'youtube — 주소를 그대로 담은 v 는 거절된다(값은 id 다)',
+  youtubeOf([p([el('youtube', [], { v: 'https://youtu.be/6j-gQmaZ9Zk' })])]) === undefined,
+);
+eq('youtube — 목록 밖 폭(30)은 거절된다', youtubeOf([p([el('youtube', [], { v: '6j-gQmaZ9Zk', w: '30' })])]), {
+  v: '6j-gQmaZ9Zk',
+});
+eq('youtube — 폭 50 은 산다', youtubeOf([p([el('youtube', [], { v: '6j-gQmaZ9Zk', w: '50' })])]), {
+  v: '6j-gQmaZ9Zk',
+  w: '50',
+});
 eq('youtube — 폭 단계는 50 부터다', [YOUTUBE_WIDTHS[0], YOUTUBE_WIDTHS.length], ['50', 6]);
 
 // 상황 줄에 주소 고치기가 **없다** (주인 지시 2026-08-18). 그림이 이미 그렇게 서 있었고 영상만
@@ -162,7 +239,10 @@ eq(
 {
   const n = make([p([])]);
   ok('insertYoutube — 아무 글자나 안 받는다', !n.applyCommand('insertYoutube', { v: '영상이아님' }));
-  ok('insertYoutube — watch 주소에서 id 를 되읽는다', n.applyCommand('insertYoutube', { v: 'https://www.youtube.com/watch?v=6j-gQmaZ9Zk' }));
+  ok(
+    'insertYoutube — watch 주소에서 id 를 되읽는다',
+    n.applyCommand('insertYoutube', { v: 'https://www.youtube.com/watch?v=6j-gQmaZ9Zk' }),
+  );
   // 넣는 순간 기본값이 트리에 적힌다 — 폭 70(그림보다 넓다: 영상은 제 크롬으로 한 겹 더
   // 줄어든다)에 래퍼문단은 가운데. 트리를 비워 두면 화면은 100% 로 서고 상황 줄의 눈금은
   // "값 없음" 자리에 앉아 서로 다른 %를 말한다.
@@ -170,7 +250,10 @@ eq(
     { w: 'p', a: { a: 'c' }, ch: [{ w: 'youtube', a: { v: '6j-gQmaZ9Zk', w: '70' }, ch: [] }] },
   ]);
   const n2 = make([p([])]);
-  ok('insertYoutube — youtu.be 짧은 주소도 읽는다', n2.applyCommand('insertYoutube', { v: 'https://youtu.be/6j-gQmaZ9Zk' }));
+  ok(
+    'insertYoutube — youtu.be 짧은 주소도 읽는다',
+    n2.applyCommand('insertYoutube', { v: 'https://youtu.be/6j-gQmaZ9Zk' }),
+  );
   ok('insertYoutube — id 를 그대로 줘도 받는다', make([p([])]).applyCommand('insertYoutube', { v: '6j-gQmaZ9Zk' }));
 }
 
@@ -178,7 +261,7 @@ eq(
 
 function roundTrip(name: string, doc: readonly unknown[]): void {
   const source = make(doc);
-  const back = make([]);
+  const back = createNabi({ ...nabiOptionsOf(registry), doc: [], parseHtml: tinyHtml });
   back.setHtml(source.getHtml());
   eq(`왕복 — ${name}`, back.getJson(), source.getJson());
 }
@@ -209,6 +292,19 @@ eq('clearFormat — 링크(a)를 벗긴다', clearedMark('a', { href: 'https://e
 eq('clearFormat — 지우는 마크는 열하나다', CLEARED_MARKS.length, 11);
 
 {
+  const removable = simpleMark({ w: 'exClear', clearable: true });
+  const preserved = simpleMark({ w: 'exKeep' });
+  const n = createNabiWith([...allWings, removable, preserved], {
+    doc: [p([el('exClear', ['A']), el('exKeep', ['B'])])],
+  }).nabi;
+  n.select(range(at([0], 0), at([0], 2)));
+  ok('clearFormat — custom mark는 clearable capability를 명시하면 벗긴다', n.applyCommand('clearFormat'));
+  eq('clearFormat — capability가 없는 custom mark는 보존한다', n.getJson(), [
+    { w: 'p', ch: ['A', { w: 'exKeep', ch: ['B'] }] },
+  ]);
+}
+
+{
   // 첨부 링크는 불가침이다 — 껍데기를 벗기면 되살릴 수 없는 죽은 평문이 된다 (old 규칙).
   const n = make([p([el('a', ['첨부.png'], { href: '/f/x.png', file: 'png' })])]);
   n.select(range(at([0], 0), at([0], 5)));
@@ -237,7 +333,10 @@ eq('clearFormat — 지우는 마크는 열하나다', CLEARED_MARKS.length, 11)
   const n = make([p(['앞'], { h: 2 }), p([el('i', ['뒤'])], { a: 'c' })]);
   ok('clearFormat — 두 문단에 걸친 선택이 선다', n.select(range(at([0], 0), at([1], 1))));
   n.applyCommand('clearFormat');
-  eq('clearFormat — 걸친 문단 전부가 대상이다', n.getJson(), [{ w: 'p', ch: ['앞'] }, { w: 'p', ch: ['뒤'] }]);
+  eq('clearFormat — 걸친 문단 전부가 대상이다', n.getJson(), [
+    { w: 'p', ch: ['앞'] },
+    { w: 'p', ch: ['뒤'] },
+  ]);
 }
 
 {
@@ -267,28 +366,31 @@ eq('clearFormat — 지우는 마크는 열하나다', CLEARED_MARKS.length, 11)
 
 {
   const n = make([p(['글'])]);
-  const release = n.$lock('upload');
-  eq('잠금 — 누가 잠갔는지 이름으로 답한다', n.$lockedBy(), 'upload');
+  const release = hostOf(n).lock('upload');
+  eq('잠금 — 누가 잠갔는지 이름으로 답한다', hostOf(n).lockedBy(), 'upload');
   ok('잠금 중 — 커맨드가 안 돈다', !n.applyCommand('insertText', { text: 'x' }));
   ok('잠금 중 — 되돌리기도 안 돈다', !n.undo());
   ok('잠금 중 — 문서 교체도 안 된다', !n.setJson([{ w: 'p', ch: ['다른 글'] }]));
   eq('잠금 중 — 문서는 한 글자도 안 변했다', n.getJson(), [{ w: 'p', ch: ['글'] }]);
   release();
-  eq('잠금 풀림 — 이름이 사라진다', n.$lockedBy(), null);
+  eq('잠금 풀림 — 이름이 사라진다', hostOf(n).lockedBy(), null);
   ok('잠금 풀림 — 커맨드가 다시 돈다', n.applyCommand('insertText', { text: 'x' }));
   release();
-  eq('잠금 — 두 번 풀어도 탈이 없다', n.$lockedBy(), null);
+  eq('잠금 — 두 번 풀어도 탈이 없다', hostOf(n).lockedBy(), null);
 }
 
 {
   const n = make([p([])]);
   ok('commitUpload — 항목이 없으면 안 돈다', !n.applyCommand('commitUpload', { items: [] }));
-  ok('commitUpload — 배치 하나가 커맨드 한 번이다', n.applyCommand('commitUpload', {
-    items: [
-      { kind: 'image', uri: '/f/a.png', name: 'a.png' },
-      { kind: 'file', uri: '/f/b.pdf', name: 'b.pdf' },
-    ],
-  }));
+  ok(
+    'commitUpload — 배치 하나가 커맨드 한 번이다',
+    n.applyCommand('commitUpload', {
+      items: [
+        { kind: 'image', uri: '/f/a.png', name: 'a.png' },
+        { kind: 'file', uri: '/f/b.pdf', name: 'b.pdf' },
+      ],
+    }),
+  );
   // 첨부의 글자는 **파일 이름이 아니다** — 부르는 쪽이 준 말이고, 안 주면 주소가 글자다
   // (커맨드는 말을 모른다). 자리표시자와 끝난 뒤의 링크가 같은 글자를 들어야 줄이 안 바뀐다.
   eq('commitUpload — 이미지는 img(폭 60·가운데), 그 밖은 첨부 링크가 된다', n.getJson(), [
@@ -297,12 +399,15 @@ eq('clearFormat — 지우는 마크는 열하나다', CLEARED_MARKS.length, 11)
   ]);
   {
     const named = make([{ w: 'p', ch: [] }]);
-    named.applyCommand('commitUpload', { items: [{ kind: 'file', uri: '/f/b.pdf', name: 'b.pdf' }], label: '첨부파일' });
+    named.applyCommand('commitUpload', {
+      items: [{ kind: 'file', uri: '/f/b.pdf', name: 'b.pdf' }],
+      label: '첨부파일',
+    });
     eq('commitUpload — 넘겨받은 글자가 첨부의 글자다', named.getJson(), [
       { w: 'p', ch: [{ w: 'a', a: { href: '/f/b.pdf', file: 'pdf' }, ch: ['첨부파일'] }] },
     ]);
   }
-  ok('commitUpload — 반환 자리는 반환 트리에 실재한다', positionExists(n.$doc(), n.getSelection().focus, env));
+  ok('commitUpload — 반환 자리는 반환 트리에 실재한다', positionExists(hostOf(n).doc(), n.getSelection().focus, env));
   ok('commitUpload — 되돌리기 한 번에 배치가 통째로 걷힌다', n.undo());
   eq('commitUpload — 배치 = undo 한 점', n.getJson(), [{ w: 'p', ch: [] }]);
 }
@@ -313,21 +418,50 @@ eq('clearFormat — 지우는 마크는 열하나다', CLEARED_MARKS.length, 11)
   eq('commitUpload — 못 믿을 주소는 이름만 남는 평문이 된다', n.getJson(), [{ w: 'p', ch: ['나쁜.pdf'] }]);
 }
 
-eq('acceptFiles — 큰 파일은 그 파일만 빠진다', acceptFiles(
-  [{ name: 'a.png', size: 10, type: 'image/png' }, { name: 'b.png', size: 999, type: 'image/png' }],
-  { maxFileSize: 100, maxTotalSize: 0 },
-).map((f) => f.name), ['a.png']);
-eq('acceptFiles — 총합 초과는 묶음 전체를 거절한다', acceptFiles(
-  [{ name: 'a.png', size: 80, type: 'image/png' }, { name: 'b.png', size: 80, type: 'image/png' }],
-  { maxFileSize: 0, maxTotalSize: 100 },
-).length, 0);
-eq('acceptFiles — 확장자 목록 밖은 빠진다', acceptFiles(
-  [{ name: 'a.exe', size: 1, type: '' }, { name: 'b.png', size: 1, type: '' }],
-  { extensions: ['png'] },
-).map((f) => f.name), ['b.png']);
+eq(
+  'acceptFiles — 큰 파일은 그 파일만 빠진다',
+  acceptFiles(
+    [
+      { name: 'a.png', size: 10, type: 'image/png' },
+      { name: 'b.png', size: 999, type: 'image/png' },
+    ],
+    { maxFileSize: 100, maxTotalSize: 0 },
+  ).map((f) => f.name),
+  ['a.png'],
+);
+eq(
+  'acceptFiles — 총합 초과는 묶음 전체를 거절한다',
+  acceptFiles(
+    [
+      { name: 'a.png', size: 80, type: 'image/png' },
+      { name: 'b.png', size: 80, type: 'image/png' },
+    ],
+    { maxFileSize: 0, maxTotalSize: 100 },
+  ).length,
+  0,
+);
+eq(
+  'acceptFiles — 확장자 목록 밖은 빠진다',
+  acceptFiles(
+    [
+      { name: 'a.exe', size: 1, type: '' },
+      { name: 'b.png', size: 1, type: '' },
+    ],
+    { extensions: ['png'] },
+  ).map((f) => f.name),
+  ['b.png'],
+);
 eq('acceptFiles — 빈 파일은 빠진다', acceptFiles([{ name: 'a.png', size: 0, type: '' }], {}).length, 0);
-eq('extensionOf — 맨 앞의 점은 확장자가 아니다', [extensionOf('a.PNG'), extensionOf('.gitignore'), extensionOf('a')], ['png', '', '']);
-eq('isImageFile — mime 이 없으면 확장자로 본다', [isImageFile({ name: 'a.png', size: 1, type: '' }), isImageFile({ name: 'a.pdf', size: 1, type: '' })], [true, false]);
+eq(
+  'extensionOf — 맨 앞의 점은 확장자가 아니다',
+  [extensionOf('a.PNG'), extensionOf('.gitignore'), extensionOf('a')],
+  ['png', '', ''],
+);
+eq(
+  'isImageFile — mime 이 없으면 확장자로 본다',
+  [isImageFile({ name: 'a.png', size: 1, type: '' }), isImageFile({ name: 'a.pdf', size: 1, type: '' })],
+  [true, false],
+);
 
 {
   // mountUpload — 잠금이 걸린 채 도는지, 끝나고 한 번에 커밋되는지.
@@ -340,7 +474,7 @@ eq('isImageFile — mime 이 없으면 확장자로 본다', [isImageFile({ name
   const mount = mountUpload({
     nabi: n,
     uploader: (task) => {
-      lockedDuringUpload = n.$lockedBy();
+      lockedDuringUpload = hostOf(n).lockedBy();
       return Promise.resolve({ uri: `/f/${task.name}` });
     },
     maxFileSize: 0,
@@ -351,7 +485,7 @@ eq('isImageFile — mime 이 없으면 확장자로 본다', [isImageFile({ name
   ok('mountUpload — 도는 동안 편집은 잠긴다', !n.applyCommand('insertText', { text: 'x' }));
   await new Promise((resolve) => setTimeout(resolve, 0));
   eq('mountUpload — 전송 훅이 도는 동안에도 잠겨 있다', lockedDuringUpload, 'upload');
-  eq('mountUpload — 끝나면 잠금이 풀린다', n.$lockedBy(), null);
+  eq('mountUpload — 끝나면 잠금이 풀린다', hostOf(n).lockedBy(), null);
   // mountUpload 는 로케일을 아는 자리라 첨부의 말을 골라 커맨드에 넘긴다 (기본 en).
   eq('mountUpload — 배치가 한 번에 커밋됐다', n.getJson(), [
     { w: 'p', a: { a: 'c' }, ch: [{ w: 'img', a: { src: '/f/a.png', w: '60' }, ch: [] }] },
@@ -370,7 +504,6 @@ function toasting(doc: readonly unknown[]): { nabi: ReturnType<typeof make>; sai
   const said: string[] = [];
   const nabi = createNabiWith(allWings, {
     doc,
-    parseHtml: tinyHtml,
     toast: (level, message) => said.push(`${level}:${message}`),
   }).nabi;
   return { nabi, said };
@@ -460,7 +593,10 @@ const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0
 
 // 판 이름은 **나비 자신의 판**이고 앞의 둘만 쓴다 (`1.2.3` → `1.2`) — 셋째 자리는 고친 것을
 // 세는 자리라 파일 모양과 상관이 없다.
-eq('writeNabiFile — 판 이름과 몸이 함께 나간다', JSON.parse(writeNabiFile([1])), { version: NABI_FILE_VERSION, body: [1] });
+eq('writeNabiFile — 판 이름과 몸이 함께 나간다', JSON.parse(writeNabiFile([1])), {
+  version: NABI_FILE_VERSION,
+  body: [1],
+});
 eq('판 이름은 나비 판의 앞 둘이다', NABI_FILE_VERSION, NABI_VERSION.split('.').slice(0, 2).join('.'));
 
 // **읽을 때는 판을 안 본다** (2026-08-17) — 거를 판이 아직 하나도 없다. 문을 세우면
@@ -472,7 +608,9 @@ eq('읽기: 판이 글자가 아니어도 몸만 본다', readNabiFile(JSON.stri
 eq('읽기: 나비트리를 통째로 담은 파일(손으로 만든 것)도 읽는다', readNabiFile(JSON.stringify([1])), [1]);
 eq('읽기: 모양이 아니면 null — 거기서만 거절한다', readNabiFile('{'), null);
 eq('readNabiFile — 몸만 되읽는다', readNabiFile(writeNabiFile([{ w: 'p', ch: ['글'] }])), [{ w: 'p', ch: ['글'] }]);
-eq('readNabiFile — 나비트리를 통째로 담은 옛 파일도 읽는다', readNabiFile('[{"w":"p","ch":["글"]}]'), [{ w: 'p', ch: ['글'] }]);
+eq('readNabiFile — 나비트리를 통째로 담은 옛 파일도 읽는다', readNabiFile('[{"w":"p","ch":["글"]}]'), [
+  { w: 'p', ch: ['글'] },
+]);
 eq('readNabiFile — 형식이 아니면 null 이다(던지지 않는다)', readNabiFile('not json'), null);
 
 {
@@ -488,7 +626,7 @@ eq('readNabiFile — 형식이 아니면 null 이다(던지지 않는다)', read
       saved = text;
       savedMime = mime ?? '';
     },
-    open: (): Promise<string | null> => Promise.resolve(saved),
+    open: () => Promise.resolve({ name: savedName, text: saved, ...(savedMime ? { mime: savedMime } : {}) }),
   };
   // html 을 읽는 문은 주입이다 — 그물은 제 손 토크나이저를 준다(브라우저는 parseNodes).
   const mounted = (nabi: ReturnType<typeof make>) =>
@@ -515,11 +653,23 @@ eq('readNabiFile — 형식이 아니면 null 이다(던지지 않는다)', read
   // 저장 판이 세울 단추의 재료다. 순서는 **nabi → html → md**: 원본이 맨 앞이고, 되돌아오지
   // 못하는 것이 맨 뒤다.
   const formats = mount.formats();
-  eq('formats — 순서는 nabi → html → md', formats.map((format) => format.id), ['nabi', 'html', 'markdown']);
+  eq(
+    'formats — 순서는 nabi → html → md',
+    formats.map((format) => format.id),
+    ['nabi', 'html', 'markdown'],
+  );
   // html 형식이 내는 이름은 **`.nhtml`** 이다(주인 지시 2026-08-23) — 담기는 글자와 mime 은
   // 여전히 html 한 장이고, 바뀐 것은 파일 이름의 꼬리뿐이다.
-  eq('formats — 확장자도 그 순서다', formats.map((format) => format.extension), ['.nabi', '.nhtml', '.md']);
-  eq('formats — 되돌아오지 못하는 것은 md 뿐이다', formats.filter((format) => format.lossy).map((f) => f.id), ['markdown']);
+  eq(
+    'formats — 확장자도 그 순서다',
+    formats.map((format) => format.extension),
+    ['.nabi', '.nhtml', '.md'],
+  );
+  eq(
+    'formats — 되돌아오지 못하는 것은 md 뿐이다',
+    formats.filter((format) => format.lossy).map((f) => f.id),
+    ['markdown'],
+  );
 
   // `.html` — **자립형 한 장이다.** 조각만 내리면 서식 없는 문서가 나오므로 껍데기와 시트를 얹는다.
   // 사본을 내리기 전에 **바뀐 문서**로 만들어 둔다 — 기준선을 옮기는지 여기서 갈린다.
@@ -530,8 +680,16 @@ eq('readNabiFile — 형식이 아니면 null 이다(던지지 않는다)', read
   mount.saveAs('html', '내 글');
   eq('saveAs — html 은 `.nhtml` 로 나가고 형식은 html 그대로다', `${savedName} ${savedMime}`, '내 글.nhtml text/html');
   ok('saveAs — html 은 doctype 으로 시작한다', saved.startsWith('<!doctype html>'), saved.slice(0, 40));
-  ok('saveAs — html 이 charset·제목·시트를 든다', saved.includes('<meta charset="utf-8">') && saved.includes('<title>내 글</title>') && saved.includes('.nabi-content {'));
-  ok('saveAs — html 본문이 `.nabi-content` 안에 든다', saved.includes('<div class="nabi-content">') && saved.includes('<h2>'));
+  ok(
+    'saveAs — html 이 charset·제목·시트를 든다',
+    saved.includes('<meta charset="utf-8">') &&
+      saved.includes('<title>내 글</title>') &&
+      saved.includes('.nabi-content {'),
+  );
+  ok(
+    'saveAs — html 본문이 `.nabi-content` 안에 든다',
+    saved.includes('<div class="nabi-content">') && saved.includes('<h2>'),
+  );
 
   mount.saveAs('markdown', '내 글');
   eq('saveAs — md 는 확장자와 형식이 제 것이다', `${savedName} ${savedMime}`, '내 글.md text/markdown');
@@ -551,7 +709,16 @@ eq('readNabiFile — 형식이 아니면 null 이다(던지지 않는다)', read
   // **여는 목록에 `.html` 이 빠져 있다** — 그 이름을 읽는 것은 저장 칸이 없는 짝(`html-open`)
   // 이고, 이 함수는 `save.extension` 을 든 필터만 센다. 목록을 넓히는 일은 surface 의 몫이라
   // 이 라운드에서 손대지 않았다(`todo/260823_012` 의 "남은 것" 참고).
-  eq('열기 — 받는 확장자 셋', readExtensions(ioFiltersOf({ registry, parse: tinyHtml })), ['.nabi', '.nhtml', '.md']);
+  eq('열기 — 명시된 확장자 전체', readExtensions(ioFiltersOf({ registry, parse: tinyHtml })), [
+    '.nabi',
+    '.nhtml',
+    '.html',
+    '.htm',
+    '.xhtml',
+    '.shtml',
+    '.md',
+    '.markdown',
+  ]);
 
   // 이름을 실은 새 모양 — 확장자가 어느 필터로 읽을지를 정한다.
   const named = (name: string, text: string) => ({
@@ -560,21 +727,36 @@ eq('readNabiFile — 형식이 아니면 null 이다(던지지 않는다)', read
   });
   {
     const target = make([]);
-    const opened = mountFile({ nabi: target, registry, store: named('메모.nabi', writeNabiFile(kept)), parse: tinyHtml });
+    const opened = mountFile({
+      nabi: target,
+      registry,
+      store: named('메모.nabi', writeNabiFile(kept)),
+      parse: tinyHtml,
+    });
     eq('mountFile — `.nabi` 가 열린다', await opened.open(), true);
     eq('mountFile — 왕복한 값이 그대로다', target.getJson(), kept);
   }
   {
     // 우리가 내린 이름 — 저장 판이 내는 그 확장자다. **저장한 것을 다시 열 수 있어야 한다.**
     const target = make([]);
-    const opened = mountFile({ nabi: target, registry, store: named('메모.nhtml', '<h1>연 제목</h1>'), parse: tinyHtml });
+    const opened = mountFile({
+      nabi: target,
+      registry,
+      store: named('메모.nhtml', '<h1>연 제목</h1>'),
+      parse: tinyHtml,
+    });
     eq('mountFile — `.nhtml` 은 html 필터가 읽는다', await opened.open(), true);
     eq('mountFile — 연 nhtml 이 문서가 됐다', target.getJson(), [{ w: 'p', a: { h: 1 }, ch: ['연 제목'] }]);
   }
   {
     // 밖에서 온 평범한 html — **여는 길을 막지 않는다**(주인 지시). 저장 칸 없는 짝이 받는다.
     const target = make([]);
-    const opened = mountFile({ nabi: target, registry, store: named('메모.html', '<h1>연 제목</h1>'), parse: tinyHtml });
+    const opened = mountFile({
+      nabi: target,
+      registry,
+      store: named('메모.html', '<h1>연 제목</h1>'),
+      parse: tinyHtml,
+    });
     eq('mountFile — `.html` 도 그대로 열린다', await opened.open(), true);
     eq('mountFile — 연 html 이 문서가 됐다', target.getJson(), [{ w: 'p', a: { h: 1 }, ch: ['연 제목'] }]);
   }
@@ -585,28 +767,74 @@ eq('readNabiFile — 형식이 아니면 null 이다(던지지 않는다)', read
     eq('mountFile — 연 md 가 문서가 됐다', target.getJson(), [{ w: 'p', a: { h: 1 }, ch: ['마크다운 제목'] }]);
   }
   {
-    // 모르는 확장자 — 아무 필터도 안 받는다. **쓰던 글이 그대로 남는 것**이 답이다.
+    // 모르는 확장자 — 평문으로 연다.
     const target = make([{ w: 'p', ch: ['쓰던 글'] }]);
     const opened = mountFile({ nabi: target, registry, store: named('메모.txt', '그냥 글자'), parse: tinyHtml });
-    eq('mountFile — 모르는 확장자는 안 연다', await opened.open(), false);
-    eq('mountFile — 그때 쓰던 글은 그대로다', target.getJson(), [{ w: 'p', ch: ['쓰던 글'] }]);
+    eq('mountFile — 모르는 확장자는 평문으로 연다', await opened.open(), true);
+    eq('mountFile — 평문이 문서가 된다', target.getJson(), [{ w: 'p', ch: ['그냥 글자'] }]);
   }
   {
-    // 옛 모양(글자만 답하는 저장소)도 계속 열린다 — 이름이 없으면 `.nabi` 로 본다.
     const target = make([]);
-    const old = { save: (): void => {}, open: (): Promise<string> => Promise.resolve(writeNabiFile(kept)) };
-    const opened = mountFile({ nabi: target, registry, store: old });
-    eq('mountFile — 옛 모양(글자만) 저장소도 열린다', await opened.open(), true);
-    eq('mountFile — 그 값도 그대로 앉는다', target.getJson(), kept);
+    const unnamed = named('', '확장자 없는 평문');
+    const opened = mountFile({ nabi: target, registry, store: unnamed });
+    eq('mountFile — 확장자 없는 이름은 평문으로 열린다', await opened.open(), true);
+    eq('mountFile — 확장자 없는 값이 문단이 된다', target.getJson(), [{ w: 'p', ch: ['확장자 없는 평문'] }]);
   }
-  ok('mountFile — 취소(null)는 오류가 아니다', (await mountFile({ nabi: make([]), registry, store: { save: () => {}, open: () => Promise.resolve(null) } }).open()) === false);
+  {
+    const errors: unknown[] = [];
+    const target = make([{ w: 'p', ch: ['원문'] }]);
+    const reject: IoFilter = { id: 'reject', label: 'reject', read: { extensions: ['.reject'], run: () => null } };
+    const opened = mountFile({
+      nabi: target,
+      registry,
+      store: named('bad.reject', 'x'),
+      ioFilters: [reject],
+      onError: (error) => errors.push(error),
+    });
+    eq('mountFile — known reader가 모두 null이면 원자적으로 거절한다', await opened.open(), false);
+    eq('mountFile — null reader 뒤 문서는 그대로다', target.getJson(), [{ w: 'p', ch: ['원문'] }]);
+    eq('mountFile — null reader 실패를 정확히 한 번 보고한다', errors.length, 1);
+  }
+  {
+    const errors: unknown[] = [];
+    const target = make([{ w: 'p', ch: ['원문'] }]);
+    const invalid: IoFilter = {
+      id: 'invalid',
+      label: 'invalid',
+      read: { extensions: ['.invalid'], run: () => ({ nope: true }) },
+    };
+    const opened = mountFile({
+      nabi: target,
+      registry,
+      store: named('bad.invalid', 'x'),
+      ioFilters: [invalid],
+      onError: (error) => errors.push(error),
+    });
+    eq('mountFile — reader의 invalid body를 원자적으로 거절한다', await opened.open(), false);
+    eq('mountFile — invalid body 뒤 문서는 그대로다', target.getJson(), [{ w: 'p', ch: ['원문'] }]);
+    eq('mountFile — invalid body 실패를 정확히 한 번 보고한다', errors.length, 1);
+  }
+  ok(
+    'mountFile — 취소(null)는 오류가 아니다',
+    (await mountFile({
+      nabi: make([]),
+      registry,
+      store: { save: () => {}, open: () => Promise.resolve(null) },
+    }).open()) === false,
+  );
 
   // **쓰던 글이 있으면 먼저 묻는다.** 묻는 길은 인스턴스의 것이라 호스트가 제 상자를 끼운다.
   {
     const asked: string[] = [];
     const dirty = createNabiWith(allWings, {
       doc: [{ w: 'p', ch: ['쓰던 글'] }],
-      ask: { message: () => {}, confirm: (text) => { asked.push(text); return false; } },
+      ask: {
+        message: () => {},
+        confirm: (text) => {
+          asked.push(text);
+          return false;
+        },
+      },
     }).nabi;
     const mounted2 = mountFile({ nabi: dirty, registry, store: named('메모.nabi', writeNabiFile(kept)) });
     dirty.select({ anchor: { path: [0], offset: 1 }, focus: { path: [0], offset: 1 } });
@@ -685,7 +913,7 @@ eq('summarize — 길면 자른다', summarize([{ w: 'p', ch: ['가'.repeat(200)
 
 {
   // 지우기는 되돌리기가 못 닿는다 — 그래서 기록 판이 먼저 묻는다. 그 물음이 **인스턴스의 것**을
-  // 지나야 한다: 부속이 `nabi.$ask` 를 그대로 물려주지 않으면 판이 브라우저 상자로 새거나
+  // 지나야 한다: 부속이 `hostOf(nabi).ask` 를 그대로 물려주지 않으면 판이 브라우저 상자로 새거나
   // 아무것도 안 물어 보고 지운다. 여기서 그 줄이 끊기지 않았는지만 잡는다.
   const storage = fakeStorage();
   const asked: string[] = [];
@@ -698,9 +926,9 @@ eq('summarize — 길면 자른다', summarize([{ w: 'p', ch: ['가'.repeat(200)
       return true;
     },
   };
-  const n = createNabiWith(allWings, { doc: [p(['글'])], parseHtml: tinyHtml, ask }).nabi;
+  const n = createNabiWith(allWings, { doc: [p(['글'])], ask }).nabi;
   const history = mountLocalHistory({ nabi: n, storage, minIntervalMs: 0 });
-  eq('localHistory — 묻는 길이 인스턴스의 것 그대로다', history.ask, n.$ask);
+  eq('localHistory — 묻는 길이 인스턴스의 것 그대로다', history.ask, hostOf(n).ask);
   eq('localHistory — 물으면 그 상자가 답한다', history.ask.confirm('지울까요?'), true);
   eq('localHistory — 물음이 그 상자에 닿았다', asked, ['지울까요?']);
   history.unmount();
@@ -738,7 +966,7 @@ for (const key of ['history.clearAsk', 'history.removeAsk']) {
   eq('historyStorageAlive — 저장소가 아예 없으면 죽은 것이다', historyStorageAlive(null), false);
   eq('historyStorageAlive — 읽히면 살아 있다', historyStorageAlive(fakeStorage()), true);
   eq('localHistory — 막힌 저장소는 부속도 죽었다고 답한다', history.alive(), false);
-  eq('localHistory — 알리는 길도 인스턴스의 것 그대로다', history.toast, n.$toast);
+  eq('localHistory — 알리는 길도 인스턴스의 것 그대로다', history.toast, hostOf(n).toast);
   history.unmount();
 
   // 저장소가 아예 없는 자리에서도 **부속은 선다** — 그래야 wing 단추가 판으로 이어지고, 판이
@@ -754,7 +982,11 @@ for (const key of ['history.clearAsk', 'history.removeAsk']) {
 // 판이 무엇을 보이는가 — 셋뿐이고 DOM 이 없다. "없음"과 "못 엶"은 다른 말이라 갈라 둔다.
 eq('historyView — 저장소가 막혔으면 blocked (기록 없음이 아니다)', historyView(false, []), 'blocked');
 eq('historyView — 살아 있는데 한 줄도 없으면 empty', historyView(true, []), 'empty');
-eq('historyView — 줄이 있으면 rows', historyView(true, [{ sessionId: 's', summary: '', body: '[]', savedAt: 1, createdAt: 1 }]), 'rows');
+eq(
+  'historyView — 줄이 있으면 rows',
+  historyView(true, [{ sessionId: 's', summary: '', body: '[]', savedAt: 1, createdAt: 1 }]),
+  'rows',
+);
 
 // --- 자세한 시각 — 로케일이 자리 순서를 정한다 (084 ⑤) ------------------------------------------
 
@@ -767,7 +999,10 @@ eq('historyView — 줄이 있으면 rows', historyView(true, [{ sessionId: 's',
   ok('exactTime — 지역까지 봐야 한다 (en-GB ≠ en-US)', exactTime(born, 'en-GB') !== exactTime(born, 'en-US'));
   // 초까지 든다는 것을 숫자 모양으로 안 잰다 — 벵골어는 제 숫자를 쓰고 인도네시아어는 시각을
   // 점으로 나눈다. 1초를 옮겼을 때 글자가 달라지는가로 잰다.
-  ok('exactTime — 열넷 어디서도 초까지 든다', LOCALES.every((code) => exactTime(born, code) !== exactTime(born + 1000, code)));
+  ok(
+    'exactTime — 열넷 어디서도 초까지 든다',
+    LOCALES.every((code) => exactTime(born, code) !== exactTime(born + 1000, code)),
+  );
   ok('exactTime — 모양이 아닌 로케일도 시각을 잃지 않는다', exactTime(born, '!!').includes('2026'));
 }
 
@@ -788,7 +1023,9 @@ for (const key of ['history.blocked', 'upload.failed', 'upload.failed_many', 'up
 
 const joined = (code: string, lang: string): string => tokenize(code, lang).reduce((sum, t) => sum + t.text, '');
 const typesOf = (code: string, lang: string): string[] =>
-  tokenize(code, lang).filter((t) => t.type !== undefined).map((t) => t.type as string);
+  tokenize(code, lang)
+    .filter((t) => t.type !== undefined)
+    .map((t) => t.type as string);
 
 for (const [lang, code] of [
   ['ts', 'const x: number = 1; // 주석\nfunction f() { return "글"; }'],
@@ -801,22 +1038,53 @@ for (const [lang, code] of [
   eq(`토크나이저 — 이어 붙이면 원본이다 (${lang || '무명'})`, joined(code, lang), code);
 }
 ok('토크나이저 — ts 는 키워드를 안다', typesOf('const x = 1', 'ts').includes('keyword'));
-ok('토크나이저 — ts 는 글자열과 주석을 가른다', ['string', 'comment'].every((t) => typesOf('// 주석\nconst s = "글"', 'ts').includes(t)));
-ok('토크나이저 — json 은 글자열과 수를 안다', ['string', 'number'].every((t) => typesOf('{"a": 1}', 'json').includes(t)));
+ok(
+  '토크나이저 — ts 는 글자열과 주석을 가른다',
+  ['string', 'comment'].every((t) => typesOf('// 주석\nconst s = "글"', 'ts').includes(t)),
+);
+ok(
+  '토크나이저 — json 은 글자열과 수를 안다',
+  ['string', 'number'].every((t) => typesOf('{"a": 1}', 'json').includes(t)),
+);
 ok('토크나이저 — css 는 주석을 안다', typesOf('.a { /* c */ }', 'css').includes('comment'));
-ok('토크나이저 — html 은 태그와 속성을 안다', ['tag', 'attribute'].every((t) => typesOf('<a href="/x">글</a>', 'html').includes(t)));
+ok(
+  '토크나이저 — html 은 태그와 속성을 안다',
+  ['tag', 'attribute'].every((t) => typesOf('<a href="/x">글</a>', 'html').includes(t)),
+);
 eq('토크나이저 — 닫히지 않은 글자열도 글자를 안 잃는다', joined('const s = "열린 채', 'ts'), 'const s = "열린 채');
 eq('토크나이저 — 빈 글은 빈 목록이다', tokenize('', 'ts').length, 0);
-eq('usableTokens — 원본과 다른 답은 평문 한 덩이가 된다', usableTokens([{ text: '다른 글' }], '원본'), [{ text: '원본' }]);
-eq('usableTokens — 모르는 토큰 이름은 맨 글자로 떨어진다', usableTokens([{ text: 'x', type: '낯선' }], 'x'), [{ text: 'x' }]);
+eq('usableTokens — 원본과 다른 답은 평문 한 덩이가 된다', usableTokens([{ text: '다른 글' }], '원본'), [
+  { text: '원본' },
+]);
+eq('usableTokens — 모르는 토큰 이름은 맨 글자로 떨어진다', usableTokens([{ text: 'x', type: '낯선' }], 'x'), [
+  { text: 'x' },
+]);
 
 // `tokensFor` — 편집 화면과 보는 쪽이 **함께 쓰는 한 줄**이다 (088). 둘이 각자 이 줄을 적으면
 // 언젠가 갈리고, 그러면 미리보기의 색과 편집기의 색이 다른 답을 낸다.
 eq('tokensFor — 하이라이터가 없으면 내장 토크나이저가 답한다', tokensFor('const', 'ts'), tokenize('const', 'ts'));
-eq('tokensFor — 호스트의 답을 그대로 쓴다', tokensFor('ab', null, () => [{ text: 'ab', type: 'string' }]), [{ text: 'ab', type: 'string' }]);
-eq('tokensFor — null 을 답하면 내장으로 떨어진다', tokensFor('const', 'ts', () => null), tokenize('const', 'ts'));
-eq('tokensFor — 던지는 하이라이터도 색칠만 포기한다', tokensFor('const', 'ts', () => { throw new Error('죽었다'); }), tokenize('const', 'ts'));
-eq('tokensFor — 원본과 어긋난 답은 평문 한 덩이다', tokensFor('원본', null, () => [{ text: '다른 글' }]), [{ text: '원본' }]);
+eq(
+  'tokensFor — 호스트의 답을 그대로 쓴다',
+  tokensFor('ab', null, () => [{ text: 'ab', type: 'string' }]),
+  [{ text: 'ab', type: 'string' }],
+);
+eq(
+  'tokensFor — null 을 답하면 내장으로 떨어진다',
+  tokensFor('const', 'ts', () => null),
+  tokenize('const', 'ts'),
+);
+eq(
+  'tokensFor — 던지는 하이라이터도 색칠만 포기한다',
+  tokensFor('const', 'ts', () => {
+    throw new Error('죽었다');
+  }),
+  tokenize('const', 'ts'),
+);
+eq(
+  'tokensFor — 원본과 어긋난 답은 평문 한 덩이다',
+  tokensFor('원본', null, () => [{ text: '다른 글' }]),
+  [{ text: '원본' }],
+);
 
 // --- 체크 토글 ----------------------------------------------------------------------------------
 
@@ -834,7 +1102,7 @@ eq('tokensFor — 원본과 어긋난 답은 평문 한 덩이다', tokensFor('�
   ok('toggleCheck — 값을 못 박아 부를 수도 있다', n.applyCommand('toggleCheck', { ck: 1 }));
   ok('toggleCheck — 이미 그 값이면 침묵한다 (무변화면 침묵)', !n.applyCommand('toggleCheck', { ck: 1 }));
 
-  const id = ((n.$doc()[0]?.ch[0] as ElementNode).ch[0] as ElementNode)._id;
+  const id = ((hostOf(n).doc()[0]?.ch[0] as ElementNode).ch[0] as ElementNode)._id;
   ok('toggleCheck — 화면이 짚어 준 _id 로도 찾는다 (체크 띠 클릭의 길)', n.applyCommand('toggleCheck', { id, ck: 0 }));
   ok('toggleCheck — 모르는 id 는 안 돈다', !n.applyCommand('toggleCheck', { id: 'nope' }));
 }
@@ -883,7 +1151,11 @@ function dies(name: string, fn: () => unknown, needles: readonly string[]): void
     all.length === defaultWings.length && all.every((wing, i) => wing === defaultWings[i]),
     all.map((wing) => wing.w).join('·'),
   );
-  eq('빌더 — wingNames() 가 defaultWings 의 w 차례 그대로다', wingNames(), defaultWings.map((wing) => wing.w));
+  eq(
+    '빌더 — wingNames() 가 defaultWings 의 w 차례 그대로다',
+    wingNames(),
+    defaultWings.map((wing) => wing.w),
+  );
   eq('빌더 — .all() 없이는 빈 손이다', wings().build(), []);
 }
 
@@ -904,8 +1176,14 @@ function dies(name: string, fn: () => unknown, needles: readonly string[]): void
     '빌더 — .allBasic() 이 든 것은 defaultWings 와 같은 인스턴스다',
     basic.every((wing) => wing === defaultWings.find((one) => one.w === wing.w)),
   );
-  ok('빌더 — 든 것은 전부 스스로 basic 이라 말한 것이다', basic.every((wing) => wing.basic === true));
-  ok('빌더 — 뺀 넷은 basic 을 안 단다', WIRED.every((w) => defaultWings.find((wing) => wing.w === w)?.basic !== true));
+  ok(
+    '빌더 — 든 것은 전부 스스로 basic 이라 말한 것이다',
+    basic.every((wing) => wing.basic === true),
+  );
+  ok(
+    '빌더 — 뺀 넷은 basic 을 안 단다',
+    WIRED.every((w) => defaultWings.find((wing) => wing.w === w)?.basic !== true),
+  );
 
   // 빠진 것을 도로 넣는 길은 이미 있는 문 하나뿐이다 — .use().
   const withSave = wings().allBasic().use('save').use('open').build();
@@ -919,14 +1197,24 @@ function dies(name: string, fn: () => unknown, needles: readonly string[]): void
   ok('빌더 — basic 을 안 단 커스텀은 안 든다', !$isBasic({ w: 'exNote', place: 'tool' }));
   ok('빌더 — basic: true 를 단 커스텀은 든다', $isBasic({ w: 'exNote', place: 'tool', basic: true }));
   // 차례표 밖이라 .allBasic() 이 커스텀을 찾아가지는 않는다 — 커스텀은 .use(객체) 로 온다.
-  ok('빌더 — .allBasic() 은 커스텀을 스스로 끌어오지 않는다', !wings().allBasic().build().some((wing) => wing.w.startsWith('ex')));
+  ok(
+    '빌더 — .allBasic() 은 커스텀을 스스로 끌어오지 않는다',
+    !wings()
+      .allBasic()
+      .build()
+      .some((wing) => wing.w.startsWith('ex')),
+  );
 }
 
 {
   // .all() 은 한 글자도 안 바뀐다 — allBasic 이 늘어도 옛 문과 defaultWings 는 그대로다.
   eq('빌더 — .all() 은 여전히 차례표 전부다', wings().all().build().length, defaultWings.length);
   const mixed = wings().allBasic().all().build();
-  eq('빌더 — .allBasic() 뒤의 .all() 이 빠진 셋을 도로 채운다', mixed.map((wing) => wing.w), defaultWings.map((wing) => wing.w));
+  eq(
+    '빌더 — .allBasic() 뒤의 .all() 이 빠진 셋을 도로 채운다',
+    mixed.map((wing) => wing.w),
+    defaultWings.map((wing) => wing.w),
+  );
 }
 
 // ① 이름 오타 — 그 자리에서 죽고, "혹시 이것?" 과 전체 목록이 실린다.
@@ -951,9 +1239,11 @@ dies('빌더 ② — 옵션 없는 wing 에 옵션을 주면 죽는다', () => w
 dies('빌더 ② — values 에 배열 아닌 것을 주면 죽는다', () => wings().use('tf', { values: 'sans' } as never), [
   "'tf' 의 values 는 배열이다",
 ]);
-dies('빌더 ② — allowLocalUrls 에 불리언 아닌 것을 주면 죽는다', () => wings().use('img', { allowLocalUrls: 'yes' } as never), [
-  "'img' 의 allowLocalUrls 는 true/false 다",
-]);
+dies(
+  '빌더 ② — allowLocalUrls 에 불리언 아닌 것을 주면 죽는다',
+  () => wings().use('img', { allowLocalUrls: 'yes' } as never),
+  ["'img' 의 allowLocalUrls 는 true/false 다"],
+);
 
 // ③ 목록 밖 값 — 팩토리(계약의 원본)가 던지고, 받는 목록이 실린다.
 dies('빌더 ③ — 목록 밖 값은 죽고 받는 목록이 실린다', () => wings().use('tf', { values: ['sans', 'georgia'] }), [
@@ -967,9 +1257,11 @@ dies('팩토리 직접 호출도 같은 계약이다', () => makeTypefaceWing({ 
 dies('빌더 ④ — ex 아닌 커스텀은 죽고 고친 이름을 보여 준다', () => wings().use({ w: 'note', place: 'tool' } as Wing), [
   "'note' → 'exNote'",
 ]);
-dies('빌더 ④ — 객체에 옵션을 얹으면 죽는다(조용히 버리지 않는다)', () => (wings() as { use(a: unknown, b: unknown): unknown }).use(uploadWing, { allowLocalUrls: true }), [
-  '객체에는 옵션을 못 얹는다',
-]);
+dies(
+  '빌더 ④ — 객체에 옵션을 얹으면 죽는다(조용히 버리지 않는다)',
+  () => (wings() as { use(a: unknown, b: unknown): unknown }).use(uploadWing, { allowLocalUrls: true }),
+  ['객체에는 옵션을 못 얹는다'],
+);
 dies('빌더 — 이름도 객체도 아닌 것은 죽는다', () => wings().use(42 as never), ['이름(글자열) 또는 wing 객체']);
 
 // ⑤ 의존성 깨는 drop — 마지막 딛는 자리를 빼면 죽고, 함께 빼는 길이 실린다.
@@ -978,14 +1270,16 @@ dies('빌더 ⑤ — 마지막 딛는 wing 을 빼면 죽는다', () => wings().
   'img·a 중 하나가 필요하다',
   ".drop('upload')",
 ]);
-dies('빌더 ⑤ — 안 든 것을 빼면 죽는다(조용한 no-op 이 아니다)', () => wings().drop('upload'), [
-  '지금 목록에 없다',
-]);
+dies('빌더 ⑤ — 안 든 것을 빼면 죽는다(조용한 no-op 이 아니다)', () => wings().drop('upload'), ['지금 목록에 없다']);
 
 {
   // 의존성 — 더할 때는 조용히 끌어오고(img 가 딸려 온다), 하나가 남아 있으면 빼도 산다.
   const up = wings().use('upload').build();
-  eq('빌더 — upload 을 부르면 딛는 img 가 조용히 딸려 온다', up.map((wing) => wing.w), ['img', 'upload']);
+  eq(
+    '빌더 — upload 을 부르면 딛는 img 가 조용히 딸려 온다',
+    up.map((wing) => wing.w),
+    ['img', 'upload'],
+  );
   ok('빌더 — 딸려 온 목록이 등록(makeRegistry)을 그대로 지난다', makeRegistry(up).wings.length === 2);
   const noImg = wings().all().drop('img').build();
   ok(
@@ -997,10 +1291,17 @@ dies('빌더 ⑤ — 안 든 것을 빼면 죽는다(조용한 no-op 이 아니�
 {
   // 값 좁히기 — 상황 줄의 칸이 실제로 줄고, 좁힌 목록 밖 값은 커맨드도 안 돈다.
   // 빌더를 createNabiWith 에 **그대로** 넘긴다 — .build() 없이.
-  const picked = wings().all().drop('upload').use('tf', { values: ['sans', 'serif'] });
+  const picked = wings()
+    .all()
+    .drop('upload')
+    .use('tf', { values: ['sans', 'serif'] });
   const tf = picked.build().find((wing) => wing.w === 'tf');
   const control = tf?.context?.controls[0] as { values: readonly { value: string }[] } | undefined;
-  eq('빌더 — 값 좁히기가 상황 줄의 칸을 실제로 줄인다', control?.values.map((choice) => choice.value), ['sans', 'serif']);
+  eq(
+    '빌더 — 값 좁히기가 상황 줄의 칸을 실제로 줄인다',
+    control?.values.map((choice) => choice.value),
+    ['sans', 'serif'],
+  );
 
   const { nabi } = createNabiWith(picked, { doc: [p(['글'])] });
   ok('빌더 — createNabiWith 가 빌더를 그대로 받는다', nabi.getHtml().includes('글'));
@@ -1010,30 +1311,58 @@ dies('빌더 ⑤ — 안 든 것을 빼면 죽는다(조용한 no-op 이 아니�
 
 {
   // .all() 뒤의 .use(w, options) 는 옵션만 얹는다 — 자리도 개수도 그대로다(주인의 확정 3).
-  const swapped = wings().all().use('tf', { values: ['sans'] }).build();
+  const swapped = wings()
+    .all()
+    .use('tf', { values: ['sans'] })
+    .build();
   eq(
     '빌더 — .all() 뒤의 .use 는 옵션만 얹는다(자리·개수 그대로)',
     [swapped.length, swapped.findIndex((wing) => wing.w === 'tf')],
     [defaultWings.length, defaultWings.findIndex((wing) => wing.w === 'tf')],
   );
   // 반대 순서 — 좁혀 둔 것이 .all() 에 씻기면 안 된다.
-  const kept = wings().use('tf', { values: ['sans'] }).all().build();
-  const keptControl = kept.find((wing) => wing.w === 'tf')?.context?.controls[0] as { values: readonly { value: string }[] };
+  const kept = wings()
+    .use('tf', { values: ['sans'] })
+    .all()
+    .build();
+  const keptControl = kept.find((wing) => wing.w === 'tf')?.context?.controls[0] as {
+    values: readonly { value: string }[];
+  };
   eq('빌더 — 먼저 좁힌 것이 .all() 에 씻기지 않는다', keptControl.values.length, 1);
 }
 
 {
   // 객체 길 — 팩토리로 미리 지은 인스턴스가 공식 자리(차례)에 앉는다. 데모가 이 길을 쓴다.
-  const demo = wings().all().use(makeUploadWing({ allowLocalUrls: true })).build();
-  eq('빌더 — 팩토리 인스턴스(객체)가 공식 자리에 앉는다', demo.map((wing) => wing.w), defaultWings.map((wing) => wing.w));
+  const demo = wings()
+    .all()
+    .use(makeUploadWing({ allowLocalUrls: true }))
+    .build();
+  eq(
+    '빌더 — 팩토리 인스턴스(객체)가 공식 자리에 앉는다',
+    demo.map((wing) => wing.w),
+    defaultWings.map((wing) => wing.w),
+  );
   ok('빌더 — 앉은 것은 기본이 아니라 그 인스턴스다', demo.find((wing) => wing.w === 'upload') !== uploadWing);
 
   // 커스텀 — 공식 뒤에, 들어온 차례로 선다. 등록도 그대로 지난다.
   const exNote: Wing = { w: 'exNote', place: 'tool' };
   const withCustom = wings().use('b').use(exNote).build();
-  eq('빌더 — 커스텀은 공식 뒤에 선다', withCustom.map((wing) => wing.w), ['b', 'exNote']);
+  eq(
+    '빌더 — 커스텀은 공식 뒤에 선다',
+    withCustom.map((wing) => wing.w),
+    ['b', 'exNote'],
+  );
   ok('빌더 — 커스텀을 문 목록이 등록을 지난다', makeRegistry(withCustom).wingOf('exNote') === exNote);
-  eq('빌더 — 커스텀도 .drop 으로 뺀다', wings().use('b').use(exNote).drop('exNote').build().map((wing) => wing.w), ['b']);
+  eq(
+    '빌더 — 커스텀도 .drop 으로 뺀다',
+    wings()
+      .use('b')
+      .use(exNote)
+      .drop('exNote')
+      .build()
+      .map((wing) => wing.w),
+    ['b'],
+  );
 }
 
 done('wings2');

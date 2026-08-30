@@ -101,11 +101,7 @@ const registry = makeRegistry(defaultWings);
   const { del, ins } = changedRanges(runs);
   eq('del 구간', del, [{ start: 1, end: 2 }]);
   eq('ins 구간', ins, [{ start: 1, end: 2 }]);
-  eq(
-    '한 글자 강조',
-    paintHtml(html, del, 'nabi-diff-del'),
-    '<p>가<span class="nabi-diff-del">나</span>다</p>',
-  );
+  eq('한 글자 강조', paintHtml(html, del, 'nabi-diff-del'), '<p>가<span class="nabi-diff-del">나</span>다</p>');
 }
 
 // --- 블록 매칭 — 같음 ---------------------------------------------------------------------------
@@ -121,7 +117,10 @@ const DOC = [
   const result = diffDocs(DOC, DOC, registry);
   ok('같은 문서 — 결과가 있다', result !== null);
   if (result) {
-    ok('같은 문서 — 전부 same', result.entries.every((entry) => entry.kind === 'same'));
+    ok(
+      '같은 문서 — 전부 same',
+      result.entries.every((entry) => entry.kind === 'same'),
+    );
     eq('같은 문서 — 변경 목록이 빈다', result.changes, []);
     eq(
       '블록 조립을 이으면 renderStoredHtml 과 같다',
@@ -188,12 +187,19 @@ const DOC = [
     const entry = result.entries[result.changes[0] as number];
     eq('글자 변경 — changed 로 짝이 잡힌다', entry?.kind, 'changed');
     eq('글자 변경 — 같은 자리끼리다', [entry?.before, entry?.after], [1, 1]);
-    ok('글자 변경 — 양쪽에 구간이 있다', (entry?.beforeRanges?.length ?? 0) > 0 && (entry?.afterRanges?.length ?? 0) > 0);
+    ok(
+      '글자 변경 — 양쪽에 구간이 있다',
+      (entry?.beforeRanges?.length ?? 0) > 0 && (entry?.afterRanges?.length ?? 0) > 0,
+    );
     const beforeHtml = result.before[1]?.html ?? '';
     const afterHtml = result.after[1]?.html ?? '';
     ok('글자 변경 — before 에 del span', beforeHtml.includes('class="nabi-diff-del"'), beforeHtml);
     ok('글자 변경 — after 에 ins span', afterHtml.includes('class="nabi-diff-ins"'), afterHtml);
-    eq('글자 변경 — 강조를 입혀도 글자는 같다', [htmlText(beforeHtml), htmlText(afterHtml)], ['첫 문단이다.', '첫 문단이라네.']);
+    eq(
+      '글자 변경 — 강조를 입혀도 글자는 같다',
+      [htmlText(beforeHtml), htmlText(afterHtml)],
+      ['첫 문단이다.', '첫 문단이라네.'],
+    );
   }
 }
 {
@@ -245,6 +251,69 @@ const DOC = [
 }
 
 // --- 거절 ---------------------------------------------------------------------------------------
+
+// Pairing and semantic line-break regressions.
+{
+  const before = [
+    { w: 'p', ch: ['dup'] },
+    { w: 'p', ch: ['dup'] },
+    { w: 'p', ch: ['tail'] },
+  ];
+  const after = [
+    { w: 'p', ch: ['tail'] },
+    { w: 'p', ch: ['dup'] },
+    { w: 'p', ch: ['dup'] },
+  ];
+  const first = diffDocs(before, after, registry);
+  ok('중복 블록 이동은 결과가 있다', first !== null);
+  if (first) {
+    eq('중복 블록 이동 순서는 문서 순서로 고정된다', first.entries, [
+      { kind: 'same', before: 0, after: 1 },
+      { kind: 'same', before: 1, after: 2 },
+      { kind: 'moved', before: 2, after: 0 },
+    ]);
+    const encoded = JSON.stringify(first);
+    for (let i = 0; i < 20; i += 1)
+      eq('반복 diff 모델은 바이트가 같다', JSON.stringify(diffDocs(before, after, registry)), encoded);
+    const reversed = JSON.stringify(diffDocs(after, before, registry));
+    for (let i = 0; i < 20; i += 1)
+      eq('입력을 뒤집은 모델도 바이트가 같다', JSON.stringify(diffDocs(after, before, registry)), reversed);
+  }
+  const withIds = [
+    { w: 'p', a: { id: 'x' }, ch: ['dup'] },
+    { w: 'p', a: { id: 'x' }, ch: ['dup'] },
+  ];
+  eq(
+    'id 중복과 누락은 내용 매칭을 바꾸지 않는다',
+    diffDocs(
+      withIds,
+      [
+        { w: 'p', ch: ['dup'] },
+        { w: 'p', a: { id: 'y' }, ch: ['dup'] },
+      ],
+      registry,
+    )?.entries.map((e) => e.kind),
+    ['same', 'same'],
+  );
+}
+{
+  const removed = diffDocs([{ w: 'p', ch: ['a', { w: 'br', ch: [] }, 'b'] }], [{ w: 'p', ch: ['a', 'b'] }], registry);
+  const added = diffDocs([{ w: 'p', ch: ['a', 'b'] }], [{ w: 'p', ch: ['a', { w: 'br', ch: [] }, 'b'] }], registry);
+  eq('BR 삭제는 의미 토큰 한 칸이다', removed?.entries[0]?.beforeRanges, [{ start: 1, end: 2 }]);
+  eq('BR 삽입은 의미 토큰 한 칸이다', added?.entries[0]?.afterRanges, [{ start: 1, end: 2 }]);
+  eq(
+    'BR 삭제 강조는 br markup을 보존한다',
+    removed?.before[0]?.html,
+    '<p>a<span class="nabi-diff-del"><br/></span>b</p>',
+  );
+  eq('BR 삽입 강조는 br markup을 보존한다', added?.after[0]?.html, '<p>a<span class="nabi-diff-ins"><br/></span>b</p>');
+  const marked = diffDocs(
+    [{ w: 'p', ch: [{ w: 'b', ch: ['a', { w: 'br', ch: [] }, 'b'] }] }],
+    [{ w: 'p', ch: [{ w: 'b', ch: ['a', 'b'] }] }],
+    registry,
+  );
+  ok('mark 안 BR 삭제도 강조된다', !!marked && marked.before[0]!.html.includes('nabi-diff-del'));
+}
 
 {
   ok('나비트리가 아니면 null', diffDocs({ not: 'tree' }, DOC, registry) === null);

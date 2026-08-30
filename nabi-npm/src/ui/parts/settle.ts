@@ -6,6 +6,8 @@
 //
 // 고르는 중의 판정에는 **타이머가 없다** — 몸짓을 끝낸 그 이벤트 안에서 바로 가라앉는다.
 // 뷰포트는 그럴 수 없다(끝을 알리는 이벤트가 없다) — 거기만 조용한 시간을 센다.
+import { AsyncMountScope } from '../../lifecycle.js';
+
 const QUIET_MS = 300;
 const MAX_TRIES = 4;
 const EXTENDING = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']);
@@ -32,15 +34,23 @@ export function watchSettle(owner: Document, options: SettleOptions = {}): Settl
   const quiet = options.quietMs ?? QUIET_MS;
   const listeners = new Set<() => void>();
   const source = options.surface ?? owner;
+  const lifetime = new AsyncMountScope();
 
   let choosing = false;
   let movedAt = 0;
   let timer: number | null = null;
+  let frame: number | null = null;
 
   const settled = (): void => {
     if (!choosing) return;
     choosing = false;
-    for (const fn of [...listeners]) fn();
+    for (const fn of [...listeners]) {
+      try {
+        fn();
+      } catch {
+        // One listener must not strand the other settle listeners.
+      }
+    }
   };
   const start = (): void => {
     choosing = true;
@@ -74,40 +84,59 @@ export function watchSettle(owner: Document, options: SettleOptions = {}): Settl
 
   const clear = (): void => {
     if (timer !== null && view) view.clearTimeout(timer);
+    if (frame !== null && view) view.cancelAnimationFrame?.(frame);
     timer = null;
+    frame = null;
   };
 
   return {
     busy: () => choosing,
     onSettle(fn) {
+      if (lifetime.disposed) return () => undefined;
       listeners.add(fn);
       return () => listeners.delete(fn);
     },
     afterViewport(fn) {
+      if (lifetime.disposed) return;
+      clear();
+      const generation = lifetime.next();
       if (!view) {
-        fn();
+        if (lifetime.active(generation)) {
+          try {
+            fn();
+          } catch {
+            // The settled viewport has no remaining teardown to delegate.
+          }
+        }
         return;
       }
-      clear();
       let tries = 0;
       const look = (): void => {
         timer = null;
+        if (!lifetime.active(generation)) return;
         const since = Date.now() - movedAt;
         if (since < quiet && tries < MAX_TRIES) {
           tries += 1;
           timer = view.setTimeout(look, quiet - since);
           return;
         }
-        fn();
+        try {
+          fn();
+        } catch {
+          // A consumer failure must not escape the scheduled lifecycle.
+        }
       };
       // 한 프레임 뒤에 첫 걸음 — 레이아웃이 끝난 다음이어야 제대로 잰다 (040 §"다시 열 때" 1).
       const kick = (): void => {
+        frame = null;
+        if (!lifetime.active(generation)) return;
         timer = view.setTimeout(look, movedAt === 0 ? 0 : quiet);
       };
-      if (view.requestAnimationFrame) view.requestAnimationFrame(kick);
+      if (view.requestAnimationFrame) frame = view.requestAnimationFrame(kick);
       else kick();
     },
     unmount() {
+      lifetime.dispose();
       clear();
       listeners.clear();
       source.removeEventListener('pointerdown', onPointerDown);

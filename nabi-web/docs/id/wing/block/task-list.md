@@ -1,14 +1,20 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: Daftar tugas
+description: Daftar yang menyimpan status selesai bersama dokumen.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# Daftar tugas
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+Ini adalah daftar dengan status selesai. Pada paragraf kosong, ketik `[ ]` atau `[x]` lalu tekan Spasi, atau buat melalui toolbar; klik kotak centang untuk mengubah statusnya.
 
-[Open the Korean canonical page](/ko/guide/features)
+Status tercentang disimpan bersama dokumen sebagai atribut item. Saat item dibagi, status tercentang mengikuti item yang masih berisi teks, bukan item kosong sebelumnya, sehingga membagi tugas yang sudah selesai tidak membalik statusnya.
 
-</div>
+<WingDemo path="/wing/block/task-list" />
+
+```ts
+const selected = wings().use('tl').build()
+```

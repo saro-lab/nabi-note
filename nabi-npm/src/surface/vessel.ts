@@ -11,14 +11,7 @@ import {
   type NabiDoc,
   type SchemaEnv,
 } from '../schema/index.js';
-import {
-  fromRuns,
-  nodeAt,
-  replaceAt,
-  terminalOf,
-  withChildren,
-  type Position,
-} from '../doc/index.js';
+import { fromRuns, nodeAt, replaceAt, terminalOf, withChildren, type Position } from '../doc/index.js';
 import { caretAt } from '../caret/index.js';
 import type { Command } from '../editor/index.js';
 import type { Registry } from '../wing/index.js';

@@ -367,6 +367,16 @@ const LOCALE_NAMES: Readonly<Record<string, string>> = {
   bn: 'বাংলা',
   ur: 'اردو',
   id: 'Indonesia',
+  fa: 'فارسی',
+  mr: 'मराठी',
+  vi: 'Tiếng Việt',
+  te: 'తెలుగు',
+  ha: 'Hausa',
+  tr: 'Türkçe',
+  sw: 'Kiswahili',
+  ta: 'தமிழ்',
+  th: 'ไทย',
+  it: 'Italiano',
 }
 // 첫 그림은 **안 섞은** 것이다 — 자리만 잡으면 되고, 서버가 보낸 것과 같아야 한다.
 // The first paint is unshuffled: it only needs to hold the space, and it must match the server.

@@ -26,24 +26,16 @@ export const NAV: readonly NavGroup[] = [
     key: 'menu_start',
     entries: [
       { path: '/guide/getting-started', key: 'menu_getting_started' },
+      { path: '/guide/rendering', key: 'menu_rendering' },
       { path: '/guide/cdn', key: 'menu_cdn' },
       { path: '/intro/vibe-coding', key: 'menu_intro_vibe_coding' },
-    ],
-  },
-  {
-    key: 'menu_concepts',
-    entries: [
-      { path: '/guide/document', key: 'menu_document' },
-      { path: '/guide/storage', key: 'menu_storage' },
-      { path: '/guide/input', key: 'menu_input' },
       { path: '/guide/style', key: 'menu_style_guide' },
-      { path: '/guide/rendering', key: 'menu_rendering' },
+      { path: '/guide/extend', key: 'menu_extend_guide' },
     ],
   },
   {
     key: 'menu_features',
     entries: [
-      { path: '/guide/features', key: 'menu_feature_catalog' },
       {
         key: 'menu_inline',
         items: [
@@ -86,14 +78,6 @@ export const NAV: readonly NavGroup[] = [
         ],
       },
     ],
-  },
-  {
-    key: 'menu_extend',
-    entries: [{ path: '/guide/extend', key: 'menu_extend_guide' }],
-  },
-  {
-    key: 'menu_reference',
-    entries: [{ path: '/reference/api', key: 'menu_api' }],
   },
 ]
 

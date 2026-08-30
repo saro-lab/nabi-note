@@ -1,6 +1,16 @@
 // 붙여넣기 조각을 캐럿 자리에 끼우는 순수 연산 — "빈 문단 + 단일 물건 = 교체"는 wing/ops 의
 // insertLump 가 알고, 여기는 여러 문단 조각의 자리 잡기다.
-import { BR, P, isElement, isWrapper, runsOf, type ElementNode, type NabiDoc, type NabiNode, type SchemaEnv } from '../schema/index.js';
+import {
+  BR,
+  P,
+  isElement,
+  isWrapper,
+  runsOf,
+  type ElementNode,
+  type NabiDoc,
+  type NabiNode,
+  type SchemaEnv,
+} from '../schema/index.js';
 import {
   fromRuns,
   holderLength,
@@ -26,37 +36,49 @@ function caretAfter(doc: NabiDoc, lastTop: number, env: SchemaEnv): Position {
     if ((holder.path[0] as number) > lastTop) return { path: holder.path, offset: 0 };
   }
   const last = all[all.length - 1];
-  return last ? { path: last.path, offset: 0 } : { path: [0], offset: 0 };
+  return last ? { path: last.path, offset: holderLength(last.node, env) } : { path: [0], offset: 0 };
 }
-
 
 // 조각을 **글줄 하나로 누른다** — 문단 경계는 라인(br)이 되고 마크는 그대로 살아남는다.
 // 표의 칸처럼 "문단 하나로 고정된" 자리에 붙여넣을 때 쓰는 모양이다(옛 규칙: 칸은 글줄).
-function pressToInline(fragment: readonly ElementNode[]): NabiNode[] {
-  const out: NabiNode[] = [];
-  const walk = (nodes: readonly NabiNode[]): void => {
+function pressToInline(fragment: readonly ElementNode[], env: SchemaEnv): NabiNode[] {
+  const inlineOf = (nodes: readonly NabiNode[]): NabiNode[] => {
+    const inline: NabiNode[] = [];
     for (const node of nodes) {
       if (typeof node === 'string') {
-        if (node !== '') out.push(node);
+        if (node !== '') inline.push(node);
         continue;
       }
       if (!isElement(node)) continue;
-      if (node.w === BR) {
-        out.push({ w: BR, ch: [] });
-        continue;
+      if (node.w === BR) inline.push({ w: BR, ch: [] });
+      else if (
+        !env.lumps.has(node.w) &&
+        !env.blockHolders.has(node.w) &&
+        !env.inlineHolders.has(node.w) &&
+        node.ch.length > 0
+      ) {
+        inline.push(node);
       }
-      // 블록 껍데기(문단·래퍼·표의 행과 칸) — 벗기고 속만 잇는다.
-      if (node.w === P || node.ch.some((kid) => isElement(kid) && (kid.w === P || kid.w === 'tr' || kid.w === 'td'))) {
-        walk(node.ch);
-        continue;
-      }
-      if (node.ch.length === 0) continue; // 물건·빈 마크 — 글줄에 못 선다
-      out.push(node); // 마크 — 그대로 산다(형광펜·글자색이 여기서 살아남는다)
     }
+    return inline;
   };
-  fragment.forEach((block, at) => {
-    if (at > 0 && out.length > 0) out.push({ w: BR, ch: [] });
-    walk([block]);
+  const linesOf = (node: NabiNode): NabiNode[][] => {
+    if (typeof node === 'string') return node === '' ? [] : [[node]];
+    if (!isElement(node)) return [];
+    if (node.w === P) {
+      if (isWrapper(node, env)) return node.ch.flatMap(linesOf);
+      return [inlineOf(node.ch)];
+    }
+    if (env.inlineHolders.has(node.w)) return [inlineOf(node.ch)];
+    if (env.blockHolders.has(node.w)) return node.ch.flatMap(linesOf);
+    if (env.lumps.has(node.w) || node.ch.length === 0) return [];
+    return [[node]];
+  };
+  const lines = fragment.flatMap(linesOf);
+  const out: NabiNode[] = [];
+  lines.forEach((line, index) => {
+    if (index > 0) out.push({ w: BR, ch: [] });
+    out.push(...line);
   });
   return out;
 }
@@ -73,7 +95,7 @@ function spliceInline(
   fragment: readonly ElementNode[],
   env: SchemaEnv,
 ): { doc: NabiDoc; selection: Selection } | null {
-  const inline = pressToInline(fragment);
+  const inline = pressToInline(fragment, env);
   if (inline.length === 0) return null;
   const terminal = terminalOf(env);
   const runs = runsOf(holder, terminal);

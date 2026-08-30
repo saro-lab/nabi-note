@@ -10,14 +10,31 @@ interface Draft {
 }
 
 const VOID: ReadonlySet<string> = new Set([
-  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr',
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'source',
+  'track',
+  'wbr',
 ]);
 
 // 속이 태그가 아니라 글자인 것들 — 여기까지 태그로 읽으면 스크립트 본문이 트리에 선다.
 const RAW: ReadonlySet<string> = new Set(['script', 'style', 'textarea', 'title']);
 
 const NAMED: Readonly<Record<string, string>> = {
-  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
 };
 
 function decode(source: string): string {
@@ -60,7 +77,10 @@ export function tinyHtml(source: string): ParseNode[] {
     }
     if (source.startsWith('</', lt)) {
       const end = source.indexOf('>', lt);
-      const tag = source.slice(lt + 2, end < 0 ? source.length : end).trim().toLowerCase();
+      const tag = source
+        .slice(lt + 2, end < 0 ? source.length : end)
+        .trim()
+        .toLowerCase();
       for (let k = stack.length - 1; k > 0; k -= 1) {
         if ((stack[k] as Draft).tag === tag) {
           stack.length = k;

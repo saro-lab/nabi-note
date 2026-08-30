@@ -10,8 +10,19 @@ export {
   siblingsAt,
   terminalOf,
 } from './position.js';
-export type { EditEnv, EditResult, HolderAt, Position } from './position.js';
-export { fromRuns, holderRuns, sameMark, sliceRuns, stepAfter, stepBefore, withChildren } from './runs-edit.js';
+export { DocumentIndex } from './position.js';
+export { documentIndex } from './position.js';
+export type { EditEnv, EditResult, HolderAt, IndexedNode, Position } from './position.js';
+export {
+  fromRuns,
+  holderRuns,
+  runGraphemeBoundaries,
+  sameMark,
+  sliceRuns,
+  stepAfter,
+  stepBefore,
+  withChildren,
+} from './runs-edit.js';
 export { insertLine, insertText } from './insert.js';
 export { splitParagraph } from './split.js';
 export { deleteBackward, deleteForward } from './remove.js';

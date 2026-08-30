@@ -4,6 +4,7 @@
 // 값 거절의 선이 셋이다: ① 커맨드 — 목록 밖 값은 아예 안 돈다 ② 들여오기(claim) — 목록 밖
 // 값을 단 태그는 껍데기를 벗고 글만 남는다 ③ 눌림 표시(currentValue) — 목록 밖 값은 없는 값이다.
 import { isWrapper, runsOf, type Attrs, type NabiDoc } from '../../schema/index.js';
+import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import {
   comparePositions,
   holderLength,
@@ -22,10 +23,70 @@ import type { MdBuilder } from '../../io/index.js';
 import type { LocaleText } from '../../locale/index.js';
 
 // wing 이름 넷 — old 사전 이식(14 로케일).
-const HIGHLIGHT_NAME: LocaleText = { ko: '형광펜', en: 'Highlight', ja: '蛍光ペン', zh: '荧光笔', de: 'Textmarker', fr: 'Surligneur', es: 'Resaltador', pt: 'Realce', ru: 'Маркер', ar: 'تمييز', hi: 'हाइलाइट', bn: 'হাইলাইট', ur: 'نمایاں', id: 'Stabilo' };
-const TEXT_COLOR_NAME: LocaleText = { ko: '글자색', en: 'Text color', ja: '文字色', zh: '文字颜色', de: 'Textfarbe', fr: 'Couleur du texte', es: 'Color del texto', pt: 'Cor do texto', ru: 'Цвет текста', ar: 'لون النص', hi: 'टेक्स्ट का रंग', bn: 'লেখার রং', ur: 'متن کا رنگ', id: 'Warna teks' };
-const FONT_SIZE_NAME: LocaleText = { ko: '글자 크기', en: 'Text size', ja: '文字サイズ', zh: '文字大小', de: 'Schriftgröße', fr: 'Taille du texte', es: 'Tamaño del texto', pt: 'Tamanho da letra', ru: 'Размер текста', ar: 'حجم الخط', hi: 'टेक्स्ट का आकार', bn: 'অক্ষরের আকার', ur: 'حروف کا سائز', id: 'Ukuran huruf' };
-const TYPEFACE_NAME: LocaleText = { ko: '서체', en: 'Typeface', ja: '書体', zh: '字体', de: 'Schriftart', fr: 'Police', es: 'Tipografía', pt: 'Tipo de letra', ru: 'Гарнитура', ar: 'نوع الخط', hi: 'फ़ॉन्ट', bn: 'ফন্ট', ur: 'فونٹ', id: 'Jenis huruf' };
+const HIGHLIGHT_NAME: LocaleText = {
+  ko: '형광펜',
+  en: 'Highlight',
+  ja: '蛍光ペン',
+  zh: '荧光笔',
+  de: 'Textmarker',
+  fr: 'Surligneur',
+  es: 'Resaltador',
+  pt: 'Realce',
+  ru: 'Маркер',
+  ar: 'تمييز',
+  hi: 'हाइलाइट',
+  bn: 'হাইলাইট',
+  ur: 'نمایاں',
+  id: 'Stabilo',
+};
+const TEXT_COLOR_NAME: LocaleText = {
+  ko: '글자색',
+  en: 'Text color',
+  ja: '文字色',
+  zh: '文字颜色',
+  de: 'Textfarbe',
+  fr: 'Couleur du texte',
+  es: 'Color del texto',
+  pt: 'Cor do texto',
+  ru: 'Цвет текста',
+  ar: 'لون النص',
+  hi: 'टेक्स्ट का रंग',
+  bn: 'লেখার রং',
+  ur: 'متن کا رنگ',
+  id: 'Warna teks',
+};
+const FONT_SIZE_NAME: LocaleText = {
+  ko: '글자 크기',
+  en: 'Text size',
+  ja: '文字サイズ',
+  zh: '文字大小',
+  de: 'Schriftgröße',
+  fr: 'Taille du texte',
+  es: 'Tamaño del texto',
+  pt: 'Tamanho da letra',
+  ru: 'Размер текста',
+  ar: 'حجم الخط',
+  hi: 'टेक्स्ट का आकार',
+  bn: 'অক্ষরের আকার',
+  ur: 'حروف کا سائز',
+  id: 'Ukuran huruf',
+};
+const TYPEFACE_NAME: LocaleText = {
+  ko: '서체',
+  en: 'Typeface',
+  ja: '書体',
+  zh: '字体',
+  de: 'Schriftart',
+  fr: 'Police',
+  es: 'Tipografía',
+  pt: 'Tipo de letra',
+  ru: 'Гарнитура',
+  ar: 'نوع الخط',
+  hi: 'फ़ॉन्ट',
+  bn: 'ফন্ট',
+  ur: 'فونٹ',
+  id: 'Jenis huruf',
+};
 
 // --- 값 목록 (old 번역 — 이름이 곧 저장값이고, 색은 시트가 준다) ------------------------------
 
@@ -54,8 +115,7 @@ function valueOver(
     const length = holderLength(node, env);
     if (comparePositions({ path, offset: length }, start) <= 0) continue;
     if (comparePositions({ path, offset: 0 }, end) >= 0) continue;
-    const samePathAs = (p: Position): boolean =>
-      p.path.length === path.length && p.path.every((v, i) => v === path[i]);
+    const samePathAs = (p: Position): boolean => p.path.length === path.length && p.path.every((v, i) => v === path[i]);
     const from = samePathAs(start) ? start.offset : 0;
     const to = samePathAs(end) ? end.offset : length;
     if (from >= to) continue;
@@ -87,12 +147,7 @@ function valueOver(
 type CollapsedScope = 'mark' | 'paragraph';
 
 // 값 하나를 건다 — 목록 밖 값은 여기서 죽는다(문서에 닿지 않는다). 같은 값이면 벗고, 다른 값이면 교체다.
-function setValueCommand(
-  w: string,
-  key: string,
-  values: readonly string[],
-  scope: CollapsedScope = 'mark',
-): Command {
+function setValueCommand(w: string, key: string, values: readonly string[], scope: CollapsedScope = 'mark'): Command {
   const allowed = new Set(values);
   return (doc, sel, args, env) => {
     const value = args[key];
@@ -189,17 +244,152 @@ const TEXT_SWATCH: Readonly<Record<string, string>> = Object.fromEntries(
 );
 // 값 이름 — old 사전 이식(14 로케일). 값 자체는 저장값이고 이름은 화면의 것이다.
 const HIGHLIGHT_LABELS: Readonly<Record<string, LocaleText>> = {
-  yellow: { ko: '노랑', en: 'Yellow', ja: '黄色', zh: '黄色', de: 'Gelb', fr: 'Jaune', es: 'Amarillo', pt: 'Amarelo', ru: 'Жёлтый', ar: 'أصفر', hi: 'पीला', bn: 'হলুদ', ur: 'پیلا', id: 'Kuning' },
-  green: { ko: '연두', en: 'Green', ja: '黄緑', zh: '绿色', de: 'Grün', fr: 'Vert', es: 'Verde', pt: 'Verde', ru: 'Зелёный', ar: 'أخضر', hi: 'हरा', bn: 'সবুজ', ur: 'سبز', id: 'Hijau' },
-  cyan: { ko: '하늘', en: 'Cyan', ja: '水色', zh: '天蓝', de: 'Hellblau', fr: 'Cyan', es: 'Celeste', pt: 'Ciano', ru: 'Голубой', ar: 'سماوي', hi: 'आसमानी', bn: 'আকাশি', ur: 'آسمانی', id: 'Biru muda' },
-  pink: { ko: '분홍', en: 'Pink', ja: 'ピンク', zh: '粉色', de: 'Rosa', fr: 'Rose', es: 'Rosa', pt: 'Rosa', ru: 'Розовый', ar: 'وردي', hi: 'गुलाबी', bn: 'গোলাপি', ur: 'گلابی', id: 'Merah muda' },
-  purple: { ko: '보라', en: 'Purple', ja: '紫', zh: '紫色', de: 'Lila', fr: 'Violet', es: 'Morado', pt: 'Roxo', ru: 'Фиолетовый', ar: 'بنفسجي', hi: 'बैंगनी', bn: 'বেগুনি', ur: 'ارغوانی', id: 'Ungu' },
-  orange: { ko: '주황', en: 'Orange', ja: 'オレンジ', zh: '橙色', de: 'Orange', fr: 'Orange', es: 'Naranja', pt: 'Laranja', ru: 'Оранжевый', ar: 'برتقالي', hi: 'नारंगी', bn: 'কমলা', ur: 'نارنجی', id: 'Oranye' },
+  yellow: {
+    ko: '노랑',
+    en: 'Yellow',
+    ja: '黄色',
+    zh: '黄色',
+    de: 'Gelb',
+    fr: 'Jaune',
+    es: 'Amarillo',
+    pt: 'Amarelo',
+    ru: 'Жёлтый',
+    ar: 'أصفر',
+    hi: 'पीला',
+    bn: 'হলুদ',
+    ur: 'پیلا',
+    id: 'Kuning',
+  },
+  green: {
+    ko: '연두',
+    en: 'Green',
+    ja: '黄緑',
+    zh: '绿色',
+    de: 'Grün',
+    fr: 'Vert',
+    es: 'Verde',
+    pt: 'Verde',
+    ru: 'Зелёный',
+    ar: 'أخضر',
+    hi: 'हरा',
+    bn: 'সবুজ',
+    ur: 'سبز',
+    id: 'Hijau',
+  },
+  cyan: {
+    ko: '하늘',
+    en: 'Cyan',
+    ja: '水色',
+    zh: '天蓝',
+    de: 'Hellblau',
+    fr: 'Cyan',
+    es: 'Celeste',
+    pt: 'Ciano',
+    ru: 'Голубой',
+    ar: 'سماوي',
+    hi: 'आसमानी',
+    bn: 'আকাশি',
+    ur: 'آسمانی',
+    id: 'Biru muda',
+  },
+  pink: {
+    ko: '분홍',
+    en: 'Pink',
+    ja: 'ピンク',
+    zh: '粉色',
+    de: 'Rosa',
+    fr: 'Rose',
+    es: 'Rosa',
+    pt: 'Rosa',
+    ru: 'Розовый',
+    ar: 'وردي',
+    hi: 'गुलाबी',
+    bn: 'গোলাপি',
+    ur: 'گلابی',
+    id: 'Merah muda',
+  },
+  purple: {
+    ko: '보라',
+    en: 'Purple',
+    ja: '紫',
+    zh: '紫色',
+    de: 'Lila',
+    fr: 'Violet',
+    es: 'Morado',
+    pt: 'Roxo',
+    ru: 'Фиолетовый',
+    ar: 'بنفسجي',
+    hi: 'बैंगनी',
+    bn: 'বেগুনি',
+    ur: 'ارغوانی',
+    id: 'Ungu',
+  },
+  orange: {
+    ko: '주황',
+    en: 'Orange',
+    ja: 'オレンジ',
+    zh: '橙色',
+    de: 'Orange',
+    fr: 'Orange',
+    es: 'Naranja',
+    pt: 'Laranja',
+    ru: 'Оранжевый',
+    ar: 'برتقالي',
+    hi: 'नारंगी',
+    bn: 'কমলা',
+    ur: 'نارنجی',
+    id: 'Oranye',
+  },
 };
 const TEXT_LABELS: Readonly<Record<string, LocaleText>> = {
-  green: { ko: '초록', en: 'Green', ja: '緑', zh: '绿色', de: 'Grün', fr: 'Vert', es: 'Verde', pt: 'Verde', ru: 'Зелёный', ar: 'أخضر', hi: 'हरा', bn: 'সবুজ', ur: 'سبز', id: 'Hijau' },
-  coral: { ko: '코랄', en: 'Coral', ja: 'サンゴ色', zh: '珊瑚色', de: 'Koralle', fr: 'Corail', es: 'Coral', pt: 'Coral', ru: 'Коралловый', ar: 'مرجاني', hi: 'मूंगा', bn: 'প্রবাল', ur: 'مونگا', id: 'Koral' },
-  violet: { ko: '보라', en: 'Violet', ja: '紫', zh: '紫色', de: 'Violett', fr: 'Violet', es: 'Violeta', pt: 'Violeta', ru: 'Фиолетовый', ar: 'بنفسجي', hi: 'बैंगनी', bn: 'বেগুনি', ur: 'بنفشی', id: 'Ungu' },
+  green: {
+    ko: '초록',
+    en: 'Green',
+    ja: '緑',
+    zh: '绿色',
+    de: 'Grün',
+    fr: 'Vert',
+    es: 'Verde',
+    pt: 'Verde',
+    ru: 'Зелёный',
+    ar: 'أخضر',
+    hi: 'हरा',
+    bn: 'সবুজ',
+    ur: 'سبز',
+    id: 'Hijau',
+  },
+  coral: {
+    ko: '코랄',
+    en: 'Coral',
+    ja: 'サンゴ色',
+    zh: '珊瑚色',
+    de: 'Koralle',
+    fr: 'Corail',
+    es: 'Coral',
+    pt: 'Coral',
+    ru: 'Коралловый',
+    ar: 'مرجاني',
+    hi: 'मूंगा',
+    bn: 'প্রবাল',
+    ur: 'مونگا',
+    id: 'Koral',
+  },
+  violet: {
+    ko: '보라',
+    en: 'Violet',
+    ja: '紫',
+    zh: '紫色',
+    de: 'Violett',
+    fr: 'Violet',
+    es: 'Violeta',
+    pt: 'Violeta',
+    ru: 'Фиолетовый',
+    ar: 'بنفسجي',
+    hi: 'बैंगनी',
+    bn: 'বেগুনি',
+    ur: 'بنفشی',
+    id: 'Ungu',
+  },
   // amber 는 **호박(琥珀)** 이다 — 나무 진이 굳은 그 보석. 넷이 "금빛"으로 옮겨져 있었는데
   // (ko·hi·bn·ur), 금빛과 호박빛은 다른 색이고 애초에 다른 물건이다. 나머지 아홉은 처음부터
   // 호박을 가리켰고(琥珀色·Bernstein·Ambre·Янтарный·كهرماني…) 값도 그 편이다: #d97706.
@@ -207,20 +397,170 @@ const TEXT_LABELS: Readonly<Record<string, LocaleText>> = {
   // 고친 낱말은 **사이트의 데모 본문에서 가져왔다** — 주인이 검수한 그 글은 이미 셋 다 바르게
   // 옮겨 두고 있었다(hi अंबर · bn অ্যাম্বার · ur کہربائی). 같은 색을 두 자리에서 다른 말로
   // 부르면 그것이 다음 오역이 된다.
-  amber: { ko: '호박', en: 'Amber', ja: '琥珀色', zh: '琥珀色', de: 'Bernstein', fr: 'Ambre', es: 'Ámbar', pt: 'Âmbar', ru: 'Янтарный', ar: 'كهرماني', hi: 'अंबर', bn: 'অ্যাম্বার', ur: 'کہربائی', id: 'Ambar' },
-  blue: { ko: '파랑', en: 'Blue', ja: '青', zh: '蓝色', de: 'Blau', fr: 'Bleu', es: 'Azul', pt: 'Azul', ru: 'Синий', ar: 'أزرق', hi: 'नीला', bn: 'নীল', ur: 'نیلا', id: 'Biru' },
+  amber: {
+    ko: '호박',
+    en: 'Amber',
+    ja: '琥珀色',
+    zh: '琥珀色',
+    de: 'Bernstein',
+    fr: 'Ambre',
+    es: 'Ámbar',
+    pt: 'Âmbar',
+    ru: 'Янтарный',
+    ar: 'كهرماني',
+    hi: 'अंबर',
+    bn: 'অ্যাম্বার',
+    ur: 'کہربائی',
+    id: 'Ambar',
+  },
+  blue: {
+    ko: '파랑',
+    en: 'Blue',
+    ja: '青',
+    zh: '蓝色',
+    de: 'Blau',
+    fr: 'Bleu',
+    es: 'Azul',
+    pt: 'Azul',
+    ru: 'Синий',
+    ar: 'أزرق',
+    hi: 'नीला',
+    bn: 'নীল',
+    ur: 'نیلا',
+    id: 'Biru',
+  },
 };
 const SIZE_LABELS: Readonly<Record<string, LocaleText>> = {
-  xs: { ko: '아주 작게', en: 'Extra small', ja: '最小', zh: '特小', de: 'Sehr klein', fr: 'Très petit', es: 'Muy pequeño', pt: 'Muito pequeno', ru: 'Очень мелкий', ar: 'صغير جدًا', hi: 'बहुत छोटा', bn: 'খুব ছোট', ur: 'بہت چھوٹا', id: 'Sangat kecil' },
-  sm: { ko: '작게', en: 'Small', ja: '小', zh: '小', de: 'Klein', fr: 'Petit', es: 'Pequeño', pt: 'Pequeno', ru: 'Мелкий', ar: 'صغير', hi: 'छोटा', bn: 'ছোট', ur: 'چھوٹا', id: 'Kecil' },
-  lg: { ko: '크게', en: 'Large', ja: '大', zh: '大', de: 'Groß', fr: 'Grand', es: 'Grande', pt: 'Grande', ru: 'Крупный', ar: 'كبير', hi: 'बड़ा', bn: 'বড়', ur: 'بڑا', id: 'Besar' },
-  xl: { ko: '아주 크게', en: 'Extra large', ja: '最大', zh: '特大', de: 'Sehr groß', fr: 'Très grand', es: 'Muy grande', pt: 'Muito grande', ru: 'Очень крупный', ar: 'كبير جدًا', hi: 'बहुत बड़ा', bn: 'খুব বড়', ur: 'بہت بڑا', id: 'Sangat besar' },
+  xs: {
+    ko: '아주 작게',
+    en: 'Extra small',
+    ja: '最小',
+    zh: '特小',
+    de: 'Sehr klein',
+    fr: 'Très petit',
+    es: 'Muy pequeño',
+    pt: 'Muito pequeno',
+    ru: 'Очень мелкий',
+    ar: 'صغير جدًا',
+    hi: 'बहुत छोटा',
+    bn: 'খুব ছোট',
+    ur: 'بہت چھوٹا',
+    id: 'Sangat kecil',
+  },
+  sm: {
+    ko: '작게',
+    en: 'Small',
+    ja: '小',
+    zh: '小',
+    de: 'Klein',
+    fr: 'Petit',
+    es: 'Pequeño',
+    pt: 'Pequeno',
+    ru: 'Мелкий',
+    ar: 'صغير',
+    hi: 'छोटा',
+    bn: 'ছোট',
+    ur: 'چھوٹا',
+    id: 'Kecil',
+  },
+  lg: {
+    ko: '크게',
+    en: 'Large',
+    ja: '大',
+    zh: '大',
+    de: 'Groß',
+    fr: 'Grand',
+    es: 'Grande',
+    pt: 'Grande',
+    ru: 'Крупный',
+    ar: 'كبير',
+    hi: 'बड़ा',
+    bn: 'বড়',
+    ur: 'بڑا',
+    id: 'Besar',
+  },
+  xl: {
+    ko: '아주 크게',
+    en: 'Extra large',
+    ja: '最大',
+    zh: '特大',
+    de: 'Sehr groß',
+    fr: 'Très grand',
+    es: 'Muy grande',
+    pt: 'Muito grande',
+    ru: 'Очень крупный',
+    ar: 'كبير جدًا',
+    hi: 'बहुत बड़ा',
+    bn: 'খুব বড়',
+    ur: 'بہت بڑا',
+    id: 'Sangat besar',
+  },
 };
 const FACE_LABELS: Readonly<Record<string, LocaleText>> = {
-  sans: { ko: '산세리프', en: 'Sans serif', ja: 'ゴシック体', zh: '无衬线', de: 'Serifenlos', fr: 'Sans empattement', es: 'Sin serifa', pt: 'Sem serifa', ru: 'Без засечек', ar: 'غير مذيل', hi: 'सैन्स सेरिफ़', bn: 'সান্স সেরিফ', ur: 'سینس سیرف', id: 'Tanpa serif' },
-  serif: { ko: '세리프', en: 'Serif', ja: '明朝体', zh: '衬线', de: 'Serif', fr: 'Avec empattement', es: 'Con serifa', pt: 'Com serifa', ru: 'С засечками', ar: 'مذيل', hi: 'सेरिफ़', bn: 'সেরিফ', ur: 'سیرف', id: 'Berserif' },
-  mono: { ko: '고정폭', en: 'Monospace', ja: '等幅', zh: '等宽', de: 'Dicktengleich', fr: 'Chasse fixe', es: 'Monoespaciada', pt: 'Monoespaçada', ru: 'Моноширинный', ar: 'ثابت العرض', hi: 'मोनोस्पेस', bn: 'মনোস্পেস', ur: 'یکساں چوڑائی', id: 'Lebar tetap' },
-  cursive: { ko: '필기체', en: 'Cursive', ja: '筆記体', zh: '手写体', de: 'Schreibschrift', fr: 'Cursive', es: 'Manuscrita', pt: 'Cursiva', ru: 'Рукописный', ar: 'خط اليد', hi: 'हस्तलेख', bn: 'হস্তলিপি', ur: 'رواں خط', id: 'Tulisan tangan' },
+  sans: {
+    ko: '산세리프',
+    en: 'Sans serif',
+    ja: 'ゴシック体',
+    zh: '无衬线',
+    de: 'Serifenlos',
+    fr: 'Sans empattement',
+    es: 'Sin serifa',
+    pt: 'Sem serifa',
+    ru: 'Без засечек',
+    ar: 'غير مذيل',
+    hi: 'सैन्स सेरिफ़',
+    bn: 'সান্স সেরিফ',
+    ur: 'سینس سیرف',
+    id: 'Tanpa serif',
+  },
+  serif: {
+    ko: '세리프',
+    en: 'Serif',
+    ja: '明朝体',
+    zh: '衬线',
+    de: 'Serif',
+    fr: 'Avec empattement',
+    es: 'Con serifa',
+    pt: 'Com serifa',
+    ru: 'С засечками',
+    ar: 'مذيل',
+    hi: 'सेरिफ़',
+    bn: 'সেরিফ',
+    ur: 'سیرف',
+    id: 'Berserif',
+  },
+  mono: {
+    ko: '고정폭',
+    en: 'Monospace',
+    ja: '等幅',
+    zh: '等宽',
+    de: 'Dicktengleich',
+    fr: 'Chasse fixe',
+    es: 'Monoespaciada',
+    pt: 'Monoespaçada',
+    ru: 'Моноширинный',
+    ar: 'ثابت العرض',
+    hi: 'मोनोस्पेस',
+    bn: 'মনোস্পেস',
+    ur: 'یکساں چوڑائی',
+    id: 'Lebar tetap',
+  },
+  cursive: {
+    ko: '필기체',
+    en: 'Cursive',
+    ja: '筆記体',
+    zh: '手写体',
+    de: 'Schreibschrift',
+    fr: 'Cursive',
+    es: 'Manuscrita',
+    pt: 'Cursiva',
+    ru: 'Рукописный',
+    ar: 'خط اليد',
+    hi: 'हस्तलेख',
+    bn: 'হস্তলিপি',
+    ur: 'رواں خط',
+    id: 'Tulisan tangan',
+  },
 };
 
 const swatchChoices = (
@@ -239,7 +579,22 @@ const namedChoices = (values: readonly string[], names: Readonly<Record<string, 
 // 때문이다(작게→크게). 칸으로 늘어놓으면 줄을 넷씩 먹는데 슬라이더는 하나로 끝난다.
 
 // 기본 칸 — 값 없음. 손잡이가 여기 앉으면 아무것도 안 걸린 것이고, 여기로 옮기면 벗는다.
-const BASE_LABEL: LocaleText = { ko: '기본', en: 'Default', ja: '既定', zh: '默认', de: 'Standard', fr: 'Par défaut', es: 'Predeterminado', pt: 'Padrão', ru: 'По умолчанию', ar: 'افتراضي', hi: 'डिफ़ॉल्ट', bn: 'ডিফল্ট', ur: 'طے شدہ', id: 'Bawaan' };
+const BASE_LABEL: LocaleText = {
+  ko: '기본',
+  en: 'Default',
+  ja: '既定',
+  zh: '默认',
+  de: 'Standard',
+  fr: 'Par défaut',
+  es: 'Predeterminado',
+  pt: 'Padrão',
+  ru: 'По умолчанию',
+  ar: 'افتراضي',
+  hi: 'डिफ़ॉल्ट',
+  bn: 'ডিফল্ট',
+  ur: 'طے شدہ',
+  id: 'Bawaan',
+};
 
 // 순서가 있는 눈금 — 기본 칸이 **가운데**가 아니라 맨 앞이다: 목록이 작은 것부터 큰 것 순이라
 // 그 앞이 "안 걸림" 의 자리다.
@@ -342,9 +697,10 @@ export function makeHighlightWing(options: ValueWingOptions = {}): Wing {
   const values = narrowed('hl', HIGHLIGHT_COLORS, options);
   // 기본색은 노랑이다 — 형광펜이라는 말이 먼저 뜻하는 색. 좁혀서 노랑이 빠졌으면 남은 첫 색이다.
   const first = values.includes('yellow') ? 'yellow' : (values[0] as string);
-  return {
+  const wing: Wing = {
     ...valueMark({
       w: 'hl',
+      clearable: true,
       key: 'c',
       values,
       button: {
@@ -375,15 +731,18 @@ export function makeHighlightWing(options: ValueWingOptions = {}): Wing {
       ],
     },
   };
+  $markBuiltinAttrOwner(wing, ['hl']);
+  return wing;
 }
 export const highlightWing: Wing = makeHighlightWing();
 
 export function makeTextColorWing(options: ValueWingOptions = {}): Wing {
   const values = narrowed('tc', TEXT_COLORS, options);
   const first = values.includes('green') ? 'green' : (values[0] as string);
-  return {
+  const wing: Wing = {
     ...valueMark({
       w: 'tc',
+      clearable: true,
       key: 'c',
       values,
       button: {
@@ -413,6 +772,8 @@ export function makeTextColorWing(options: ValueWingOptions = {}): Wing {
       ],
     },
   };
+  $markBuiltinAttrOwner(wing, ['tc']);
+  return wing;
 }
 export const textColorWing: Wing = makeTextColorWing();
 
@@ -422,9 +783,10 @@ export function makeFontSizeWing(options: ValueWingOptions = {}): Wing {
   // 크기 단추를 눌러 글자가 작아지기를 바라는 사람은 없다. 좁혀서 lg 가 빠졌으면 남은 것 중
   // 가장 큰 값이다(목록이 작은 것부터 큰 것 순이라 마지막이 그 값이다).
   const first = values.includes('lg') ? 'lg' : (values[values.length - 1] as string);
-  return {
+  const wing: Wing = {
     ...valueMark({
       w: 'fs',
+      clearable: true,
       key: 'v',
       values,
       button: {
@@ -455,6 +817,8 @@ export function makeFontSizeWing(options: ValueWingOptions = {}): Wing {
       ],
     },
   };
+  $markBuiltinAttrOwner(wing, ['fs']);
+  return wing;
 }
 export const fontSizeWing: Wing = makeFontSizeWing();
 
@@ -480,10 +844,13 @@ export function makeTypefaceWing(options: ValueWingOptions = {}): Wing {
   const values = narrowed('tf', TYPEFACES, options);
   // 산세리프는 표식 없는 글이 이미 입고 있는 것이라, 눌러서 나오는 것은 그다음 얼굴이다 —
   // 세리프가 남았으면 세리프, 아니면 산세리프가 아닌 첫 얼굴, 산세리프뿐이면 그것이다.
-  const first = values.includes('serif') ? 'serif' : (values.find((value) => value !== 'sans') ?? (values[0] as string));
-  return {
+  const first = values.includes('serif')
+    ? 'serif'
+    : (values.find((value) => value !== 'sans') ?? (values[0] as string));
+  const wing: Wing = {
     ...valueMark({
       w: 'tf',
+      clearable: true,
       key: 'v',
       values,
       button: {
@@ -516,6 +883,8 @@ export function makeTypefaceWing(options: ValueWingOptions = {}): Wing {
       ],
     },
   };
+  $markBuiltinAttrOwner(wing, ['tf']);
+  return wing;
 }
 export const typefaceWing: Wing = makeTypefaceWing();
 

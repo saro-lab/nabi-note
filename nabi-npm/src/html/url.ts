@@ -15,12 +15,24 @@ const LOCAL_URL = /^(?:blob:|data:image\/(?!svg)[a-z0-9.+-]+[;,])/i;
 // IP 와 Referer 가 샌다. 같은 사이트 상대 경로만 받겠다는 아래 분기의 본뜻이 이것을 거른다.
 const PROTOCOL_RELATIVE = /^\/\//;
 
+// URL parser와 HTML parser가 지우거나 다른 문법으로 해석하는 글자는 주소 문에 들이지 않는다.
+const URL_CONTROL = /[\u0000-\u001f\u007f]/;
+const HTML_REFERENCE = /&(?:#[0-9]+|#x[0-9a-f]+|[a-z][a-z0-9]+);/i;
+
+function encodedScheme(value: string): boolean {
+  const end = value.search(/[/?#]/);
+  return HTML_REFERENCE.test(end < 0 ? value : value.slice(0, end));
+}
+
 // `http(s)` 절대 주소와 같은 사이트 상대 경로를 받는다. `allowLocal` 이면 `blob:`·`data:image/…` 도.
 // 통과 못 한 것은 null 이다 — "없는 주소"로 다루는 것은 부르는 쪽의 몫이다.
 export function safeUrl(raw: string | undefined, allowLocal = false): string | null {
-  const value = (raw ?? '').trim();
+  const source = raw ?? '';
+  if (URL_CONTROL.test(source) || source.includes('\\')) return null;
+  const value = source.trim();
   if (value === '') return null;
   if (PROTOCOL_RELATIVE.test(value)) return null;
+  if (encodedScheme(value)) return null;
 
   // 상대 경로 — 스킴이 없으니 그대로 둔다. 콜론이 섞이면 스킴 흉내이므로 거절한다.
   if (/^[./]/.test(value)) return value.includes(':') ? null : value;
@@ -57,8 +69,14 @@ export function youtubeId(raw: string | undefined): string | null {
   if (value === '') return null;
   try {
     const url = new URL(value, 'https://youtube.com');
-    if (url.hostname.endsWith('youtu.be')) return videoId(url.pathname.slice(1));
-    if (!/(?:^|\.)(?:youtube\.com|youtube-nocookie\.com)$/i.test(url.hostname)) return null;
+    const host = url.hostname.toLowerCase();
+    if (host === 'youtu.be') return videoId(url.pathname.slice(1));
+    if (
+      !['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(
+        host,
+      )
+    )
+      return null;
     if (url.pathname === '/watch') return videoId(url.searchParams.get('v') ?? undefined);
     const matched = EMBED_PATH.exec(url.pathname);
     return matched ? videoId(matched[1]) : null;

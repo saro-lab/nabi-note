@@ -1,14 +1,18 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: সুপারস্ক্রিপ্ট
+description: নির্বাচিত লেখাকে baseline-এর ওপরে তুলুন।
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# সুপারস্ক্রিপ্ট
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+ঘাত ও রেফারেন্স চিহ্নের জন্য নির্বাচিত লেখাকে baseline-এর ওপরে তোলে। আবার প্রয়োগ করলে ফরম্যাটিং সরিয়ে যায়।
 
-[Open the Korean canonical page](/ko/guide/features)
+<WingDemo path="/wing/inline/superscript" />
 
-</div>
+```ts
+const selected = wings().use('sup').build()
+```

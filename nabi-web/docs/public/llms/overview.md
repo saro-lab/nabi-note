@@ -58,7 +58,7 @@ This is not permission to register unsafe custom builders or filters. Custom cod
 - Call every returned `unmount()`, `close()`, or detach function when its host goes away.
 - One mount belongs to one editor and one set of roots. Do not reuse a surface mount across editors.
 - `nabi.applyCommand()` is enough for headless control; toolbars are optional.
-- Use the `$`-prefixed members on `Nabi` only when wiring package-level integrations. They are exported in the type but are internal integration hooks, not the stable application-level API.
+- The public `Nabi` facade has no `$`-prefixed integration hooks. Package integrations receive narrow internal capabilities instead.
 
 ## Next documents
 

@@ -24,6 +24,7 @@ export interface StructureDecl {
   readonly singleParagraph?: boolean;
   // 값이 1/0 뿐인 불리언 attr 이름 (체크 ck, 펼침 o …).
   readonly boolAttrs?: readonly string[];
+  readonly attrs?: readonly string[];
 }
 
 // --- 키 소유 -------------------------------------------------------------------------
@@ -59,8 +60,12 @@ export type OnKey = (
 export interface AttachHost {
   readonly root: HTMLElement;
   readonly nabi: Nabi;
+  doc(): NabiDoc;
+  readonly env: EditEnv;
   // 편집기 DOM 의 data-key → 문서 경로 (없으면 null) — 표면의 사상을 wing 이 재구현하지 않게.
   pathOfKey(id: string): readonly number[] | null;
+  // attach 조립 중 먼저 단 부작용을 즉시 걸어 둔다 — 그 뒤 attach 가 던져도 mount transaction 이 걷는다.
+  onDispose(dispose: () => void): void;
 }
 
 export type Attach = (host: AttachHost) => () => void;
@@ -73,7 +78,10 @@ export interface InputRule {
   readonly scope?: 'block' | 'word';
   readonly pattern: RegExp;
   // 맞으면 돌릴 커맨드 — 커맨드 이름은 registry 의 명명 규칙 검사를 지난 것이어야 한다.
-  readonly run: (match: RegExpMatchArray) => { readonly name: string; readonly args?: Readonly<Record<string, unknown>> };
+  readonly run: (match: RegExpMatchArray) => {
+    readonly name: string;
+    readonly args?: Readonly<Record<string, unknown>>;
+  };
 }
 
 // --- 툴바 선언 (그림은 ui 12 가 그린다 — 여기는 충돌 검사와 "무엇을 하는가"까지만) -----------
@@ -281,6 +289,9 @@ export interface Wing {
   readonly holds?: 'blocks' | 'inline';
   readonly singleParagraph?: boolean;
   readonly boolAttrs?: readonly string[];
+  readonly attrs?: readonly string[];
+  // clearFormat이 이 wing의 mark 또는 attrKey를 벗길 수 있는가.
+  readonly clearable?: boolean;
   // 데려오는 구조 타입들 (표의 tr·td, 리스트의 li) — 키가 그 타입의 `w` 다. 옛 owns 의 자리.
   readonly parts?: Readonly<Record<string, StructureDecl>>;
   // 컨테이너가 품는 자식 타입 제한 — 벗어난 자식은 repair 앞에서 걷힌다(껍데기 벗기기).

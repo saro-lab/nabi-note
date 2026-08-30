@@ -16,7 +16,7 @@
 import { isElement, isWrapper } from '../schema/index.js';
 import { nodeAt } from '../doc/index.js';
 import { ordered } from '../caret/index.js';
-import type { Nabi } from '../editor/index.js';
+import { hostOf, type Nabi } from '../editor/index.js';
 
 // 화면 전용 표식 — 출력에는 안 나간다(조립이 이 이름을 모른다).
 export const PICKED_ATTR = 'data-nabi-picked';
@@ -49,9 +49,9 @@ export function mountPickedMark(options: PickedMarkOptions): PickedMark {
     if (start.path.length !== 1 || end.path.length !== 1 || start.path[0] !== end.path[0]) return null;
     if (start.offset !== 0 || end.offset !== 1) return null;
 
-    const doc = nabi.$doc();
+    const doc = hostOf(nabi).doc();
     const top = nodeAt(doc, start.path);
-    if (!top || !isWrapper(top, nabi.$env)) return null;
+    if (!top || !isWrapper(top, hostOf(nabi).env)) return null;
     const lump = top.ch[0];
     if (!isElement(lump) || typeof lump._id !== 'string') return null;
     return lump._id;

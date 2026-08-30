@@ -1,14 +1,37 @@
 ---
-title: Translation pending
-description: Korean documentation is being reviewed before translation.
+title: نمط الخط
+description: يطبّق فئة خط على النص المحدد أو الفقرة.
 ---
 
-<div class="translation-shell">
+<script setup>
+import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
+</script>
 
-# Translation pending
+# نمط الخط
 
-The Korean documentation is the canonical edition and is being reviewed before this locale is translated. This page keeps the same route so language switching and existing links remain safe.
+يطبّق فئة خط على النص المحدد. يغيّر النطاق وحده عند تحديده، ويطبّقها على نص الفقرة الحالية عند وجود مؤشر الكتابة فقط. تحدد CSS الخاصة بالخدمة ملفات الخطوط الفعلية و`font-family`.
 
-[Open the Korean canonical page](/ko/guide/features)
+الفئات الأساسية هي `sans` و`serif` و`mono` و`cursive`. ومن الأفضل في الخدمات متعددة نظم الكتابة تحديد الخط المرتبط بكل فئة بوضوح.
 
-</div>
+<WingDemo path="/wing/etc/typeface" />
+
+```ts
+const selected = wings().use('tf', {
+  values: ['sans', 'serif', 'mono'],
+}).build()
+```
+
+عند حذف `values` تُستخدم جميع الفئات الأساسية. ولا يسمح المستند إلا بالقيم المدرجة في `values`.
+
+## أنماط CSS
+
+يُحفظ اسم الفئة فقط في المستند، بينما تحدد CSS ملف الخط. غيّر المتغيرات في الحاوية نفسها للمحرر وصفحة النشر.
+
+```css
+.nabi-content {
+  --nabi-font-serif: "Noto Naskh Arabic", serif;
+  --nabi-font-mono: "JetBrains Mono", monospace;
+}
+```
+
+عند استخدام خط ويب، حمّل ملفه أولًا. وغالبًا لا يدعم خط `cursive` كل نظم الكتابة، لذلك لا تعرض هذه الفئة إلا بعد تعيين خط تستخدمه الخدمة فعلًا.
