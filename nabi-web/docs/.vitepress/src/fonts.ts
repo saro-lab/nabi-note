@@ -1,55 +1,97 @@
-// 서체 wing은 갈래(sans/serif/mono/cursive)만 고르고 실제 글꼴은 호스트 몫이다 — 언어마다 한 벌씩 쌓았다.
-// The typeface wing only picks a genus; filling it is the host's call — one font stack per language here.
-// CJK 글꼴은 유니코드 조각으로 쪼개져 CSS만 gzip 245KB라, head가 아니라 데모가 뜰 때 붙인다.
-// CJK fonts arrive unicode-range-sliced at ~245KB gzipped, so this loads on demo mount, not in <head>.
-const EDITOR_FONTS = [
-  // cursive — 갈래 중 유일하게 Noto가 답을 안 준다, 언어마다 손글씨 얼굴이 다르다.
-  // Cursive is the one genus Noto doesn't cover, so each language gets its own handwriting face.
-  'Caveat:wght@400..700', // 라틴
-  'Nanum+Pen+Script', // 한국어
-  'Yomogi', // 일본어
-  'Zhi+Mang+Xing', // 중국어
-  'Kalam:wght@400;700', // 데바나가리
-  'Noto+Nastaliq+Urdu:wght@400..700', // 우르두 — 나스탈리크 자체가 흘림이다
+import type { LocaleCode } from '../locales/codes.ts'
 
-  // sans — 라틴/그리스/키릴은 head의 Noto Sans가 이미 덮는다(config.mts)
-  'Noto+Sans+KR:wght@400..700',
-  'Noto+Sans+JP:wght@400..700',
-  'Noto+Sans+SC:wght@400..700',
-  'Noto+Sans+Arabic:wght@400..700',
-  'Noto+Sans+Hebrew:wght@400..700',
-  'Noto+Sans+Devanagari:wght@400..700',
-  'Noto+Sans+Bengali:wght@400..700',
-  'Noto+Sans+Thai:wght@400..700',
+// 서체 wing은 갈래만 고른다. 펜글씨는 로케일과 떼고, 본문 보조 글꼴만 현재 문자권별로 붙인다.
+// The typeface wing picks only a genus. Handwriting is locale-independent; only body fallbacks follow the current script.
+const FONT_GROUPS = {
+  cursive: [
+    'Caveat:wght@400..700',
+    'Gaegu:wght@300;400;700',
+    'Hachi+Maru+Pop',
+    'Zhi+Mang+Xing',
+    'Noto+Nastaliq+Urdu:wght@400..700',
+    'Kalam:wght@400;700',
+    'Atma:wght@300;400;500;600;700',
+    'Gurajada',
+    'Kavivanar',
+    'Mali:wght@400;700',
+  ],
+  ko: ['Noto+Sans+KR:wght@400..700', 'Noto+Serif+KR:wght@400..700'],
+  ja: ['Noto+Sans+JP:wght@400..700', 'Noto+Serif+JP:wght@400..700'],
+  zh: ['Noto+Sans+SC:wght@400..700', 'Noto+Serif+SC:wght@400..700'],
+  arabic: [
+    'Noto+Sans+Arabic:wght@400..700',
+    'Noto+Naskh+Arabic:wght@400..700',
+  ],
+  devanagari: [
+    'Noto+Sans+Devanagari:wght@400..700',
+    'Noto+Serif+Devanagari:wght@400..700',
+  ],
+  bengali: [
+    'Noto+Sans+Bengali:wght@400..700',
+    'Noto+Serif+Bengali:wght@400..700',
+  ],
+  telugu: ['Noto+Sans+Telugu:wght@400..700', 'Noto+Serif+Telugu:wght@400..700'],
+  tamil: ['Noto+Sans+Tamil:wght@400..700', 'Noto+Serif+Tamil:wght@400..700'],
+  thai: ['Noto+Sans+Thai:wght@400..700', 'Noto+Serif+Thai:wght@400..700'],
+} as const
 
-  // serif
-  'Noto+Serif+KR:wght@400..700',
-  'Noto+Serif+JP:wght@400..700',
-  'Noto+Serif+SC:wght@400..700',
-  'Noto+Naskh+Arabic:wght@400..700', // 아랍 문자의 세리프 격이 나스흐다
-  'Noto+Serif+Hebrew:wght@400..700',
-  'Noto+Serif+Devanagari:wght@400..700',
-  'Noto+Serif+Bengali:wght@400..700',
-  'Noto+Serif+Thai:wght@400..700',
-]
+type FontGroup = keyof typeof FONT_GROUPS
+type BodyFontGroup = Exclude<FontGroup, 'cursive'>
 
-// `display=swap` — 글꼴을 기다리는 동안 시스템 글꼴로 먼저 그려, 데모 첫 화면이 안 비게 한다.
-// `display=swap` paints system fonts while waiting, so the demo's first paint isn't left blank.
-export const EDITOR_FONT_HREF = `https://fonts.googleapis.com/css2?${EDITOR_FONTS.map(
-  (family) => `family=${family}`,
-).join('&')}&display=swap`
+const LOCALE_FONT_GROUP = {
+  en: null,
+  ko: 'ko',
+  ja: 'ja',
+  zh: 'zh',
+  de: null,
+  fr: null,
+  es: null,
+  pt: null,
+  ru: null,
+  ar: 'arabic',
+  hi: 'devanagari',
+  bn: 'bengali',
+  ur: 'arabic',
+  id: null,
+  fa: 'arabic',
+  mr: 'devanagari',
+  vi: null,
+  te: 'telugu',
+  ha: null,
+  tr: null,
+  sw: null,
+  ta: 'tamil',
+  th: 'thai',
+  it: null,
+} as const satisfies Record<LocaleCode, BodyFontGroup | null>
 
-const LINK_ID = 'nabi-editor-fonts'
+const LINK_ID_PREFIX = 'nabi-editor-fonts-'
 
-// 여러 데모가 한 페이지에 있어도 한 번만 붙는다 — id로 확인한다.
-// Idempotent: several demos on one page still attach it once.
-export function loadEditorFonts(): void {
-  if (typeof document === 'undefined') return
-  if (document.getElementById(LINK_ID)) return
+// Google Fonts는 CSS 안에서 unicode-range로 다시 자른다. 여기서는 CSS 요청도 문자권별로 갈라 한 데모가 지원 언어 전체를 받지 않게 한다.
+// Google Fonts splits files again with unicode-range. Splitting the CSS requests here keeps one demo from fetching every supported script's @font-face list.
+function editorFontHref(group: FontGroup): string {
+  return `https://fonts.googleapis.com/css2?${FONT_GROUPS[group]
+    .map((family) => `family=${family}`)
+    .join('&')}&display=swap`
+}
+
+function loadFontGroup(group: FontGroup): void {
+  const id = `${LINK_ID_PREFIX}${group}`
+  if (document.getElementById(id)) return
 
   const link = document.createElement('link')
-  link.id = LINK_ID
+  link.id = id
   link.rel = 'stylesheet'
-  link.href = EDITOR_FONT_HREF
+  link.href = editorFontHref(group)
   document.head.append(link)
+}
+
+// 펜글씨 한 벌은 로케일과 상관없이 붙인다. 무거운 본문 보조 글꼴만 현재 페이지나 언어 칩의 문자권을 따른다.
+// The handwriting sheet is locale-independent. Only the heavier body fallbacks follow the page or selected chip's script.
+export function loadEditorFonts(locale: string): void {
+  if (typeof document === 'undefined') return
+
+  loadFontGroup('cursive')
+  const bodyGroup = LOCALE_FONT_GROUP[locale as LocaleCode]
+  if (bodyGroup) loadFontGroup(bodyGroup)
 }

@@ -11,20 +11,23 @@
 :root {
   --nabi-font:
     'Noto Sans', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans Arabic', 'Noto Sans Hebrew',
-    'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Thai', system-ui, sans-serif;
+    'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Telugu', 'Noto Sans Tamil', 'Noto Sans Thai',
+    system-ui, sans-serif;
   --nabi-font-serif:
     'Noto Serif', 'Noto Serif KR', 'Noto Serif JP', 'Noto Serif SC', 'Noto Naskh Arabic', 'Noto Serif Hebrew',
-    'Noto Serif Devanagari', 'Noto Serif Bengali', 'Noto Serif Thai', Georgia, serif;
+    'Noto Serif Devanagari', 'Noto Serif Bengali', 'Noto Serif Telugu', 'Noto Serif Tamil', 'Noto Serif Thai',
+    Georgia, serif;
   /* 고정폭은 라틴에만 있는 개념이라 뒤는 고정폭이 아니다 — 글자가 빠지는 것보다는 낫다 */
   /* Monospacing is a Latin notion; the tail is not monospaced, but a missing glyph is worse */
   --nabi-font-mono:
-    'Noto Sans Mono', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', ui-monospace, SFMono-Regular, Consolas,
-    monospace;
-  /* 흘림만 Noto가 안 커버해 언어마다 손글씨 글꼴을 낱개로 골랐다(한국어 Nanum Pen Script 등) — 손글씨가 없는 문자는 브라우저 기본 글꼴로 떨어진다. */
-  /* Only cursive has no Noto answer, so each language's handwriting face was picked by hand (Korean: Nanum Pen Script); a script with none falls back to the browser default. */
+    'Noto Sans Mono', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans Arabic',
+    'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Telugu', 'Noto Sans Tamil', 'Noto Sans Thai',
+    ui-monospace, SFMono-Regular, Consolas, monospace;
+  /* 펜글씨는 로케일과 상관없이 같은 묶음을 쓴다. 전용 시트는 데모가 뜰 때 한 번만 늦게 받는다(src/fonts.ts). */
+  /* Handwriting uses one locale-independent stack; its dedicated sheet loads once when a demo mounts (src/fonts.ts). */
   --nabi-font-cursive:
-    'Caveat', 'Nanum Pen Script', 'Yomogi', 'Zhi Mang Xing', 'Kalam', 'Noto Nastaliq Urdu', 'Segoe Script',
-    'Snell Roundhand', cursive;
+    'Caveat', 'Gaegu', 'Hachi Maru Pop', 'Zhi Mang Xing', 'Noto Nastaliq Urdu', 'Kalam', 'Atma', 'Gurajada',
+    'Kavivanar', 'Mali', 'Segoe Script', 'Snell Roundhand', cursive;
 }
 
 /* 편집기 안은 이 사이트가 입히지 않는다 — 크롬도 본문도 코어 시트가 그린다 */
