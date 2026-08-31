@@ -1,12 +1,5 @@
-// 고치(cocoon) — 어떤 길로 들어온 나비트리든 여기를 지나면 불변식이 선다 (: 매 커맨드).
-// 루트는 문단 배열 — 떠도는 인라인은 문단으로 모이고, 맨몸 물건은 래퍼문단을 입는다.
-// 물건과 글이 섞인 문단은 쪼개진다. 이미지 둘이 든 문단은 래퍼문단 둘이 된다.
-// 래퍼문단의 attrs 는 정렬(a)만 남고, 물건이 정렬을 마다하면(`noAlign` — 코드 상자) 그것도
-// 안 남는다 (Q11). 글 문단의 attrs 는 h·a·dc 화이트리스트다.
-// 빈 문단은 걷지 않는다 — 공백은 내용이다 (엔터 연타).
-// 타입별 복구(표 격자 등)는 wing 의 repair 훅에 위임한다 — cocoon 은 호출 자리만 갖는다.
-// 모든 엘리먼트에 유일한 _id 를 결정적으로 채운다 — 같은 JSON 은 같은 키를 얻는다 (hydrate).
-// 바뀐 것이 없으면 원래 참조를 그대로 돌려준다 — 매 커맨드 위에서도 구조 공유로 싸게 돈다.
+// cocoon 을 지나면 나비트리 불변식이 선다(래퍼문단·attrs 화이트리스트 등) — 세부는 각 함수 주석에.
+// Passing through cocoon establishes nabi-tree invariants; per-invariant detail lives on each function below.
 import { BR, P } from './reserved.js';
 import { canonicalTextLines } from './text.js';
 import { $callbackTree, $snapshotNodes } from './raw.js';
@@ -76,11 +69,8 @@ function sameAttrs(a: Attrs | undefined, b: Attrs | undefined): boolean {
   return ka.every((key) => a[key] === b[key]);
 }
 
-// 글 문단이 입을 수 있는 속성은 제목(h: 1~6)·정렬(a: l/c/r)·드롭캡(dc: 1) 셋뿐이고
-// 래퍼문단은 그중 정렬만이다 (·Q11). 이름별 검증이 곧 화이트리스트다.
-// `align` 이 거짓이면 그 정렬 하나마저 걷는다 — 물건이 정렬을 마다한 자리다(`noAlign`).
-// 옛 저장본에 이미 박힌 값도 이 문을 지나며 걷힌다: 못 쓰게 막기만 하고 남겨 두면
-// 사람은 걸린 정렬을 벗길 단추가 없는 문서를 만난다.
+// 글 문단은 h·a·dc 만, 래퍼문단은 정렬(a)만 남기고 나머진 걷는다 — 옛 저장본의 무효값도 여기서 씻긴다.
+// Text paragraphs keep only h/a/dc, wrapper paragraphs only alignment; stale invalid values are dropped here too.
 function paragraphAttrs(a: Attrs | undefined, wrapper: boolean, align = true): Attrs | undefined {
   if (!a) return undefined;
   const out: Record<string, AttrValue> = {};
@@ -94,8 +84,8 @@ function paragraphAttrs(a: Attrs | undefined, wrapper: boolean, align = true): A
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
-// wing 노드의 attrs 는 일반 규칙만 본다 — 값은 문자열이거나 유한한 숫자, `_` 접두 키는 내부
-// 전용이라 걷고, 불리언 attr 는 숫자 1 만 남는다. 이름별 화이트리스트는 그 wing 의 몫이다(07).
+// wing attrs 는 일반 규칙만 본다(문자열/유한수, `_` 접두 걷기, 불리언은 1만) — 이름별 화이트리스트는 wing 몫.
+// Wing attrs only get generic checks; per-name whitelisting is each wing's own job.
 function wingAttrs(w: string, a: Attrs | undefined, env: SchemaEnv): Attrs | undefined {
   if (!a) return undefined;
   const closed = $hasClosedBuiltinAttrs(env, w);
@@ -216,13 +206,10 @@ function inlineChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] 
       for (const inner of inlineChildren(node.ch, env)) push(inner);
       continue;
     }
-    // 마크 하나 — 속을 먼저 고치고, 그 wing 의 repair 에게 값을 묻는다.
-    //
-    // **여기가 JSON 입구의 값 검사 자리다**. 예전에는 마크에 repair 를 안 태워서
-    // 같은 공격이 길에 따라 다르게 끝났다: HTML 로 들어온 `a href="javascript:"` 는 껍데기가
-    // 벗겨졌는데, JSON 으로 들어온 같은 것은 트리에 그대로 남았다. 출력은 render 가 막으니
-    // 안 터졌지만 **저장값이 오염된 채** 백엔드로 갔고, 그 JSON 을 읽는 다른 렌더러에서 터진다.
-    // repair 가 null 을 답하면 껍데기를 벗기고 속을 이 자리로 올린다 — HTML 입구와 같은 걸음이다.
+    // 마크의 repair 를 여기서 태우는 게 JSON 입구의 값 검사다 — 안 태우면 `javascript:` href 가
+    // HTML 입구와 달리 JSON 입구에선 트리에 그대로 남아 오염된 값이 백엔드로 간다.
+    // Running repair here is JSON's own validation gate — skip it and a `javascript:` href
+    // survives via JSON while HTML strips it, leaking a poisoned value to storage.
     const fixed = rebuild(node, node.w, wingAttrs(node.w, node.a, env), inlineChildren(node.ch, env));
     const repair = repairOf(env, fixed.w);
     const kept = repair ? runRepair(repair, fixed, env) : fixed;
@@ -237,11 +224,10 @@ function inlineChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] 
 
 // --- 블록 정리 ------------------------------------------------------------------------------
 
-// 물건 하나를 고친다 — 단말은 속을 비우고, 컨테이너는 속을 블록 규칙으로 고친 뒤 repair 훅에 위임한다.
-//
-// **null 은 "이 물건은 없던 것으로 쳐라" 다.** 못 믿을 주소를 문 그림이 그 자리다 — HTML 입구는
-// 그런 그림을 아예 안 들이는데(`import.ts`), JSON 입구만 껍데기를 남기면 두 문의 답이 갈린다.
-// 물건은 속이 없거나 제 안에서 끝나므로, 여기서는 벗기지 않고 **통째로 뺀다**(마크와 다른 점).
+// repair 가 null 을 답하면 물건은 통째로 뺀다(마크처럼 벗기지 않음) — HTML 입구가 못 믿을 그림을
+// 아예 안 들이는 것과 JSON 입구의 답을 맞추기 위해서다.
+// A null repair drops the whole lump (unlike marks, which get unwrapped) so JSON matches
+// HTML's door, which never admits an untrusted image in the first place.
 function lumpNode(node: ElementNode, env: SchemaEnv): ElementNode | null {
   const a = wingAttrs(node.w, node.a, env);
   let next: ElementNode;
@@ -391,9 +377,8 @@ function collectIds(nodes: readonly NabiNode[], seen: Map<string, number>): void
   }
 }
 
-// 모든 엘리먼트에 유일한 _id 를 채운다. 이미 실린 유효한 키는 지키고(안정성 — 부분 재그리기
-// 구조 공유의 전제), 빈 자리는 경로에서 유도한다(결정성 — 같은 JSON 은 같은 키, hydrate).
-// 유도 키가 이미 쓰인 이름과 부딪히면 `~n` 을 붙여 비켜 간다 — 걷는 순서가 같으므로 이것도 결정적이다.
+// 기존 유효 _id 는 지키고(구조 공유 전제), 빈 자리는 경로에서 결정적으로 유도한다(hydrate 전제).
+// Existing valid `_id`s are kept for structural sharing; empty ones are derived deterministically from path, for hydrate.
 function assignIds(doc: readonly ElementNode[]): NabiDoc {
   const existing = new Map<string, number>();
   collectIds(doc, existing);

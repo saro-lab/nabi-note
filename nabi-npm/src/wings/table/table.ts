@@ -1,9 +1,8 @@
-// 표 wing — 064 의 표 버그 다섯(3·4·5·6·7)이 구조적으로 안 나는 표.
-//   구조: 래퍼문단 > table > tr > td > 문단 하나(엔터 = 라인). 정렬·폭 attr 없음.
-//   repair: 들쭉 행·span 초과를 빈 칸으로 채워 직사각형 — cocoon 이 위임 호출.
-//   키: tab/shiftTab 칸 이동. Shift+방향키는 아예 안 받는다 — mount 가 브라우저에 돌려준다.
-//   병합: 토글 하나 — 잡은 사각형을 하나로, 병합 칸에서 다시 누르면 풀린다. 캐럿은 언제나 실재 자리로.
-//   제목: 행·열 토글 + currentValue 눌림. 칸의 제목 표식은 불리언 attr `th` 다.
+// 표 wing — 064의 표 버그 다섯이 구조적으로 안 나는 표: 래퍼>table>tr>td>문단 하나(엔터=라인), 정렬·폭 attr 없음.
+// The table wing, structured so 064's five table bugs can't recur: wrapper>table>tr>td>one paragraph (Enter=line), no align/width attrs.
+//
+// repair는 들쭉 행·span 초과를 빈 칸으로 채워 직사각형화한다. 병합은 토글 하나(잡은 사각형↔풀기), 제목은 행·열 토글이다.
+// repair pads ragged rows and over-spanning cells into a rectangle. Merge is one toggle (box↔split); header is a row/column toggle.
 import { BR, P, isElement, type AttrValue, type ElementNode, type NabiNode } from '../../schema/index.js';
 import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import { holderLength, nodeAt, replaceAt, holders, type EditEnv, type Position } from '../../doc/index.js';
@@ -13,6 +12,7 @@ import type { HtmlBuilder, ParseElement } from '../../html/index.js';
 import type { MdBuilder } from '../../io/index.js';
 import type { KeyIntent, OnKey, Wing } from '../../wing/index.js';
 import { insertLump } from '../../wing/index.js';
+import { exitWrapper } from '../../wing/ops.js';
 import type { LocaleText } from '../../locale/index.js';
 import { NARROW_REM } from '../../style/tokens.js';
 import {
@@ -39,11 +39,8 @@ function rebuilt(node: ElementNode, ch: readonly NabiNode[]): ElementNode {
   return { w: node.w, ch, ...(node.a ? { a: node.a } : {}), ...(node._id !== undefined ? { _id: node._id } : {}) };
 }
 
-// 칸의 제목 표식 — 값 1 뿐인 불리언. `br` 예약어와 헷갈릴 이름(hr 류)을 피해 HTML 의 th 를 그대로 쓴다.
-// --- 칸 속 = 문단 하나 (repair) ---------------------------------------------------------------
-
-// 속이 이미 "문단 하나 + 깨끗한 인라인"인가 — 매 커맨드 cocoon 위에서 공짜여야 하므로
-// 참일 때는 손대지 않는다 (구조 공유).
+// 속이 이미 "문단 하나 + 깨끗한 인라인"인가 — 매 커맨드 cocoon 위에서 공짜여야 하므로 참이면 손대지 않는다.
+// Whether the content is already "one clean paragraph" — this must be free on every cocoon pass, so a true result changes nothing (structural sharing).
 function cleanInline(node: NabiNode): boolean {
   if (typeof node === 'string') return true;
   if (!isElement(node)) return false;
@@ -60,12 +57,13 @@ function cleanCell(cell: ElementNode): boolean {
 }
 
 // 속 어딘가에 문단이 사는가 — 마크(인라인)와 블록 껍데기(행·칸·중첩 표)를 가르는 판정.
+// Whether a paragraph lives anywhere inside — the test separating inline marks from block wrappers (rows, cells, nested tables).
 function hasParagraphInside(node: ElementNode): boolean {
   return node.ch.some((child) => isElement(child) && (child.w === P || hasParagraphInside(child)));
 }
 
-// 블록들을 라인으로 눌러 한 문단의 인라인으로 만든다 — 옛 규칙("칸은 글줄") 그대로.
-// 마크는 남기고, 블록 껍데기(문단·래퍼·중첩 표)는 벗기며 경계마다 라인을 한 칸 둔다.
+// 블록들을 라인으로 눌러 한 문단의 인라인으로 만든다 — 마크는 남기고 블록 껍데기는 벗기며 경계마다 라인을 한 칸 둔다.
+// Flattens blocks into one paragraph's inline content by line — marks survive, block wrappers are stripped, and each boundary becomes a line break.
 function pressInline(nodes: readonly NabiNode[], out: NabiNode[], sep: { pending: boolean }): void {
   const flush = (): void => {
     if (sep.pending && out.length > 0) out.push({ w: BR, ch: [] });
@@ -85,7 +83,7 @@ function pressInline(nodes: readonly NabiNode[], out: NabiNode[], sep: { pending
       continue;
     }
     if (node.w === P || hasParagraphInside(node)) {
-      // 블록 껍데기(문단·래퍼·중첩 표의 행과 칸) — 벗기고, 앞뒤 경계를 라인으로 남긴다.
+      // 블록 껍데기 — 벗기고, 앞뒤 경계를 라인으로 남긴다.
       const before = out.length;
       sep.pending = out.length > 0;
       pressInline(node.ch, out, sep);
@@ -106,8 +104,6 @@ export function repairCell(cell: ElementNode): ElementNode {
   const paragraph: ElementNode = isElement(first) && first.w === P ? rebuilt(first, inline) : { w: P, ch: inline };
   return rebuilt(cell, [paragraph]);
 }
-
-// --- 표 repair — 행 아닌 자식 감싸기· span 조임· 직사각형화 --------------------------
 
 function clampSpans(table: ElementNode): ElementNode {
   const rows = table.ch.filter((child): child is ElementNode => isElement(child) && child.w === 'tr');
@@ -135,8 +131,10 @@ function clampSpans(table: ElementNode): ElementNode {
   return changed ? rebuilt(table, ch) : table;
 }
 
+// 행 아닌 자식 감싸기, span 조임, 직사각형화 — 이 순서로 도는 표 repair.
+// Table repair, in order: wrap non-row children, clamp spans, then pad to a rectangle.
 export function repairTable(table: ElementNode): ElementNode {
-  // 1) 행 아닌 블록 자식 — 행 하나(칸 하나)로 감싼다. 글은 남는다.
+  // 1) 행 아닌 블록 자식은 행 하나(칸 하나)로 감싼다 — 글은 남는다.
   let wrappedAny = false;
   const rowsOnly = table.ch.map((child) => {
     if (isElement(child) && child.w === 'tr') return child;
@@ -153,11 +151,11 @@ export function repairTable(table: ElementNode): ElementNode {
       )
     : table;
 
-  // 2) 행이 하나도 없으면 1×1 로 세운다 — 캐럿의 집.
+  // 2) 행이 하나도 없으면 1×1로 세운다 — 캐럿의 집.
   const hasRow = base.ch.some((child) => isElement(child) && child.w === 'tr');
   const seeded = hasRow ? base : rebuilt(base, [{ w: 'tr', ch: [emptyCell()] }]);
 
-  // 3) span 조임 → 4) 직사각형화 — 행마다 모자란 만큼 빈 칸을 꼬리에 채운다.
+  // 3, 4) span 조임과 직사각형화 — 행마다 모자란 만큼 빈 칸을 꼬리에 채운다.
   const clamped = clampSpans(seeded);
   const grid = cellGrid(clamped);
   const columns = Math.max(1, grid.columns);
@@ -176,8 +174,6 @@ export function repairTable(table: ElementNode): ElementNode {
   });
   return padded ? rebuilt(clamped, ch) : clamped;
 }
-
-// --- 캐럿 자리의 칸 찾기 -----------------------------------------------------------------------
 
 interface CellCtx {
   readonly tablePath: readonly number[];
@@ -202,12 +198,14 @@ function cellCtxOf(doc: readonly ElementNode[], pos: Position): CellCtx | null {
   return null;
 }
 
-// 칸의 문단 첫 자리 — repair 가 "칸 = 문단 하나"를 보장하므로 문단 인덱스는 0 이다.
+// 칸의 문단 첫 자리 — repair가 "칸 = 문단 하나"를 보장하므로 문단 인덱스는 0이다.
+// A cell's first paragraph position — always index 0, since repair guarantees "one cell = one paragraph".
 function caretInCell(tablePath: readonly number[], cell: GridCell, offset = 0): Position {
   return { path: [...tablePath, cell.trIndex, cell.tdIndex, 0], offset };
 }
 
-// 격자 행 번호 → table.ch 의 tr 인덱스.
+// 격자 행 번호 → table.ch의 tr 인덱스.
+// Maps a grid row number to its tr index in table.ch.
 function trIndexOfRow(table: ElementNode, row: number): number | null {
   let r = -1;
   for (let i = 0; i < table.ch.length; i += 1) {
@@ -220,16 +218,16 @@ function trIndexOfRow(table: ElementNode, row: number): number | null {
   return null;
 }
 
-// --- 행·열 넣고 빼기 (순수 — 표 노드만 다룬다) -------------------------------------------------
-
-// 격자 행 `line` 자리에 새 행을 넣는다 (line === rows 면 꼬리).
+// 격자 행 `line` 자리에 새 행을 넣는다(line === rows면 꼬리).
+// Inserts a new row at grid position `line` (line === rows means the tail).
 function insertRowAt(table: ElementNode, line: number): ElementNode {
   const grid = cellGrid(table);
   const columns = Math.max(1, grid.columns);
 
   // 줄을 가로지르는 병합 칸은 한 칸 더 자란다 — 그 열들에는 새 칸이 안 선다.
+  // A merged cell straddling this line grows by one — no new cell lands in its columns.
   const spanning = grid.cells.filter((item) => item.row < line && item.row + item.rowSpan - 1 >= line);
-  // mapCells 는 격자를 새로 지으므로 GridCell 이 아니라 칸 노드 참조로 맞춘다.
+  // mapCells는 격자를 새로 짓기 때문에 GridCell이 아니라 칸 노드 참조로 맞춘다.
   const spanningCells = new Set(spanning.map((item) => item.cell));
   const widened =
     spanning.length === 0
@@ -256,7 +254,8 @@ function insertRowAt(table: ElementNode, line: number): ElementNode {
   return rebuilt(widened, [...widened.ch.slice(0, at), row, ...widened.ch.slice(at)]);
 }
 
-// 격자 열 `line` 자리에 새 열을 넣는다 (line === columns 면 오른끝).
+// 격자 열 `line` 자리에 새 열을 넣는다(line === columns면 오른끝).
+// Inserts a new column at grid position `line` (line === columns means the right edge).
 function insertColumnAt(table: ElementNode, line: number): ElementNode {
   const grid = cellGrid(table);
   const spanning = grid.cells.filter((item) => item.column < line && item.column + item.colSpan - 1 >= line);
@@ -279,25 +278,25 @@ function insertColumnAt(table: ElementNode, line: number): ElementNode {
     if (range && range.start <= r && r < range.end) continue;
     const trIndex = trIndexOfRow(next, r);
     if (trIndex === null) continue;
-    // 제목 줄에는 제목 칸이 선다 — 새 표는 첫 행이 늘 제목이라(084 ③), 여기서 빈 칸을 넣으면
-    // 열을 하나 더할 때마다 제목 줄에 구멍이 뚫린다. 줄이 통째로 제목일 때만 따라간다.
+    // 통째로 제목인 줄에는 제목 칸이 따라 선다 — 안 그러면 열을 더할 때마다 제목 줄에 구멍이 뚫린다.
+    // A row that's entirely header gets a header cell too — otherwise adding a column punches a hole in the header line.
     //
-    // **행 추가 쪽에는 같은 규칙을 안 건다**: 제목 행 하나뿐인 표에서는 모든 열이 "통째로 제목"
-    // 이라, 그 아래 새 행까지 제목이 되어 버린다 (마지막 칸의 Tab 이 바로 그 자리다).
+    // 행 추가 쪽엔 같은 규칙을 안 건다 — 제목 행 하나뿐인 표는 모든 열이 "통째로 제목"이라, 그 아래 새 행까지 제목이 되어 버린다.
+    // Row insertion skips this rule — in a table with only a header row, every column reads as "entirely header," so a new row below it would wrongly inherit header status too.
     next = insertCellInRow(next, trIndex, line, headerLine(grid, 'row', r) ? headerCell() : emptyCell());
   }
   return next;
 }
 
-// 격자 행 `line` 을 지운다 — 줄에서 시작하는 병합 칸은 아랫줄로 옮겨 한 칸 줄고
-// 위에서 내려온 병합 칸은 한 칸 준다. 행이 하나뿐이면 null (표 전체 삭제는 부르는 쪽 몫).
+// 격자 행 `line`을 지운다 — 위에서 내려온 병합 칸은 한 칸 줄고, 행이 하나뿐이면 null(표 전체 삭제는 부르는 쪽 몫).
+// Deletes grid row `line` — a merged cell spanning down from above shrinks by one; returns null if it's the only row (whole-table deletion is the caller's job).
 function deleteRowAt(table: ElementNode, line: number): ElementNode | null {
   const grid = cellGrid(table);
   if (grid.rows <= 1) return null;
 
   const movers = grid.cells.filter((item) => item.row === line && item.rowSpan > 1).sort((a, b) => a.column - b.column);
   const t1 = mapCells(table, (item) => {
-    if (item.row === line) return null; // 지워지는 줄에서 시작 — movers 는 아래서 되심는다
+    if (item.row === line) return null; // 지워지는 줄에서 시작 — movers는 아래서 되심는다
     if (item.row < line && item.row + item.rowSpan - 1 >= line) {
       return withSpans(item.cell, item.colSpan, item.rowSpan - 1);
     }
@@ -316,7 +315,8 @@ function deleteRowAt(table: ElementNode, line: number): ElementNode | null {
   return t2;
 }
 
-// 격자 열 `line` 을 지운다 — 걸친 병합 칸은 한 칸 줄고, 열이 하나뿐이면 null.
+// 격자 열 `line`을 지운다 — 걸친 병합 칸은 한 칸 줄고, 열이 하나뿐이면 null.
+// Deletes grid column `line` — a straddling merged cell shrinks by one; null if it's the only column.
 function deleteColumnAt(table: ElementNode, line: number): ElementNode | null {
   const grid = cellGrid(table);
   if (grid.columns <= 1) return null;
@@ -328,9 +328,8 @@ function deleteColumnAt(table: ElementNode, line: number): ElementNode | null {
   });
 }
 
-// --- 병합 (토글 하나) -----------------------------------------------------------------
-
 // 선택이 걸친 두 칸 — 같은 표 안일 때만.
+// The two cells a selection spans — only when both sit in the same table.
 function cellsOfSelection(
   doc: readonly ElementNode[],
   sel: Selection,
@@ -341,11 +340,13 @@ function cellsOfSelection(
   if (!a || !b) return null;
   if (a.tablePath.length !== b.tablePath.length || !a.tablePath.every((v, i) => v === b.tablePath[i])) return null;
   // 격자는 호출마다 새로 지어지므로 칸 노드 참조로 같음을 판정한다.
+  // The grid is rebuilt on every call, so equality is checked by cell node reference, not grid identity.
   if (a.cell.cell === b.cell.cell) return null;
   return { ctx: a, other: b.cell };
 }
 
 // 병합 상자의 칸들 — 화면 칠(부속)과 병합 커맨드가 같은 판정을 쓴다.
+// The cells of a merge box — the on-screen paint (attach) and the merge command share this exact same test.
 export function selectionBox(
   doc: readonly ElementNode[],
   sel: Selection,
@@ -357,6 +358,7 @@ export function selectionBox(
 }
 
 // 상자의 칸들을 왼쪽 위 칸 하나로 — 글은 라인으로 이어 남는다.
+// Collapses every cell in the box into the top-left one — their text survives, joined by line breaks.
 function mergeBox(table: ElementNode, grid: TableGrid, box: GridBox): ElementNode {
   const origin = cellCovering(grid, box.top, box.left);
   if (!origin) return table;
@@ -379,7 +381,8 @@ function mergeBox(table: ElementNode, grid: TableGrid, box: GridBox): ElementNod
   });
 }
 
-// 병합 칸 하나를 도로 편다 — 자기 자리는 1×1 이 되고, 먹혔던 자리마다 빈 칸이 선다.
+// 병합 칸 하나를 도로 편다 — 자기 자리는 1×1이 되고, 먹혔던 자리마다 빈 칸이 선다.
+// Unmerges one merged cell — it shrinks to 1×1, and an empty cell fills each spot it used to cover.
 function splitCell(table: ElementNode, target: GridCell): ElementNode {
   let next = mapCells(table, (item) => (item.cell === target.cell ? withSpans(item.cell, 1, 1) : item.cell));
   for (let r = target.row; r < target.row + target.rowSpan; r += 1) {
@@ -393,9 +396,8 @@ function splitCell(table: ElementNode, target: GridCell): ElementNode {
   return next;
 }
 
-// --- 커맨드 ------------------------------------------------------------------------------------
-
-// 표를 바꾼 뒤의 답 — 캐럿은 (row, column) 에서 가장 가까운 실재 칸의 문단 첫 자리다 (캐럿 실재성).
+// 표를 바꾼 뒤의 답 — 캐럿은 (row, column)에서 가장 가까운 실재 칸의 문단 첫 자리다.
+// The outcome after changing a table — the caret lands at the paragraph start of whatever real cell is nearest (row, column).
 function settle(
   doc: readonly ElementNode[],
   tablePath: readonly number[],
@@ -415,6 +417,7 @@ function settle(
 }
 
 // 래퍼문단(표)을 통째로 걷은 뒤의 답 — 마지막 행·열 삭제가 표 자체 삭제로 이어진다.
+// The outcome after removing the whole wrapper (table) — deleting the last row or column cascades into deleting the table itself.
 function removeWholeTable(
   doc: readonly ElementNode[],
   tablePath: readonly number[],
@@ -451,14 +454,8 @@ const clampDim = (raw: unknown, fallback: number): number => {
 };
 
 const commands: Readonly<Record<string, Command>> = {
-  // 표 하나를 캐럿 자리에 세운다 — 빈 문단이면 교체된다.
-  //
-  // **새 표의 첫 행은 예외 없이 제목 행이다** (084 ③). 행 수를 안 본다 — 한 행짜리 표도 그
-  // 한 행이 제목이다: "몇 행부터 제목" 이라는 단서를 두면 행을 하나 더하는 순간 표의 뜻이
-  // 말없이 바뀐다. 사람이 원하는 그림은 거의 언제나 "첫 줄은 이름, 아래는 값" 이고, 아닌
-  // 표는 제목 행 토글로 벗기면 된다 — 없는 것을 입히는 것보다 입은 것을 벗기는 쪽이 쉽다.
-  //
-  // **생성 길에만 선다.** 이미 있는 문서·들여온 HTML 은 여기를 안 지나므로 손이 안 닿는다.
+  // 표 하나를 캐럿 자리에 세운다(빈 문단이면 교체) — 새 표의 첫 행은 예외 없이 제목 행이다(084 ③, 생성 길에만 선다).
+  // Stands up a table at the caret (replacing an empty paragraph) — the first row is always a header row (084 ③), and only on creation, never on import.
   insertTable(doc, sel, args, env) {
     const rows = clampDim(args['rows'], 3);
     const cols = clampDim(args['cols'], 3);
@@ -509,14 +506,8 @@ const commands: Readonly<Record<string, Command>> = {
     return settle(doc, ctx.tablePath, next, ctx.cell.row, ctx.cell.column);
   }),
 
-  // 병합 토글 **하나** — 이름이 하나이듯 뜻도 하나다: "이 칸들을 하나로".
-  //
-  // 방향으로 가르지 않는다(오른쪽·아래). 사람이 사각형을 잡아 보이는 것으로 이미 어디까지인지
-  // 다 말했는데, 거기에 방향을 또 물으면 같은 것을 두 번 묻는 셈이다.
-  //
-  // **푸는 단추도 따로 없다.** 병합 칸에 캐럿이 서면 이 단추가 눌린 채로 보이고(`merged` 토큰)
-  // 눌린 것을 다시 누르면 풀린다 — 켜고 끄는 것이 한 자리인 여느 토글과 같다. 풀 때 글은 전부
-  // 첫 칸에 남고 먹혔던 자리마다 빈 칸이 다시 선다(`splitCell`).
+  // 병합 토글 하나 — 방향은 안 묻는다(사각형을 잡은 것으로 이미 다 말했다). 병합 칸에 서면 눌린 채로 보이고, 다시 누르면 풀린다.
+  // One merge toggle, no direction asked (the dragged rectangle already says everything) — showing pressed on a merged cell, pressing again splits it.
   mergeCells(doc, sel, _args, _env) {
     const boxed = selectionBox(doc, sel);
     if (boxed) {
@@ -530,12 +521,12 @@ const commands: Readonly<Record<string, Command>> = {
     return settle(doc, ctx.tablePath, splitCell(ctx.table, ctx.cell), ctx.cell.row, ctx.cell.column);
   },
 
-  // 제목 행·열 — 토글이다: 줄의 칸 전부가 제목이면 벗고, 아니면 입힌다.
+  // 제목 행·열 토글 — 줄의 칸 전부가 제목이면 벗고, 아니면 입힌다.
   toggleHeaderRow: withCtx((ctx, doc, sel) => toggleHeader(ctx, doc, sel, 'row')),
   toggleHeaderColumn: withCtx((ctx, doc, sel) => toggleHeader(ctx, doc, sel, 'column')),
 
-  // 정렬 켜기/끄기 — 보는 쪽에서 제목 칸을 눌러 열을 정렬할 수 있게 하는 표식 하나다.
-  // 이 표식이 없으면 `attachTableSort` 가 붙을 표가 없다(기본은 표식 달린 표만 붙는다).
+  // 정렬 켜기/끄기 — 보는 쪽에서 제목 칸을 눌러 열을 정렬할 수 있게 하는 표식 하나. 없으면 attachTableSort가 안 붙는다.
+  // Toggles the flag that lets the viewer sort by clicking a header cell — without it, attachTableSort never attaches.
   toggleSortable(doc, sel) {
     const ctx = cellCtxOf(doc, ordered(sel)[0]);
     if (!ctx) return null;
@@ -552,7 +543,8 @@ const commands: Readonly<Record<string, Command>> = {
     return { doc: replaceAt(doc, ctx.tablePath, [next]), selection: sel };
   },
 
-  // 표 삭제 — 래퍼문단째 걷고 그 자리에 빈 문단을 세운다(캐럿이 설 자리는 늘 있어야 한다).
+  // 표 삭제 — 래퍼문단째 걷고 그 자리에 빈 문단을 세운다.
+  // Deletes the table — removes it wrapper and all, seating an empty paragraph in its place.
   deleteTable(doc, sel) {
     const [start] = ordered(sel);
     const top = start.path[0];
@@ -592,8 +584,8 @@ function toggleHeader(
   return { doc: out, selection: sel };
 }
 
-// 그 줄이 통째로 제목인가 — 눌림 표시·토글·열 추가가 **한 판정**을 나눠 쓴다.
-// 병합 칸은 자기가 덮은 줄 전부에 든 것으로 센다(줄에 걸치면 그 줄의 칸이다).
+// 그 줄이 통째로 제목인가 — 눌림 표시·토글·열 추가가 이 한 판정을 나눠 쓴다.
+// Whether a whole line is header — the shared test behind the pressed indicator, the toggle, and column insertion.
 function headerLine(grid: TableGrid, axis: 'row' | 'column', line: number): boolean {
   const cells = grid.cells.filter((item) =>
     axis === 'row'
@@ -610,18 +602,11 @@ export function headerLineOf(
   return headerLine(ctx.grid, axis, axis === 'row' ? ctx.cell.row : ctx.cell.column);
 }
 
-// --- 키 — tab/shiftTab 칸 이동 + 화살표 격자 걸음. Shift+방향키는 여기 안 온다. ---------
-
-// 화살표는 **화면이 아니라 격자를 따라 움직인다.**
+// 화살표는 화면이 아니라 격자를 따라 움직인다 — 브라우저의 화면 좌표 기반 걸음은 칸 폭·병합이 섞이면 엉뚱한 칸으로 샌다.
+// Arrow keys walk the grid, not screen position — the browser's coordinate-based movement drifts to the wrong cell once widths and merges are involved.
 //
-// 왜 브라우저에 못 맡기나: 브라우저의 화살표는 화면 좌표를 따라간다. 칸마다 폭이 다르고 병합
-// 칸이 섞이면 위·아래 걸음이 같은 열에 안 떨어지고 옆 칸으로 샌다. 좌·우도 마찬가지로 칸 경계를
-// 못 넘거나 표 밖으로 튕겨 나갔다. 격자는 우리가 이미 아는 것이므로(cellGrid), 걸음도 그 위에서
-// 센다 — old 도 같은 까닭으로 같은 선택을 했다.
-//
-// 칸 **안**에서 갈 곳이 남아 있으면 우리 일이 아니다(null → 코어·브라우저의 글자 걸음). 칸의
-// 끝에 닿았을 때만 옆 칸으로 넘긴다. 격자 밖으로 나가는 걸음도 우리 일이 아니다 — 표를 벗어나는
-// 착지는 코어의 홀더 걸음이 안다.
+// 칸 안에 갈 곳이 남았으면 우리 일이 아니다(null로 코어·브라우저에 넘긴다) — 칸 끝에 닿았을 때만 옆 칸으로 넘긴다.
+// If there's still room inside the cell, this isn't our concern (returns null to core/browser) — only reaching a cell's edge hands off to the neighbor.
 function arrowStep(
   intent: KeyIntent,
   doc: readonly ElementNode[],
@@ -644,17 +629,15 @@ function arrowStep(
     const next = stepCell(ctx.grid, ctx.cell, back ? -1 : 1);
     if (!next) return null; // 표의 첫(끝) 칸 — 표 밖으로 나가는 것은 코어의 걸음이다
     const head = caretInCell(ctx.tablePath, next);
-    // 왼쪽으로 넘어가면 그 칸의 **끝**에 선다 — 넘어간 자리가 곧 다음에 지울 자리다.
+    // 왼쪽으로 넘어가면 그 칸의 끝에 선다 — 넘어간 자리가 곧 다음에 지울 자리다.
+    // Moving left lands at the target cell's end — the position you'd delete from next.
     return { doc, selection: caretAt(back ? { ...head, offset: lengthAt(head) } : head) };
   }
 
-  // 위·아래 — 같은 열의 이웃 줄. 병합 칸은 자기가 덮은 줄 전체가 자기 자리라, 아래로는 덮은
-  // 만큼 건너뛰어야 제 아래 줄에 닿는다.
+  // 위·아래는 같은 열의 이웃 줄 — 병합 칸은 자기가 덮은 줄 전체가 자기 자리라, 덮은 만큼 건너뛰어야 제 아래 줄에 닿는다.
+  // Up/down moves to the neighboring line in the same column — a merged cell's whole span counts as its own, so it must skip past that span to reach the next real line.
   const row = dir === 'up' ? ctx.cell.row - 1 : ctx.cell.row + ctx.cell.rowSpan;
-  if (row < 0 || row >= ctx.grid.rows) {
-    const wrapperPath = ctx.tablePath.slice(0, -1);
-    return { doc, selection: caretAt({ path: wrapperPath, offset: dir === 'up' ? 0 : 1 }) };
-  }
+  if (row < 0 || row >= ctx.grid.rows) return exitWrapper(doc, ctx.tablePath, dir === 'up' ? 'up' : 'down');
   const next = cellCovering(ctx.grid, row, ctx.cell.column);
   if (!next) return null;
   return { doc, selection: caretAt(caretInCell(ctx.tablePath, next)) };
@@ -664,7 +647,7 @@ const onKey: OnKey = (intent, doc, sel, env, owner) => {
   if (!isCollapsed(sel)) return null;
   if (owner.node.w !== 'td') return null;
   if (intent.key === 'arrow') return arrowStep(intent, doc, sel, env);
-  if (intent.key !== 'tab' && intent.key !== 'shiftTab') return null; // 엔터=라인·삭제는 코어의 것
+  if (intent.key !== 'tab' && intent.key !== 'shiftTab') return null; // 엔터=라인, 삭제는 코어의 것
 
   const ctx = cellCtxOf(doc, sel.focus);
   if (!ctx) return null;
@@ -679,13 +662,11 @@ const onKey: OnKey = (intent, doc, sel, env, owner) => {
   if (next) {
     return { doc: doc, selection: caretAt(caretInCell(ctx.tablePath, next)) };
   }
-  // 마지막 칸의 Tab — 아래에 새 행을 만들고 그 첫 칸으로 (옛 판은 제자리 멈춤이었지만
-  // 새 판에서 무변화 답은 코어의 "스페이스 넷"으로 떨어지므로 행 추가가 맞는 답이다).
+  // 마지막 칸의 Tab은 아래에 새 행을 만들고 그 첫 칸으로 간다 — 무변화 답은 코어의 "스페이스 넷"으로 떨어지니 행 추가가 맞는 답이다.
+  // Tab at the last cell adds a new row and lands there — a no-op would fall through to core's "insert four spaces," so growing the table is the right answer.
   const grown = insertRowAt(ctx.table, ctx.grid.rows);
   return settle(doc, ctx.tablePath, grown, ctx.grid.rows, 0);
 };
-
-// --- 조립·들여오기 -----------------------------------------------------------------------------
 
 const spanAttr = (value: AttrValue | undefined): string | undefined => {
   const n = spanOf(value);
@@ -701,17 +682,16 @@ const tableHtml: HtmlBuilder = (node, children, ctx) =>
 
 const trHtml: HtmlBuilder = (_node, children, ctx) => ctx.element('tr', children());
 
-// 제목 칸은 th 로 나간다 — 표식(attr)이 곧 태그다.
+// 제목 칸은 th로 나간다 — 표식(attr)이 곧 태그다.
+// A header cell renders as `th` — the attr flag becomes the tag itself.
 const tdHtml: HtmlBuilder = (node, children, ctx) =>
   ctx.element(node.a?.[TH] === 1 ? 'th' : 'td', ctx.filled(children()), {
     colspan: spanAttr(node.a?.[SPAN_COL]),
     rowspan: spanAttr(node.a?.[SPAN_ROW]),
   });
 
-// --- md 조립 -------------------------------------------------------------------------------------
-// 파이프 표는 md 에서 **격자 하나**뿐이다: 머리 줄이 첫 줄이고(그리고 첫 줄은 통째로 머리이고),
-// 병합이 없고, 줄마다 칸 수가 같아야 한다. 하나라도 어긋나면 이 표는 md 로 못 적는다 —
-// 반쯤 적어 격자를 흐트러뜨리느니 통째로 html 로 낸다.
+// 파이프 표는 md에서 격자 하나뿐이다 — 머리가 통째로 첫 줄, 병합 없음, 줄마다 칸 수 동일. 하나라도 어긋나면 html로 낸다.
+// A pipe table in md handles exactly one shape — first row all-header, no merges, equal cell counts per row; any mismatch falls back to html entirely.
 function pipeable(node: ElementNode): boolean {
   let cols = -1;
   for (let r = 0; r < node.ch.length; r += 1) {
@@ -733,15 +713,18 @@ const tableMd: MdBuilder = (node, ctx) => {
   const rows = ctx.children('\n').split('\n');
   const cols = (node.ch[0] as ElementNode).ch.length;
   // 구분 줄 — 머리와 몸을 가르는 이 한 줄이 없으면 파이프 줄은 그냥 글이다.
+  // The separator line — without it, pipe-delimited lines are read back as plain text, not a table.
   return [rows[0], `|${' --- |'.repeat(cols)}`, ...rows.slice(1)].join('\n');
 };
 
 const trMd: MdBuilder = (_node, ctx) => `| ${ctx.children(' | ')} |`;
 
-// 칸 하나는 **한 줄**에 들어야 한다 — 줄바꿈은 칸이 아니라 표를 깬다.
+// 칸 하나는 한 줄에 들어야 한다 — 줄바꿈은 칸이 아니라 표를 깬다.
+// A cell must fit on one line — a line break wouldn't just break the cell, it'd break the whole table.
 const tdMd: MdBuilder = (_node, ctx) => ctx.children(' ').replace(/\s+/g, ' ').trim();
 
-// 들여오기 — 기본 대응은 th 를 td 로만 누이므로, 제목 표식은 여기서 주장한다.
+// 들여오기 — 기본 대응은 th를 td로만 누이므로, 제목 표식은 여기서 주장한다.
+// Import claim — the default mapping just flattens th to td, so the header flag must be asserted here instead.
 function claim(el: ParseElement, inner: (block: boolean) => NabiNode[]): NabiNode[] | null {
   // 정렬 표식을 단 표 — 표식만 되읽고 속은 기본 대응이 읽게 둔다.
   if (el.tag === 'table' && el.attrs['data-nabi-sortable'] !== undefined) {
@@ -756,13 +739,10 @@ function claim(el: ParseElement, inner: (block: boolean) => NabiNode[]): NabiNod
   return [{ w: 'td', a, ch: inner(true) }];
 }
 
-// --- wing --------------------------------------------------------------------------------------
-
-// --- 버튼·상황 줄 선언 (12) ----------------------------------------------------------------------
-// 아이콘 속은 old 번역이다. 눌림은 `currentValue` 가 답하는 상태 토큰('merged'·'th')으로 읽는다.
-
+// 눌림은 currentValue가 답하는 상태 토큰('merged'·'th')으로 읽는다.
+// A pressed state is read from the token currentValue returns ('merged', 'th').
 const TABLE_ICONS = {
-  // 위아래 화살표 — 열 정렬의 표식. viewer 의 단추와 같은 뜻이다.
+  // 위아래 화살표 — 열 정렬의 표식. viewer의 단추와 같은 뜻이다.
   sortable: '<path d="M5 6.5 8 3.5l3 3M5 9.5l3 3 3-3"/>',
   grid: '<rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.5"/><path d="M1.75 6.5h12.5M6 6.5v6.75"/>',
   rowAbove: '<rect x="1.75" y="8" width="12.5" height="5.5" rx="1.2"/><path d="M8 2v4M6 4h4"/>',
@@ -782,7 +762,6 @@ const TABLE_ICONS = {
     '<path d="M6.5 8H3.75M6.5 8 5.25 6.75M6.5 8 5.25 9.25M9.5 8h2.75M9.5 8l1.25-1.25M9.5 8l1.25 1.25"/>',
 } as const;
 
-// 이름들 — old 사전 이식(14 로케일).
 const TABLE_NAME: LocaleText = {
   ko: '표',
   en: 'Table',
@@ -963,25 +942,19 @@ const TABLE_TEXT: Readonly<Record<string, LocaleText>> = {
 };
 
 const TABLE_CSS = `
-/* **표는 자리를 꽉 채우지 않는다 — 쓴 만큼만 넓다.** 그래서 폭을 안 적는다: 표의 기본 자동
-   배치가 속의 글에 맞춰 줄어들고, 좁아지면 칸 안에서 줄이 바뀐다. 여기에 \`100%\` 를 적으면
-   칸 둘짜리 표가 화면을 가로질러 늘어나 빈 칸만 넓어진다.
-   더 줄일 수 없을 만큼 넓어지면 겉옷(\`.nabi-scroll\`)이 가로로 구른다 — 페이지가 옆으로
-   밀리는 것이 아니라 표 **안**에서 구르는 것이 규칙이다. */
+/* 표는 자리를 꽉 채우지 않는다 — 폭을 안 적어야 속 글에 맞춰 자동 배치가 줄어들고, 안 그러면 칸 둘짜리 표가 빈 칸만 늘어난다. */
+/* A table never fills its space by default — leaving width unset lets it shrink to content; setting it explicitly would stretch a two-column table into empty space. */
 .nabi-content table { border-collapse: collapse; }
-/* 칸의 최소 폭 — **빈 표가 눌리는 표가 되게 하는 값이다.**
-   이것이 없으면 갓 만든 3×3 이 62px 로 접힌다: 칸은 안쪽 여백 만큼(20px)이고 그 속 문단은
-   폭이 0 이라, 캐럿이 설 자리가 없어 눌러도 아무 일이 안 난다("셀을 클릭하면 커서가 안 생김").
-   글이 차면 칸은 이 값 위로 자라고, 더 못 줄일 만큼 넓어지면 겉옷이 가로로 구른다. */
+/* 칸의 최소 폭 — 없으면 갓 만든 표가 폭 0으로 접혀 캐럿이 설 자리가 없어진다("셀을 클릭해도 커서가 안 생김"). */
+/* A cell's minimum width — without it, a freshly created table collapses to zero width, leaving no room for a caret to land. */
 .nabi-content th,.nabi-content td {
   border: 1px solid var(--nabi-line); padding:.35em.6em; vertical-align: top; text-align: start;
   min-inline-size: 4rem;
 }
 .nabi-content th { background: var(--nabi-soft); font-weight: 650; }
 
-/* 드래그로 세운 칸 상자 — **화면 전용 표식이다**(트리에도 저장 HTML 에도 안 실린다).
-   이 규칙이 없으면 상자는 서는데 보이지가 않는다: 표식만 붙고 아무도 안 그려서, 드래그로 칸을
-   고르는 기능이 통째로 없어진 것처럼 보였다. */
+/* 드래그로 세운 칸 상자는 화면 전용 표식이다(트리·저장 HTML엔 안 실린다) — 이 규칙 없이는 표식만 붙고 안 그려진다. */
+/* The drag-selected cell box is a screen-only flag (never in the tree or saved HTML) — without this rule the flag attaches but nothing renders. */
 .nabi-content :is(td, th)[data-nabi-cell-selected] {
   background: color-mix(in srgb, var(--nabi-accent) 14%, transparent);
 }
@@ -1009,17 +982,10 @@ const TABLE_CSS = `
 /* 정렬된 열만 강조색이다 — 농도는 아이콘이 말하고 색은 "이 열" 을 말한다. */
 .nabi-content table .nabi-sort[data-nabi-sort-active] { color: var(--nabi-accent); }
 
-/* --- 편집 화면의 정렬 표식 (084 ⑦) ---
-   정렬 **동작**은 보는 쪽 런타임의 것이라 편집기에는 일부러 안 붙는다 — 글을 고치는 중에 행이
-   저 혼자 자리를 바꾸면 캐럿이 어디 있었는지 알 수 없게 된다. 그래서 편집 화면에는 **표식**이
-   선다: 글쓴이는 "이 표는 발행되면 정렬된다"를 화면에서 알아야 하고, 상황 줄의 눌린 단추 하나는
-   캐럿이 그 표에 들어 있는 동안에만 보인다.
-   그림은 보는 쪽의 '원본' 아이콘 그대로다(삼각형 둘, 흐리게) — 같은 뜻이니 같은 그림이어야
-   한다. 자리도 같다: 칸의 오른쪽 가운데.
-   **첫 행에만** 선다 — 붙는 쪽(attachTableSort)이 단추를 다는 자리가 첫 행의 칸들이다.
-   병합이 보이는 표는 붙는 쪽이 거절하므로 표식도 서지 않는다 — 화면이 거짓말을 하면 안 된다.
-   (편집 HTML 은 span 이 2 이상일 때만 colspan/rowspan 을 적는다 — 그래서 존재만 봐도 병합이다.)
-   의사요소로 그린다: 문서에 없는 그림이라 트리에도 저장 HTML 에도 안 실리고, 누를 수도 없다. */
+/* 편집 화면의 정렬 표식(084 ⑦) — 정렬 동작 자체는 보는 쪽 런타임의 것이라 편집기에는 표식만 선다(행이 저 혼자 움직이면 캐럿을 잃는다). */
+/* The editor shows only a sort indicator (084 ⑦), never actual sorting — real sorting belongs to the viewer runtime, since a row moving on its own would lose the caret. */
+/* 첫 행에만, 병합 없는 표에만 선다 — attachTableSort가 붙는 자리와 정확히 같아야 화면이 거짓말을 안 한다. */
+/* Shown only on the first row of a merge-free table — must match exactly where attachTableSort attaches, or the screen would lie. */
 .nabi-content.nabi-editing table[data-nabi-sortable]:not(:has([colspan], [rowspan])) tr:first-child > :is(th, td) {
   position: relative; padding-inline-end: 1.75em;
 }
@@ -1028,36 +994,29 @@ const TABLE_CSS = `
   content: ""; position: absolute; inset-inline-end:.25em; inset-block-start: 50%;
   transform: translateY(-50%); pointer-events: none;
   inline-size: 1.25em; block-size: 1.25em; opacity:.38;
-  /* 색은 글자색을 따른다 — 마스크로 뚫어야 다크 모드에서도 삼각형이 글과 같은 색으로 산다
-     (그림 파일에 색을 박으면 한쪽 모드에서 안 보인다). */
+  /* 색은 글자색을 따른다 — 마스크로 뚫어야 다크 모드에서도 글과 같은 색으로 산다. */
+  /* Color follows currentColor via a mask, not a baked-in fill — otherwise it'd vanish in one theme or the other. */
   background: currentColor;
   -webkit-mask: var(--nabi-sort-mark) center / contain no-repeat;
   mask: var(--nabi-sort-mark) center / contain no-repeat;
 }
 
-/* --- 표 만들기 격자 — 작은 화면에서는 5×5, 칸은 손가락 크기로 (084 ②) ---
-   격자를 그리는 손은 툴바지만 **몇 칸이 서는지는 이 wing 의 선언**(button.action 의 max)이
-   말한다. 그러니 화면이 좁을 때의 모양도 표의 것이라 여기 산다 — 코어 시트에는 데스크톱
-   격자만 남고, 무게가 같으면 뒤에 붙는 wing 시트가 이긴다.
-   판정을 JS 가 아니라 CSS 로 하는 까닭: 창을 돌리거나 줄이는 것을 따라간다. 판이 열려 있는
-   동안 폭이 바뀌어도 다시 열 필요가 없다.
-   폭 기준 40rem 은 "세로로 든 전화기와 좁힌 창" 까지다 — 태블릿·데스크톱은 8×8 그대로.
-   **이 40rem 은 코어 시트(ui/css.ts)의 판 규칙과 같은 값이어야 한다** — 거기서 판이 버튼을
-   놓고 화면 한가운데 90% 로 서는 그 지점이다. 둘이 어긋나면 격자는 5×5 인데 판은 아직 버튼에
-   붙어 있는(또는 그 반대의) 어중간한 화면이 생긴다. */
+/* 표 만들기 격자는 작은 화면에서 5×5로 줄고 칸은 손가락 크기로 커진다(084 ②) — 몇 칸이 서는지는 button.action의 max가 정한다. */
+/* The table-creation grid shrinks to 5x5 on small screens with finger-sized cells (084 ②) — the cell count comes from button.action's max. */
+/* 40rem 기준은 코어 시트(ui/css.ts)의 판 규칙과 같은 값이어야 한다 — 어긋나면 격자와 판이 서로 다른 화면 폭에서 바뀐다. */
+/* The 40rem breakpoint must match the core sheet's (ui/css.ts) panel rule exactly, or the grid and panel would flip at different widths. */
 @media (max-width: ${NARROW_REM}rem) {
   .nabi-grid {
-    /* 칸 크기 토큰을 격자 자신에게 다시 매긴다 — 칸(.nabi-cell)이 상속으로 받으므로 코어 시트의
-       규칙을 안 건드리고도 커진다. 2.75rem 은 손가락 표적 관례(44px)다. */
+    /* 칸 크기 토큰을 격자 자신에게 다시 매긴다 — 코어 시트를 안 건드리고도 칸이 상속으로 커진다. */
+    /* Redefines the cell-size token on the grid itself — cells inherit it, growing without touching the core sheet's rule. */
     --nabi-grid-cell: var(--nabi-touch-control-size, 2.75rem);
     gap: .25rem;
-    /* !important 인 까닭 하나: 열 수를 툴바가 **인라인 style** 로 박는다. 인라인을 이기는 길은
-       이것뿐이고, 여기서 안 이기면 남은 칸 스물다섯이 여덟 열로 흘러 5×5 가 깨진다. */
+    /* !important는 툴바가 열 수를 인라인 style로 박기 때문 — 안 이기면 남는 칸들이 여덟 열로 흘러 5×5가 깨진다. */
+    /* !important because the toolbar sets column count via inline style — without it, the remaining cells would flow into 8 columns, breaking the 5x5 layout. */
     grid-template-columns: repeat(5, var(--nabi-grid-cell)) !important;
   }
-  /* 여섯째 열부터·여섯째 줄부터는 걷는다 — 여기 적힌 8 은 button.action 의 max 다(둘이 함께
-     움직인다). display:none 이라 격자 배치에서도 빠져, 남는 것이 정확히 앞 5×5 다.
-     더 큰 표가 필요하면 만든 뒤 행·열 추가로 늘린다 — 손가락으로 8×8 을 겨누는 것보다 쉽다. */
+  /* 여섯째 열·줄부터 걷는다 — 여기 적힌 8은 button.action의 max와 함께 움직인다. */
+  /* Hides everything from the 6th column/row on — the 8 here must move in lockstep with button.action's max. */
   .nabi-grid > .nabi-cell:nth-child(8n + 6),
   .nabi-grid > .nabi-cell:nth-child(8n + 7),
   .nabi-grid > .nabi-cell:nth-child(8n + 8),
@@ -1084,11 +1043,10 @@ export const tableWing: Wing = {
   partRepair: { td: repairCell },
   onKey,
   commands,
-  // 눌림 표시 — 이 wing 은 노드를 **여러 급** 소유하고(표·행·칸), 상태도 급마다 나뉘어 산다.
-  //   칸: 'merged'(병합)·'th'(제목)  /  표: 'sort'(발행되면 열 정렬이 돈다)
-  // 상황 줄과 눌림 판정은 급 하나가 아니라 **줄기 전부**의 토큰을 합쳐 읽으므로(ui/press 의
-  // `stackValue`), 표가 여기서 제 몫을 답하면 칸의 토큰과 나란히 실린다 — 정렬 토글이 칸 안에
-  // 서 있으면서도 표의 상태를 보여 주는 까닭이다.
+  // 이 wing은 여러 급(표·행·칸)을 소유하고 상태도 급마다 나뉜다 — 칸은 merged/th, 표는 sort.
+  // 상황 줄은 조상 줄기 전부의 토큰을 합쳐 읽으므로(ui/press의 stackValue), 칸 안 단추가 표의 상태(sort)를 그대로 보여줄 수 있다.
+  // This wing owns several levels (table/row/cell), each with its own state — cell: merged/th, table: sort.
+  // The context toolbar reads tokens up the whole ancestor chain (ui/press's stackValue), so a button inside a cell can still reflect the table's own state.
   currentValue: (node) => {
     if (node.w === 'table') return node.a?.[SORTABLE] === 1 ? SORTABLE : undefined;
     if (node.w !== 'td') return undefined;

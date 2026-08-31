@@ -1,5 +1,5 @@
-// wings 층의 문 — 기본 wing 전부와 그 묶음(defaultWings), 고르기 빌더(wings)가 여기서 나간다.
-// 글 계열(08) + 표(10) + 물건·도구(11)를 합친 완전 묶음이다.
+// wings 층의 문 — 기본 wing 전부, 그 묶음(defaultWings), 고르기 빌더(wings)가 여기서 나간다.
+// The wings layer's door — every built-in wing, their bundle (defaultWings), and the picker builder (wings) all export from here.
 import type { Wing } from '../wing/index.js';
 import { $catalogWings } from './builder.js';
 import { completeLocaleTree } from '../locale/complete.js';
@@ -40,13 +40,11 @@ export { dividerWing } from './hr/hr.js';
 export { diffWing } from './diff/diff.js';
 export { tableWings } from './table/index.js';
 export * from './extra.js';
-// wing 고르기 빌더 (087) — `wings().all().drop('upload').use('tf', { values: [...] })`.
 export { wingNames, wings } from './builder.js';
 export type { WingName, WingUseOptions, WingsBuilder } from './builder.js';
 
-// 기본 묶음 전체 — `createNabiWith(defaultWings)` 하나로 에디터가 선다.
-// 목록의 원본은 빌더의 차례표(builder.ts 의 CATALOG) **한 자리**다 — 여기 한 번 더 적으면
-// `.all()` 과 이 배열이 갈리고, 이름 유니온(WingName)도 딴 데를 보게 된다.
+// 기본 묶음 전체 — `createNabiWith(defaultWings)` 하나로 에디터가 선다. 원본은 builder.ts의 CATALOG 한 자리뿐이다.
+// The full default bundle — `createNabiWith(defaultWings)` alone stands up an editor; its only source is builder.ts's CATALOG.
 export const defaultWings: readonly Wing[] = $catalogWings;
 completeLocaleTree(DICTIONARY);
 completeLocaleTree(defaultWings);

@@ -1,7 +1,5 @@
-// The words are Portuguese now — menu names match the editor's own buttons, so a reader who
-// clicks "Negrito" in the menu meets "Negrito" in the toolbar.
-// 이제 낱말은 포르투갈어다 — 메뉴 이름은 에디터 버튼이 보이는 말과 같게 맞췄으니, 메뉴에서
-// "Negrito" 를 누른 사람은 툴바에서도 "Negrito" 를 만난다.
+// 옮겼다 — 키 하나라도 빠지면 타입 오류라 파일이 통째로 채워져 있어야 한다.
+// Translated — a missing key is a type error, so the file must stay filled in whole.
 export const pt = {
   label: 'Português',
   lang: 'pt',

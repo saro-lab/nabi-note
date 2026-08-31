@@ -1,5 +1,5 @@
-// 런 편집 — 저장 모양(중첩 마크)을 런으로 펴서(runsOf, 02) 자르고 잇고, 다시 최소 중첩으로
-// 되감는다(fromRuns). 저장은 언제나 중첩 한 모양이고, 편집 계산만 런 위에서 한다.
+// 저장 모양(중첩 마크)을 런으로 펴서 자르고 잇고, 다시 최소 중첩으로 되감는다 — 편집 계산만 런 위에서 한다.
+// Flattens the stored shape (nested marks) into runs to cut/join, then folds back to minimal nesting; only the edit math runs on runs.
 import {
   runLength,
   runsOf,
@@ -11,7 +11,8 @@ import {
 } from '../schema/index.js';
 import { graphemeBoundaries } from './grapheme.js';
 
-// 마크가 같은가 — 이름과 attrs 가 같으면 같은 마크다 (`_id` 는 안 본다).
+// 이름과 attrs가 같으면 같은 마크다 — `_id`는 안 본다.
+// Same name and attrs makes it the same mark; `_id` is ignored.
 export function sameMark(a: ElementNode, b: ElementNode): boolean {
   if (a === b) return true;
   if (a.w !== b.w) return false;
@@ -21,8 +22,8 @@ export function sameMark(a: ElementNode, b: ElementNode): boolean {
   return ka.every((key) => (a.a as Attrs)[key] === (b.a as Attrs)[key]);
 }
 
-// 런 목록을 다시 자식 목록으로 — 이웃한 같은 마크는 한 엘리먼트로 모이고, 이웃한 글자는 이어진다.
-// 한 묶음의 런이 전부 같은 원본 마크 참조를 들고 있으면 그 참조의 `_id` 를 지킨다 (부분 재그리기).
+// 이웃한 같은 마크는 한 엘리먼트로 모이고, 그 묶음이 전부 같은 원본 참조면 `_id`를 지킨다(부분 재그리기).
+// Adjacent identical marks merge into one element; if the whole run shares one original reference, its `_id` survives (partial repaint).
 export function fromRuns(runs: readonly Run[]): NabiNode[] {
   const build = (slice: readonly Run[], depth: number): NabiNode[] => {
     const out: NabiNode[] = [];
@@ -64,7 +65,8 @@ export function fromRuns(runs: readonly Run[]): NabiNode[] {
   return build(runs, 0);
 }
 
-// [from, to) 칸 구간의 런만 잘라 낸다 — 글자 런은 경계에서 쪼개진다.
+// 글자 런은 경계에서 쪼개진다.
+// A text run splits right at the [from, to) boundary.
 export function sliceRuns(runs: readonly Run[], from: number, to: number): Run[] {
   const out: Run[] = [];
   let at = 0;
@@ -85,12 +87,12 @@ export function sliceRuns(runs: readonly Run[], from: number, to: number): Run[]
   return out;
 }
 
-// 홀더의 런 — 편의 축약.
 export function holderRuns(holder: ElementNode, isTerminal: Terminal): Run[] {
   return runsOf(holder, isTerminal);
 }
 
-// 홀더의 속만 갈아 끼운 새 홀더 — 이름·attrs·`_id` 는 지킨다.
+// 이름·attrs·`_id`는 지키고 속만 갈아 끼운다.
+// Swaps only the children, keeping name/attrs/`_id`.
 export function withChildren(holder: ElementNode, ch: readonly NabiNode[]): ElementNode {
   return {
     w: holder.w,
@@ -126,7 +128,8 @@ export function runGraphemeBoundaries(runs: readonly Run[]): readonly number[] {
   return out;
 }
 
-// 오프셋 바로 앞 한 문자소의 너비. 단말은 한 칸이다. 앞이 없으면 0.
+// 오프셋 바로 앞 한 문자소의 너비 — 단말은 한 칸, 앞이 없으면 0.
+// Width of the one grapheme just before the offset; a terminal counts as one, 0 if there's nothing before.
 export function stepBefore(runs: readonly Run[], offset: number): number {
   if (offset <= 0) return 0;
   const boundaries = runGraphemeBoundaries(runs);
@@ -138,7 +141,8 @@ export function stepBefore(runs: readonly Run[], offset: number): number {
   return Math.max(0, offset - before);
 }
 
-// 오프셋 바로 뒤 한 문자소의 너비 — stepBefore 의 대칭. 뒤가 없으면 0.
+// stepBefore의 대칭 — 뒤가 없으면 0.
+// The mirror of stepBefore; 0 if there's nothing after.
 export function stepAfter(runs: readonly Run[], offset: number): number {
   for (const boundary of runGraphemeBoundaries(runs)) {
     if (boundary > offset) return boundary - offset;

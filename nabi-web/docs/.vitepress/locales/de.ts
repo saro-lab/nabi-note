@@ -1,7 +1,5 @@
-// Translated — the values speak German, and every wing name is the word its toolbar button
-// shows. A missing key is a type error, so the file has to be whole; it is.
-// 옮겼다 — 값은 독일어로 말하고, 날개 이름은 그 날개 버튼이 툴바에 내놓는 낱말 그대로다.
-// 키가 하나라도 빠지면 타입 오류라 파일은 온전해야 하고, 지금 온전하다.
+// 옮겼다 — 키 하나라도 빠지면 타입 오류라 파일이 통째로 채워져 있어야 한다.
+// Translated — a missing key is a type error, so the file must stay filled in whole.
 export const de = {
   label: 'Deutsch',
   lang: 'de',

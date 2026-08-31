@@ -1,23 +1,19 @@
-// 예문과 미리 그린 화면을 검증하고 굳힌다.
-//
-// 한국어는 `docs/.vitepress/trees/ko.ts` 의 NABI TREE가 사람이 직접 고치는 원본이다. 긴 HTML
-// 문자열을 로케일 사전에 두면 따옴표나 태그 하나만 어긋나도 문서 사이트 전체가 열리지 않기
-// 때문이다. 아직 번역을 확정하지 않은 다른 언어는 로케일 사전의 `demo_html`·`demo_html_*`을
-// 공식 HTML 입력 경로로 읽어 같은 모양의 `trees/<lang>.ts`를 만든다.
-//
-//   npm run build:trees      (nabi-web 폴더에서)
-//
-// 브라우저의 공개 `createNabiWith()`는 DOMParser를 내부에서 연결한다. 이 Node 전용 생성기는
-// DOM이 없으므로, 패키지 소스의 build-only 내부 조립 문에 테스트 adapter를 넘긴다. 이 경로는
-// 사이트 원고를 굳히는 용도일 뿐, 배포물이나 사용자 공개 API에는 들어가지 않는다.
+// 예문과 미리 그린 화면을 검증하고 굳힌다(npm run build:trees, nabi-web 폴더에서).
+// Verifies and freezes the samples and pre-rendered screens (npm run build:trees, from nabi-web).
+// ko는 trees/ko.ts를 사람이 직접 고치는 원본이고, 다른 언어는 사전의 demo_html*에서 굳힌다.
+// ko's tree is hand-edited directly; other languages are frozen from the dictionary's demo_html*.
+// 브라우저의 createNabiWith()는 DOMParser를 쓰지만 이 Node 생성기엔 DOM이 없어 테스트 adapter를 대신 넘긴다.
+// The browser's createNabiWith() wires a DOMParser; this Node generator has none, so it passes a test adapter instead.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// 굳히기(HTML → 트리)는 편집기를 한 번 세워야 해서 코어 엔트리를 문다 — `setHtml` 이 거기 산다.
+// 굳히기(HTML → 트리)는 편집기를 한 번 세워야 해서 코어 엔트리를 문다 — setHtml이 거기 산다.
+// Freezing (HTML to tree) stands up one editor, so this imports the core entry where setHtml lives.
 import { defaultWings, makeTranslator } from 'nabi-note';
 import { $createNabiWith } from '../../nabi-npm/src/wing/index.ts';
-// 그리는 쪽은 **서버 진입점**이면 충분하다 — 편집 표면·화면 도구를 한 파일도 안 딛는다 (095).
+// 그리는 쪽은 서버 진입점이면 충분하다 — 편집 표면·화면 도구를 한 파일도 안 딛는다(095).
+// Rendering needs only the server entry — it touches no edit surface or view tool files (095).
 import { makeRegistry, renderStoredEditorHtml, renderToolbarHtml, renderViewToolsHtml } from 'nabi-note/ssr';
 import { tinyHtml } from '../../nabi-npm/test/tiny-html.ts';
 import { messages } from '../docs/.vitepress/locales/index.ts';
@@ -27,12 +23,8 @@ import { trees as koTrees } from '../docs/.vitepress/trees/ko.ts';
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, '../docs/.vitepress/trees');
 
-// `--check` — **쓰지 않고 견준다.** 굳혀 둔 파일이 지금 코드가 내는 것과 같은지만 본다.
-//
-// 이 그물이 없으면 조용히 퇴행한다(096 §4 ⓓ): 패키지 판을 올려 아이콘이나 단추 목록이 바뀌었는데
-// 여기를 다시 안 돌리면, 심어 둔 옛 글자와 새 글자가 달라 브라우저가 **매번 새로 그린다** —
-// 화면은 멀쩡하고 미리 그린 값만 사라지므로 아무도 모른다. 굳힌 것은 전부 이 그물이 지킨다:
-// 나비트리 · 홈 미리그리기 · 툴바 글자 · wing 칩.
+// --check는 쓰지 않고 견준다 — 없으면 패키지를 올려도 여기를 안 돌려 굳힌 값이 조용히 낡는다(096 §4ⓓ).
+// --check compares without writing; without it, a package bump can leave the frozen output silently stale (096 §4d).
 const checking = process.argv.includes('--check');
 const stale: string[] = [];
 
@@ -52,16 +44,16 @@ function freeze(name: string, text: string): void {
   if (had !== text) stale.push(`${name} — 굳힌 것이 지금 코드가 내는 것과 다르다`);
 }
 
-// 예문에는 `blob:`·상대 주소가 없지만, 데모가 세우는 편집기와 같은 조건으로 읽는다 —
-// 들여오기의 답이 옵션 하나로 갈리면 굳힌 트리와 화면이 어긋난다.
+// 예문에 blob:·상대 주소는 없지만 데모와 같은 조건으로 읽는다 — 옵션이 갈리면 굳힌 트리와 화면이 어긋난다.
+// Samples carry no blob:/relative URLs, but read under the same option as the demo, or the frozen tree drifts.
 const open = { allowLocalUrls: true } as const;
 
-// 미리 그리기가 쓰는 어휘 — 데모가 세우는 것과 같은 목록이라야 브라우저가 이어받는다.
-// (데모는 img·upload 를 `allowLocalUrls` 판으로 갈아 끼우는데, 그것은 **들여오기** 쪽 판정이라
-//  조립 결과를 안 바꾼다 — 조립의 로컬 주소 허용은 아래 `open` 이 정한다.)
+// 미리 그리기가 쓰는 어휘는 데모가 세우는 것과 같은 목록이라야 브라우저가 이어받는다.
+// The pre-render vocabulary must match what the demo assembles, or the browser can't adopt it.
 const registry = makeRegistry(defaultWings);
 
-// 한국어는 이 트리 자체가 원본이다. 다른 언어도 번역이 확정되면 같은 방식으로 한 줄씩 옮긴다.
+// 한국어는 이 트리 자체가 원본이다 — 다른 언어도 번역이 확정되면 같은 방식으로 옮긴다.
+// ko's tree is itself the source; other languages move to direct trees the same way once translated.
 const directTrees: Readonly<Partial<Record<string, SampleTrees>>> = { ko: koTrees };
 
 function treeOf(html: string): unknown[] {
@@ -69,8 +61,8 @@ function treeOf(html: string): unknown[] {
   if (!nabi.setHtml(html)) throw new Error('setHtml 이 거절했다');
   const tree = nabi.getJson();
 
-  // 굳힌 트리가 원고와 같은 문서인가 — 트리로 세운 편집기의 HTML 이 원고를 들여온 편집기의
-  // 것과 한 글자도 다르지 않아야 한다. 다르면 그 자리에서 멈춘다.
+  // 굳힌 트리가 원고와 같은 문서인가 — 트리로 세운 편집기의 HTML이 원고를 들여온 것과 한 글자도 달라선 안 된다.
+  // Confirms the frozen tree matches the source: the HTML from the tree must equal the HTML from importing it.
   const seen = $createNabiWith(defaultWings, { ...open, doc: tree });
   if (seen.nabi.getHtml() !== nabi.getHtml()) throw new Error('트리 왕복이 원고와 어긋난다');
   return tree;
@@ -88,9 +80,8 @@ function checkedTree(tree: SampleTree, code: string, key: string): unknown[] {
 mkdirSync(out, { recursive: true });
 
 let count = 0;
-// wing 칩의 이름 — 언어마다 한 벌. 데모가 **뜨자마자** 칩을 그리려고 여기서 미리 뽑는다.
-// 이 이름은 패키지 사전의 것이라 코어가 도착해야 알 수 있었고, 그래서 칩 줄이 늦게 채워지며
-// 그 아래 문서가 통째로 밀렸다. 굳혀 두면 서버가 보내는 HTML 에 이미 칩이 서 있다.
+// wing 칩의 이름 — 코어가 와야 알 수 있어 칩 줄이 늦게 채워졌다. 여기서 미리 뽑아 서버 HTML에 심는다.
+// Chip labels used to wait for the core to arrive; freezing them here lets the server ship them already set.
 const chipRows: string[] = [];
 
 for (const [code, sheet] of Object.entries(messages)) {
@@ -113,6 +104,7 @@ for (const [code, sheet] of Object.entries(messages)) {
     } else {
       const html = (sheet as Record<string, string>)[messageKeyFor(key)];
       // 사전에 예문이 빠졌으면 그 자리에서 멈춘다 — 조용히 빈 문서를 굳히면 화면에서야 드러난다.
+      // Stops here if the dictionary is missing a sample; freezing an empty doc silently would only show up on screen.
       if (typeof html !== 'string') throw new Error(`${code} 사전에 ${messageKeyFor(key)} 가 없다`);
       tree = treeOf(html);
     }
@@ -125,18 +117,10 @@ for (const [code, sheet] of Object.entries(messages)) {
     freeze(`${code}.ts`, lines.join('\n'));
   }
 
-  // --- 홈 예문을 **미리 그려 둔다** (095 ⓐ) ---------------------------------------------------
-  // 데모는 브라우저에서만 서므로, 아무것도 안 하면 서버가 보내는 데모 자리는 빈 상자다.
-  // 코어가 오고 mount 될 때까지 그 상자가 납작하게 접혀 있다가 갑자기 채워지며 페이지가 밀린다.
-  // 그 구간을 없애는 길은 **편집기 HTML 을 미리 그려 페이지에 심어 두는 것**이고,
-  // `renderStoredEditorHtml` 이 DOM 없이 도니 여기서 그대로 뽑힌다.
-  //
-  // `data-key` 가 붙은 편집기 HTML 이라야 한다 — 브라우저가 `mountSurface({ hydrate: true })`
-  // 로 그 DOM 을 **다시 그리지 않고 이어받는다**. 같은 저장본은 언제나 같은 키를 얻으므로
-  // 서버가 그린 것과 브라우저가 그릴 것이 맞아떨어진다.
-  //
-  // 홈(`main`)만 뽑는다 — wing 문서의 예문은 한두 문단이라 밀림이 눈에 안 띄고, 그것까지
-  // 심으면 페이지마다 제 HTML 을 또 싣게 된다.
+  // 홈 예문을 미리 그려 둔다(095ⓐ) — 안 그러면 서버가 보내는 데모 자리가 빈 채로 있다 코어 도착 후 갑자기 채워진다.
+  // Pre-renders the home sample (095a); otherwise the server ships an empty box that fills suddenly once the core lands.
+  // 홈만 뽑는다 — wing 문서의 예문은 한두 문단이라 밀림이 안 보이고, 다 심으면 페이지마다 HTML을 또 싣는다.
+  // Only the home page: wing samples are short enough that the shift is invisible, and pre-rendering all would bloat every page.
   if (mainTree === null) throw new Error(`${code} 에 홈 예문(main)이 없다`);
   const mainHtml = renderStoredEditorHtml(mainTree, registry, open);
   if (mainHtml === null) throw new Error(`${code} 의 홈 예문을 미리 그리지 못했다`);
@@ -160,9 +144,8 @@ for (const [code, sheet] of Object.entries(messages)) {
     ].join('\n'),
   );
 
-  // --- wing 칩 한 벌 (칩 줄이 늦게 서는 것을 없앤다) -------------------------------------------
-  // 고르는 규칙도 이름을 찾는 길도 데모(`EditorDemo.vue` 의 catalog·labelOf)와 **같아야 한다** —
-  // 어긋나면 미리 그린 칩과 코어가 도착해 다시 그리는 칩의 폭이 달라 그 순간 줄이 다시 접힌다.
+  // 고르는 규칙과 이름 찾는 길이 데모(EditorDemo.vue의 catalog·labelOf)와 같아야 한다 — 어긋나면 줄이 다시 접힌다.
+  // The picking rule and name lookup must match the demo's catalog/labelOf, or the row refolds once the core arrives.
   const t = makeTranslator(code);
   const chips = defaultWings
     .filter((wing) => wing.button !== undefined || wing.buttons !== undefined)

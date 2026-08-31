@@ -161,4 +161,4 @@ Unmount flushes a throttled trailing document change. Restoring another session 
 
 ## Resource limits
 
-Version 0.9 does not impose a document-wide node count, text length, nesting depth, or processing-time budget on JSON, HTML, Markdown, diff, or custom commands. This is separate from the upload limits above. A host that accepts untrusted large documents should enforce its own request and storage limits before calling the package. Future hard limits may be added at the shared input boundary, but 0.9 exposes no document-budget option.
+Version 1.0 does not impose a document-wide node count, text length, nesting depth, or processing-time budget on JSON, HTML, Markdown, diff, or custom commands. This is separate from the upload limits above. A host that accepts untrusted large documents should enforce its own request and storage limits before calling the package. Future hard limits may be added at the shared input boundary, but 1.0 exposes no document-budget option.

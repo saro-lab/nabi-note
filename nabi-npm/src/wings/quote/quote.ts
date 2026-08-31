@@ -2,7 +2,8 @@
 // `allows` 를 안 건다: 인용 속은 최상위와 같은 규칙이라 표·이미지도 래퍼문단을 입고 설 수 있다.
 import { DEFAULT_BUILDERS } from '../../html/index.js';
 import { caretAt } from '../../caret/index.js';
-import { toggleWrap, type Wing } from '../../wing/index.js';
+import { toggleWrap, type OnKey, type Wing } from '../../wing/index.js';
+import { blocksBoundaryEscape } from '../../wing/ops.js';
 import type { LocaleText } from '../../locale/index.js';
 import { $markBuiltinAttrOwner } from '../../schema/env.js';
 
@@ -34,11 +35,14 @@ const QUOTE_CSS = `
 }
 `;
 
+const onKey: OnKey = (intent, doc, sel, env, owner) => blocksBoundaryEscape(intent, doc, sel, env, owner);
+
 export const quoteWing: Wing = {
   w: 'quote',
   place: 'container',
   basic: true,
   holds: 'blocks',
+  onKey,
   toHtml: DEFAULT_BUILDERS['quote'],
   // 속의 **모든 줄**에 `> ` 를 단다 — 빈 줄에는 `>` 하나가 붙는다(그것이 인용 속의 문단 경계다).
   toMd: (_node, ctx) => ctx.children('\n\n', '> '),

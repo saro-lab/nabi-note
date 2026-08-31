@@ -898,6 +898,71 @@ for (const fam of FAMILIES) {
   eq('코드 wing 의 currentValue — 언어', codeWing.currentValue?.({ w: 'code', a: { lang: 'ts' }, ch: [] }), 'ts');
 }
 
+// --- onKey — 위/아래 방향키로 그릇 밖으로 (표와 같은 자리: 래퍼문단 앞/뒤) ----------------------
+// 문서 전체가 이 그릇 하나뿐이어도 탈출 자리는 항상 실재한다(래퍼문단의 offset 0/1) —
+// 이웃 문단이 미리 있어야 하는 게 아니다.
+
+{
+  const n = make([el('quote', [p(['하나']), p(['둘'])])]);
+  const doc = hostOf(n).doc();
+  const arrow = (dir: 'up' | 'down', sel: Selection) => routeKey({ key: 'arrow', dir }, doc, sel, env, registry);
+
+  eq('인용 첫 문단 맨 앞에서 ↑ 는 래퍼문단 앞에 선다', arrow('up', caretAt(at([0, 0, 0], 0)))?.selection.focus, {
+    path: [0],
+    offset: 0,
+  });
+  eq('인용 마지막 문단 맨 끝에서 ↓ 는 래퍼문단 뒤에 선다', arrow('down', caretAt(at([0, 0, 1], 1)))?.selection.focus, {
+    path: [0],
+    offset: 1,
+  });
+  eq('첫 문단 안쪽(맨 앞이 아니면)의 ↑ 는 pass — 코어의 글자 걸음', arrow('up', caretAt(at([0, 0, 0], 1))), null);
+  eq('마지막 아닌 문단의 ↓ 는 pass — 문단 사이 이동은 코어 몫', arrow('down', caretAt(at([0, 0, 0], 0))), null);
+}
+{
+  const n = make([el('details', [el('summary', ['제목']), p(['속글'])], { o: 1 })]);
+  const doc = hostOf(n).doc();
+  const arrow = (dir: 'up' | 'down', sel: Selection) => routeKey({ key: 'arrow', dir }, doc, sel, env, registry);
+
+  eq('접기 제목 맨 앞에서 ↑ 는 래퍼문단 앞에 선다', arrow('up', caretAt(at([0, 0, 0], 0)))?.selection.focus, {
+    path: [0],
+    offset: 0,
+  });
+  eq('접기 속 마지막 문단 맨 끝에서 ↓ 는 래퍼문단 뒤에 선다', arrow('down', caretAt(at([0, 0, 1], 2)))?.selection.focus, {
+    path: [0],
+    offset: 1,
+  });
+  eq('제목 안쪽의 ↑ 는 pass', arrow('up', caretAt(at([0, 0, 0], 1))), null);
+}
+{
+  // 코드는 문단 배열이 아니라 한 홀더 속 BR 인코딩 줄이라, 판정은 "몇 번째 자식"이 아니라
+  // "몇 번째 줄"이다 — 그래서 화면 자동 줄바꿈처럼 줄 **안** 어디에 있어도(꼭 offset 0/끝이
+  // 아니어도) 첫/마지막 줄이면 탈출한다(표가 칸 속 자동 줄바꿈을 무시하는 것과 같은 타협).
+  const n = make([el('code', ['ab', el('br'), 'cd', el('br'), 'ef'], { lang: 'ts' })]);
+  const doc = hostOf(n).doc();
+  const arrow = (dir: 'up' | 'down', sel: Selection) => routeKey({ key: 'arrow', dir }, doc, sel, env, registry);
+
+  eq('첫 줄 맨 앞에서 ↑ 는 래퍼문단 앞에 선다', arrow('up', caretAt(at([0, 0], 0)))?.selection.focus, {
+    path: [0],
+    offset: 0,
+  });
+  eq('첫 줄 한가운데서도 ↑ 는 탈출 — 줄 안 위치는 안 본다', arrow('up', caretAt(at([0, 0], 1)))?.selection.focus, {
+    path: [0],
+    offset: 0,
+  });
+  eq('마지막 줄 맨 끝에서 ↓ 는 래퍼문단 뒤에 선다', arrow('down', caretAt(at([0, 0], 8)))?.selection.focus, {
+    path: [0],
+    offset: 1,
+  });
+  eq('마지막 줄 시작에서도 ↓ 는 탈출', arrow('down', caretAt(at([0, 0], 6)))?.selection.focus, {
+    path: [0],
+    offset: 1,
+  });
+  eq('가운데 줄에서는 ↑/↓ 둘 다 pass — 코어의 글자 걸음', [
+    arrow('up', caretAt(at([0, 0], 4))),
+    arrow('down', caretAt(at([0, 0], 4))),
+  ], [null, null]);
+}
+
 // --- 코드 상자는 정렬을 안 받는다 (`Wing.noAlign` 선언) ----------------------------------------
 //
 // 다른 물건에게 정렬은 "줄의 어디에 서는가" 인데 코드 상자는 제 폭이 곧 줄의 폭이고, 정렬은

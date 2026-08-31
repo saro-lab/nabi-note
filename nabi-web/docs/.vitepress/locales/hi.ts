@@ -1,7 +1,5 @@
-// Translated — every value below is Hindi, and the wing names are the same words their toolbar
-// buttons show, so the menu and the editor say one thing.
-// 옮겼다 — 아래 값은 모두 힌디어이고, 날개 이름은 그 날개 버튼에 뜨는 낱말 그대로라
-// 메뉴와 에디터가 한 말을 한다.
+// 옮겼다 — 키 하나라도 빠지면 타입 오류라 파일이 통째로 채워져 있어야 한다.
+// Translated — a missing key is a type error, so the file must stay filled in whole.
 export const hi = {
   label: 'हिन्दी',
   lang: 'hi',

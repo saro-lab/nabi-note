@@ -1,11 +1,5 @@
-<!-- One inline-SVG icon set for the chrome. Not an icon font: the font arrives late and the
-     literal ligature word ("search", "dark_mode") flashes in its place first, and the row jumps
-     when the glyph finally swaps in. An SVG is in the HTML from the first paint. -->
-<!-- 크롬이 쓰는 아이콘 한 벌 — **글꼴이 아니라 인라인 SVG** 다. 아이콘 글꼴은 늦게 오고, 그동안
-     리거처 낱말("search"·"dark_mode")이 그 자리에 글자로 보였다가 그림으로 바뀐다. 바뀌는 순간
-     폭이 달라져 줄이 튄다(주인 신고 2026-08-19). SVG 는 첫 그림부터 문서 안에 있다.
-
-     크기는 `1em` 이다 — 부르던 자리의 `text-[1.05rem]` 같은 글자 크기 클래스가 그대로 듣는다. -->
+<!-- 아이콘은 글꼴이 아니라 인라인 SVG다 — 글꼴은 늦게 와 리거처 낱말이 깜박이며 줄을 튀게 한다(2026-08-19). 1em 크기라 호출부 글자 크기를 그대로 따른다. -->
+<!-- An inline SVG, not an icon font — the font arrives late and its ligature word flashes then shifts the line (2026-08-19). Sized at 1em, so it follows the caller's font size. -->
 <template>
   <svg
     class="ui-icon"
@@ -26,7 +20,8 @@ const props = withDefaults(defineProps<{ name: keyof typeof PATHS; weight?: numb
 })
 const { name, weight } = props
 
-// 16×16 한 틀 — 패키지 툴바 아이콘과 같은 결(획 색은 currentColor, 둥근 끝)이다.
+// 16×16 틀, currentColor 획, 둥근 끝 — nabi-npm 툴바 아이콘과 같은 결이다.
+// A 16x16 grid, currentColor stroke, round caps — matching nabi-npm's toolbar icons.
 const PATHS = {
   menu: '<path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>',
   search: '<circle cx="7" cy="7" r="4.25"/><path d="m10.2 10.2 3.05 3.05"/>',

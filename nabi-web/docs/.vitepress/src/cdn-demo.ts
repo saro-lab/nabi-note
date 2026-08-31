@@ -1,19 +1,18 @@
-// CDN 예제 한 벌 — 열네 쪽이 저마다 복사해 들고 있던 파일을 여기 하나로 모았다.
-//
-// **쪽에 보이는 코드와 내려받는 파일이 같은 문자열이다.** 둘로 두면 한쪽이 조용히 낡는다 —
-// 옛 판이 실제로 그랬다(쪽마다 사본 열넷). 주석만 로케일 사전이 들고, 코드는 이 한 벌이다.
+// CDN 예제를 한 벌로 모았다 — 쪽에 보이는 코드와 내려받는 파일이 같은 문자열이라 둘이 안 어긋난다.
+// One CDN example, shared: the code shown on the page and the downloaded file are the same string.
 import { translate } from './langs.ts'
 import { CDN_BUNDLE, CDN_SHEET } from './version.ts'
 
-// 내려받는 이름 — 안내 문장의 단추 글자이자 파일 이름이다. 한 자리에서 온다.
+// 내려받는 파일 이름 — 안내 문장의 단추 글자와 한 자리에서 온다.
+// The downloaded filename comes from the same place as the button label text.
 export const CDN_DEMO_FILE = 'demo.html'
 
-// 오른쪽에서 왼쪽으로 읽는 쪽은 예제 파일도 그렇게 서야 한다 — 문서의 `dir` 이 아니라
-// 내려받은 파일 제 몸의 문제다(그 파일은 이 사이트 밖에서 혼자 열린다).
+// 오른쪽에서 왼쪽 언어는 예제 파일도 그렇게 서야 한다 — 문서의 dir이 아니라 파일 자체의 문제다.
+// RTL languages need the downloaded file itself marked rtl — it opens standalone, outside this site's dir.
 const RTL: readonly string[] = ['ar', 'ur', 'fa']
 
-// 주석은 여러 줄일 수 있다 — 언어마다 문장이 접히는 자리가 달라서다(독일어는 넉 줄, 한국어는 석 줄).
-// 줄마다 `//` 를 새로 단다.
+// 주석은 언어마다 줄 수가 다르다(독일어 넉 줄, 한국어 석 줄) — 줄마다 `//`를 새로 단다.
+// Comments span a different number of lines per language; each line gets its own `//`.
 function note(lang: string, key: string): string {
   return translate(lang, key)
     .split('\n')
@@ -21,7 +20,8 @@ function note(lang: string, key: string): string {
     .join('\n')
 }
 
-// 시트 안의 주석은 `/* */` 다 — 그 자리에는 한 줄만 온다.
+// 시트 안 주석은 `/* */`다 — 그 자리엔 한 줄만 온다.
+// Comments inside the stylesheet use `/* */`, and only one line fits there.
 function cssNote(lang: string, key: string): string {
   return `    /* ${translate(lang, key).split('\n').join(' ')} */`
 }

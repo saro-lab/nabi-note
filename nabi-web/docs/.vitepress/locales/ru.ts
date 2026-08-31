@@ -1,7 +1,5 @@
-// Translated — the values now speak Russian; only the frame and the keys are shared with English.
-// A missing key is a type error, so the file stays whole.
-// 옮겼다 — 값은 이제 러시아어로 선다. 영어와 같은 것은 틀과 키뿐이다.
-// 키가 하나라도 빠지면 타입 오류라 파일은 온전해야 한다.
+// 옮겼다 — 키 하나라도 빠지면 타입 오류라 파일이 통째로 채워져 있어야 한다.
+// Translated — a missing key is a type error, so the file must stay filled in whole.
 export const ru = {
   label: 'Русский',
   lang: 'ru',

@@ -1,5 +1,5 @@
-// 마크·문단 속성 연산 — 값 마크(hl·tc·fs·tf)와 단순 마크(b·i·u·s·sub·sup)가 한 모양을 쓴다.
-// 범위의 글자 길이는 안 바뀌므로 반환 자리는 들어온 범위 그대로다.
+// 값 마크(hl·tc·fs·tf)와 단순 마크(b·i·u·s·sub·sup)가 한 모양을 쓴다 — 길이가 안 바뀌므로 범위는 그대로 돌아간다.
+// Value marks (hl/tc/fs/tf) and simple marks (b/i/u/s/sub/sup) share one shape; length never changes, so the range comes back as-is.
 import {
   P,
   isWrapper,
@@ -31,7 +31,8 @@ interface Covered {
   readonly to: number;
 }
 
-// 범위가 덮는 홀더들과 각자의 [from, to) — 래퍼문단은 글이 없어 마크의 자리가 아니다.
+// 래퍼문단은 글이 없어 마크의 자리가 아니므로 건너뛴다.
+// Wrapper paragraphs hold no text, so they're not a place for marks and get skipped.
 function coveredHolders(doc: NabiDoc, start: Position, end: Position, env: EditEnv): Covered[] {
   const out: Covered[] = [];
   for (const { path, node } of holders(doc, env)) {
@@ -80,7 +81,8 @@ const keepRange = (doc: NabiDoc, range: DocRange): EditResult => ({
   anchor: range.anchor,
 });
 
-// 토글 — 덮인 글자 런 전부가 이미 그 마크를 입었을 때만 벗기고, 아니면 입힌다.
+// 덮인 글자 런 전부가 이미 그 마크를 입었을 때만 벗기고, 아니면 입힌다.
+// Strips the mark only when every covered run already has it; otherwise applies it.
 export function toggleMark(doc: NabiDoc, range: DocRange, mark: ElementNode, env: EditEnv): EditResult {
   const { start, end } = normalize(range);
   if (comparePositions(start, end) === 0) return keepRange(doc, range);
@@ -109,7 +111,8 @@ export function toggleMark(doc: NabiDoc, range: DocRange, mark: ElementNode, env
   return keepRange(next, range);
 }
 
-// 값 마크 — attrs 를 주면 같은 이름을 교체하며 입히고, null 이면 벗긴다.
+// attrs를 주면 같은 이름을 교체하며 입히고, null이면 벗긴다.
+// Passing attrs replaces any same-named mark; null strips it.
 export function setMark(doc: NabiDoc, range: DocRange, w: string, a: Attrs | null, env: EditEnv): EditResult {
   const { start, end } = normalize(range);
   if (comparePositions(start, end) === 0) return keepRange(doc, range);
@@ -129,7 +132,8 @@ export function setMark(doc: NabiDoc, range: DocRange, w: string, a: Attrs | nul
   return keepRange(next, range);
 }
 
-// 문단 속성 값 검증 — cocoon 과 같은 규칙의 이중 방어다 (h: 1~6· a: l/c/r· dc: 1).
+// cocoon과 같은 규칙의 이중 방어다.
+// A second line of defense with the same rules cocoon enforces.
 function validParagraphAttr(key: string, value: AttrValue): boolean {
   if (key === 'h') return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 6;
   if (key === 'a') return value === 'l' || value === 'c' || value === 'r';
@@ -137,8 +141,8 @@ function validParagraphAttr(key: string, value: AttrValue): boolean {
   return false;
 }
 
-// 문단 속성 — 범위가 덮는 문단마다 얹거나(value) 벗긴다(null). 래퍼문단은 정렬(a)만 받고,
-// 물건이 정렬을 마다하면(`noAlign` — 코드 상자) 그것도 안 받는다.
+// 래퍼문단은 정렬(a)만 받고, noAlign 물건(코드 상자)은 그것도 안 받는다.
+// A wrapper paragraph accepts only alignment; a noAlign object (a code box) refuses even that.
 export function setParagraphAttr(
   doc: NabiDoc,
   range: DocRange,
@@ -149,7 +153,8 @@ export function setParagraphAttr(
   const { start, end } = normalize(range);
   if (value !== null && !validParagraphAttr(key, value)) return keepRange(doc, range);
 
-  // 접힌 캐럿은 자기 문단 하나를 겨눈다.
+  // 접힌 캐럿은 자기 문단 하나만 겨눈다.
+  // A collapsed caret targets only its own paragraph.
   const targets: { path: readonly number[]; node: ElementNode }[] = [];
   if (comparePositions(start, end) === 0) {
     const node = nodeAt(doc, start.path);
@@ -166,9 +171,10 @@ export function setParagraphAttr(
   let next = doc;
   for (const target of targets) {
     const node = nodeAt(next, target.path);
-    if (!node || node.w !== P) continue; // 인라인 홀더(summary·code)는 문단 속성의 자리가 아니다
+    // 인라인 홀더(summary·code)는 문단 속성의 자리가 아니다.
+    // An inline holder (summary/code) isn't a place for paragraph attrs.
+    if (!node || node.w !== P) continue;
     if (isWrapper(node, env) && key !== 'a') continue;
-    // 정렬을 마다한 물건(`noAlign` — 코드 상자)의 래퍼문단은 그 정렬도 안 받는다.
     if (key === 'a' && !takesAlign(node, env)) continue;
     const attrs: Record<string, AttrValue> = { ...(node.a ?? {}) };
     if (value === null) delete attrs[key];

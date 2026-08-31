@@ -1,9 +1,11 @@
-// 표 묶음 — defaultWings 병합은 코디네이터가 한다 (10 은 wings/index.ts 를 안 만진다).
+// 표 묶음 — defaultWings 병합은 코디네이터(wings/index.ts)가 한다.
+// The table bundle — merging into defaultWings is the coordinator's job (wings/index.ts), not this file's.
 import type { Wing } from '../../wing/index.js';
 import { attachCellRange } from './attach.js';
 import { tableWing as bare } from './table.js';
 
-// 칸 드래그 칠은 선언형 부속으로 함께 선다 (계약 밖 리스너 금지).
+// 칸 드래그 칠은 선언형 부속으로 함께 선다 — 계약 밖 리스너는 금지다.
+// Drag-to-select cell painting attaches as a declarative attach — no listeners outside the contract.
 export const tableWing: Wing = { ...bare, attach: attachCellRange };
 
 export const tableWings: readonly Wing[] = [tableWing];

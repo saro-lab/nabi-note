@@ -1,7 +1,7 @@
-<!-- The CDN example page, whole: the lead line with its download button and the code itself -->
-<!-- CDN 예제 쪽의 머리 — 안내 한 줄(내려받기 단추가 그 안에 산다)과 코드가 한 부품이다 -->
-<!-- The shown code and the downloaded file are one string, so they can never drift apart -->
-<!-- 보이는 코드와 내려받는 파일이 같은 문자열이라 둘이 어긋날 자리가 없다 -->
+<!-- CDN 예제 쪽의 머리 — 안내 한 줄(내려받기 단추가 그 안에 산다)과 코드가 한 부품이다. -->
+<!-- The CDN example page, whole: the lead line with its download button and the code itself. -->
+<!-- 보이는 코드와 내려받는 파일이 같은 문자열이라 둘이 어긋날 자리가 없다. -->
+<!-- The shown code and the downloaded file are one string, so they can never drift apart. -->
 <template>
   <p class="cdn-lead"><span>{{ before }}</span><button
       type="button"
@@ -34,8 +34,8 @@ const { t } = useTranslate()
 const file = CDN_DEMO_FILE
 const code = computed(() => cdnDemoHtml(lang.value))
 
-// The button stands where `{file}` sits, so each language keeps its own word order — RTL included
-// 단추는 `{file}` 자리에 선다 — 그래서 언어마다 제 어순 그대로다(오른쪽에서 읽는 쪽까지)
+// 단추는 {file} 자리에 선다 — 그래서 언어마다 제 어순 그대로다(RTL 포함).
+// The button stands where {file} sits, so each language keeps its own word order, RTL included.
 const parts = computed(() => {
   const [head, tail] = t('cdn_demo_lead').split('{file}')
   return { head: head ?? '', tail: tail ?? '' }
@@ -50,16 +50,16 @@ function download(): void {
   link.href = url
   link.download = CDN_DEMO_FILE
   link.click()
-  // Revoking in the same tick can cut the download off in some browsers — let this one finish first
-  // 같은 틱에 거두면 브라우저에 따라 내려받기가 끊긴다 — 이번 틱을 넘기고 거둔다
+  // 같은 틱에 거두면 브라우저에 따라 내려받기가 끊긴다 — 이번 틱을 넘기고 거둔다.
+  // Revoking in the same tick can cut the download off in some browsers — let this one finish first.
   setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 </script>
 
 <style scoped>
 .cdn-lead {
-  /* Sits directly above the code box, so it keeps the paragraph rhythm of the page around it */
-  /* 바로 아래가 코드 상자다 — 쪽의 문단 사이 리듬을 그대로 쓴다 */
+  /* 바로 아래가 코드 상자다 — 쪽의 문단 사이 리듬을 그대로 쓴다. */
+  /* Sits directly above the code box, keeping the page's own paragraph rhythm. */
   margin: 1rem 0;
 }
 
@@ -67,8 +67,8 @@ function download(): void {
   display: inline-flex;
   align-items: center;
   gap: 0.3em;
-  /* Reads as the file name it writes, so it wears the inline-code face rather than a button's */
-  /* 제가 쓰는 파일 이름을 그대로 입는다 — 단추가 아니라 인라인 코드의 얼굴이다 */
+  /* 제가 쓰는 파일 이름을 그대로 입는다 — 단추가 아니라 인라인 코드의 얼굴이다. */
+  /* Reads as the file name it writes, so it wears the inline-code face rather than a button's. */
   font-family: var(--vp-font-family-mono, ui-monospace, monospace);
   font-size: 0.875em;
   line-height: 1.4;
@@ -92,8 +92,8 @@ function download(): void {
 }
 
 .cdn-file svg {
-  /* The arrow says "this saves a file" — without it the box reads as a plain code span */
-  /* 화살표가 "이걸 누르면 파일이 된다" 를 말한다 — 없으면 그냥 코드 조각으로 읽힌다 */
+  /* 화살표가 "이걸 누르면 파일이 된다"를 말한다 — 없으면 그냥 코드 조각으로 읽힌다. */
+  /* The arrow says "this saves a file" — without it the box reads as a plain code span. */
   flex: none;
   opacity: 0.8;
 }

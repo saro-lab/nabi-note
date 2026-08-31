@@ -1,8 +1,7 @@
 export const TH = 'th';
 
-// 보는 쪽(nabi-note/viewer)의 열 정렬을 켜는 표식 — 값이 1 뿐인 불리언이다.
-// **어느 열을 어느 방향으로 정렬했는지는 저장하지 않는다** — 그것은 읽는 사람의 일이고 문서의
-// 것이 아니다. 문서에 남는 것은 "이 표는 정렬해도 된다" 한 마디뿐이다.
+// 보는 쪽(viewer)의 열 정렬을 켜는 표식 — 어느 열을 어느 방향으로는 저장 안 하고, "정렬해도 된다"만 남긴다.
+// Flags a table as sortable for the viewer — never stores which column or direction, only that sorting is allowed at all.
 export const SORTABLE = 'sort';
 
 import { P, type ElementNode } from '../../schema/index.js';
@@ -21,5 +20,6 @@ export const emptyCells = (width: number, expand = false): ElementNode[] => {
   }
   return cells;
 };
-// 제목 칸 — 표식만 다른 같은 칸이다(칸의 이름은 언제나 td 고, 제목은 attr 하나가 말한다).
+// 제목 칸 — 표식만 다른 같은 칸(이름은 언제나 td고, 제목은 attr 하나가 말한다).
+// A header cell is the same node with one extra flag — always `td`, "header" is just an attr.
 export const headerCell = (): ElementNode => ({ w: 'td', a: { th: 1 }, ch: [emptyParagraph()] });

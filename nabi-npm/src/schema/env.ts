@@ -1,33 +1,33 @@
-// 스키마 환경 — 갈래 지식(어떤 타입이 물건·단말·컨테이너인가)은 wing 계약의 것이라
-// 스키마는 그것을 집합으로 받아서만 판정한다 (경계: schema 는 wing 층을 모른다).
-// 07(wing 계약)이 등록된 선언에서 이 환경을 짓고, 그때까지 시험은 손으로 짠 환경을 쓴다.
+// 어떤 타입이 물건·단말·컨테이너인가는 wing 계약의 지식이라, schema는 그것을 집합으로만 받아 판정한다 — wing 층은 모른다.
+// Which type is an object/terminal/container is wing-contract knowledge; schema only judges by the sets it's handed, unaware of the wing layer.
 import { P } from './reserved.js';
 import { isElement, type ElementNode, type NabiNode } from './types.js';
 
 export interface SchemaEnv {
-  // 물건 — 래퍼문단이 감싸야 하는 타입 전부: 블록 단말 + 한 줄을 차지하는 컨테이너
-  // (hr·img·youtube·table·ul·ol·tl·quote·details·code 류).
+  // 래퍼문단이 감싸야 하는 타입 전부(블록 단말 + 한 줄을 차지하는 컨테이너).
+  // Every type a wrapper paragraph must wrap: block terminals plus one-line containers.
   readonly lumps: ReadonlySet<string>;
-  // 블록 단말 — 속이 전혀 없어서 ch 를 강제로 비운다 (hr·img·youtube 류).
+  // 속이 전혀 없어 ch를 강제로 비우는 블록 단말(hr·img·youtube 류).
+  // Block terminals with no content at all, forced to an empty ch (hr/img/youtube and the like).
   readonly voids: ReadonlySet<string>;
-  // 속이 블록(문단·물건·다른 컨테이너)인 컨테이너 — 이 안의 떠도는 인라인은 문단으로 감싼다
-  // (table·tr·td·ul·li·ol·oli·tl·tli·quote·details 류).
+  // 속이 블록인 컨테이너 — 떠도는 인라인은 문단으로 감싸 넣는다.
+  // A container whose content is blocks; stray inline nodes get wrapped in a paragraph.
   readonly blockHolders: ReadonlySet<string>;
-  // 속이 인라인(글·라인)인 블록 — 문단처럼 속을 직접 든다 (summary·code 류).
+  // 속이 인라인인 블록 — 문단처럼 속을 직접 든다(summary·code 류).
+  // A block whose content is inline, held directly like a paragraph (summary/code and the like).
   readonly inlineHolders: ReadonlySet<string>;
-  // 값이 1/0 뿐인 불리언 attr 이름 — 0 과 숫자 아닌 값은 "없음"이므로 걷는다.
+  // 값이 1/0뿐인 불리언 attr 이름 — 0과 숫자 아닌 값은 "없음"으로 걷는다.
+  // Boolean attr names whose only value is 1/0; 0 or a non-numeric value counts as absent.
   readonly boolAttrs: ReadonlySet<string>;
   readonly attrSchemas?: ReadonlyMap<string, ReadonlySet<string>>;
   readonly boolAttrsByType?: ReadonlyMap<string, ReadonlySet<string>>;
   readonly clearableMarks?: ReadonlySet<string>;
   readonly clearableAttrs?: ReadonlySet<string>;
-  // 정렬(a)을 마다하는 물건 — 이 물건을 입은 래퍼문단에는 정렬조차 안 실린다.
-  // 래퍼문단이 드는 문단 속성은 정렬 하나뿐인데(Q11), 그 하나마저 뜻이 없는 물건이 있다:
-  // 코드 상자는 속이 글자 자리로 말하는 평문이라 가운데로 밀면 코드가 흐트러질 뿐이다.
-  // wing 의 `noAlign` 선언이 registry 를 지나 여기로 접힌다 — 아래층은 wing 이름을 모른다.
+  // 정렬을 마다하는 물건(예: 코드 상자) — 그 물건을 입은 래퍼문단은 정렬조차 못 받는다.
+  // An object that refuses alignment (a code box, say) — its wrapper paragraph can't take alignment either.
   readonly noAlign?: ReadonlySet<string>;
-  // 타입별 복구 훅 — 자기 속 구조(표 격자 등)는 그 타입의 wing 이 고친다.
-  // cocoon 은 위임 호출만 하고, 훅의 결과는 그 타입 안에서 유효하다고 믿는다.
+  // 타입별 복구 훅 — 표 격자 등 자기 속 구조는 그 타입의 wing이 고친다.
+  // Per-type repair hooks; a type's own internal structure (a table grid) is fixed by that type's wing.
   readonly repair?: Readonly<Record<string, (node: ElementNode) => ElementNode | null>>;
 }
 
@@ -94,7 +94,8 @@ export function $usesClosedBuiltinAttrs(env: SchemaEnv): boolean {
   return (env as InternalSchemaEnv)[CLOSED_ATTR_TYPES] !== undefined;
 }
 
-// 시험·상위 층이 같은 문으로 환경을 짓게 하는 도우미 — 배열을 집합으로 굳힌다.
+// 배열을 집합으로 굳힌다 — 테스트·상위 층이 같은 문으로 환경을 짓게 하는 도우미.
+// Freezes arrays into sets; a shared door for tests and upper layers to build an env.
 export function makeEnv(draft: {
   readonly lumps?: readonly string[];
   readonly voids?: readonly string[];
@@ -123,24 +124,22 @@ export function makeEnv(draft: {
   };
 }
 
-// 물건인가 — 래퍼문단이 필요한 타입.
 export function isLump(node: NabiNode, env: SchemaEnv): node is ElementNode {
   return isElement(node) && env.lumps.has(node.w);
 }
 
-// 래퍼문단인가 — 자식이 물건 하나뿐인 p. 저장 표식 없이 이 판별식만 진실을 말한다 (결정 Q14).
+// 자식이 물건 하나뿐인 p다 — 저장 표식 없이 이 판별식만으로 정한다(결정 Q14).
+// A `p` with exactly one lump child; no stored flag, this predicate alone decides it (decision Q14).
 export function isWrapper(node: NabiNode, env: SchemaEnv): boolean {
   return isElement(node) && node.w === P && node.ch.length === 1 && isLump(node.ch[0] as NabiNode, env);
 }
 
-// 이 물건이 정렬을 마다하는가 — wing 의 `noAlign` 선언이 접힌 자리다.
 export function refusesAlign(w: string, env: SchemaEnv): boolean {
   return env.noAlign?.has(w) ?? false;
 }
 
-// 이 문단이 정렬을 받는가 — 글 문단은 언제나 받고, 래퍼문단은 제가 입은 물건에 달렸다.
-// 노출(ui)·커맨드(doc·정렬 wing)·고치(cocoon)가 이 한 문으로 같은 답을 낸다: 세 자리가
-// 각자 판정을 적으면 셋이 조금씩 어긋나고, 그 틈이 곧 "숨었는데 눌리는 단추"다.
+// 글 문단은 언제나 정렬을 받고, 래퍼문단은 입은 물건에 달렸다 — ui·doc·cocoon이 다 이 한 문으로 답해야 판정이 안 어긋난다.
+// A text paragraph always takes alignment; a wrapper depends on its lump. UI, doc commands, and cocoon must all defer to this one function or their judgments drift apart.
 export function takesAlign(node: NabiNode, env: SchemaEnv): boolean {
   if (!isElement(node) || node.w !== P) return false;
   if (!isWrapper(node, env)) return true;

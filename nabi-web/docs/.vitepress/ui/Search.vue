@@ -1,7 +1,5 @@
-<!-- Searches THIS language only: one index is loaded (the page's own) and every hit is checked to
-     live under `/<lang>/`. A reader on the Japanese site never gets a Korean page back. -->
-<!-- 지금 이 언어만 찾는다 — 색인도 이 페이지의 것 하나만 싣고, 나온 것도 `/<lang>/` 아래인지
-     다시 본다. 일본어 사이트에서 한국어 문서가 나오는 일은 없다. -->
+<!-- 지금 이 언어만 찾는다 — 색인도 페이지 것 하나만 싣고, 나온 것도 /<lang>/ 아래인지 다시 본다. -->
+<!-- Searches THIS language only: one index is loaded and every hit is checked to live under /<lang>/. -->
 <template>
   <div class="search-scrim" @click.self="emit('close')">
     <div class="search-box g-glass rd-box" @keydown="onKey">
@@ -35,9 +33,8 @@
           </a>
         </li>
       </ul>
-      <!-- 빈 자리에도 말이 선다 — 아직 아무것도 안 친 사람에게 빈 칸만 보이면 판이 고장 난 것으로
-           읽힌다. 결과가 없다는 말과 같은 자리, 같은 결이다. -->
-      <!-- The empty state speaks too: a blank panel before the first keystroke reads as broken -->
+      <!-- 빈 자리에도 말이 선다 — 아직 안 친 사람에게 빈 칸만 보이면 판이 고장 난 것으로 읽힌다. -->
+      <!-- The empty state speaks too: a blank panel before the first keystroke reads as broken. -->
       <div v-else class="search-empty">
         {{ query ? t('search_no_results') : t('search_hint') }}
       </div>
@@ -81,8 +78,8 @@ interface Result {
   readonly snippet: string
 }
 
-// The left menu already names every page; a hit says which group it came from with the same word.
 // 왼쪽 메뉴가 이미 모든 문서를 이름 짓는다 — 결과도 그 낱말 그대로 어느 무리인지 말한다.
+// The left menu already names every page; a hit says which group it came from with the same word.
 const groupOf = (id: string): string => {
   const path = id.replace(/^\/[a-z-]+/, '').replace(/\.html$/, '').replace(/\/$/, '')
   for (const group of NAV) {
@@ -108,9 +105,8 @@ function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-// The line the word actually sits on, not the head of the page — a document is long and the first
-// 160 characters are the same introduction on every one of them.
 // 낱말이 실제로 앉은 자리를 보여 준다 — 문서는 길고, 앞 160자는 어느 문서나 같은 머리말이다.
+// The line the word actually sits on, not the page's head — the first 160 characters are the same intro everywhere.
 function snippetOf(text: string, terms: readonly string[]): string {
   const lower = text.toLowerCase()
   let first = -1
@@ -128,10 +124,8 @@ function snippetOf(text: string, terms: readonly string[]): string {
   return marks.length ? html.replace(new RegExp(`(${marks.join('|')})`, 'gi'), '<mark>$1</mark>') : html
 }
 
-// `{{ t('menu_docs') }}` and friends survive into the rendered text; the reader never sees the
-// braces, so neither should a result.
-// 그려진 글에 `{{ t('menu_docs') }}` 같은 것이 남는다 — 읽는 사람에게 안 보이는 것이니 결과에도
-// 안 보여야 한다.
+// 그려진 글에 `{{ t('menu_docs') }}` 같은 것이 남는다 — 읽는 사람에게 안 보이니 결과에도 안 보여야 한다.
+// Raw `{{ t('menu_docs') }}` survives into rendered text; the reader never sees the braces, so results shouldn't either.
 function localize(text: string): string {
   return text
     .replace(/\{\{\s*\$?t\(\s*'([^']+)'\s*\)\s*\}\}/g, (_, key: string) => t(key))
@@ -146,8 +140,8 @@ onMounted(async () => {
   await nextTick()
   inputRef.value?.focus()
 
-  // Only this language's index is loaded — the other thirteen are never fetched.
-  // 이 언어의 색인 하나만 싣는다 — 나머지 열셋은 받아 오지도 않는다.
+  // 이 언어의 색인 하나만 싣는다 — 나머지는 받아 오지도 않는다.
+  // Only this language's index is loaded — the rest are never fetched.
   const load = indexes[`../theme/search/${localeIndex.value}.data.ts`]
   if (!load) return
   const { data } = await load()
@@ -155,10 +149,8 @@ onMounted(async () => {
   const search = new MiniSearch<SearchDoc>({
     fields: ['title', 'text'],
     storeFields: ['title', 'text'],
-    // CJK and Devanagari do not put spaces between words, so the default splitter would hand the
-    // engine one enormous token. Splitting on characters as well keeps those languages findable.
-    // 한중일·데바나가리는 낱말을 띄지 않아 기본 쪼개기로는 통짜 토큰 하나가 된다. 글자로도 쪼개야
-    // 그 언어들이 찾아진다.
+    // 한중일·데바나가리는 낱말을 안 띄어 기본 쪼개기로는 통짜 토큰이 된다 — 글자로도 쪼개야 찾아진다.
+    // CJK/Devanagari don't space words, so the default splitter yields one giant token; split by character too.
     tokenize: (text) => text.split(/[\s\-_/.,()[\]{}<>:;"'`]+/u).filter(Boolean),
   })
   search.addAll(data)
@@ -220,10 +212,8 @@ function onKey(event: KeyboardEvent): void {
   }
 }
 
-// Nothing here reads the page's language beyond the index it picks, but the input needs it: an
-// Arabic reader types right to left.
-// 여기서 언어를 보는 곳은 색인 고르기뿐이지만 입력 칸은 다르다 — 아랍어를 쓰는 사람은 오른쪽에서
-// 왼쪽으로 친다.
+// 여기서 언어를 보는 곳은 색인 고르기뿐이지만 입력 칸은 다르다 — 아랍어는 오른쪽에서 왼쪽으로 친다.
+// Nothing here reads the page's language beyond picking the index, but the input needs it for RTL typing.
 defineExpose({ lang })
 </script>
 
@@ -236,27 +226,18 @@ defineExpose({ lang })
   justify-content: center;
   padding: 4.5rem 1rem 1rem;
   /* 막도 함께 짙게 — 판이 또렷해진 만큼 뒤가 옅어야 눈이 판으로 간다. */
+  /* The scrim darkens too, so the panel stands out against a dimmer background. */
   background: rgb(0 0 0 / 55%);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 
-/* Nearly opaque, on purpose. This panel is a *reading* surface — twenty snippets of dense text —
-   and at the shared 72% the page behind it (chips, toolbar icons) read straight through the
-   sentences. Worse, the box cannot blur its own backdrop: the scrim above it already blurs, and a
-   blurring layer is a backdrop root, so everything inside it has nothing left to sample. Opacity is
-   what is left, and it is the right answer here anyway — a search panel is not decoration. */
-/* 일부러 거의 불투명하다. 이 판은 **읽는 자리**다(빽빽한 글 스무 토막) — 공용값 72% 에서는 뒤의
-   칩과 툴바 아이콘이 문장 사이로 그대로 읽혀 글이 안 잡혔다. 게다가 이 상자는 제 뒤를 못 흐린다:
-   위의 막이 이미 흐리고 있어서 그 속의 것들은 볼 것이 남지 않는다(backdrop root). 남는 손은
-   불투명도이고, 여기서는 그것이 맞는 답이기도 하다 — 검색 판은 장식이 아니다. */
+/* 일부러 거의 불투명하다 — 공용값 72%에서는 이 판이 읽는 자리(빽빽한 글)라 뒤 칩·아이콘이 문장 사이로 읽혔다. */
+/* Nearly opaque on purpose: at the shared 72%, this reading surface let the page behind bleed through the text. */
 .search-box {
   width: min(40rem, 100%);
-  /* `max-height` 가 아니라 `height` 다 — 결과가 없거나 한둘일 때 상자가 그만큼 쪼그라들면,
-     칠해진 바탕이 글자 몇 줄에 딱 붙어 판이 찌그러져 보인다. 키를 고정해 두면 결과가 몇이든
-     같은 상자이고, 안의 목록만 늘고 준다. */
-  /* Fixed height, not a cap: a box that shrinks to two results looks broken. The panel keeps its
-     size and only the list inside grows and shrinks. */
+  /* max-height가 아니라 height다 — 결과가 적으면 상자가 쪼그라들어 찌그러져 보이니 키를 고정한다. */
+  /* Fixed height, not a cap: a box that shrinks to few results looks broken, so the size stays put. */
   height: min(34rem, calc(100vh - 6rem));
   display: flex;
   flex-direction: column;
@@ -344,7 +325,7 @@ defineExpose({ lang })
 }
 
 /* 남은 자리를 다 먹고 그 한가운데 선다 — 상자가 제 키를 지키므로 이 자리도 그만큼 넓다. */
-/* Fills what is left and centers in it — the box holds its height, so this space is the rest of it */
+/* Fills what is left and centers in it — the box holds its height, so this space is the rest of it. */
 .search-empty {
   flex: 1;
   min-height: 0;
@@ -375,8 +356,8 @@ defineExpose({ lang })
   font-family: inherit;
 }
 
-/* 좁은 화면에서는 키 안내를 접는다 — 폰에는 그 키가 없다 */
-/* The key hints fold on a narrow screen: a phone has none of those keys */
+/* 좁은 화면에서는 키 안내를 접는다 — 폰에는 그 키가 없다. */
+/* The key hints fold on a narrow screen: a phone has none of those keys. */
 @media (max-width: 34rem) {
   .search-foot {
     display: none;

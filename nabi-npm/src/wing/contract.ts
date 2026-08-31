@@ -1,5 +1,5 @@
-// Wing 계약 v2 — 확장점의 표면이다. 계약은 말이 아니라 기계(registry)가 지킨다.
-// 노드의 `w` = 그 노드를 소유한 wing 의 `w` — 개념 하나에 이름 하나.
+// Wing 계약 v2 — 확장점의 표면. 이 계약은 말이 아니라 registry가 검사로 지킨다
+// Wing contract v2, the surface of the extension point; enforced by the registry, not by convention
 import type { LocaleText } from '../locale/index.js';
 import type { AttrValue, ElementNode, NabiDoc, NabiNode } from '../schema/index.js';
 import type { EditEnv } from '../doc/index.js';
@@ -8,21 +8,20 @@ import type { HtmlBuilder, ParseElement } from '../html/index.js';
 import type { IoFilter, MdBuilder, MdBuilders } from '../io/index.js';
 import type { Command, CommandOutcome, Nabi } from '../editor/index.js';
 
-// 갈래 — §2.1 의 다섯 정의와 맞물린다: 문단·라인은 코어 예약어이고, wing 은 이 다섯 중 하나다.
-//   mark      인라인 마크 (b·i·hl·tc·fs·tf·a …) — 글자 범위에 걸린다
-//   void      블록 단말 = 속이 전혀 없는 물건 (hr·img·youtube) — 래퍼문단이 감싼다
-//   container 속이 있는 물건 (table·ul·quote·details·code) — 래퍼문단이 감싼다
-//   attr      문단 속성 wing (제목 h·정렬 a·드롭캡 dc) — 노드를 안 세우고 attrs 만 얹는다
-//   tool      노드 없는 도구 (clearFormat·upload·save …) — 커맨드·버튼만 있다
+// wing의 다섯 갈래 — mark(인라인 마크) · void(속 없는 블록 단말) · container(속 있는 블록) ·
+// attr(문단 속성) · tool(노드 없는 도구)
+// The five wing kinds — mark, void (contentless block), container, attr (paragraph attribute), tool (nodeless)
 export type WingPlace = 'mark' | 'void' | 'container' | 'attr' | 'tool';
 
-// 컨테이너가 데려오는 구조 타입(표의 행·칸, 리스트의 항목)의 속 선언.
+// 컨테이너가 데려오는 구조 타입(표의 행·칸, 리스트의 항목)의 속 선언
+// Declares the shape of a structural child type a container brings in (table rows/cells, list items)
 export interface StructureDecl {
-  // blocks = 속이 블록(문단·물건·컨테이너) / inline = 속이 글·라인(문단처럼 직접 든다).
+  // blocks = 속이 문단/물건/컨테이너, inline = 속이 문단처럼 글·라인을 직접 든다
+  // 'blocks' holds paragraphs/objects/containers; 'inline' holds text/lines directly, like a paragraph
   readonly holds: 'blocks' | 'inline';
-  // 문단 하나로 고정 — 그 속의 엔터는 분할이 아니라 라인이다 (표의 칸).
+  // 문단 하나로 고정 — 속의 엔터는 분할이 아니라 줄바꿈이다(표의 칸)
+  // Fixed to one paragraph; Enter inside it is a line break, not a split (table cells)
   readonly singleParagraph?: boolean;
-  // 값이 1/0 뿐인 불리언 attr 이름 (체크 ck, 펼침 o …).
   readonly boolAttrs?: readonly string[];
   readonly attrs?: readonly string[];
 }
@@ -128,9 +127,8 @@ export interface WingField {
 export type WingAction =
   // 인자 없는(또는 붙박이 인자만 있는) 커맨드 하나.
   | { readonly kind: 'command'; readonly command: string; readonly args?: Readonly<Record<string, unknown>> }
-  // 마크 토글 — 코어의 `toggleMark` 로 간다. 접힌 캐럿이면 문이 **부른 손**을 본다 (084 ⑨):
-  // 키보드 손(힌트·가속키·프로그램 호출)은 예약이 되고, 포인터 손(직접 클릭·탭)은 예약 없이
-  // 거절 + toast("적용할 대상이 없다")다. `result.arm` 을 답하는 값 마크 커맨드도 같은 규칙을 받는다.
+  // 마크 토글(toggleMark) — 접힌 캐럿이면 누른 손을 본다: 키보드 손은 예약, 포인터 손은 거절+toast(084)
+  // Mark toggle; with a collapsed caret it checks the input source — keyboard arms it, pointer rejects with a toast (084)
   | { readonly kind: 'mark' }
   // 값 고르기 — 목록에서 하나. 지금 값은 `currentValue` 가 답한다.
   | {
@@ -156,9 +154,8 @@ export type WingAction =
 
 export interface WingButton {
   readonly group: string;
-  // **이 필드는 코드이지 데이터가 아니다.** ui 가 `innerHTML` 로 꽂으므로(아이콘은 태그 뭉치다)
-  // 여기 오는 글자는 wing 을 **쓴 사람**의 것이어야 한다. 호스트가 사용자 입력으로 wing 을 짓게
-  // 하면 그 자리가 곧 구멍이다 — 사용자에게서 온 글자는 절대 여기 오면 안 된다.
+  // ui가 innerHTML로 꽂으므로 코드이지 데이터가 아니다 — 사용자 입력이 여기로 오면 XSS 구멍이 된다
+  // ui injects this via innerHTML, so it's code, not data — user input reaching here would be an XSS hole
   readonly svg?: string;
   // 다국어 이름 — aria-label 과 툴팁이 된다. 없으면 ui 가 사전의 `wing.<w>` 를 본다.
   readonly label?: LocaleText;
@@ -173,10 +170,8 @@ export interface WingButton {
   readonly value?: string | number;
   // 이 단추만의 이름 — 없으면 wing 의 이름을 쓴다. 한 wing 이 단추를 여럿 낼 때 필요하다.
   readonly name?: string;
-  // **가속키가 누를 때만 다른 답.** 없으면 가속키도 `action` 을 그대로 누른다.
-  //
-  // 저장이 그 자리다: 단추를 누르는 손은 "이름을 정해서 내보내겠다" 이고 ⌘S 를 누르는 손은
-  // "지금 그대로 저장" 이다. 같은 일을 시키면 ⌘S 마다 이름 칸이 떠서 손이 멈춘다.
+  // 가속키가 눌릴 때만의 다른 동작 — 없으면 action을 그대로 쓴다(저장 버튼 vs ⌘S가 이 자리)
+  // A different action for when the accelerator fires, e.g. the save button prompts a name but ⌘S just saves
   readonly accelerated?: WingAction;
 }
 
@@ -220,22 +215,15 @@ export type ContextControl =
       readonly values: readonly WingChoice[];
       readonly attr?: string;
     })
-  // 눈금 위 슬라이더 — 단계가 순서대로 서고 손잡이가 지금 단계에 앉는다. 값이 **순서를 갖는**
-  // 것만 이 꼴이다(글자 크기·서체·폭). 고르는 칸이 여섯이면 줄이 여섯 칸을 먹지만 슬라이더는
-  // 하나다 — 상황 줄이 한 줄로 끝나는 까닭이 이것이다.
-  //
-  // 끄는 동안은 옆의 글자만 움직이고 **손을 뗄 때 한 번만** 커맨드가 돈다 (ui 가 지킨다):
-  // 매 단계 돌리면 끌기 하나가 통째로 되돌리기에 쌓여, Ctrl+Z 한 번이 몸짓의 한 걸음만 되돌린다.
+  // 눈금 슬라이더 — 값이 순서를 갖는 것만(글자 크기·서체·폭). 끄는 동안은 커맨드를 안 돌리고 손을 뗄 때 한 번만 돈다 — 매 단계 돌리면 Ctrl+Z 한 번이 몸짓 전체를 되돌린다
+  // A stepped slider for ordered values (font size, typeface, width); the command fires once on release, not per step, or one undo would revert the whole drag
   | (ContextBase & {
       readonly kind: 'range';
       readonly command: string;
       readonly argKey: string;
-      // 배열 순서가 곧 눈금 순서다. 값이 `''` 인 칸은 **쉬는 자리**(값 없음)이고 눌린 적이 없다.
       readonly values: readonly WingChoice[];
       readonly attr?: string;
-      // 아무 값도 안 걸렸을 때 손잡이가 앉는 값 — 없으면 `''` 칸, 그것도 없으면 첫 칸이다.
       readonly rest?: string;
-      // 손잡이 옆에 지금 단계의 이름을 글자로 세운다.
       readonly readout?: boolean;
     })
   // 글 한 줄 — 지금 값으로 채워 두고, 확정하면 커맨드로 간다.
@@ -244,24 +232,21 @@ export type ContextControl =
       readonly command: string;
       readonly argKey: string;
       readonly attr?: string;
-      // 칸을 채울 지금 값 — `attr` 보다 먼저 본다. attr 하나로 못 읽는 값(링크의 **표시 이름**은
-      // 속성이 아니라 그 마크가 덮은 글이다)이 이 문으로 온다.
+      // attr으로 못 읽는 값(링크의 표시 이름은 속성이 아니라 마크가 덮은 글자)이 이 문으로 온다
+      // Values `attr` can't read (a link's display text is the marked-up text, not an attribute) come through this instead
       readonly initial?: (node: ElementNode) => string | undefined;
       readonly placeholder?: LocaleText;
-      // 값이 쓸 만한가 — 거짓이면 확정이 안 된다(문서를 안 건드린다).
       readonly validate?: (value: string) => boolean;
     })
-  // 판을 띄워 칸을 채운다 — 상황 줄에 인라인으로 두기엔 칸이 여럿인 것(주소 + 이름표).
-  // 넣을 때(`WingAction.prompt`)와 고칠 때가 **같은 판**이다. 다른 것은 칸이 미리 차 있다는 것뿐.
+  // 넣을 때(WingAction.prompt)와 고칠 때가 같은 판이다 — 고칠 때는 칸이 미리 차 있을 뿐이다
+  // The same dialog serves both inserting (WingAction.prompt) and editing; editing just pre-fills the fields
   | (ContextBase & {
       readonly kind: 'prompt';
       readonly command: string;
       readonly fields: readonly WingField[];
     })
-  // 크게 보기 — 커맨드를 안 돌린다(본다고 문서가 바뀌지 않는다). 값은 노드의 attr 에서 읽는다.
   | (ContextBase & {
       readonly kind: 'lightbox';
-      // 그림 주소가 든 attr 이름. 그 attr 이 비면 컨트롤이 안 선다.
       readonly src: string;
       readonly alt?: string;
     });
@@ -279,34 +264,20 @@ export interface Wing {
   readonly w: string;
   readonly place: WingPlace;
 
-  // 호스트가 아무것도 안 끼워도 그대로 도는 wing — `wings().allBasic()` 이 이것만 모은다.
-  // 안 적으면 false 다(모르는 것은 안 든다). false 인 것은 호스트가 제 것을 더 대야 산다:
-  // upload 는 올려 줄 서버(`uploader`), save·open 은 `FileStore` 다 — 그런 단추를 기본값으로
-  // 세우면 사람은 "눌러도 아무 일이 없는 편집기" 를 먼저 만난다. 커스텀 wing 도 같은 문을 쓴다.
+  // 호스트가 아무것도 안 끼워도 도는 wing인가 — 안 적으면 false다(upload·save처럼 서버·저장소가 필요한 것들)
+  // Whether this wing works with no host wiring at all; defaults false for things needing a server or store (upload, save)
   readonly basic?: boolean;
 
-  // container 전용 — 자기 속의 갈래. void 는 속이 없고 mark·attr·tool 은 해당 없다.
   readonly holds?: 'blocks' | 'inline';
   readonly singleParagraph?: boolean;
   readonly boolAttrs?: readonly string[];
   readonly attrs?: readonly string[];
-  // clearFormat이 이 wing의 mark 또는 attrKey를 벗길 수 있는가.
   readonly clearable?: boolean;
-  // 데려오는 구조 타입들 (표의 tr·td, 리스트의 li) — 키가 그 타입의 `w` 다. 옛 owns 의 자리.
   readonly parts?: Readonly<Record<string, StructureDecl>>;
-  // 컨테이너가 품는 자식 타입 제한 — 벗어난 자식은 repair 앞에서 걷힌다(껍데기 벗기기).
   readonly allows?: readonly string[];
-  // 물건 전용 — 이 물건을 입은 **래퍼문단이 정렬을 안 받는다**.
-  //
-  // 래퍼문단이 드는 문단 속성은 정렬 하나뿐인데(Q11), 그 하나조차 뜻이 없는 물건이 있다:
-  // 코드 상자의 속은 글자 자리가 곧 뜻인 평문이라 `text-align` 이 상자를 옮기는 것이 아니라
-  // **코드를 흐트러뜨린다**(pre 가 정렬을 물려받는다). 그런 물건이 스스로 말하는 자리다 —
-  // 정렬 wing 이 물건 이름을 알아보는 특례를 두지 않게 방향이 이쪽이다.
-  //
-  // 선언하면 셋이 함께 선다: 툴바에서 정렬 단추가 숨고(ui), 커맨드가 무변화로 거절하고(doc),
-  // 이미 박힌 값은 고치를 지나며 걷힌다(cocoon). void·container 만 든다 — 등록 검사가 지킨다.
+  // 이 물건의 래퍼문단은 정렬을 안 받는다 — 코드 상자처럼 text-align이 내용을 흐트러뜨리는 물건이 쓴다
+  // This object's wrapper paragraph gets no alignment — for objects like code boxes where text-align would garble the content
   readonly noAlign?: boolean;
-  // 이 중 하나는 함께 등록돼야 한다 (upload → a·img 류).
   readonly requiresAnyOf?: readonly string[];
 
   // attr 전용 — 문단 속성 키(h·a·dc)와 허용 값. cocoon 의 화이트리스트와 같은 목록이어야 한다.
@@ -321,60 +292,36 @@ export interface Wing {
   // 조립 — 노드를 세우는 wing(mark·void·container)은 필수, parts 도 각자 필수 (등록 검사).
   readonly toHtml?: HtmlBuilder;
   readonly partHtml?: Readonly<Record<string, HtmlBuilder>>;
-  // md 조립 — **선택이다.** 안 달면 그 노드는 md 저장에서 html 로 떨어진다(밑줄·유튜브·접기
-  // 처럼 md 에 자리가 없는 것들이 그 자리다). 손실보다 섞는 쪽이 낫다.
+  // 안 달면 md 저장에서 html로 떨어진다 — md에 자리가 없는 것들(밑줄·유튜브·접기)은 손실보다 섞는 쪽이 낫다
+  // Without this the node falls back to raw html in md output — for things md has no syntax for (underline, youtube, details), mixing beats losing them
   readonly toMd?: MdBuilder;
   readonly partMd?: MdBuilders;
-  // 들여오기의 역방향 주장 — 먼저 물어보고 null 이면 기본 대응으로 떨어진다.
-  //
-  // **여기서 받은 값은 검사해야 한다.** `el.attrs` 는 밖에서 온 HTML 그대로다(남의 사이트에서
-  // 복사한 것일 수 있다). 주장한 attr 을 그냥 통과시키면 그 값이 트리에 박힌다 — 출력은 render 가
-  // 막지만 **저장값이 오염되고**, 그 JSON 을 읽는 다른 렌더러에서 터진다. 주소는 `safeUrl`
-  // 값은 제 목록으로 거른다. `repair` 를 함께 선언하면 JSON 입구에서도 같은 검사가 걸린다.
+  // el.attrs는 밖에서 온 HTML 그대로라 여기서 받는 값은 반드시 검사해야 한다 — 안 그러면 오염된 값이 트리에 박힌다
+  // `el.attrs` is raw HTML from outside, so values claimed here must be validated or a tainted value gets baked into the tree
   readonly claim?: (el: ParseElement, inner: (block: boolean) => NabiNode[]) => NabiNode[] | null;
 
-  // IO 필터 하나 — 이 wing 이 제 형식의 붙여넣기·저장·열기를 데려온다(`.nabi` 파일이 그 자리다).
-  // **필터는 wing 이 아니다**: 여기 실려 오는 것은 wing 이 딸린 지식일 뿐이고, 호스트가
-  // `makeRegistry(wings, { ioFilters })` 로 끼운 것이 이보다 앞에 선다. id 는 등록 검사에서 유일하다.
   readonly ioFilter?: IoFilter;
 
-  // 자기 속 구조의 복구 (표 격자 직사각형화 류) — cocoon 이 위임 호출한다.
-  // 밖에서 온 노드 하나를 제 규칙으로 고친다 — JSON 입구(cocoon)가 부르는 자리다.
-  //
-  // **`null` 은 "이 껍데기는 벗겨라" 다.** 값이 화이트리스트 밖이면 고칠 것이 아니라 없던 것으로
-  // 쳐야 한다: 껍데기가 벗겨지고 속이 그 자리로 올라온다(HTML 입구가 하는 것과 같다
-  // `a href="javascript:"` 가 평문이 되는 그 걸음). 마크 자리에서 뜻이 있고, 블록 자리에서는
-  // 껍데기만 벗겨도 문서 구조가 무너질 수 있어 지금은 안 벗긴 것으로 친다.
+  // null은 "이 껍데기를 벗겨라"다 — 화이트리스트 밖 값은 고치지 않고 없던 것으로 쳐서 속을 끌어올린다
+  // Returning null means "strip this shell" — a value outside the whitelist isn't fixed, it's treated as never having been there, promoting its contents
   readonly repair?: (node: ElementNode) => ElementNode | null;
   readonly partRepair?: Readonly<Record<string, (node: ElementNode) => ElementNode>>;
 
-  // 눌림 표시의 한 길 — 노드에서 지금 값을 읽는다 (ui 12 가 쓴다).
   readonly currentValue?: (node: ElementNode) => string | undefined;
-  // 마크 전용 — 이 키가 눌리면 예약의 음수 방향(마크 벗고 쓰기)이 선다 (④).
   readonly escapeKeys?: readonly string[];
 
-  // 연타 선언 — 이 키를 연타 창(`TAP_MS`) 안에 **두 번** 두드리면 그 커맨드가 돈다.
-  // 키 이름(`KeyboardEvent.key`) → 커맨드 이름. `escapeKeys` 와 낱말은 닮았지만 뜻이 전혀 다르다:
-  // 그쪽은 "마크를 벗고 이어 쓴다" 이고, 이쪽은 "한 몸짓으로 커맨드 하나".
-  //
-  // 표면은 이 표만 본다 — wing 이름을 알아보고 특례를 두는 자리가 안 생긴다. 그 wing 을 안
-  // 끼운 편집기에서는 표가 비어 있어 연타가 아무 일도 안 한다.
-  // 우선순위는 **가장 낮다**: Escape 의 기존 갈래 셋(예약 걷기·마크 탈출·남은 예약)이 전부
-  // 통과한 뒤에만 받고, 위에 뜬 것이 있거나 문서가 잠겼으면 아예 세지 않는다.
+  // 이 키를 연타 창 안에 두 번 두드리면 그 커맨드가 돈다 — escapeKeys와 달리 마크 탈출이 아니라 한 몸짓 커맨드다
+  // Double-tapping this key within the tap window fires the command; unlike `escapeKeys` this isn't about leaving a mark, it's one gesture, one command
   readonly doubleKeys?: Readonly<Record<string, string>>;
 
-  // 표면 부속 — 선언형이다. mount 가 붙이고 떼며, wing 은 계약 밖 리스너를 달지 않는다.
   readonly attach?: Attach;
 
   readonly inputRules?: readonly InputRule[];
   readonly button?: WingButton;
-  // 단추가 **여럿**인 wing — 값마다 자리를 갖는 것들이다(정렬 왼쪽·가운데·오른쪽).
-  // 차림표로 접으면 지금 어느 쪽으로 정렬돼 있는지 줄에서 안 보인다: 접는 것은 자리를 아끼는
-  // 대신 상태를 감춘다. 자주 쓰고 상태가 곧 답인 것은 펼쳐 둔다.
+  // 값마다 자리를 갖는 wing의 단추들(정렬 왼쪽·가운데·오른쪽) — 차림표로 접으면 지금 상태가 안 보인다
+  // Buttons for a wing where each button owns a value (align left/center/right); collapsing into a menu would hide the current state
   readonly buttons?: readonly WingButton[];
-  // 상황 줄 선언 — 캐럿이 이 wing 소유 노드 안일 때 상황 줄이 이 선언을 읽어 그린다 (12).
   readonly context?: WingContext;
-  // 이 wing 의 시트 — 문자열로 굳혀 오면 코어가 주입한다(13).
   readonly styles?: string;
 }
 

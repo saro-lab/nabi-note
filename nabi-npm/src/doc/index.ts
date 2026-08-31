@@ -1,4 +1,5 @@
-// doc 층의 문 — 문단 배열 위의 순수 편집 연산 전부가 여기서 나간다.
+// 문단 배열 위의 순수 편집 연산 전부가 여기서 나간다.
+// Every pure edit operation over the paragraph array is exported from here.
 export {
   comparePositions,
   holderLength,

@@ -1,17 +1,10 @@
-// 서체 wing 이 고르는 것은 갈래(sans·serif·mono·cursive)뿐이고, 그 갈래에 어떤 글꼴을 물릴지는
-// 호스트가 정한다 — 코어는 `--nabi-font*` 토큰만 읽는다(typeface.css). 이 사이트가 고른 답이
-// 여기 있다: 갈래마다 구글 웹폰트를 한 줄로 쌓아, 어느 언어를 써 넣어도 그 갈래의 모양이
-// 유지되게 한다. 토큰 자체는 theme/style.css 가 세운다.
-// The typeface wing picks a GENUS (sans/serif/mono/cursive); which fonts fill it is the host's
-// call — the core only reads the `--nabi-font*` tokens. This is this site's answer.
-//
-// 값이 비싸다 — 한중일 글꼴은 유니코드 조각으로 쪼개져 오기 때문에 @font-face 규칙만
-// 1000줄이 넘고, CSS 만으로 gzip 245KB 다(2026-08-13 실측). 그래서 이 시트는 head 에 두지 않고
-// **편집기 데모가 실제로 뜰 때** 한 번 붙인다 — 데모가 없는 문서 페이지는 한 바이트도 안 낸다.
-// It is expensive: CJK families arrive sliced by unicode-range, so the CSS alone is ~245KB gzipped
-// (measured 2026-08-13). Hence it is attached when the editor demo mounts, not in <head>.
+// 서체 wing은 갈래(sans/serif/mono/cursive)만 고르고 실제 글꼴은 호스트 몫이다 — 언어마다 한 벌씩 쌓았다.
+// The typeface wing only picks a genus; filling it is the host's call — one font stack per language here.
+// CJK 글꼴은 유니코드 조각으로 쪼개져 CSS만 gzip 245KB라, head가 아니라 데모가 뜰 때 붙인다.
+// CJK fonts arrive unicode-range-sliced at ~245KB gzipped, so this loads on demo mount, not in <head>.
 const EDITOR_FONTS = [
-  // cursive — 갈래 중 유일하게 Noto 가 답을 주지 않는다. 언어마다 손글씨 얼굴이 따로다
+  // cursive — 갈래 중 유일하게 Noto가 답을 안 준다, 언어마다 손글씨 얼굴이 다르다.
+  // Cursive is the one genus Noto doesn't cover, so each language gets its own handwriting face.
   'Caveat:wght@400..700', // 라틴
   'Nanum+Pen+Script', // 한국어
   'Yomogi', // 일본어
@@ -19,7 +12,7 @@ const EDITOR_FONTS = [
   'Kalam:wght@400;700', // 데바나가리
   'Noto+Nastaliq+Urdu:wght@400..700', // 우르두 — 나스탈리크 자체가 흘림이다
 
-  // sans — 라틴·그리스·키릴은 head 의 Noto Sans 가 이미 덮는다(config.mts)
+  // sans — 라틴/그리스/키릴은 head의 Noto Sans가 이미 덮는다(config.mts)
   'Noto+Sans+KR:wght@400..700',
   'Noto+Sans+JP:wght@400..700',
   'Noto+Sans+SC:wght@400..700',
@@ -40,16 +33,16 @@ const EDITOR_FONTS = [
   'Noto+Serif+Thai:wght@400..700',
 ]
 
-// `display=swap` — 글꼴을 기다리는 동안 시스템 글꼴로 먼저 그린다. 안 그러면 데모 첫 화면이
-// 몇 백 킬로바이트를 기다리며 빈 채로 서 있다
+// `display=swap` — 글꼴을 기다리는 동안 시스템 글꼴로 먼저 그려, 데모 첫 화면이 안 비게 한다.
+// `display=swap` paints system fonts while waiting, so the demo's first paint isn't left blank.
 export const EDITOR_FONT_HREF = `https://fonts.googleapis.com/css2?${EDITOR_FONTS.map(
   (family) => `family=${family}`,
 ).join('&')}&display=swap`
 
 const LINK_ID = 'nabi-editor-fonts'
 
-// 여러 데모가 한 페이지에 있어도 한 번만 붙는다 — id 로 확인한다
-// Idempotent: several demos on one page still attach it once
+// 여러 데모가 한 페이지에 있어도 한 번만 붙는다 — id로 확인한다.
+// Idempotent: several demos on one page still attach it once.
 export function loadEditorFonts(): void {
   if (typeof document === 'undefined') return
   if (document.getElementById(LINK_ID)) return

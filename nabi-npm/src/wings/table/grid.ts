@@ -1,15 +1,19 @@
-// 병합 칸이 있는 표의 단일 출처 — 모든 좌표는 배치 계산에서 나온다 (old tree/grid 의 번역).
-// `tr.ch` 를 열 번호로 세면 윗 행의 rowspan 이 자리를 먹는 순간 어긋난다.
+// 병합 칸이 있는 표의 단일 출처 — 모든 좌표는 배치 계산에서 나온다.
+// The single source of truth for a table with merged cells — every coordinate comes from this layout computation.
+//
+// `tr.ch`를 열 번호로 세면 윗 행의 rowspan이 자리를 먹는 순간 어긋난다.
+// Counting `tr.ch` directly as column index breaks the moment a row above it has a rowspan eating into that column.
 import { isElement, type AttrValue, type ElementNode } from '../../schema/index.js';
 
 export const SPAN_COL = 'colspan';
 export const SPAN_ROW = 'rowspan';
 
 // HTML 규격의 상한 — 격자 폭 폭주(패딩 폭탄)를 막는다. 브라우저도 이 값으로 조인다.
+// The HTML spec's own cap, guarding against a grid-width bomb — browsers clamp to this same value.
 export const $MAX_SPAN = 1000;
 
-// 왼쪽 위 모서리의 격자 좌표(row·column)와 문서상의 자리(trIndex·tdIndex) — 옛 판의
-// 중복 필드(rowIndex/row 동값)는 안 가져오고, 경로를 지을 자리 둘만 남긴다.
+// 왼쪽 위 모서리의 격자 좌표(row·column)와 문서상의 자리(trIndex·tdIndex).
+// A cell's top-left grid coordinate (row/column) alongside its document position (trIndex/tdIndex).
 export interface GridCell {
   readonly cell: ElementNode;
   // table.ch 에서 이 칸의 행(tr)이 서 있는 인덱스.
@@ -26,10 +30,12 @@ export interface TableGrid {
   readonly rows: number;
   readonly columns: number;
   // 문서 순서(행 우선·왼쪽부터) — Tab 이동이 이 순서를 탄다.
+  // Document order (row-major, left to right) — Tab navigation rides this same order.
   readonly cells: readonly GridCell[];
 }
 
-// 네 변 모두 포함 — right·bottom 도 안쪽이다.
+// 네 변 모두 포함 — right·bottom도 안쪽이다.
+// Inclusive on all four sides — right and bottom are inside the box, not past it.
 export interface GridBox {
   readonly top: number;
   readonly left: number;
@@ -37,7 +43,8 @@ export interface GridBox {
   readonly right: number;
 }
 
-// 못 믿을 값(글자·0·음수)은 1, 폭주는 상한으로 조인다. 값은 문자열이 기본이지만 숫자도 받는다.
+// 못 믿을 값(글자·0·음수)은 1로, 폭주는 상한으로 조인다 — 값은 보통 문자열이지만 숫자도 받는다.
+// An untrustworthy value (non-numeric, 0, negative) falls back to 1; runaway values clamp to the cap; accepts a number too, not just the usual string.
 export function spanOf(value: AttrValue | undefined): number {
   const raw = typeof value === 'number' ? value : Number.parseInt(value ?? '', 10);
   if (!Number.isFinite(raw) || raw < 1) return 1;
@@ -92,8 +99,8 @@ function rowsOf(table: ElementNode): RowAt[] {
   return out;
 }
 
-// 표준 배치 규칙 그대로 — 칸마다 그 행의 첫 빈 자리를 찾아 놓는다. 마지막 행을 넘는
-// rowspan 은 읽는 시점에 조인다 — 격자는 언제나 실제 행 수 안에 있다.
+// 표준 배치 규칙 — 칸마다 그 행의 첫 빈 자리를 찾아 놓는다. 마지막 행을 넘는 rowspan은 읽는 시점에 조인다.
+// The standard layout algorithm — each cell claims its row's first free slot; a rowspan overrunning the last row is clamped on read.
 export function cellGrid(table: ElementNode): TableGrid {
   const rows = rowsOf(table);
   const occupied: Interval[][] = Array.from({ length: rows.length }, () => []);
@@ -152,6 +159,7 @@ export function $columnGapWidths(grid: TableGrid, row: number, columns = grid.co
 }
 
 // 병합에 먹힌 자리도 그 주인을 돌려준다.
+// Even a spot swallowed by a merge resolves back to its owning cell.
 export function cellCovering(grid: TableGrid, row: number, column: number): GridCell | null {
   return (
     grid.cells.find(
@@ -164,7 +172,8 @@ export function cellCovering(grid: TableGrid, row: number, column: number): Grid
   );
 }
 
-// 두 칸의 경계 상자에서 시작해, 걸치는 병합 칸이 다 들어올 때까지 넓힌다 — ㄱ자 상자가 안 나온다.
+// 두 칸의 경계 상자에서 시작해 걸치는 병합 칸이 다 들어올 때까지 넓힌다 — L자 상자가 안 나온다.
+// Starts from the bounding box of two cells and grows until every overlapping merged cell fits inside — never leaves an L-shaped box.
 export function boxBetween(grid: TableGrid, first: GridCell, second: GridCell): GridBox {
   let top = Math.min(first.row, second.row);
   let left = Math.min(first.column, second.column);
@@ -200,7 +209,8 @@ export function boxBetween(grid: TableGrid, first: GridCell, second: GridCell): 
   return { top, left, bottom, right };
 }
 
-// 완전히 든 칸들만 — 걸친 칸은 boxBetween 이 이미 안으로 넓혔다.
+// 완전히 든 칸들만 — 걸친 칸은 boxBetween이 이미 안으로 넓혔다.
+// Only cells fully contained — a straddling one was already absorbed by boxBetween's growth.
 export function cellsInBox(grid: TableGrid, box: GridBox): readonly GridCell[] {
   return grid.cells.filter(
     (item) =>
@@ -211,14 +221,16 @@ export function cellsInBox(grid: TableGrid, box: GridBox): readonly GridCell[] {
   );
 }
 
-// 문서 순서의 한 칸 걸음 — Tab 이동. 끝을 넘으면 null 이다.
+// 문서 순서의 한 칸 걸음 — Tab 이동. 끝을 넘으면 null이다.
+// One step in document order, for Tab navigation — null past either end.
 export function stepCell(grid: TableGrid, from: GridCell, step: 1 | -1): GridCell | null {
   const index = grid.cells.indexOf(from) + step;
   if (index < 0 || index >= grid.cells.length) return null;
   return grid.cells[index] ?? null;
 }
 
-// span 을 갈아 끼운 칸 — 기본값 1 은 안 적는다(저장값에 안 남긴다). 값은 문자열이다.
+// span을 갈아 끼운 칸 — 기본값 1은 저장값에 안 남긴다.
+// A cell with new spans applied — a value of 1 (the default) is never written to storage.
 export function withSpans(cell: ElementNode, colSpan: number, rowSpan: number): ElementNode {
   const a: Record<string, AttrValue> = { ...(cell.a ?? {}) };
   delete a[SPAN_COL];
@@ -231,8 +243,8 @@ export function withSpans(cell: ElementNode, colSpan: number, rowSpan: number): 
   return next;
 }
 
-// 칸마다 도는 매퍼로 행들을 다시 짓는다 — 격자 기반 편집이 공유하는 모양. null = 그 칸이 빠진다.
-// 빈 행을 걷는 것은 부르는 쪽의 판단이라 여기서 안 한다.
+// 칸마다 도는 매퍼로 행들을 다시 짓는다 — 격자 기반 편집이 공유하는 모양(null이면 그 칸이 빠진다). 빈 행 걷기는 부르는 쪽 몫이다.
+// Rebuilds rows via a per-cell mapper — the shape every grid-based edit shares (null drops the cell); pruning empty rows is left to the caller.
 export function mapCells(
   table: ElementNode,
   map: (item: GridCell) => readonly ElementNode[] | ElementNode | null,
@@ -265,7 +277,8 @@ export function mapCells(
   return { w: table.w, ch, ...(table.a ? { a: table.a } : {}), ...(table._id !== undefined ? { _id: table._id } : {}) };
 }
 
-// 한 행의 격자 열 자리에 칸을 넣는다 — 그 행에서 `line` 이상에 시작하는 첫 칸 앞, 없으면 꼬리.
+// 한 행의 격자 열 자리에 칸을 넣는다 — `line` 이상에서 시작하는 그 행의 첫 칸 앞, 없으면 꼬리.
+// Inserts a cell at a row's grid column — before that row's first cell starting at or past `line`, or at the end if none.
 export function insertCellInRow(table: ElementNode, trIndex: number, line: number, fresh: ElementNode): ElementNode {
   const grid = cellGrid(table);
   const anchor = grid.cells

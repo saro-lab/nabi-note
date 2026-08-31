@@ -6,15 +6,8 @@
   --font-sans: 'Noto Sans', system-ui, sans-serif;
 }
 
-/* The editor never knows font names — it picks a family kind and the real font is supplied here */
-/* 에디터는 글꼴 이름을 모른다 — 갈래만 고르고 실제 글꼴은 여기서 얹는다 */
-/* 한 갈래에 여러 글꼴을 쌓는 이유는 한 글꼴이 모든 문자를 갖고 있지 않기 때문이다 — 브라우저는
-   글자마다 이 줄을 왼쪽부터 훑어 그 글자를 가진 첫 글꼴로 그린다. 그래서 라틴을 쥔 것이 맨 앞에
-   서고(라틴은 뒤쪽 CJK 글꼴에도 들어 있어, 순서가 뒤집히면 라틴이 CJK 글꼴의 얼굴로 나온다),
-   그 다음이 한국어다 — 한자는 한·중·일이 자형이 달라 앞에 선 쪽의 얼굴을 따른다.
-   실제 파일은 src/fonts.ts 가 데모를 띄울 때 불러온다 (head 에 두기엔 무겁다) */
-/* Several fonts per genus because no one font has every script: the browser walks this list
-   per character. Latin-carrying families lead; Korean next (Han forms differ by region) */
+/* 에디터는 글꼴 이름을 모른다 — 갈래만 고르고 실제 글꼴은 여기서 얹으며, 글자마다 이 목록을 훑어 처음 있는 글꼴로 그린다. 무거운 실제 파일은 src/fonts.ts가 데모에서만 불러온다. */
+/* The editor only names a family kind; the real fonts stack here, and the browser walks the list per character, picking the first that has the glyph. The heavy files load lazily via src/fonts.ts, demo-only. */
 :root {
   --nabi-font:
     'Noto Sans', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans Arabic', 'Noto Sans Hebrew',
@@ -27,13 +20,8 @@
   --nabi-font-mono:
     'Noto Sans Mono', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', ui-monospace, SFMono-Regular, Consolas,
     monospace;
-  /* 흘림만은 Noto 가 답을 주지 않는다 — 언어마다 손글씨 얼굴이 따로라 낱개로 골랐다.
-     벵골어처럼 손글씨 글꼴이 없는 문자는 여기서 안 걸리고 브라우저 기본 글꼴로 떨어진다 */
-  /* Only cursive has no Noto answer — handwriting is per-language, so these are picked one by one */
-  /* 언어마다 손글씨 얼굴이 하나씩이다 — 라틴 Caveat · 한국어 Nanum Pen Script ·
-     일본어 Yomogi · 중국어 Zhi Mang Xing · 데바나가리 Kalam ·
-     아랍/우르두 Noto Nastaliq Urdu(나스탈리크 자체가 흘림이다) */
-  /* One handwriting face per script; Korean is Nanum Pen Script */
+  /* 흘림만 Noto가 안 커버해 언어마다 손글씨 글꼴을 낱개로 골랐다(한국어 Nanum Pen Script 등) — 손글씨가 없는 문자는 브라우저 기본 글꼴로 떨어진다. */
+  /* Only cursive has no Noto answer, so each language's handwriting face was picked by hand (Korean: Nanum Pen Script); a script with none falls back to the browser default. */
   --nabi-font-cursive:
     'Caveat', 'Nanum Pen Script', 'Yomogi', 'Zhi Mang Xing', 'Kalam', 'Noto Nastaliq Urdu', 'Segoe Script',
     'Snell Roundhand', cursive;
@@ -74,17 +62,8 @@
   color-scheme: dark;
 }
 
-/* 이 사이트의 크기는 전부 `rem` 이라 뿌리 글자 크기 하나가 화면 전체의 자다. 그 자를 여기서
-   한 번 **16px** 로 못박는다 (주인 지시 2026-08-23).
-   바닥을 16px 로 잡는 까닭은 iOS 사파리다: 사람이 적는 칸의 글자가 16px 아래면 겨눔이 들어갈
-   때 페이지를 통째로 확대하고, 한 번 확대되면 되돌아오지 않는다. 뿌리가 16px 이면 `rem` 로
-   적은 값들이 그 아래로 안 내려간다.
-   브라우저 기본 글꼴을 키워 둔 사람에게는 이 줄이 그 설정을 도로 16px 로 되돌린다 — 그 사람의
-   확대(브라우저 줌)는 그대로 살아 있고, 아래 `@media (pointer: coarse)` 규칙이 적는 칸의
-   바닥을 따로 지킨다. */
-/* Every size on this site is in `rem`, so the root font size is the site's ruler — pinned here to
-   16px. The floor matters because iOS Safari zooms the whole page when focus lands in a field
-   smaller than 16px, and never zooms back. */
+/* 이 사이트는 크기를 전부 rem으로 쓰므로 뿌리 글자 크기를 16px로 고정한다(주인 지시 2026-08-23) — iOS 사파리가 16px 미만 입력칸에 겨눔이 들면 페이지를 확대한 채 안 돌아오기 때문이다. */
+/* Every size here is in rem, so the root font size is pinned to 16px (2026-08-23) — iOS Safari zooms the whole page and never zooms back when focus lands in a field under 16px. */
 html {
   font-size: 16px;
 }
@@ -98,26 +77,8 @@ body {
   line-height: 1.7;
 }
 
-/* 사람이 적는 칸의 글자는 손가락 기기에서 **16px 아래로 안 내린다** (주인 신고 2026-08-23
-   "사파리에서 자꾸 확대돼서"). iOS 사파리는 글자가 16px 미만인 폼 칸에 겨눔이 들면 페이지를
-   통째로 확대한다 — 한 번 확대되면 되돌아오지 않아 읽던 자리가 어긋난다.
-   막는 지름길(`user-scalable=no` · `maximum-scale=1`)은 **안 쓴다** — 사람이 확대해 볼 권리를
-   뺏는 길이다. 바른 길은 글자를 키우는 것이고, 손가락일 때만 키운다(코어 시트가 `.nabi-input`
-   에 쓴 것과 같은 길이다).
-   `max()` 라서 **바닥만** 올린다 — 이미 16px 보다 큰 칸은 제 크기를 지키고, 데모의 돋보기가
-   뿌리를 키우면 `1em`(제 부모의 크기)이 함께 커져 그 칸도 따라 커진다.
-   `!important` 인 까닭: 이 칸들의 크기는 대부분 Vue 의 scoped 스타일과 Tailwind 유틸리티가
-   정하는데, 둘 다 이 요소 선택자보다 특이도가 높아 그냥 두면 진다.
-   글자를 안 받는 컨트롤(체크박스·라디오·눈금·색·파일)은 뺀다 — 확대의 방아쇠가 아니고,
-   괜히 건드리면 생김새만 흔들린다.
-   `.nabi-input` 도 뺀다 — 편집기 안은 이 사이트가 안 입힌다(이 파일 머리말)는 규칙이고, 코어가
-   이미 같은 바닥을 `--nabi-touch-font-size` 토큰으로 깔아 두었다. 그 값은 `rem` 이 아니라
-   절대 16px 이라 데모의 돋보기로 뿌리를 줄여도 안 따라 내려간다. */
-/* Editable fields never drop below 16px on a touch device: iOS Safari zooms the whole page when
-   focus lands in a form field smaller than that. `user-scalable=no`/`maximum-scale=1` is NOT the
-   answer — it takes the reader's own zoom away. `max()` only raises the floor, so anything already
-   larger (and the demo's magnifier, which drives the root) keeps its size. `!important` because
-   scoped styles and Tailwind utilities both outrank a bare element selector. */
+/* 손가락 기기의 입력칸 글자는 16px 아래로 안 내린다(주인 신고 2026-08-23) — user-scalable=no 대신 max()로 바닥만 올리고, !important는 Vue scoped·Tailwind보다 특이도를 이기기 위해서다. 편집기 안(.nabi-input)은 코어가 --nabi-touch-font-size로 이미 처리해서 뺐다. */
+/* Touch-device input fields never drop below 16px (2026-08-23) — max() only raises the floor instead of user-scalable=no, and !important outranks scoped Vue styles and Tailwind. The editor's own fields (.nabi-input) are excluded since the core already handles this via --nabi-touch-font-size. */
 @media (pointer: coarse) {
   input:not([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='file'], .nabi-input),
   textarea,
@@ -141,13 +102,8 @@ body {
 
 /* No border — the shadow says it floats. Width is 0 but color and style stay, so a one-sided `border-b` still gets the right color */
 /* 테두리를 두르지 않는다 — 굵기만 0 이고 색·모양은 남겨서 한 변만 선이 필요한 곳이 제 색으로 그린다 */
-/* Every translucent surface on the site is this class — the header, the side menu, the language
-   list, the demo's panes, the page frame. The prefix is not decoration: WebKit still reads only
-   `-webkit-backdrop-filter`, so Safari and every iOS browser were showing the translucency with
-   no blur behind it — a wash, not glass. */
-/* 이 사이트의 반투명한 자리는 전부 이 클래스다 — 머리줄·옆 메뉴·언어 목록·데모의 판·페이지 틀.
-   접두사는 장식이 아니다. WebKit 은 아직 `-webkit-backdrop-filter` 만 읽으므로, 사파리와 모든
-   iOS 브라우저에서는 뒤가 안 흐려진 채 투명하기만 했다 — 유리가 아니라 그냥 옅은 막이었다. */
+/* 이 사이트의 반투명한 자리는 전부 이 클래스다 — webkit- 접두사가 필요한 건 WebKit이 아직 그것만 읽어서, 없으면 사파리·iOS에서 블러 없이 투명하기만 한 채로 보이기 때문이다. */
+/* Every translucent surface on the site uses this class — the -webkit- prefix is needed because WebKit still only reads that one, so without it Safari/iOS show plain transparency with no blur. */
 .g-glass {
   background: var(--g-panel);
   -webkit-backdrop-filter: blur(12px) saturate(140%);
@@ -160,14 +116,8 @@ body {
   box-shadow: none;
 }
 
-/* A layer that blurs becomes a *backdrop root*: anything inside it has nothing left behind to
-   sample. The header is glass and the language list lives inside it, so the list's own blur did
-   nothing — the page showed through it perfectly sharp. Moving the header's glass onto a pseudo
-   layer keeps the look and takes the trap away: the pseudo has no children to trap. */
-/* 흐리는 층은 **backdrop root** 가 된다 — 그 속의 것들은 뒤에 볼 것이 남지 않는다. 머리줄이
-   유리이고 언어 목록이 그 **안**에 살아서, 목록의 블러가 아무 일도 안 했다(뒤 글자가 또렷이
-   비쳤다). 머리줄의 유리를 가짜 층으로 옮기면 생김새는 그대로면서 그 덫이 없어진다 — 가짜
-   층에는 가둘 자식이 없다. */
+/* 블러 층은 backdrop root가 되어 안의 것들이 뒤를 못 비춘다 — 머리줄이 유리고 언어 목록이 그 안에 살아 목록의 블러가 무효했던 것을, 머리줄의 유리를 가짜 층(::before)으로 옮겨 해결한다. */
+/* A blurred layer becomes a backdrop root, so anything inside it can't sample behind it — the header's glass broke the language list's own blur this way, fixed by moving the header's glass onto a childless pseudo-layer. */
 header.g-glass {
   background: transparent;
   -webkit-backdrop-filter: none;
@@ -179,6 +129,7 @@ header.g-glass::before {
   position: absolute;
   inset: 0;
   /* 머리줄 제 내용보다 뒤 — 머리줄은 이미 제 쌓임 맥락(z-50)이라 이 값이 밖으로 새지 않는다. */
+  /* Behind the header's own content — the header already has its own stacking context (z-50), so this doesn't leak out. */
   z-index: -1;
   background: var(--g-panel);
   -webkit-backdrop-filter: blur(12px) saturate(140%);
@@ -198,9 +149,8 @@ header.g-glass::before {
   text-decoration: underline;
 }
 
-/* 짚는 자리는 **글자색만** 바뀐다 — 바탕을 칠하지 않는다(주인 지시 2026-08-21, dat 과 같은 결).
-   칠한 바탕은 제 크기를 가져서, 줄마다 네모가 떴다 사라지는 것이 목록을 시끄럽게 만들었다.
-   글자색만 움직이면 글이 그대로 있는 채로 "여기"만 말한다. */
+/* 짚는 자리는 글자색만 바뀐다(주인 지시 2026-08-21) — 바탕을 칠하면 크기만큼 네모가 떴다 사라져 목록이 시끄러워진다. */
+/* Hover only recolors the text (2026-08-21) — a painted background would flash a box the size of each row, making the list noisy. */
 .g-link-hover {
   cursor: pointer;
   transition: color 0.2s;
@@ -220,10 +170,8 @@ header.g-glass::before {
   color: inherit;
 }
 
-/* A finger is not a cursor: 2rem is a comfortable click and a hard tap. Grown only where the
-   pointer is coarse, so the desktop header keeps its compact row. */
-/* 손가락은 커서가 아니다 — 2rem 은 마우스에게는 넉넉하고 손에게는 빠듯하다. 거친 포인터에서만
-   키워, 데스크톱 머리줄은 지금의 촘촘함을 지킨다. */
+/* 손가락은 커서가 아니다 — 2rem은 마우스엔 넉넉하고 손엔 빠듯해, 거친 포인터에서만 키워 데스크톱 머리줄의 촘촘함을 지킨다. */
+/* A finger is not a cursor — 2rem suits a mouse but is tight for a tap, so it only grows for coarse pointers, keeping the desktop header compact. */
 @media (pointer: coarse) {
   .hdr-btn {
     min-width: 2.75rem;
@@ -336,14 +284,8 @@ header.g-glass::before {
   color: var(--g-muted);
 }
 
-/* 편집기의 색은 이 사이트가 안 건드린다 — nabi-note 가 다크·라이트 CSS 를 다 들고 있고,
-   이 사이트는 그 기본만 쓴다. 그래야 빠뜨린 것이 있으면 여기서 드러난다.
-   여기 있던 두 규칙(`--nabi-accent` 를 사이트 색으로,
-   다크에서 `--nabi-on-accent` 를 뒤집기)은 걷었다 — 뒤집기는 코어가 원래 했어야 할 일이라
-   nabi.css 의 다크 토큰으로 옮겼고, 강조색을 사이트 색으로 맞추던 것은 덧칠이라 그냥 뺐다.
-   이 사이트가 편집기 안에 얹는 것은 이제 `--nabi-font*` 넷뿐이다. */
-/* This site does not tint the editor: the core ships both themes and the demo uses them as-is,
-   so anything the core forgot shows up here instead of being papered over. */
+/* 편집기 안 색은 이 사이트가 안 건드린다 — nabi-note가 다크·라이트 CSS를 다 갖고 있어 빠뜨린 게 있으면 여기서 드러난다. 강조색 덮어쓰기 등 예전 규칙은 코어로 옮기고 걷어냈다. */
+/* This site never tints the editor's colors — the core ships both themes, so anything it forgot shows up here instead of being papered over; old overrides (accent tint, dark flip) were moved into the core and removed. */
 
 /* Hand-written fences and runtime-built code share one wrapper (`div.language-*`), so one sheet covers both */
 /* 손으로 적은 펜스와 화면에서 만들어진 코드가 같은 껍데기를 써서 시트 한 벌로 둘 다 입는다 */
@@ -478,12 +420,8 @@ div[class*='language-'] > .copy.copied::before {
   }
 }
 
-/* 폰 폭에서 좌우 여백을 한 번 더 줄인다 — 가로가 좁은 모바일 화면일수록 좌우 여백을 아낀다.
-   위 46rem 단계는 태블릿까지 아우르는 값이라 폰 하나만
-   놓고 보면 아직 여유가 있다. 이 블록도 파일 맨 끝에 있어야 한다(위와 같은 이유). */
-/* One more step down at phone widths, to minimize the side margins on a narrowed mobile
-   screen — the 46rem step above still covers tablets, so a phone alone still
-   has room to give up. This block must also stay last in the file, for the same reason as above. */
+/* 폰 폭에서 좌우 여백을 한 번 더 줄인다 — 46rem 단계는 태블릿까지 포괄해 폰만 보면 아직 여유가 있다. 이 블록도 파일 맨 끝에 있어야 한다(미디어 쿼리는 특이도를 안 더해서). */
+/* One more step down at phone widths — the 46rem breakpoint above still covers tablets, leaving room to trim further for phones alone. This block must also stay last (media queries add no specificity). */
 @media (max-width: 26rem) {
   .g-frame {
     padding-inline: 0.25rem;

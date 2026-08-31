@@ -1,7 +1,5 @@
-// Translated — the demo document and the site's own labels are in Japanese, and every wing
-// name is the word its toolbar button shows. A missing key is a type error: the file stays whole.
-// 옮겼다 — 데모 문서도 사이트 낱말도 일본어다. 날개 이름은 하나같이 그 날개의 툴바 버튼에
-// 뜨는 말 그대로다. 키가 하나라도 빠지면 타입 오류라 파일은 온전해야 한다.
+// 옮겼다 — 키 하나라도 빠지면 타입 오류라 파일이 통째로 채워져 있어야 한다.
+// Translated — a missing key is a type error, so the file must stay filled in whole.
 export const ja = {
   label: '日本語',
   lang: 'ja',

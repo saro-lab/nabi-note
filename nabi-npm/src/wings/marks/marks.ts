@@ -1,15 +1,14 @@
-// 단순 마크 여섯 — b·i·u·s·sub·sup. 뜻이 그대로 태그인 것들이라 선언 말고는 코드가 없다.
-// 커맨드를 따로 안 두는 까닭: 코어의 `toggleMark` 가 이미 이 여섯의 문이고, 접힌 캐럿에서는
-// 그 문이 예약(armed)으로 갈린다 (①). 여기서 이름을 새로 내면 그 갈림이 끊긴다.
+// 단순 마크 여섯 — b·i·u·s·sub·sup. 선언 말고는 코드가 없다.
+// Six plain marks (b/i/u/s/sub/sup) — nothing but declarations, since the tag name already is the meaning.
 //
-// 12 가 채운 것: 아이콘·이름·`action: 'mark'`(= 코어의 toggleMark 로 간다). 아이콘 속(path)은
-// old 번역이고, 16×16 틀은 ui 가 씌운다 — wing 은 화면 도구를 모른다.
+// 커맨드를 따로 안 둔다 — 코어의 toggleMark가 이미 이 여섯의 문이고, 새 이름을 내면 접힌 캐럿의 armed 갈림이 끊긴다.
+// No separate command — the core's toggleMark already owns all six, and a new name would break the collapsed-caret "armed" branch.
 import { simpleMark, type Wing } from '../../wing/index.js';
 import type { MdBuilder } from '../../io/index.js';
 import { $markBuiltinAttrOwner } from '../../schema/env.js';
 
-// md 표식 하나로 감싸는 마크 — 셋뿐이다(굵게·기울임·취소선). 밑줄·첨자 둘은 md 에 자리가
-// 없어서 `toMd` 를 **안 단다** — 그러면 그 노드만 html 로 떨어진다(뜻을 잃는 것보다 낫다).
+// md 표식으로 감싸는 마크는 셋뿐(굵게·기울임·취소선) — 밑줄·첨자는 md에 자리가 없어 toMd를 아예 안 달아 html로 떨어진다.
+// Only three marks get an md wrapper (bold/italic/strike) — underline/subscript/superscript skip `toMd` entirely and fall back to html.
 const wrapMd =
   (mark: string): MdBuilder =>
   (_node, ctx) =>
@@ -40,7 +39,8 @@ const ICONS = {
     '0 1.23-2.91 1.68-2.91 3.26h3"/></g>',
 } as const;
 
-// 위·아래 첨자만 시트를 든다 — 나머지 넷은 브라우저의 기본 태그 생김새 그대로가 맞다.
+// 위·아래 첨자만 시트를 든다 — 나머지 넷은 브라우저 기본 태그 생김새 그대로가 맞다.
+// Only sub/sup carry a stylesheet — the other four look right with the browser's default tag styling.
 const SCRIPT_CSS = `
 .nabi-content sub, .nabi-content sup { font-size: .72em; line-height: 0; position: relative; }
 .nabi-content sup { vertical-align: super; }
@@ -108,7 +108,8 @@ export const italicWing: Wing = {
     },
   }),
   basic: true,
-  // 별 하나다 — 밑줄(`_`)은 낱말 속에서 강조가 아니라 글자라, 표식으로 쓰면 자리마다 답이 갈린다.
+  // 별 하나만 쓴다 — 밑줄(`_`)은 낱말 속에서 강조가 아니라 그냥 글자로도 쓰여 자리마다 답이 갈린다.
+  // Uses a single asterisk — underscore is ambiguous mid-word (sometimes a literal character, not emphasis).
   toMd: wrapMd('*'),
 };
 
@@ -231,15 +232,15 @@ export const superscriptWing: Wing = {
       },
       action: { kind: 'mark' },
     },
-    // 첨자 둘이 시트 하나를 나눠 쓴다 — 문자열이 같으므로 문서에는 **한 번만** 실린다 (12 의 dedupe).
+    // 첨자 둘이 시트 하나를 나눠 쓴다 — 문자열이 같으므로 문서에는 한 번만 실린다.
+    // Both subscript and superscript share this one sheet — identical strings dedupe to a single copy in the document.
     styles: SCRIPT_CSS,
   }),
   basic: true,
 };
 
-// 서식 지우기(11)가 겨눌 대상 목록이자 등록 묶음.
-// 줄에 서는 차례가 곧 이 순서다 (툴바는 그룹 안에서 등록 순서를 지킨다) — 강조 넷 다음 첨자 둘
-// 첨자는 윗첨자가 먼저다 (old 배치).
+// clearFormat이 겨눌 목록이자 등록 묶음 — 툴바는 이 등록 순서를 그대로 줄 순서로 쓴다.
+// The clearFormat target list and registration bundle — the toolbar renders buttons in this same order.
 export const simpleMarkWings: readonly Wing[] = [
   boldWing,
   italicWing,

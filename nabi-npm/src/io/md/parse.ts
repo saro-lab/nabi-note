@@ -1,26 +1,18 @@
-// 마크다운 부분집합 파서 — 순수 함수다(DOM 도 레지스트리도 안 문다).
-//
-// 두 가지가 이 파일의 성격을 정한다:
-//   1. **등록된 wing 만 세운다.** html 들여오기와 다른 선택이다(거기는 아는 태그면 세우고
-//      등록 안 된 것은 cocoon 이 벗긴다). 붙여넣기 판에 뜨는 후보와 실제 결과가 어긋나면
-//      안 되므로 여기서는 `env.has(w)` 가 참인 문법만 서고, 받아 줄 wing 이 없는 문법은
-//      **원문 글자 그대로** 남는다 — md 는 원문이 곧 글이라 안 세우는 것이 곧 손실 없음이다.
-//   2. **부분집합이다.** 안 하는 것: 중첩 인용 · 참조 링크 정의 · HTML 블록 · 엔티티
-//      · setext 제목 · 느슨한/빡빡한 리스트 구분 · 각주.
-//
-// 래퍼문단은 안 씌운다 — 물건을 감싸고 쪼개는 마지막 한 걸음은 cocoon 의 것이다.
+// 등록된 wing만 세우고(html 들여오기와 달리 미등록 문법은 원문 글자 그대로 남긴다), 나머지는 의도적 부분집합(중첩 인용·참조 링크·HTML 블록·엔티티·setext·각주 없음)이다.
+// Only registered wings get built (unlike html import, unmatched syntax stays literal text); everything else is a deliberate subset (no nested quotes, reference links, HTML blocks, entities, setext, footnotes).
 import { BR, P, type AttrValue, type Attrs, type ElementNode, type NabiNode } from '../../schema/index.js';
 import { safeUrl } from '../../html/index.js';
 
 export interface MdEnv {
-  // 이 타입을 받아 줄 wing 이 등록돼 있는가 — registry 의 ownerOf/wingOf 가 답한다.
   has(w: string): boolean;
-  // 값 마크의 값까지 보는 자리 하나 — `` `x` `` → tf:mono (없으면 원문 그대로).
+  // 값 마크의 값까지 보는 자리 — `` `x` `` -> tf:mono (없으면 원문 그대로).
+  // Checks the value too, for value marks — `` `x` `` maps to tf:mono, else stays literal.
   hasValue?(w: string, value: string): boolean;
   readonly allowLocalUrls?: boolean;
 }
 
-// 값이 없는 attr 는 아예 안 싣는다 — html/import 의 그 규칙과 같은 하나다.
+// 값 없는 attr는 안 싣는다 — html/import와 같은 규칙.
+// Omits attrs with no value, same rule as html/import.
 function node(w: string, a: Record<string, AttrValue | undefined>, ch: readonly NabiNode[]): ElementNode {
   const attrs: Record<string, AttrValue> = {};
   for (const [key, value] of Object.entries(a)) {
@@ -31,22 +23,24 @@ function node(w: string, a: Record<string, AttrValue | undefined>, ch: readonly 
 
 // --- 인라인 --------------------------------------------------------------------------------
 
-// md 이스케이프가 듣는 글자 — 그 밖의 `\` 는 글자 그대로다.
+// md 이스케이프가 듣는 글자 — 그 밖의 `\`는 글자 그대로다.
+// Characters `\` actually escapes; any other backslash stays literal.
 const PUNCT = /[\\`*_{}[\]()#+\-.!|~<>]/;
 
 const unescape = (raw: string): string => raw.replace(/\\([\\`*_{}[\]()#+\-.!|~<>])/g, '$1');
 
-// `` `x` `` 를 받아 줄 자리가 있는가 — 값 마크라 값까지 물어본다.
+// 값 마크라 값까지 물어야 한다.
+// A value mark, so the value itself must be checked too.
 const mono = (env: MdEnv): boolean => env.has('tf') && (env.hasValue?.('tf', 'mono') ?? true);
 
-// 자리 i 에서 이어지는 백틱의 개수.
 function ticks(text: string, at: number): number {
   let n = 0;
   while (text[at + n] === '`') n += 1;
   return n;
 }
 
-// 여는 표식 다음 자리부터 닫는 표식을 찾는다 — 이스케이프와 코드 조각은 건너뛴다.
+// 이스케이프·코드 조각은 건너뛰며 닫는 표식을 찾는다.
+// Scans for the closing mark, skipping over escapes and inline code spans.
 function closeAt(text: string, from: number, mark: string, word: boolean): number {
   let i = from;
   while (i < text.length) {
@@ -62,12 +56,14 @@ function closeAt(text: string, from: number, mark: string, word: boolean): numbe
       continue;
     }
     if (text.startsWith(mark, i)) {
-      // 앞이 공백이면 닫는 표식이 아니다 (`*a *b*` 의 가운데 별).
+      // 앞이 공백이면 닫는 표식이 아니다(`*a *b*`의 가운데 별).
+      // A space before it means it's not a closer (the middle `*` in `*a *b*`).
       if (/\s/.test(text[i - 1] ?? ' ')) {
         i += 1;
         continue;
       }
-      // 낱말 속 밑줄은 강조가 아니다 (`snake_case_name`).
+      // 낱말 속 밑줄은 강조가 아니다(`snake_case_name`).
+      // An underscore inside a word isn't emphasis (`snake_case_name`).
       if (word && /\w/.test(text[i + mark.length] ?? '')) {
         i += 1;
         continue;
@@ -85,7 +81,8 @@ interface Link {
   readonly next: number;
 }
 
-// `[t](u)` 하나 — 대괄호·소괄호의 짝을 세어 읽는다. 제목(`"…"`)은 버린다.
+// 대괄호·소괄호 짝을 세어 읽는다 — 제목(`"…"`)은 버린다.
+// Reads by counting bracket/paren depth; a title (`"…"`) is discarded.
 function linkAt(text: string, at: number): Link | null {
   let depth = 0;
   let i = at;
@@ -129,7 +126,6 @@ interface Mark {
   readonly next: number;
 }
 
-// 강조 셋 — `**`/`__` 굵게 · `*`/`_` 기울임 · `~~` 취소선.
 function markAt(text: string, at: number, env: MdEnv): Mark | null {
   const two = text.slice(at, at + 2);
   if (two === '**' || two === '__') {
@@ -147,6 +143,7 @@ function markAt(text: string, at: number, env: MdEnv): Mark | null {
   if (one !== '*' && one !== '_') return null;
   if (!env.has('i')) return null;
   // 굵게 표식의 반쪽을 기울임으로 삼키지 않는다 — 굵게가 없는 어휘라면 둘 다 글자로 남는다.
+  // Doesn't swallow half of a bold marker as italic; without bold registered, both stay literal.
   if (text[at + 1] === one || text[at - 1] === one) return null;
   if (one === '_' && /\w/.test(text[at - 1] ?? '')) return null;
   if (/\s/.test(text[at + 1] ?? ' ')) return null;
@@ -188,7 +185,8 @@ export function parseInline(text: string, env: MdEnv): NabiNode[] {
 
     if (ch === '!' && text[i + 1] === '[' && env.has('img')) {
       const link = linkAt(text, i + 1);
-      // alt 는 안 싣는다 — 대체 글이 없는 갈래다 (html 들여오기와 같은 답).
+      // alt는 안 싣는다 — html 들여오기와 같은 답.
+      // No alt text carried, matching the html-import behavior.
       const src = link ? safeUrl(link.url, env.allowLocalUrls === true) : null;
       if (link && src !== null) {
         flush();
@@ -200,7 +198,8 @@ export function parseInline(text: string, env: MdEnv): NabiNode[] {
 
     if (ch === '[' && env.has('a')) {
       const link = linkAt(text, i);
-      // 화이트리스트를 통과 못 한 주소(`javascript:` 류)는 링크가 아니라 평문이다.
+      // 화이트리스트를 못 통과한 주소(javascript: 등)는 링크가 아니라 평문이다.
+      // An address that fails the whitelist (e.g. javascript:) becomes plain text, not a link.
       const href = link ? safeUrl(link.url) : null;
       if (link && href !== null) {
         flush();
@@ -229,7 +228,8 @@ export function parseInline(text: string, env: MdEnv): NabiNode[] {
       continue;
     }
 
-    // 맨 URL — 한 토큰이 통째로 주소일 때만 (wings/link 의 그 규칙과 같은 뜻).
+    // 한 토큰이 통째로 주소일 때만 — wings/link와 같은 규칙.
+    // Only when the whole token is an address, matching wings/link's own rule.
     if (ch === 'h' && env.has('a') && !/[\w/.]/.test(text[i - 1] ?? '')) {
       const bare = /^https?:\/\/[^\s<>]+/.exec(text.slice(i));
       const raw = bare ? (bare[0] as string).replace(/[.,;:!?)\]}'"]+$/, '') : '';
@@ -266,7 +266,8 @@ const ITEM_OF: Readonly<Record<string, string>> = { ul: 'li', ol: 'oli', tl: 'tl
 
 interface BlockCtx {
   readonly env: MdEnv;
-  // 인용 속인가 — 중첩 인용은 안 한다(부분집합의 경계).
+  // 인용 속인가 — 중첩 인용은 부분집합 밖이라 안 한다.
+  // Whether already inside a quote; nested quotes are outside this subset.
   readonly quote: boolean;
 }
 
@@ -282,13 +283,15 @@ interface Item {
   readonly text: string;
 }
 
-// 들여쓰기 너비 — 탭 하나는 네 칸으로 센다.
+// 탭 하나를 네 칸으로 센다.
+// A tab counts as four columns.
 const widthOf = (raw: string): number => raw.replace(/\t/g, '    ').length;
 
 function itemAt(line: string, env: MdEnv): Item | null {
   if (HR.test(line)) return null;
   const task = TASK_ITEM.exec(line);
-  // 체크가 글머리보다 먼저다 — `- [ ]` 는 글머리 목록이 아니다.
+  // 체크가 글머리보다 먼저 판정된다 — `- [ ]`는 글머리 목록이 아니다.
+  // Checked before bullet: `- [ ]` is a task item, not a bullet list.
   if (task && env.has('tl')) {
     return {
       indent: widthOf(task[1] ?? ''),
@@ -308,7 +311,8 @@ function itemAt(line: string, env: MdEnv): Item | null {
   return null;
 }
 
-// 항목 배열을 들여쓰기로 접는다 — 깊어지면 앞 항목 속으로 들어간다.
+// 들여쓰기로 접는다 — 깊어지면 앞 항목의 자식이 된다.
+// Folds by indent depth; a deeper item nests inside the preceding one.
 function foldList(items: readonly Item[], from: number, env: MdEnv): { node: ElementNode; next: number } {
   const first = items[from] as Item;
   const kind = first.kind;
@@ -345,7 +349,8 @@ function listAt(lines: readonly string[], at: number, env: MdEnv): Block | null 
   return { node: folded.node, next: at + folded.next };
 }
 
-// 표 한 줄의 칸들 — `\|` 는 칸을 안 나눈다.
+// `\|`는 칸을 안 나눈다.
+// An escaped `\|` doesn't split a cell.
 function cellsOf(line: string): string[] {
   let raw = line.trim();
   if (raw.startsWith('|')) raw = raw.slice(1);
@@ -380,7 +385,8 @@ function tableAt(lines: readonly string[], at: number, env: MdEnv): Block {
   let j = at + 2;
   while (j < lines.length && PIPE_ROW.test(lines[j] as string)) {
     const cells = cellsOf(lines[j] as string);
-    // 짧은 줄은 빈 칸으로 채운다 — 표는 격자다.
+    // 표는 격자다 — 짧은 줄은 빈 칸으로 채운다.
+    // A table is a grid; a short row is padded with empty cells.
     while (cells.length < head.length) cells.push('');
     rows.push(row(cells, false));
     j += 1;
@@ -406,7 +412,8 @@ function blockAt(lines: readonly string[], at: number, cx: BlockCtx): Block | nu
       body.push(lines[j] as string);
       j += 1;
     }
-    // 코드 속은 평문과 라인(br)뿐이다 — 인라인 문법이 안 돈다.
+    // 코드 속은 평문과 br뿐이다 — 인라인 문법이 안 돈다.
+    // Inside code it's plain text and br only; inline syntax never runs.
     const ch: NabiNode[] = [];
     body.forEach((text, index) => {
       if (index > 0) ch.push({ w: BR, ch: [] });
@@ -420,7 +427,8 @@ function blockAt(lines: readonly string[], at: number, cx: BlockCtx): Block | nu
   const heading = HEADING.exec(line);
   if (heading && env.has('h')) {
     const level = (heading[1] as string).length;
-    // 닫는 `#` 은 표식이지 글이 아니다.
+    // 닫는 `#`은 표식이지 글이 아니다.
+    // A trailing `#` is a marker, not text.
     const text = (heading[2] ?? '').replace(/[ \t]+#+[ \t]*$/, '').trim();
     return { node: { w: P, a: { h: level }, ch: parseInline(text, env) }, next: at + 1 };
   }
@@ -442,7 +450,8 @@ function blockAt(lines: readonly string[], at: number, cx: BlockCtx): Block | nu
   return listAt(lines, at, env);
 }
 
-// 문단 하나 — 이어진 줄은 한 문단으로 잇고, 줄 끝의 공백 둘이나 `\` 만 라인(br)이 된다.
+// 이어진 줄은 한 문단으로 잇고, 줄 끝의 공백 둘이나 `\`만 br이 된다.
+// Consecutive lines join into one paragraph; only a trailing double-space or `\` becomes a br.
 function paragraphOf(lines: readonly string[], env: MdEnv): ElementNode {
   const pieces: string[] = [];
   let current = '';

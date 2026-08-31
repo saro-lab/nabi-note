@@ -61,15 +61,13 @@ export const CORE_CSS = `
   --nabi-fg: #1b1b1f; --nabi-bg: #fff; --nabi-muted: #6b6b76; --nabi-line: #e2e2e8;
   --nabi-accent: #3b6fe0; --nabi-on-accent: #fff; --nabi-soft: rgb(0 0 0 / 4.5%);
   --nabi-danger: #d93b3b; --nabi-on-danger: #fff;
-  /* 빈 편집기의 안내글 색 — muted 에 알파를 섞어 **글자보다 한 걸음 뒤로** 물린 값이다
-     (주인 2026-08-23). 이름이 \`-fallback\` 인 까닭은 글꼴과 같다: 호스트가 쓰는 이름은
-     \`--nabi-placeholder-color\` 고 코어는 **그것을 정의하지 않는다** — 쓸 때 대체값으로만 부른다.
-     알파라 페이지 배경이 비쳐 든다. 테마별로 갈리므로 다크도 아래에서 다시 준다. */
+  /* 코어는 --nabi-placeholder-color 를 정의하지 않고 대체값으로만 부른다 — 호스트가 항상 이긴다
+     Core never defines --nabi-placeholder-color, only references it as a fallback so hosts always win */
   --nabi-placeholder-color-fallback: #6b6b76aa;
 
   --nabi-radius: 6px; --nabi-radius-sm: 4px; --nabi-radius-xs: 3px;
-  /* 층(판·미리보기·라이트박스·기록)이 함께 쓰는 모서리 하나 — 층은 각지게, 모서리를 가진 것은
-     층 자신뿐이고 그 **안**의 상자들은 각진 채로 흐른다. */
+  /* 층 자신만 모서리를 갖는다 — 안의 상자는 각진 채로 둔다
+     Only the layer itself is rounded; boxes inside it stay square */
   --nabi-layer-radius: .25rem;
   --nabi-grid-cell: 1.125rem;
   --nabi-control-size: 2rem;
@@ -84,53 +82,35 @@ export const CORE_CSS = `
   --nabi-z-overlay: ${Z_OVERLAY};
   --nabi-z-dialog: ${Z_DIALOG};
 
-  /* 글꼴 — 서체(tf) wing 이 고르는 갈래 넷의 실체다.
-     **이름이 \`-fallback\` 인 것이 요점이다.** 호스트가 쓰는 이름은 \`--nabi-font\`* 넷이고, 코어는
-     그 넷을 **정의하지 않는다** — 쓸 때 \`var(--nabi-font, var(--nabi-font-fallback))\` 로 부른다.
-     코어가 \`.nabi\` 에 정의해 버리면 호스트가 \`:root\` 에 얹은 값이 그 아래 자리에서 늘 지는데
-     (\`.nabi\` 가 더 가깝다), 그러면 호스트가 글꼴을 못 바꾼다 — 실제로 nabi-web 이 구글 폰트를
-     다 받아 놓고도 편집기에는 시스템 글꼴이 나왔다. 대체값으로만 두면 호스트가 어디에 적든 이긴다.
-
-     차례가 이렇게 생긴 까닭 셋:
-       ① 브라우저는 **글자마다** 이 줄을 왼쪽부터 훑는다 — "없으면 저것" 이 아니라 글자별
-          갈아타기다. 그래서 **라틴을 쥔 것이 앞에 선다**: CJK 글꼴에도 라틴이 들어 있는데 그
-          라틴이 못생겨서, 순서가 뒤집히면 영문 전체가 그 얼굴로 나온다.
-       ② **진짜 Bold 를 가진 글꼴을 이름으로 불러 앞세운다.** 굵기 700 의 파일이 없으면
-          브라우저가 획을 번지게 해 굵은 척을 하는데(가짜 굵게), 한글·한자는 그때 획이 서로
-          먹어 뭉개진다. system-ui 하나만 두면 윈도에서 한글이 굴림으로 떨어지는 설정이
-          아직 있고 굴림에는 Bold 파일이 없다 — "Malgun Gothic" 이 그 앞을 막는다.
-          가짜 굵게를 font-synthesis: none 으로 끄지는 **않는다**: 그러면 굵게가 아예 안
-          보여서 "버튼이 고장났다" 가 된다. 뭉갤 일이 없는 글꼴을 앞에 세워 그 자리에 안 간다.
-       ③ 이모지 글꼴은 **제네릭 뒤**, 맨 끝이다. 제네릭도 목록의 한 칸이라 거기서 안 멈춘다 —
-          앞에 두면 이모지 글꼴이 가진 화살표·괄호 류까지 그쪽으로 새서 글줄이 들쭉해진다. */
+  /* 코어는 --nabi-font* 를 정의하지 않고 대체값으로만 부른다 — 호스트가 항상 이긴다(글자별로
+     훑으므로 라틴을 쥔 글꼴을 앞에, 진짜 Bold 글꼴을 이름으로 불러 가짜 굵게를 피하고, 이모지는 끝에 둔다)
+     Core never defines --nabi-font*, only falls back to it; order favors Latin-safe and true-Bold fonts, emoji last */
   --nabi-font-fallback:
     system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Noto Sans",
     sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
-  /* 한글 명조는 굵기가 약한 갈래다 — 맥의 AppleMyungjo 도 윈도의 바탕도 Bold 파일이 없다.
-     그래서 진짜 Bold 를 가진 나눔명조·Noto Serif KR 을 그 둘보다 **앞**에 세운다. */
+  /* 한글 명조는 Bold 파일이 없는 갈래라 진짜 Bold 를 가진 나눔명조·Noto Serif KR 을 앞세운다
+     Korean serif fonts lack a real Bold file, so true-Bold fonts are listed ahead of them */
   --nabi-font-serif-fallback:
     Georgia, Cambria, "Times New Roman", Times,
     "Nanum Myeongjo", "Noto Serif KR", AppleMyungjo, Batang,
     serif, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
-  /* 한글이 monospace 제네릭 **뒤**에 선다 — 고정폭은 라틴에서 나온 개념이라 뒤에 오는 한글
-     글꼴은 고정폭이 아니고, 한글이 든 줄만 칸이 어긋난다. 그래도 이 차례가 맞다: 칸이 어긋나는
-     것보다 글자가 두부로 나오는 것이 나쁘고, 한글이 든 코드 줄은 대개 주석이다. */
+  /* 한글은 monospace 뒤에 둔다 — 칸이 어긋나는 것보다 글자가 깨지는 게 더 나쁘다
+     Korean fonts sit after monospace; misaligned columns beat broken glyphs */
   --nabi-font-mono-fallback:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Roboto Mono", "Noto Sans Mono",
     monospace, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR",
     "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
-  /* 넷 중 가장 약한 갈래다 — 안드로이드에는 흘림이 사실상 없고(제네릭이 산세리프로 떨어진다)
-     한글 흘림은 어느 플랫폼에도 기본으로 없다. 제대로 하려면 호스트가 웹폰트를 얹어야 한다
-     (nabi-web 이 그 견본이다). 코어의 몫은 "안 얹어도 아주 망가지지는 않게" 까지다. */
+  /* 흘림체는 기본 지원이 가장 약하다 — 제대로 하려면 호스트가 웹폰트를 얹어야 한다
+     Cursive has the weakest default support; a host needs its own webfont for it to look right */
   --nabi-font-cursive-fallback:
     "Segoe Script", "Bradley Hand", "Snell Roundhand", "Apple Chancery",
     Gungsuh, "Noto Sans KR", cursive;
   --nabi-typeface-base: var(--nabi-font, var(--nabi-font-fallback));
 
-  /* 형광펜 여섯· 글자색 다섯 — **리터럴이 아니라 토큰이다.** 값에는 이름만 살고 색은 여기 있다.
-     그래야 다크에서 알파를 낮춰 글자가 안 묻힌다(리터럴이면 두 테마가 같은 색을 쓴다). */
+  /* 형광펜·글자색은 토큰이다 — 다크에서 알파를 낮춰야 글자가 안 묻힌다
+     Highlight/text colors are tokens, not literals, so dark mode can lower alpha without washing text out */
   --nabi-hl-yellow: rgb(250 204 21 / 45%);
   --nabi-hl-green: rgb(74 222 128 / 45%);
   --nabi-hl-cyan: rgb(56 189 248 / 45%);

@@ -1,7 +1,5 @@
-// 자리(Position) — 캐럿의 좌표는 (문단, 오프셋) 하나다.
-// 문단은 루트 문단 배열에서 자식 인덱스로 내려가는 경로로 가리킨다 — 마지막 인덱스가
-// 캐럿 홀더(문단 또는 인라인 홀더)여야 한다. 래퍼문단 안은 0(물건 앞)·1(물건 뒤) 둘뿐이다.
-// 이 파일은 04(caret)가 그대로 가져다 쓰는 최소 공유 타입이다 — caret 은 doc 의 위층이다.
+// 경로는 캐럿 홀더(문단·인라인 홀더)를 가리키고, 래퍼문단 속은 0(물건 앞)/1(물건 뒤) 둘뿐이다. caret(04)이 그대로 가져다 쓴다.
+// A path targets a caret holder (paragraph or inline holder); inside a wrapper it's just 0 (before) or 1 (after). caret (04) reuses this as-is.
 import {
   BR,
   P,
@@ -16,32 +14,34 @@ import {
 } from '../schema/index.js';
 
 export interface Position {
-  // 루트부터 자식 인덱스로 내려가는 경로 — 마지막이 캐럿 홀더다.
   readonly path: readonly number[];
-  // 홀더 안의 칸 (0 ~ lengthOf). 글자·단말 = 한 칸, 래퍼문단은 0/1.
+  // 홀더 안의 칸(0~lengthOf) — 글자·단말은 한 칸, 래퍼문단은 0/1뿐이다.
+  // A slot inside the holder (0 to lengthOf); text/terminal each count as one, a wrapper only has 0/1.
   readonly offset: number;
 }
 
-// 연산의 답 — 반환 자리는 반환 문서에 실재해야 한다 (공통 계약, 옛 mergeBox 버그의 교훈).
+// 반환 자리는 반환 문서에 실재해야 한다 — 옛 mergeBox 버그가 남긴 공통 계약이다.
+// The returned caret must exist in the returned doc — a contract left by an old mergeBox bug.
 export interface EditResult {
   readonly doc: NabiDoc;
   readonly caret: Position;
   // 범위를 남기는 연산(마크)만 싣는다 — 없으면 접힌 캐럿이다.
+  // Only range-preserving operations (marks) carry this; absent means a collapsed caret.
   readonly anchor?: Position;
 }
 
-// doc 층의 환경 — 스키마 환경에 편집 규칙 하나를 얹는다.
 export interface EditEnv extends SchemaEnv {
   // 문단 하나로 고정된 컨테이너(표의 칸 등) — 그 속의 엔터는 분할이 아니라 라인이다.
+  // A container fixed to one paragraph (a table cell); Enter inside it becomes a line, not a split.
   readonly singleParagraph?: ReadonlySet<string>;
 }
 
-// 오프셋 계산용 단말 판정 — 라인은 언제나 한 칸이고, 물건이 홀더 속에 서 있으면 그것도 한 칸이다.
+// 라인은 언제나 한 칸이고, 홀더 속에 선 물건도 한 칸이다.
+// A line always counts as one slot, and so does an object standing inside a holder.
 export function terminalOf(env: SchemaEnv): Terminal {
   return (w) => w === BR || env.lumps.has(w);
 }
 
-// 경로가 가리키는 노드 — 어긋나면 null.
 export function nodeAt(doc: NabiDoc, path: readonly number[]): ElementNode | null {
   let nodes: readonly NabiNode[] = doc;
   let found: ElementNode | null = null;
@@ -54,7 +54,8 @@ export function nodeAt(doc: NabiDoc, path: readonly number[]): ElementNode | nul
   return found;
 }
 
-// 경로의 부모 자식 목록 — 루트면 문서 배열 자신이다.
+// 루트 경로면 문서 배열 자신을 돌려준다.
+// A root path returns the document array itself.
 export function siblingsAt(doc: NabiDoc, path: readonly number[]): readonly NabiNode[] | null {
   if (path.length === 0) return null;
   if (path.length === 1) return doc;
@@ -62,7 +63,8 @@ export function siblingsAt(doc: NabiDoc, path: readonly number[]): readonly Nabi
   return parent ? parent.ch : null;
 }
 
-// 경로 자리의 노드를 여러 노드로 갈아 끼운 새 문서 — 경로 위 조상만 새로 짓는다 (구조 공유).
+// 경로 위 조상만 새로 짓는다 — 나머지는 구조 공유.
+// Only rebuilds ancestors along the path; everything else shares structure.
 export function replaceAt(doc: NabiDoc, path: readonly number[], replacement: readonly NabiNode[]): NabiDoc {
   if (path.length === 0) return doc;
   const walk = (nodes: readonly NabiNode[], depth: number): readonly NabiNode[] => {
@@ -84,25 +86,29 @@ export function replaceAt(doc: NabiDoc, path: readonly number[], replacement: re
   return walk(doc, 0) as NabiDoc;
 }
 
-// 캐럿 홀더인가 — 문단(래퍼 포함) 또는 인라인 홀더(summary·code 류).
+// 문단(래퍼 포함) 또는 인라인 홀더(summary·code 류)인가.
+// A paragraph (wrappers included) or an inline holder (summary/code and the like).
 export function isHolder(node: NabiNode, env: SchemaEnv): node is ElementNode {
   return isElement(node) && (node.w === P || env.inlineHolders.has(node.w));
 }
 
-// 홀더의 칸 수 — 래퍼문단은 1(물건 한 칸), 그 밖은 런 길이다.
+// 래퍼문단은 1(물건 한 칸), 그 밖은 런 길이다.
+// A wrapper counts as 1 (the object is one slot); anything else is its run length.
 export function holderLength(holder: ElementNode, env: SchemaEnv): number {
   if (isWrapper(holder, env)) return 1;
   return lengthOf(holder, terminalOf(env));
 }
 
-// 자리가 문서에 실재하는가 — 경로가 홀더에 닿고 오프셋이 칸 안이다. 그물의 공통 검사다.
+// 경로가 홀더에 닿고 오프셋이 칸 안인가 — 그물(테스트)의 공통 검사다.
+// Path resolves to a holder and the offset is in range; the shared check tests use.
 export function positionExists(doc: NabiDoc, pos: Position, env: SchemaEnv): boolean {
   const node = nodeAt(doc, pos.path);
   if (!node || !isHolder(node, env)) return false;
   return Number.isInteger(pos.offset) && pos.offset >= 0 && pos.offset <= holderLength(node, env);
 }
 
-// 문서 순서의 홀더 나열 — 래퍼문단은 자기 속(물건 속 홀더들)보다 먼저 선다.
+// 래퍼문단은 자기 속 홀더들보다 문서 순서에서 먼저 선다.
+// A wrapper paragraph precedes the holders nested inside it, in document order.
 export interface HolderAt {
   readonly path: readonly number[];
   readonly node: ElementNode;
@@ -181,9 +187,8 @@ export function holders(doc: NabiDoc, env: SchemaEnv): HolderAt[] {
   return [...documentIndex(doc, env).holders];
 }
 
-// 문서 순서 비교 — 경로 사전순, 같은 홀더면 오프셋순.
-// 한쪽 경로가 다른 쪽의 접두면 그것은 래퍼문단이다 — 오프셋 0(물건 앞)은 속보다 앞이고
-// 오프셋 1(물건 뒤)은 속보다 뒤다.
+// 경로 사전순, 같은 홀더면 오프셋순 — 한쪽이 다른 쪽의 접두면 그건 래퍼문단이라, offset 0(물건 앞)은 속보다 앞, 1(물건 뒤)은 속보다 뒤다.
+// Lexicographic by path, then by offset within the same holder; a path that prefixes another is a wrapper, where offset 0 (before) precedes its contents and 1 (after) follows them.
 export function comparePositions(a: Position, b: Position): number {
   const len = Math.min(a.path.length, b.path.length);
   for (let i = 0; i < len; i += 1) {

@@ -1,17 +1,12 @@
-// 데모가 여는 예문 — **HTML 이 아니라 나비트리로 굳혀 둔 것**을 읽는다.
-//
-// 왜 트리인가: 문서의 실체는 나비트리이고 HTML 은 그것을 그린 결과다. 예문을 HTML 로 들고
-// 있으면 데모는 열 때마다 들여오기(파싱·화이트리스트·정리)를 한 번 더 돌아야 하고, 그 문을
-// 거치기 전까지는 무엇이 문서인지도 알 수 없다. 굳혀 두면 데모가 하는 일은 넣는 것뿐이다.
-//
-// 한국어는 `../trees/ko.ts`의 NABI TREE를 사람이 직접 고친다. 다른 언어는 아직 로케일 사전의
-// `demo_html`·`demo_html_*`을 원본으로 두고 `npm run build:trees`가 트리로 굳힌다. 한국어 문서와
-// 영어 문서를 확정한 뒤 나머지 번역도 직접 트리 원본으로 차례로 옮긴다.
-//
-// 로케일마다 한 벌이라 **읽는 쪽 언어의 한 벌만** 늦게 부른다 — 데모 자체가 그렇게 온다
-// (`onMounted` 안 동적 import, SSR 밖).
+// 예문은 HTML이 아니라 나비트리로 굳혀 둔다 — 안 그러면 데모를 열 때마다 들여오기를 다시 돈다.
+// Samples are frozen as NABI TREE, not HTML — otherwise the demo would re-import on every open.
+// ko는 트리(../trees/ko.ts)를 직접 고치고, 다른 로케일은 사전의 demo_html*을 build:trees가 굳힌다.
+// ko edits the tree (../trees/ko.ts) directly; other locales freeze from the dict's demo_html* via build:trees.
+// 로케일마다 한 벌이라 읽는 쪽 언어 하나만 늦게 부른다(onMounted 동적 import, SSR 밖).
+// One set per locale, so only the reader's language loads lazily (onMounted dynamic import, outside SSR).
 
-// 예문 이름표 — 트리·페이지 짝과 아직 HTML 원본을 쓰는 로케일의 사전 키가 이 목록을 따른다.
+// 예문 이름표 — 트리·페이지 짝과 사전 키가 이 목록을 따른다.
+// Sample labels — tree/page pairing and locale-dict keys both follow this list.
 export const SAMPLE_KEYS = [
   'main',
   'small',
@@ -45,18 +40,17 @@ export const SAMPLE_KEYS = [
 
 export type SampleKey = (typeof SAMPLE_KEYS)[number]
 
-// 그 이름표가 사전에서 갖는 키.
 export function messageKeyFor(key: SampleKey): string {
   return key === 'main' ? 'demo_html' : `demo_html_${key}`
 }
 
-// 나비트리 한 벌 — 사용자 JSON 그대로다(`nabi.getJson()` 이 낸 모양, `setJson`·`doc` 이 받는 모양).
-// 여기서 노드 모양을 다시 적지 않는다 — 그 규격은 패키지의 것이고, 굳힌 값은 그 문으로만 드나든다.
+// 나비트리는 사용자 JSON 그대로다(nabi.getJson()/setJson 모양) — 노드 규격은 패키지 쪽 것이라 여기서 다시 안 적는다.
+// A sample tree is raw user JSON (nabi.getJson()/setJson shape); the node schema belongs to the package, not here.
 export type SampleTree = readonly unknown[]
 export type SampleTrees = Readonly<Record<SampleKey, SampleTree>>
 
-// Samples may only use markup the page actually enables — wings.ts turns on just that wing and its neighbours
-// 예시에는 그 페이지에서 켜지는 마크업만 쓴다 — 안 켜진 서식은 평문으로 떨어져 예시가 조용히 망가진다
+// 예시에는 그 페이지에서 켜지는 마크업만 쓴다 — 안 켜진 서식은 평문으로 떨어져 예시가 조용히 망가진다.
+// Samples may only use markup the page actually enables; wings.ts turns on just that wing and its neighbours.
 const SAMPLE_BY_PATH: Readonly<Record<string, SampleKey>> = {
   '/wing/inline/bold': 'bold',
   '/wing/inline/italic': 'italic',
@@ -88,14 +82,14 @@ const SAMPLE_BY_PATH: Readonly<Record<string, SampleKey>> = {
   '/wing/etc/upload': 'upload',
 }
 
-// `path` must already have the locale prefix stripped (`/wing/inline/bold`)
-// `path` 는 로케일 접두사를 뺀 경로여야 한다 (`/wing/inline/bold`)
+// `path` 는 로케일 접두사를 뺀 경로여야 한다(예: `/wing/inline/bold`).
+// `path` must already have the locale prefix stripped (e.g. `/wing/inline/bold`).
 export function sampleKeyFor(path: string): SampleKey {
   return SAMPLE_BY_PATH[path] ?? 'small'
 }
 
 // 한 줄씩 적는다 — 번들러가 정적으로 읽어야 로케일마다 조각을 가를 수 있다(글로브는 타입이 없다).
-// 언어를 늘릴 때 여기 한 줄이 따라온다.
+// One line per locale so the bundler can statically split each into its own chunk (a glob loses types).
 const TREES: Readonly<Record<string, () => Promise<{ trees: SampleTrees }>>> = {
   en: () => import('../trees/en.ts'),
   ko: () => import('../trees/ko.ts'),
@@ -123,7 +117,8 @@ const TREES: Readonly<Record<string, () => Promise<{ trees: SampleTrees }>>> = {
   it: () => import('../trees/it.ts'),
 }
 
-// 그 언어의 예문 한 벌. 모르는 언어는 영어로 떨어진다 — 사전의 폴백 규칙과 같은 결이다.
+// 그 언어의 예문 한 벌 — 모르는 언어는 영어로 떨어진다(사전의 폴백 규칙과 같다).
+// That language's sample set; an unknown language falls back to English, same as the dictionary.
 export async function loadSampleTrees(lang: string): Promise<SampleTrees> {
   const code = (lang || 'en').split('-')[0] as string
   const load = TREES[code] ?? (TREES['en'] as () => Promise<{ trees: SampleTrees }>)

@@ -1,10 +1,8 @@
-// 리스트 셋 — 글머리(ul·li)·번호(ol·oli)·체크(tl·tli). 구조는 한 모양이다:
-//   래퍼문단 → 리스트 → 항목 → 문단 배열(항목 속에 다시 리스트가 서면 그것이 중첩이다).
+// 리스트 셋 — 글머리(ul·li)·번호(ol·oli)·체크(tl·tli), 다들 래퍼문단→리스트→항목→문단 배열 구조를 공유한다.
+// Three list families (bullet/numbered/task) share one shape: wrapper paragraph → list → item → paragraphs.
 //
-// 키는 항목을 품은 wing 의 것이다 — 셋이 같은 onKey 한 벌을 나눠 쓴다:
-//   backspace  항목 첫머리 = 표식 하나만 지운다(unwrapItem 리스트 특칙, 3종 공통)
-//   tab        앞 항목 속으로 들어간다(중첩)          shiftTab  한 겹 나온다(맨 층이면 리스트 밖)
-//   enter      항목 분할 — 빈 항목이면 탈출(내어쓰기)
+// 셋이 같은 onKey 한 벌을 나눠 쓴다 — backspace는 표식 하나만 지우고, tab/shiftTab은 들여쓰기, enter는 분할/탈출.
+// All three share one onKey: backspace strips just the marker, tab/shiftTab (un)indents, enter splits or escapes an empty item.
 import { P, isElement, isWrapper, type ElementNode, type NabiDoc, type NabiNode } from '../../schema/index.js';
 import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import {
@@ -37,14 +35,15 @@ function isEmptyItem(item: ElementNode): boolean {
 }
 
 // 래퍼문단이 입은 리스트 — 아니면 null.
+// The list a wrapper paragraph is carrying, or null.
 function listIn(block: NabiNode, env: EditEnv): ElementNode | null {
   if (!isElement(block) || !isWrapper(block, env)) return null;
   const inner = block.ch[0];
   return isElement(inner) && LIST_TYPES.has(inner.w) ? inner : null;
 }
 
-// --- 들여쓰기 — 앞 항목의 끝에 같은 가족의 리스트로 들어간다 -----------------------------------
-
+// 들여쓰기 — 앞 항목의 끝에 같은 가족의 리스트로 들어간다.
+// Indent — nests into a same-family list at the end of the previous item.
 function indent(doc: NabiDoc, itemPath: readonly number[], focus: Position, env: EditEnv): CommandOutcome | null {
   const listPath = itemPath.slice(0, -1);
   const list = nodeAt(doc, listPath);
@@ -62,7 +61,8 @@ function indent(doc: NabiDoc, itemPath: readonly number[], focus: Position, env:
   let prevCh: NabiNode[];
   let head: number[];
   if (nested && isElement(last)) {
-    // 앞 항목이 이미 같은 가족의 중첩 리스트를 들고 있다 — 그 끝에 붙는다.
+    // 앞 항목이 이미 같은 가족의 중첩 리스트를 들고 있으면 그 끝에 붙는다.
+    // If the previous item already carries a same-family nested list, append to its end.
     prevCh = [...prev.ch.slice(0, -1), withChildren(last, [withChildren(nested, [...nested.ch, item])])];
     head = [...listPath, index - 1, prev.ch.length - 1, 0, nested.ch.length];
   } else {
@@ -76,8 +76,8 @@ function indent(doc: NabiDoc, itemPath: readonly number[], focus: Position, env:
   return { doc: next, selection: caretAt({ path: [...head, ...rest], offset: focus.offset }) };
 }
 
-// --- 내어쓰기 — 한 겹 나온다. 맨 층이면 리스트 밖 문단이다(표식 하나만 걷는 것과 같은 문). ----
-
+// 내어쓰기 — 한 겹 나온다. 맨 층이면 리스트 밖 문단이 된다(표식 하나만 걷는 것과 같은 문).
+// Outdent — pops one level; at the top level it exits to a plain paragraph (same door as stripping the marker).
 function outdent(doc: NabiDoc, itemPath: readonly number[], focus: Position, env: EditEnv): CommandOutcome | null {
   const listPath = itemPath.slice(0, -1);
   const wrapperPath = listPath.slice(0, -1);
@@ -90,7 +90,8 @@ function outdent(doc: NabiDoc, itemPath: readonly number[], focus: Position, env
   const grand = grandPath.length > 0 ? nodeAt(doc, grandPath) : null;
   const outerList = grandPath.length > 1 ? nodeAt(doc, grandPath.slice(0, -1)) : null;
   const inItem = grand !== null && outerList !== null && LIST_TYPES.has(outerList.w) && outerList.ch.includes(grand);
-  // 맨 층의 리스트 — 나갈 겹이 없으니 항목이 문단으로 풀린다.
+  // 맨 층의 리스트라 나갈 겹이 없으면 항목이 문단으로 풀린다.
+  // At the top level there's no outer layer to exit into, so the item unwraps to a plain paragraph.
   if (!inItem || !grand) return outcomeOf(unwrapItem(doc, itemPath, env));
 
   const items = list.ch.filter(isElement);
@@ -99,7 +100,8 @@ function outdent(doc: NabiDoc, itemPath: readonly number[], focus: Position, env
   const before = items.slice(0, index);
   const after = items.slice(index + 1);
 
-  // 뒤에 남은 항목들은 나가는 항목을 따라 들어간다 — 순서가 뒤집히지 않는 유일한 자리다.
+  // 뒤에 남은 항목들은 나가는 항목을 따라 들어간다 — 순서가 안 뒤집히는 유일한 방법이다.
+  // Items after the outdenting one nest inside it — the only way that preserves their order.
   const moved =
     after.length === 0
       ? item
@@ -123,13 +125,11 @@ function outdent(doc: NabiDoc, itemPath: readonly number[], focus: Position, env
   return { doc: next, selection: caretAt(caret) };
 }
 
-// --- 항목끼리 잇기 (§2 백스페이스· §6 Delete) --------------------------------------------------
-//
-// 백스페이스와 Delete 는 **서로의 거울**이다: 둘 다 "이 두 항목이 하나가 된다" 는 같은 일을
-// 다른 쪽에서 부를 뿐이다. 그래서 셈은 하나이고(`joinItems`), 부르는 자리만 둘이다.
+// 백스페이스와 Delete는 서로의 거울 — 둘 다 "이 두 항목이 하나가 된다"를 반대쪽에서 부른다. 셈은 joinItems 하나뿐이다.
+// Backspace and Delete are mirrors of each other — both merge two items, just called from opposite ends; joinItems does the one calculation both share.
 
-// 항목 속 **마지막 글자리** — 래퍼문단은 글자리가 아니라 건너뛴다(중첩 목록을 든 항목이면
-// 그 목록이 아니라 그 앞 문단이 답이다).
+// 항목 속 마지막 글자리 — 래퍼문단은 건너뛴다(중첩 목록을 든 항목이면 그 앞 문단이 답이다).
+// The last text-holding spot in an item — skips wrapper paragraphs (a nested list's owning item answers with the paragraph before it).
 function lastHolderIn(root: ElementNode, env: EditEnv): readonly number[] | null {
   let found: readonly number[] | null = null;
   const walk = (node: ElementNode, at: readonly number[]): void => {
@@ -144,10 +144,11 @@ function lastHolderIn(root: ElementNode, env: EditEnv): readonly number[] | null
   return found;
 }
 
-// 항목 `index` 를 그 **앞 항목**에 잇는다 — 앞 항목의 마지막 글자리에 첫 문단이 붙고, 나머지
-// 블록(중첩 목록 등)은 그 뒤로 따라간다. 캐럿은 이어 붙은 자리다.
+// 항목 `index`를 앞 항목에 잇는다 — 마지막 글자리에 첫 문단이 붙고 나머지 블록은 뒤로 따라간다.
+// Joins item `index` into the previous one — its first paragraph merges at the prior item's last text spot, the rest tags along.
 //
-// 앞 항목이 없으면 null — 부르는 쪽이 §1/§3(벗기기·내어쓰기)으로 간다.
+// 앞 항목이 없으면 null — 부르는 쪽이 벗기기·내어쓰기로 대신 간다.
+// Returns null with no previous item — the caller falls back to unwrap or outdent instead.
 function joinItems(doc: NabiDoc, listPath: readonly number[], index: number, env: EditEnv): CommandOutcome | null {
   const list = nodeAt(doc, listPath);
   if (!list || index <= 0) return null;
@@ -166,7 +167,8 @@ function joinItems(doc: NabiDoc, listPath: readonly number[], index: number, env
   const head = item.ch[0];
   const rest = item.ch.slice(1);
 
-  // 첫 블록이 글자리면 그 글을 이어 붙이고, 아니면(중첩 목록으로 시작하는 항목) 통째로 따라간다.
+  // 첫 블록이 글자리면 그 글을 이어 붙이고, 아니면(중첩 목록으로 시작) 통째로 따라간다.
+  // If the first block holds text, splice it in; otherwise (an item starting with a nested list) carry it along whole.
   const joinable = head !== undefined && isElement(head) && isHolder(head, env) && !isWrapper(head, env);
   const filled = joinable
     ? withChildren(target, fromRuns([...holderRuns(target, terminal), ...holderRuns(head, terminal)]))
@@ -181,15 +183,16 @@ function joinItems(doc: NabiDoc, listPath: readonly number[], index: number, env
   return { doc: next, selection: caretAt({ path: [...listPath, index - 1, ...inner], offset: junction }) };
 }
 
-// 목록 **뒤**에 선 블록을 마지막 항목 끝으로 끌어올린다 (§6 의 마지막 항목· §12).
-// 뒤가 같은 자리의 문단이면 그 글을, 뒤가 또 다른 목록이면 그 첫 항목을 끌어올린다.
+// 목록 뒤에 선 블록을 마지막 항목 끝으로 끌어올린다 — 문단이면 그 글을, 목록이면 그 첫 항목을.
+// Pulls the block after the list up into its last item — a paragraph's text, or a following list's first item.
 function pullAfterList(
   doc: NabiDoc,
   listPath: readonly number[],
   itemPath: readonly number[],
   env: EditEnv,
 ): CommandOutcome | null {
-  // 목록을 감싼 래퍼문단의 자리 — 그 다음 형제가 끌어올릴 것이다.
+  // 목록을 감싼 래퍼문단의 자리 — 그다음 형제가 끌어올릴 대상이다.
+  // The wrapper paragraph's own position — its next sibling is the pull-up target.
   const wrapperPath = listPath.slice(0, -1);
   if (wrapperPath.length === 0) return null;
   const parentPath = wrapperPath.slice(0, -1);
@@ -209,7 +212,8 @@ function pullAfterList(
   const junction = holderLength(target, env);
   const caret = caretAt({ path: [...itemPath, ...inner], offset: junction });
 
-  // 뒤가 목록이면 그 **첫 항목**을 끌어올린다 — 목록끼리 붙어 있는 자리다 (§12).
+  // 뒤가 목록이면 그 첫 항목을 끌어올린다 — 목록 두 개가 맞닿아 있는 자리다.
+  // If what follows is another list, pull up its first item — the point where two lists touch.
   const lump = isWrapper(after, env) ? after.ch[0] : undefined;
   if (lump !== undefined && isElement(lump) && LIST_TYPES.has(lump.w)) {
     const first = lump.ch.filter(isElement)[0];
@@ -241,7 +245,8 @@ function pullAfterList(
   return { doc: spliceSiblings(grown, parentPath, at + 1, 1), selection: caret };
 }
 
-// 형제 하나를 걷는다 — `replaceAt` 은 갈아 끼우기만 하므로 지우는 손이 따로 필요하다.
+// 형제 하나를 걷는다 — replaceAt은 갈아 끼우기만 하므로 지우는 손이 따로 필요하다.
+// Removes one sibling — replaceAt only swaps in place, so deletion needs its own helper.
 function spliceSiblings(doc: NabiDoc, parentPath: readonly number[], at: number, count: number): NabiDoc {
   if (parentPath.length === 0) return [...doc.slice(0, at), ...doc.slice(at + count)];
   const parent = nodeAt(doc, parentPath);
@@ -251,8 +256,8 @@ function spliceSiblings(doc: NabiDoc, parentPath: readonly number[], at: number,
   ]);
 }
 
-// --- 엔터 — 항목이 갈라진다. 체크는 **글을 따라간다** (§10) -----------------------------------
-
+// 엔터 — 항목이 갈라진다. 체크 상태는 글을 따라간다(빈 앞 반쪽엔 안 남는다).
+// Enter splits an item — the checked state follows the text, not an empty leading half.
 function splitItem(doc: NabiDoc, itemPath: readonly number[], focus: Position, env: EditEnv): CommandOutcome | null {
   const split = splitParagraph(doc, focus, env);
   if (split.doc === doc) return null;
@@ -263,9 +268,8 @@ function splitItem(doc: NabiDoc, itemPath: readonly number[], focus: Position, e
   const head = item.ch.slice(0, cut);
   const tail = item.ch.slice(cut);
 
-  // **체크는 글을 따라간다** (§10). 보통은 앞 반쪽이 원래 항목이라 속성을 그대로 들지만
-  // 첫머리에서 가르면 앞 반쪽이 **빈 껍데기**다 — 그때 체크를 거기 두면 체크했던 글 전체가
-  // 사용자 모르게 "안 한 일" 로 둔갑한다. 체크는 칸이 아니라 그 할 일에 대한 표시다.
+  // 첫머리에서 가르면 앞 반쪽이 빈 껍데기다 — 그때 체크를 거기 두면 체크한 일이 조용히 "안 한 일"로 둔갑한다.
+  // Splitting right at the start leaves an empty leading half — keeping the check there would silently un-do a completed task.
   const headEmpty =
     head.length === 0 ||
     head.every((block) => isElement(block) && isHolder(block, env) && holderLength(block, env) === 0);
@@ -287,13 +291,11 @@ function splitItem(doc: NabiDoc, itemPath: readonly number[], focus: Position, e
   return { doc: next, selection: caretAt(caret) };
 }
 
-// --- 여러 항목 한꺼번에 (들여쓰기·내어쓰기) ----------------------------------------------------
-//
-// **자리는 경로가 아니라 `_id` 로 쥔다.** 항목 하나를 옮길 때마다 형제들의 인덱스가 흔들려서
-// 미리 뽑아 둔 경로 목록은 두 번째 걸음부터 엉뚱한 항목을 가리킨다. 마디마다 다시 찾으면
-// 그 흔들림이 셈에서 사라진다.
+// 여러 항목을 한꺼번에 들여쓰기·내어쓰기할 때 자리는 경로가 아니라 `_id`로 쥔다 — 이동마다 인덱스가 흔들리기 때문이다.
+// Bulk indent/outdent tracks items by `_id`, not path — moving one item shifts sibling indices, so a pre-computed path list would go stale mid-loop.
 
 // `_id` 하나의 자리 — 트리를 훑어 그 노드까지의 경로를 답한다.
+// Finds one `_id`'s path by walking the whole tree.
 function pathOfKey(doc: NabiDoc, id: string): readonly number[] | null {
   let found: readonly number[] | null = null;
   const walk = (nodes: readonly NabiNode[], base: readonly number[]): void => {
@@ -318,17 +320,18 @@ const keyAt = (doc: NabiDoc, path: readonly number[]): string | null => {
 };
 
 // 선택이 걸친 이 가족의 항목들 — 문서 순서로, 겹치지 않게.
+// Every item of this family the selection touches, in document order, without duplicates.
 function itemsInRange(doc: NabiDoc, sel: Selection, env: EditEnv, family: Family): string[] {
   const [start, end] = ordered(sel);
   const ids: string[] = [];
   for (const { path, node } of holders(doc, env)) {
-    // **래퍼문단은 세지 않는다.** 물건 하나를 감싼 문단이라 사람이 글을 친 자리가 아닌데, 그
-    // 자리(0~1)가 속을 걸친 선택과 늘 겹쳐서 **바깥 항목까지 끌려 들어왔다** — 중첩 목록 둘을
-    // 잡고 내어쓰기를 하면 그 둘을 품은 바깥 항목이 함께 풀려 목록이 통째로 무너졌다.
+    // 래퍼문단은 안 센다 — 물건을 감싼 자리라 사람이 글을 친 곳이 아닌데, 안 걸러내면 바깥 항목까지 끌려 들어온다.
+    // Wrapper paragraphs are skipped — they're not where anyone typed, and counting them would drag in the outer item too.
     if (isWrapper(node, env)) continue;
     if (comparePositions({ path, offset: holderLength(node, env) }, start) < 0) continue;
     if (comparePositions({ path, offset: 0 }, end) > 0) continue;
-    // 이 홀더를 품은 **가장 가까운** 이 가족의 항목 — 중첩이면 안쪽 것이 답이다.
+    // 이 홀더를 품은 가장 가까운 이 가족의 항목 — 중첩이면 안쪽 것이 답이다.
+    // The nearest enclosing item of this family — the innermost one wins when nested.
     for (let depth = path.length - 1; depth >= 1; depth -= 1) {
       const owner = nodeAt(doc, path.slice(0, depth));
       if (!owner || owner.w !== family.item) continue;
@@ -339,12 +342,8 @@ function itemsInRange(doc: NabiDoc, sel: Selection, env: EditEnv, family: Family
   return ids;
 }
 
-// 걸친 항목 전부를 한 겹 옮긴다.
-//
-// **차례가 반대다.** 들여쓰기는 앞에서부터 — 둘째를 첫째 밑에 넣고 나면 셋째의 앞 형제가 그
-// 첫째가 되어 같은 둥지에 이어 붙는다(잡은 것들이 한 덩어리로 유지된다). 내어쓰기는 뒤에서부터
-// 나가는 항목이 제 뒤의 형제들을 데리고 나가므로, 앞에서부터 하면 아직 안 옮긴 것들이 먼저
-// 끌려 들어간다.
+// 걸친 항목 전부를 한 겹 옮긴다 — 들여쓰기는 앞에서부터, 내어쓰기는 뒤에서부터(순서가 반대다).
+// Moves every touched item one level — indent goes front-to-back, outdent back-to-front, so the batch stays as one contiguous block either way.
 function moveItems(doc: NabiDoc, sel: Selection, env: EditEnv, family: Family, back: boolean): CommandOutcome | null {
   const ids = itemsInRange(doc, sel, env, family);
   if (ids.length === 0) return null;
@@ -357,7 +356,8 @@ function moveItems(doc: NabiDoc, sel: Selection, env: EditEnv, family: Family, b
   for (const id of back ? [...ids].reverse() : ids) {
     const at = pathOfKey(next, id);
     if (!at) continue;
-    // 자리는 여기서 안 쓴다 — 캐럿은 아래에서 `_id` 로 다시 잡는다.
+    // 자리는 여기서 안 쓴다 — 캐럿은 아래에서 `_id`로 다시 잡는다.
+    // This position is a placeholder only — the caret gets re-resolved below via `_id`.
     const head: Position = { path: [...at, 0], offset: 0 };
     const out = back ? outdent(next, at, head, env) : indent(next, at, head, env);
     if (!out) continue;
@@ -373,14 +373,11 @@ function moveItems(doc: NabiDoc, sel: Selection, env: EditEnv, family: Family, b
   return { doc: next, selection: { anchor: settle(sel.anchor, anchorKey), focus: settle(sel.focus, focusKey) } };
 }
 
-// --- 키 한 벌 (셋이 같은 것을 쓴다) ------------------------------------------------------------
-
 function listKeys(family: Family): OnKey {
   return (intent, doc, sel, env, owner) => {
     if (owner.node.w !== family.item) return null;
-    // 범위 위의 탭은 **걸친 항목 전부**의 것이다 — 여러 줄을 잡고 한 번에 미는 일이 목록에서
-    // 가장 흔하다. 이것을 코어에 흘려보내면 "아무도 안 가져간 탭 = 스페이스 넷" 규칙이 잡은
-    // 글을 스페이스로 갈아 버렸다(실제로 그랬다).
+    // 범위 위의 탭은 걸친 항목 전부의 것 — 코어에 흘려보내면 "탭 = 스페이스 넷" 규칙이 잡은 글을 갈아 버린다.
+    // A tab over a range indents every touched item — letting it fall through to core would replace the selection with four spaces instead.
     if (!isCollapsed(sel)) {
       if (intent.key !== 'tab' && intent.key !== 'shiftTab') return null; // 삭제·분할은 코어의 것
       return moveItems(doc, sel, env, family, intent.key === 'shiftTab');
@@ -396,17 +393,15 @@ function listKeys(family: Family): OnKey {
         const blockIndex = focus.path[itemPath.length] as number;
         // 항목 첫머리가 아니면 코어의 삭제 표 그대로다.
         if (blockIndex !== 0 || focus.offset !== 0) return null;
-        // **앞에 항목이 있으면 합치고, 없으면 한 겹 나온다** — 규칙 하나다 (§2·§3).
-        //
-        // 글 문단끼리의 백스페이스가 "앞과 합친다" 인데 항목도 글줄이라 같은 답이 자연스럽다.
-        // 앞 항목이 없을 때만 목록에서 나가는 일이 되고, 그 나감은 `outdent` 가 층을 보고
-        // 답한다 — 중첩이면 한 겹(부모의 형제 항목), 최상위면 문단이다.
+        // 앞에 항목이 있으면 합치고, 없으면 한 겹 나온다 — outdent가 층을 보고 나머지를 답한다.
+        // Join with the previous item if there is one; otherwise pop one level — outdent decides nested-vs-top-level from there.
         const listPath = itemPath.slice(0, -1);
         const index = itemPath[itemPath.length - 1] as number;
         return joinItems(doc, listPath, index, env) ?? outdent(doc, itemPath, focus, env);
       }
       case 'delete': {
-        // 항목 **끝** — 뒤를 끌어올린다 (§6, 백스페이스의 거울). 끝이 아니면 코어의 것이다.
+        // 항목 끝이면 뒤를 끌어올린다(백스페이스의 거울) — 끝이 아니면 코어의 것이다.
+        // At the item's end, pull up what follows (delete mirrors backspace); anywhere else, this is core's to handle.
         const item = nodeAt(doc, itemPath);
         if (!item) return null;
         const inner = lastHolderIn(item, env);
@@ -418,15 +413,14 @@ function listKeys(family: Family): OnKey {
         const listPath = itemPath.slice(0, -1);
         const index = itemPath[itemPath.length - 1] as number;
         const list = nodeAt(doc, listPath);
-        // 뒤 항목이 있으면 그것을 끌어올리고(= 그 항목이 이 항목에 합쳐진다)
-        // 마지막 항목이면 목록 **뒤**에 선 블록을 끌어올린다 (§6· §12).
+        // 뒤 항목이 있으면 끌어올려 합치고, 마지막 항목이면 목록 뒤의 블록을 끌어올린다.
+        // If there's a following item, merge it in; at the last item, pull up whatever follows the list instead.
         if (list && index + 1 < list.ch.filter(isElement).length) return joinItems(doc, listPath, index + 1, env);
         return pullAfterList(doc, listPath, itemPath, env);
       }
       case 'tab':
-        // 들어갈 앞 항목이 없으면 **아무 일도 안 한다** — 그래도 키는 삼킨다 (§4).
-        // 목록 안에서 탭은 언제나 "깊이" 를 뜻한다. 깊이를 더 줄 수 없다고 글자(스페이스 넷)를
-        // 넣는 것은 다른 규칙이 새어 든 것이다 — 그 스페이스는 사고이지 의도인 적이 없다.
+        // 들어갈 앞 항목이 없으면 아무 일도 안 하지만 키는 삼킨다 — 탭이 스페이스로 새면 안 된다.
+        // With no previous item to nest into, this is a no-op that still swallows the key — Tab must never leak through as four spaces.
         return indent(doc, itemPath, focus, env) ?? { doc, selection: sel };
       case 'shiftTab':
         return outdent(doc, itemPath, focus, env);
@@ -438,8 +432,8 @@ function listKeys(family: Family): OnKey {
   };
 }
 
-// --- 토글 커맨드 — 문단↔항목, 그리고 리스트↔리스트(가족 갈아입기) -----------------------------
-
+// 토글 커맨드 — 문단↔항목, 그리고 리스트↔리스트(가족 갈아입기).
+// The toggle command — paragraph-to-item, and list-to-list when switching families.
 function toggleList(family: Family): Command {
   return (doc, sel, args, env) => {
     const [start, end] = ordered(sel);
@@ -450,6 +444,7 @@ function toggleList(family: Family): Command {
     const checked = family.list === TASK.list && args['ck'] === 1;
 
     // 자리 옮김표 — 옛 자리 → 새 자리. 선택 양끝이 같은 표를 타므로 범위가 살아남는다.
+    // An old-to-new position map — both selection ends ride the same table, so the range survives the rebuild.
     const moves = new Map<string, readonly number[]>();
     const key = (path: readonly number[], depth: number): string => path.slice(0, depth).join('.');
     const remap = (pos: Position, depth: number): Position => {
@@ -461,7 +456,8 @@ function toggleList(family: Family): Command {
       selection: { anchor: remap(sel.anchor, depth), focus: remap(sel.focus, depth) },
     });
 
-    // 걸친 최상위가 전부 이 리스트다 — 푼다. 항목의 속이 제자리 문단으로 선다.
+    // 걸친 최상위가 전부 이 리스트면 푼다 — 항목 속이 제자리 문단으로 선다.
+    // If every covered top-level block is already this list, unwrap it — each item's contents become plain paragraphs.
     if (covered.every((block) => listIn(block, env)?.w === family.list)) {
       const blocks: ElementNode[] = [];
       covered.forEach((block, bi) => {
@@ -481,6 +477,7 @@ function toggleList(family: Family): Command {
     }
 
     // 아니면 감싼다 — 다른 가족의 리스트는 항목째로 갈아입고, 그 밖의 블록은 항목 하나가 된다.
+    // Otherwise wrap: a different-family list gets its items relabeled; any other block becomes one item.
     const items: ElementNode[] = [];
     const makeItem = (ch: readonly NabiNode[]): ElementNode =>
       checked ? { w: family.item, a: { ck: 1 }, ch } : { w: family.item, ch };
@@ -501,16 +498,15 @@ function toggleList(family: Family): Command {
 
     const wrapper: ElementNode = { w: P, ch: [{ w: family.list, ch: items }] };
     const next = [...doc.slice(0, a), wrapper, ...doc.slice(b + 1)] as NabiDoc;
-    // 감싸기는 옛 자리의 깊이가 둘(리스트면 [t,0,i], 아니면 [t])이라 깊은 쪽을 먼저 본다.
+    // 옛 자리의 깊이가 둘(리스트면 [t,0,i], 아니면 [t])이라 깊은 쪽부터 본다.
+    // The old position has two possible depths (list: [t,0,i], plain: [t]) — the deeper match is tried first.
     const deep = (pos: Position): Position => (moves.has(key(pos.path, 3)) ? remap(pos, 3) : remap(pos, 1));
     return { doc: next, selection: { anchor: deep(sel.anchor), focus: deep(sel.focus) } };
   };
 }
 
-// --- 체크 토글 (11) -----------------------------------------------------------------------------
-
-// 항목 하나의 경로 — `_id` 로 찾는다(체크 띠 클릭이 짚어 주는 값). 항목은 홀더가 아니라
-// 표면의 사상(pathOfKey)이 못 찾는 자리라, 이 커맨드가 제 손으로 걷는다.
+// 항목 하나의 경로를 `_id`로 찾는다(체크 띠 클릭이 짚어 주는 값) — 항목은 홀더가 아니라 표면 사상이 못 찾아서 직접 걷는다.
+// Finds one item's path by `_id` (from a checkbox click) — items aren't holders, so surface's usual path map can't locate them.
 function pathOfItem(doc: NabiDoc, id: string, item: string): readonly number[] | null {
   let found: readonly number[] | null = null;
   const walk = (nodes: readonly NabiNode[], base: readonly number[]): void => {
@@ -529,6 +525,7 @@ function pathOfItem(doc: NabiDoc, id: string, item: string): readonly number[] |
 }
 
 // 캐럿이 든 가장 안쪽 항목의 경로 — 클릭이 아니라 키·버튼으로 부를 때의 대상이다.
+// The innermost item holding the caret — the target when called via key/button rather than a click.
 function itemPathAt(doc: NabiDoc, focus: Position, item: string): readonly number[] | null {
   for (let depth = focus.path.length; depth > 0; depth -= 1) {
     const path = focus.path.slice(0, depth);
@@ -537,8 +534,8 @@ function itemPathAt(doc: NabiDoc, focus: Position, item: string): readonly numbe
   return null;
 }
 
-// 체크 토글 — 값은 불리언 하나(`ck: 1`)이고 끄면 attr 자체가 진다 (: 0 은 "없음").
-// 편집 화면에서는 이 커맨드가 돌고, 보기 화면의 표시는 viewer 의 몫이다.
+// 체크 토글 — 값은 불리언 하나(`ck: 1`)이고 끄면 attr 자체가 진다. 편집 화면만의 몫이고, 보기 화면은 viewer가 그린다.
+// Toggles the boolean `ck: 1` attr, deleting it entirely when off — an editor-only command; viewer handles the read-only display.
 function toggleCheck(family: Family): Command {
   return (doc, sel, args) => {
     const id = args['id'];
@@ -567,7 +564,8 @@ function toggleCheck(family: Family): Command {
   };
 }
 
-// 체크 띠의 클릭 — 선언형 부속이다: 글자 앞 띠만 히트로 치고, 그 폭은 시트와 짝이다.
+// 체크 띠의 클릭 — 글자 앞 띠만 히트로 치고, 그 폭은 시트와 짝이다.
+// Handles a click on the checkbox band — only the strip before the text counts as a hit, its width matched to the stylesheet.
 export const CHECKBOX_HIT_EM = 2;
 const FALLBACK_FONT_SIZE = 16;
 
@@ -581,6 +579,7 @@ const taskAttach: Wing['attach'] = ({ root, nabi }) => {
     const id = item.getAttribute('data-key');
     if (!id) return;
     // em 기준이라 띠가 글꼴 크기를 따라간다.
+    // Sized in em, so the hit band scales with font size.
     const style = item.ownerDocument.defaultView?.getComputedStyle(item);
     const fontSize = Number.parseFloat(style?.fontSize ?? '') || FALLBACK_FONT_SIZE;
     const band = CHECKBOX_HIT_EM * fontSize;
@@ -594,52 +593,35 @@ const taskAttach: Wing['attach'] = ({ root, nabi }) => {
   return () => root.removeEventListener('click', onClick as EventListener);
 };
 
-// --- 버튼 선언 (12) ------------------------------------------------------------------------------
-// 셋이 시트 하나를 나눠 쓴다 — 옛 판의 "가족 수만큼 중복"이 났던 그 가족이다.
-
+// 셋이 시트 하나를 나눠 쓴다.
+// All three families share this one stylesheet.
 const LIST_CSS = `
-/* **표식을 우리가 선언한다 — 브라우저 기본값에 기대지 않는다.**
-   호스트 페이지의 리셋이 \`ul, ol { list-style: none }\` 을 깔아 두는 일이 흔하고(Tailwind 의
-   preflight 가 그렇다), 그러면 글머리와 번호가 통째로 사라진다. 안 적어 두었더니 실제로 그랬다.
-
-   깊이마다 표식이 갈린다 — 같은 점이 세 겹 쌓이면 어느 줄이 어느 층인지 안 보인다.
-   \`:where()\` 로 감싸 특정도를 0 으로 둔다: 호스트가 제 목록 모양을 얹고 싶으면 이길 수 있어야 한다. */
+/* 표식을 우리가 직접 선언한다 — 호스트 리셋(Tailwind preflight 등)이 list-style: none을 깔면 안 사라지게. */
+/* Markers are declared explicitly, not left to defaults — a host reset (e.g. Tailwind preflight) would otherwise erase them. */
 .nabi-content :where(ul) { list-style: disc outside; }
 .nabi-content :where(ul ul) { list-style: circle outside; }
 .nabi-content :where(ul ul ul) { list-style: square outside; }
-/* **번호도 같은 규칙이다** — 깊이마다 표식이 갈린다. 숫자만 세 겹 쌓이면 1. / 1. / 1. 이 나란히
-   서서 어느 줄이 어느 층인지 안 읽힌다(중첩된 번호는 저마다 1 부터 다시 세기 때문이다).
-   숫자 → 알파벳 → 로마자는 개요를 쓰는 오랜 관례이고, 층이 글자꼴부터 다르니 한눈에 갈린다. */
+/* 깊이마다 표식이 갈린다(숫자→알파벳→로마자) — 중첩된 번호는 저마다 1부터 세라 안 그러면 층이 안 읽힌다. */
+/* Each depth gets a different marker style (digit/alpha/roman) — nested numbering restarts at 1, so depth needs a visual cue too. */
 .nabi-content :where(ol) { list-style: decimal outside; }
 .nabi-content :where(ol ol) { list-style: lower-alpha outside; }
 .nabi-content :where(ol ol ol) { list-style: lower-roman outside; }
-/* 체크는 **깊이가 달라도 같은 칸**이다 — 표식이 상태(했나 안 했나)를 말하지 층을 말하지 않는다.
-   층은 들여쓰기가 이미 말하고 있고, 칸 모양까지 층마다 바꾸면 켜짐/꺼짐이 안 읽힌다.
-   그래서 여기서는 "안 바꾼다" 가 같은 규칙의 답이다 — 아래 체크 규칙이 깊이를 안 가린다. */
+/* 체크는 깊이가 달라도 같은 칸 — 표식은 상태를 말하지 층을 말하지 않는다(층은 들여쓰기가 이미 말한다). */
+/* A checkbox looks the same at every depth — it signals state, not nesting level, which indentation already conveys. */
 
-/* 들여쓰기 단위가 \`em\` 인 것은 이 자리의 예외다 — 목록의 표식은 제가 붙은 **글자**를 따라
-   커져야 한다(제목 안의 목록, 글자 크기를 키운 줄). rem 으로 박으면 글자만 커지고 표식은
-   그대로라 줄이 어긋난다.
-
-   **자식(\`>\`)이 아니라 자손으로 겨눈다.** 목록은 물건이라 언제나 래퍼문단 하나를 쓰고 있어서
-   (\`div[data-nabi-p] > ul\`), \`.nabi-content > ul\` 도 \`li > ul\` 도 한 겹씩 빗나갔다 — 맨 위
-   목록도 중첩 목록도 여백을 통째로 못 받았다. 겉옷이 몇 겹이든 목록은 목록이다.
-   중첩된 것만 아래 여백을 뗀다: 항목 안에서 아래로 벌어지면 그 줄만 헐렁해 보인다. */
+/* em 단위인 것은 예외다 — 표식이 붙은 글자 크기를 따라 커져야 한다(rem이면 글자만 커지고 표식은 안 커진다). */
+/* Uses em, not rem, deliberately — the marker must scale with its own text size, or it falls out of sync in a bigger heading. */
 .nabi-content :where(ul, ol) { margin: 0 0.65em; padding-inline-start: 1.6em; }
 .nabi-content li :where(ul, ol) { margin-block-end: 0; }
 .nabi-content li { margin-block:.15em; }
 .nabi-content li > p { margin: 0; }
 
-/* 체크리스트 — 표식을 끄고 우리 칸을 그린다. \`input\` 을 안 쓰는 까닭: contenteditable 안의
-   폼 요소는 캐럿을 엉키게 한다.
-   \`padding-inline-start: 2em\` 은 list.ts 의 \`CHECKBOX_HIT_EM\` 과 **같은 값이어야 한다** —
-   그 수가 곧 "누르면 켜지는 띠"의 폭이고, 어긋나면 칸 옆의 빈자리를 눌러도 켜지거나 칸을
-   눌러도 안 켜진다. */
+/* 체크리스트는 표식을 끄고 우리 칸을 그린다 — input을 안 쓰는 건 contenteditable 안의 폼 요소가 캐럿을 엉키게 해서다. */
+/* Task lists disable the marker and paint our own box — no input element, since a form control inside contenteditable breaks the caret. */
 .nabi-content ul[data-nabi-list="task"] { list-style: none; padding-inline-start: 0; }
 .nabi-content ul[data-nabi-list="task"] > li { position: relative; padding-inline-start: 2em; }
-/* 빈 칸은 **테두리 상자가 아니라 채운 타일**이다 — 비었다는 것을 모양이 아니라 색조만으로
-   말한다. 테두리를 두르면 빈 칸이 켜진 칸보다 요란해진다. 크기는 글자 한 칸(1em) 이라 어느
-   글자 크기에서도 줄 높이와 어울린다. */
+/* padding-inline-start는 list.ts의 CHECKBOX_HIT_EM과 같은 값이어야 한다 — 어긋나면 클릭 판정이 칸과 안 맞는다. */
+/* This padding must match list.ts's CHECKBOX_HIT_EM exactly, or the clickable band and the visible box drift apart. */
 .nabi-content ul[data-nabi-list="task"] > li::before {
   content: ""; position: absolute; inset-inline-start: 0; inset-block-start:.25em;
   inline-size: 1em; block-size: 1em; box-sizing: border-box;
@@ -647,14 +629,11 @@ const LIST_CSS = `
   background: color-mix(in srgb, var(--nabi-line) 60%, transparent);
   cursor: pointer;
 }
-/* 켜진 칸 — 강조색 타일 위에 **흰 ✕**. old 의 그림 그대로다.
-   왜 체크(✓)가 아니라 ✕ 인가: 이 목록은 "한 일" 이 아니라 "쳐낸 일" 을 말한다. 아래의
-   가로줄(line-through)과 한 몸짓이라 ✕ 가 그 뜻과 맞고, 작은 칸에서 ✓ 보다 훨씬 잘 읽힌다.
-   그림을 img 태그가 아니라 배경으로 까는 까닭: 이 칸은 ::before 라 자식을 못 든다. */
+/* 체크는 ✓이 아니라 ✕ — 이 목록은 "한 일"이 아니라 "쳐낸 일"을 말하고, 아래 가로줄과 한 몸짓이다. */
+/* A checked box shows a white × rather than a checkmark — this list marks "crossed off," matching the line-through below it. */
 .nabi-content ul[data-nabi-list="task"] > li[data-nabi-checked="true"]::before {
   background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20vector-effect%3D%22non-scaling-stroke%22%20d%3D%22M1%201l14%2014M15%201l-14%2014%22%2F%3E%3C%2Fsvg%3E") center / 75% no-repeat, var(--nabi-accent);
 }
-/* 쳐낸 줄은 물러난다 — 색이 옅어지고 가로줄이 그어진다. */
 .nabi-content ul[data-nabi-list="task"] > li[data-nabi-checked="true"] {
   color: var(--nabi-muted); text-decoration: line-through;
 }
@@ -672,7 +651,6 @@ const ORDERED_ICON =
 const TASK_ICON =
   '<path d="M6.25 4.5h6.56M6.25 11.06h6.56M2.31 4.15l1.05 1.05 1.75-1.93M2.31 10.71l1.05 1.05 1.75-1.93"/>';
 
-// 이름 셋 — old 사전 이식(14 로케일).
 const BULLET_NAME: LocaleText = {
   ko: '글머리 목록',
   en: 'Bullet list',
@@ -722,13 +700,13 @@ const TASK_NAME: LocaleText = {
   id: 'Daftar tugas',
 };
 
-// --- md 조립 -------------------------------------------------------------------------------------
-// 목록은 항목이 **붙어 서야** 한 목록이다 — 사이에 빈 줄이 들면 되읽을 때 목록이 둘로 갈린다.
-// 항목은 첫 줄에 표식을 얹고 나머지 줄을 들여쓴다: 그 들여쓰기가 곧 중첩의 문법이다.
+// 목록은 항목이 붙어 서야 한 목록이다 — 사이에 빈 줄이 들면 되읽을 때 둘로 갈린다.
+// A list stays one list only when its items sit flush — a blank line between them re-parses as two separate lists.
 
 const MD_MARKER: Readonly<Record<string, (node: ElementNode) => string>> = {
   li: () => '- ',
-  // 전부 `1.` 로 적고 목록이 번호를 매긴다 — 항목은 제가 몇 째인지 모른다.
+  // 전부 `1.`로 적고 목록이 번호를 매긴다 — 항목은 제가 몇 째인지 모른다.
+  // Every item writes `1.` — the list itself renumbers them; no item knows its own index.
   oli: () => '1. ',
   tli: (node) => (node.a?.['ck'] === 1 ? '- [x] ' : '- [ ] '),
 };
@@ -747,8 +725,8 @@ const itemMd = (item: string): MdBuilder => {
 
 const listMd: MdBuilder = (_node, ctx) => ctx.children('\n');
 
-// 번호 매기기 — 줄머리에 선 `1. ` 만 이 목록의 항목이다(들여쓴 줄은 속 목록의 것이고,
-// 그 목록이 제 번호를 스스로 매긴다).
+// 줄머리에 선 `1. `만 이 목록의 항목이다 — 들여쓴 줄은 속 목록의 것이라 그쪽이 스스로 번호를 매긴다.
+// Only a line starting with `1. ` belongs to this list — an indented line is a nested list's own, numbered separately.
 const orderedMd: MdBuilder = (_node, ctx) => {
   let at = 0;
   return ctx
@@ -757,8 +735,6 @@ const orderedMd: MdBuilder = (_node, ctx) => {
     .map((line) => (line.startsWith('1. ') ? `${(at += 1)}. ${line.slice(3)}` : line))
     .join('\n');
 };
-
-// --- wing 셋 -----------------------------------------------------------------------------------
 
 function listWing(
   family: Family,
@@ -803,7 +779,8 @@ export const bulletListWing: Wing = listWing(
 export const orderedListWing: Wing = listWing(
   ORDERED,
   'toggleOrderedList',
-  // 번호가 몇이든 목록의 시작으로 본다 — `1.2` 는 점 뒤가 남아 안 잡힌다.
+  // 번호가 몇이든 목록의 시작으로 본다 — `1.2`는 점 뒤가 남아 안 잡힌다.
+  // Any number counts as a list start, regardless of value — `1.2` doesn't match, since text remains after the dot.
   [{ trigger: 'space', pattern: /^\d{1,9}\.$/, run: () => ({ name: 'toggleOrderedList' }) }],
   ORDERED_ICON,
   ORDERED_NAME,

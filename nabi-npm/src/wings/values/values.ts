@@ -1,8 +1,8 @@
-// 값 마크 넷 — 형광펜(hl)·글자색(tc)은 키가 `c`, 글자 크기(fs)·서체(tf)는 키가 `v` 다 (:
-// 크기·서체는 문단 속성이 아니라 마크다). 값 목록은 old 에서 이름만 번역해 왔다.
+// 값 마크 넷 — 형광펜(hl)·글자색(tc)은 키가 c, 글자 크기(fs)·서체(tf)는 키가 v다(크기·서체는 마크지 문단 속성이 아니다).
+// Four value marks — highlight/text-color use key `c`, size/typeface use `v` (size and typeface are marks, not paragraph attrs).
 //
-// 값 거절의 선이 셋이다: ① 커맨드 — 목록 밖 값은 아예 안 돈다 ② 들여오기(claim) — 목록 밖
-// 값을 단 태그는 껍데기를 벗고 글만 남는다 ③ 눌림 표시(currentValue) — 목록 밖 값은 없는 값이다.
+// 값 거절은 세 곳에서 — 커맨드는 목록 밖 값을 안 돌리고, 들여오기(claim)는 껍데기를 벗기고, 눌림 표시는 없는 값으로 본다.
+// Rejection happens in three places — the command refuses out-of-list values, `claim` strips the tag on import, and currentValue reads it as unset.
 import { isWrapper, runsOf, type Attrs, type NabiDoc } from '../../schema/index.js';
 import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import {
@@ -22,7 +22,6 @@ import { markSpanAt, valueMark, type Wing, type WingChoice } from '../../wing/in
 import type { MdBuilder } from '../../io/index.js';
 import type { LocaleText } from '../../locale/index.js';
 
-// wing 이름 넷 — old 사전 이식(14 로케일).
 const HIGHLIGHT_NAME: LocaleText = {
   ko: '형광펜',
   en: 'Highlight',
@@ -88,17 +87,13 @@ const TYPEFACE_NAME: LocaleText = {
   id: 'Jenis huruf',
 };
 
-// --- 값 목록 (old 번역 — 이름이 곧 저장값이고, 색은 시트가 준다) ------------------------------
-
 export const HIGHLIGHT_COLORS: readonly string[] = ['yellow', 'green', 'cyan', 'pink', 'purple', 'orange'];
 export const TEXT_COLORS: readonly string[] = ['green', 'coral', 'violet', 'amber', 'blue'];
 export const FONT_SIZES: readonly string[] = ['xs', 'sm', 'lg', 'xl'];
 export const TYPEFACES: readonly string[] = ['sans', 'serif', 'mono', 'cursive'];
 
-// --- 범위가 이미 든 값 ------------------------------------------------------------------------
-
-// 범위의 글자 런 전부가 같은 값의 이 마크를 입었으면 그 값 — 아니면 undefined.
-// 토글의 판정이다: 같은 값이면 벗고, 다른 값(또는 섞였으면)이면 그 값으로 갈아입는다.
+// 범위의 글자 런 전부가 같은 값의 이 마크를 입었으면 그 값, 아니면 undefined — 토글의 판정이다.
+// The value if every text run in the range carries this mark with the same value; undefined otherwise — this is the toggle's decision test.
 function valueOver(
   doc: NabiDoc,
   start: Position,
@@ -133,20 +128,15 @@ function valueOver(
   return seen ? found : undefined;
 }
 
-// --- 커맨드 ------------------------------------------------------------------------------------
-
-// **접힌 캐럿의 겨눔** — 값 마크 넷이 여기서 둘로 갈린다.
+// 접힌 캐럿의 겨눔이 여기서 둘로 갈린다 — 'mark'는 캐럿이 든 마크 하나(형광펜·글자색), 'paragraph'는 문단 전체(크기·서체).
+// A collapsed caret's target splits two ways — 'mark' aims at just the enclosing mark (highlight/color), 'paragraph' at the whole paragraph (size/typeface).
 //
-//   'mark'      형광펜·글자색 — 캐럿이 든 **그 마크가 덮은 글**이 겨눔이다. 마크 밖이면 걸 글자가
-//               없으니 예약이다(다음에 칠 글자에 걸린다).
-//   'paragraph' 글자 크기·서체 — **문단 전체**가 겨눔이다. 구조로는 마크(span)로 바뀌었지만
-// 사람이 겪는 뜻은 그대로 "이 문단의 글자 크기"다. 낱말 하나만 커지는
-//               것을 바라고 크기 단추를 누르는 사람은 없다 — 그건 긁어서 고를 때의 뜻이다.
-//
-// 어느 쪽이든 **긁어서 고른 범위가 있으면 그 범위가 답이다** — 넓히는 것은 접혔을 때뿐이다.
+// 어느 쪽이든 긁어서 고른 범위가 있으면 그 범위가 답 — 넓히는 것은 접혔을 때뿐이다.
+// Either way, an actual selection always wins — widening the target only happens when the caret is collapsed.
 type CollapsedScope = 'mark' | 'paragraph';
 
-// 값 하나를 건다 — 목록 밖 값은 여기서 죽는다(문서에 닿지 않는다). 같은 값이면 벗고, 다른 값이면 교체다.
+// 값 하나를 건다 — 목록 밖 값은 여기서 죽는다. 같은 값이면 벗고, 다른 값이면 교체다.
+// Sets one value — an out-of-list value dies right here; the same value strips it, a different one replaces it.
 function setValueCommand(w: string, key: string, values: readonly string[], scope: CollapsedScope = 'mark'): Command {
   const allowed = new Set(values);
   return (doc, sel, args, env) => {
@@ -157,7 +147,8 @@ function setValueCommand(w: string, key: string, values: readonly string[], scop
     if (isCollapsed(sel)) {
       if (scope === 'paragraph') {
         const holder = nodeAt(doc, sel.focus.path);
-        // 글이 한 글자도 없는 문단 — 걸 자리가 없으므로 예약이다(치는 순간 그 글자가 입는다).
+        // 글이 한 글자도 없는 문단은 걸 자리가 없어 예약이다 — 치는 순간 그 글자가 입는다.
+        // An empty paragraph has nowhere to attach the mark, so it arms instead — the next typed character wears it.
         const length = holder ? holderLength(holder, env) : 0;
         if (length === 0) return { doc, selection: sel, arm: { w, a: { [key]: value }, ch: [] } };
         aimed = {
@@ -176,18 +167,11 @@ function setValueCommand(w: string, key: string, values: readonly string[], scop
     const strip = args['toggleCurrent'] === true && isCollapsed(sel) ? current !== undefined : current === value;
     const a: Attrs | null = strip ? null : { [key]: value };
     const r = setMark(doc, { anchor: start, focus: end }, w, a, env);
-    // 넓혀서 겨눴으면 캐럿은 있던 자리에 그대로 둔다 — 한 번 바꿨다고 낱말·문단이 통째로 긁힌
-    // 것처럼 보이면 안 된다. 긁어서 고른 것이면 그 범위가 답이다.
+    // 넓혀서 겨눴으면 캐럿을 그대로 둔다 — 한 번 바꿨다고 낱말·문단이 통째로 골라진 것처럼 보이면 안 된다.
+    // If the target was widened from a collapsed caret, the caret stays put — one change shouldn't look like the whole word/paragraph got selected.
     if (aimed !== sel) {
-      // **이어붙은 몸짓 하나만 예외다.** 새 값이 이웃 조각과 같아지면 둘은 저장값에서 하나로
-      // 붙는다(같은 마크가 조각으로 남으면 왕복이 흔들리니 붙는 것이 옳다) — 그런데 붙고 나면
-      // 문서에는 옛 경계가 없어, 캐럿만 남겨 두면 **다음 몸짓의 겨눔이 붙은 덩어리 전체**로
-      // 넓어진다. 색을 고르다 이웃까지 물드는 "색 전이"가 그것이다. 사람이 바꾼 것은 캐럿이 든
-      // 그 조각이지, 우연히 같은 색이 된 이웃이 아니다.
-      //
-      // 경계의 기억이 살 수 있는 자리는 셀렉션뿐이라(커맨드는 순수하고 문서는 이미 붙었다),
-      // 붙었을 때만 겨눴던 조각을 범위로 남긴다 — 다음 몸짓은 그 범위를 그대로 겨누고, 눈에도
-      // "네가 바꾼 것은 이만큼"이 보인다. 안 붙는 보통 몸짓은 위의 규칙 그대로 캐럿이다.
+      // 새 값이 이웃과 같아져 저장값에서 하나로 붙으면, 캐럿만 남길 때 다음 몸짓이 붙은 덩어리 전체로 번진다 — 그래서 붙었을 때만 범위를 남긴다.
+      // If the new value matches a neighbor and merges in storage, leaving just a caret would let the next gesture spread across the whole merged run — so a range is kept only in that merge case.
       const after = strip ? null : markSpanAt(r.doc, sel.focus, w, env);
       const fused =
         after !== null &&
@@ -198,8 +182,8 @@ function setValueCommand(w: string, key: string, values: readonly string[], scop
   };
 }
 
-// --- 들여오기 — 목록 밖 값을 단 태그는 마크가 아니다 -------------------------------------------
-
+// 목록 밖 값을 단 태그는 마크가 아니다.
+// A tag carrying an out-of-list value is rejected as an actual mark.
 function rejectUnknown(tag: string, attr: string, values: readonly string[]): NonNullable<Wing['claim']> {
   const allowed = new Set(values);
   return (el, inner) => {
@@ -210,13 +194,8 @@ function rejectUnknown(tag: string, attr: string, values: readonly string[]): No
   };
 }
 
-// 툴바 단추는 **판을 안 띄운다.** 값 고르기는 상황 줄의 일이다 (규칙: 컨텍스트 툴바로
-// 통일) — 단추는 쓸 만한 기본값 하나를 바로 걸되, 접힌 캐럿에 이미 값이 있으면 무슨 값이든
-// 벗긴다. 여기서 차림표를 열면 값을 고르는 자리가 둘이 되고, 그 둘이 서로 다른 모양으로 같은
-// 말을 한다.
-// --- 버튼 선언 (12) ------------------------------------------------------------------------------
-// 아이콘 속은 old 번역이고, 고를 값은 위의 목록 그대로다 — 목록이 두 곳에 살면 곧 갈린다.
-
+// 툴바 단추는 판을 안 띄운다 — 값 고르기는 상황 줄의 일이다. 단추는 기본값 하나를 바로 걸거나(이미 값이 있으면 벗긴다) 할 뿐이다.
+// The toolbar button never opens a picker — choosing a value is the context toolbar's job; the button just applies (or strips) one default.
 const TEXT_COLOR_ICON =
   '<g transform="translate(8 8) scale(0.0125) translate(-480 420)" fill="currentColor" stroke="none">' +
   '<path d="M80 0v-160h800V0H80Zm140-280 210-560h100l210 560h-96l-50-144H368l-52 144h-96Zm176-224h168l-82-232h-4l-82 232Z"/></g>';
@@ -233,17 +212,14 @@ const TYPEFACE_ICON =
   '<g transform="translate(8 8) scale(0.0218) translate(-480.5 479.4545)" fill="currentColor" stroke="none">' +
   '<path d="M338-241q16 0 23-10.5t9-24.5q2-10 3.5-20t3.5-22q2-11 4.5-24t5.5-30q23-5 45-8.5t43-5.5q23-3 45.5-4.5T564-394q5 24 10.5 43t11.5 36q8 23 17.5 38t23.5 26q14 11 30.5 12t28.5-9q9-7 9-21t-8-35q-5-11-8.5-22.5T670-350q-5-14-9-25.5t-7-22.5q13-1 23.5-4.5T695-412q7-6 10.5-14.5T709-445q0-11-4.5-18.5T691-476q-9-5-22.5-6.5t-30.5.5q-2-18-4-35.5t-5-35.5q-3-17-5.5-35t-7.5-35q-6-26-17-44.5T574-698q-13-11-28.5-16.5T511-720q-22 0-42 9t-40 27q-11 11-22 23.5T386-631q-8-6-14.5-8t-14.5-2q-11 0-18.5 6t-7.5 20q0 18-2 36t-6 36q-5 26-11 51.5T301-440q-11 2-19.5 5.5T267-427q-8 5-11.5 12.5T252-399q0 7 2 13t7 11q5 5 12 7.5t16 3.5q-1 12-1.5 22.5T287-321q0 21 3 36t9 25q6 10 15.5 14.5T338-241Zm71-223q6-23 14-44.5t18-44.5q16-37 34-59t32-22q11 0 19 17t13 51q3 20 5 43t4 43q-17 1-35 2.5t-35 3.5q-17 2-34.5 4.5T409-464Z"/></g>';
 
-// 화면 색은 시트가 준다 — 문서에는 이름만 산다. **견본에 넘기는 것도 색 리터럴이 아니라 토큰
-// 참조다**: 그래야 글에 칠해진 색과 견본의 색이 언제나 같은 값이고, 다크에서 함께 갈린다.
-// 리터럴을 박으면 두 곳이 곧 어긋난다(글은 토큰을 보고 견본은 리터럴을 본다).
-// 겸사겸사 이 문이 임의의 CSS 를 흘려 넣는 통로가 되지 않는다 — 토큰 이름 하나뿐이다.
+// 화면 색은 시트가 준다(문서엔 이름만 산다) — 견본도 토큰 참조라, 칠해진 색과 견본이 언제나 같고 다크에서 함께 갈린다.
+// The screen color lives in the stylesheet (only a name is stored) — swatches reference the same token, so text and swatch never drift, even across themes.
 const HIGHLIGHT_SWATCH: Readonly<Record<string, string>> = Object.fromEntries(
   ['yellow', 'green', 'cyan', 'pink', 'purple', 'orange'].map((name) => [name, `var(--nabi-hl-${name})`]),
 );
 const TEXT_SWATCH: Readonly<Record<string, string>> = Object.fromEntries(
   ['green', 'coral', 'violet', 'amber', 'blue'].map((name) => [name, `var(--nabi-tc-${name})`]),
 );
-// 값 이름 — old 사전 이식(14 로케일). 값 자체는 저장값이고 이름은 화면의 것이다.
 const HIGHLIGHT_LABELS: Readonly<Record<string, LocaleText>> = {
   yellow: {
     ko: '노랑',
@@ -391,13 +367,8 @@ const TEXT_LABELS: Readonly<Record<string, LocaleText>> = {
     ur: 'بنفشی',
     id: 'Ungu',
   },
-  // amber 는 **호박(琥珀)** 이다 — 나무 진이 굳은 그 보석. 넷이 "금빛"으로 옮겨져 있었는데
-  // (ko·hi·bn·ur), 금빛과 호박빛은 다른 색이고 애초에 다른 물건이다. 나머지 아홉은 처음부터
-  // 호박을 가리켰고(琥珀色·Bernstein·Ambre·Янтарный·كهرماني…) 값도 그 편이다: #d97706.
-  //
-  // 고친 낱말은 **사이트의 데모 본문에서 가져왔다** — 주인이 검수한 그 글은 이미 셋 다 바르게
-  // 옮겨 두고 있었다(hi अंबर · bn অ্যাম্বার · ur کہربائی). 같은 색을 두 자리에서 다른 말로
-  // 부르면 그것이 다음 오역이 된다.
+  // amber는 호박(琥珀)이지 금빛이 아니다 — ko/hi/bn/ur 넷이 잘못 옮겨져 있어 사이트 데모 본문의 검수된 번역으로 맞췄다.
+  // Amber means the resin color, not gold — four locales (ko/hi/bn/ur) had it wrong, corrected against the site demo's reviewed translation.
   amber: {
     ko: '호박',
     en: 'Amber',
@@ -604,10 +575,8 @@ const scale = (values: readonly string[], names: Readonly<Record<string, LocaleT
   ...namedChoices(values, names),
 ];
 
-// 색 시트 — 형광펜과 글자색이 같은 표식(`data-color`)을 태그로 갈라 쓴다.
-// 색은 **토큰이 준다**(코어 시트에 선언돼 있다) — 여기 리터럴을 박으면 다크에서 두 테마가 같은
-// 색을 쓰게 되어, 어두운 바탕 위에서 형광펜이 글자를 삼킨다. 형광펜은 알파를 낮춘 색이라
-// 글자색을 안 눌러도 된다: `color` 를 안 적어야 그 위의 글자색(tc)이 살아남는다.
+// 형광펜·글자색이 같은 표식(data-color)을 태그로 갈라 쓴다. 색은 토큰이 준다 — 리터럴을 박으면 다크 테마에서 형광펜이 글자를 삼킨다.
+// Highlight and text-color share the data-color attribute, split by tag. Colors come from tokens — a literal would break dark mode, letting highlight swallow the text.
 const COLOR_CSS = `
 .nabi-content mark[data-color="yellow"] { background: var(--nabi-hl-yellow); }
 .nabi-content mark[data-color="green"] { background: var(--nabi-hl-green); }
@@ -630,27 +599,21 @@ const SIZE_CSS = `
 .nabi-content [data-nabi-size="xl"] { font-size: 1.5em; }
 `;
 
-// 글꼴도 토큰이다 — 호스트가 자기 글꼴로 갈아 끼울 자리가 있어야 한다(웹폰트는 호스트의 것이지
-// 편집기의 것이 아니다). 표식 없는 글은 `--nabi-typeface-base` 를 입는다.
+// 글꼴도 토큰이다 — 호스트가 자기 글꼴로 갈아 끼울 자리가 있어야 한다(웹폰트는 호스트 것이지 편집기 것이 아니다).
+// Fonts are tokens too — a host must be able to swap in its own (a webfont belongs to the host, not the editor).
 const FACE_CSS = `
 .nabi-content [data-nabi-typeface="sans"] { font-family: var(--nabi-font, var(--nabi-font-fallback)); }
 .nabi-content [data-nabi-typeface="serif"] { font-family: var(--nabi-font-serif, var(--nabi-font-serif-fallback)); }
 .nabi-content [data-nabi-typeface="mono"] { font-family: var(--nabi-font-mono, var(--nabi-font-mono-fallback)); }
-/* 손글씨 얼굴은 x-높이가 낮아 **같은 px 로도 눈에는 작다.** \`font-size-adjust\` 는 글꼴을 px 가
-   아니라 x-높이 기준으로 재우므로, 저장값의 크기를 안 건드리고 보이는 크기만 맞출 수 있다.
-
-   기준은 라틴이 아니라 **한글**이다. x-높이는 라틴의 개념이라 그 값에 정직하게 맞추면(0.52)
-   한글이 산세리프보다 3할 커진다 — 한글에는 x-높이가 없어 조정이 그대로 확대가 되기 때문이다.
-   그래서 한글이 같아지는 값을 재어서 골랐다(같은 글줄의 한글 폭: 산세리프 97px, 흘림 100px).
-   본문 글꼴이 다른 호스트는 토큰 하나로 다시 잰다. */
+/* 손글씨 얼굴은 x-높이가 낮아 같은 px로도 작아 보인다 — font-size-adjust로 보이는 크기만 한글 기준에 맞춰 재운다(저장값은 안 건드린다). */
+/* The cursive face's low x-height makes it look smaller at the same px, so font-size-adjust corrects only the visual size, calibrated to Hangul, without touching the stored value. */
 .nabi-content [data-nabi-typeface="cursive"] {
   font-family: var(--nabi-font-cursive, var(--nabi-font-cursive-fallback));
   font-size-adjust: var(--nabi-cursive-adjust, 0.4);
 }
 
-/* 고르는 칸도 **자기가 가리키는 얼굴로** 그린다 — 이름만 늘어놓으면 무엇을 고르는지가 글자가
-   아니라 낱말 뜻으로만 전해진다. 흘림 칸은 같은 규칙으로 재운다: 안 재우면 그 칸만 유독 작아
-   무엇을 고르는 자리인지 안 읽힌다. */
+/* 고르는 칸도 자기가 가리키는 얼굴로 그린다 — 이름만 늘어놓으면 무엇을 고르는지 낱말 뜻으로만 전해진다. */
+/* Each picker option renders in the face it names — otherwise the choice is conveyed only by the word's meaning, not by sight. */
 .nabi-ctx-group[data-wing="tf"] .nabi-btn[data-value="sans"] { font-family: var(--nabi-font, var(--nabi-font-fallback)); }
 .nabi-ctx-group[data-wing="tf"] .nabi-btn[data-value="serif"] { font-family: var(--nabi-font-serif, var(--nabi-font-serif-fallback)); }
 .nabi-ctx-group[data-wing="tf"] .nabi-btn[data-value="mono"] { font-family: var(--nabi-font-mono, var(--nabi-font-mono-fallback)); }
@@ -660,20 +623,16 @@ const FACE_CSS = `
 }
 `;
 
-// --- 값 좁히기 (087) — 팩토리가 계약의 원본이다 ---------------------------------------------------
-// 호스트가 값 목록을 줄이는 문은 이 팩토리 넷뿐이다(빌더의 `.use('tf', { values })` 도 여기를
-// 부른다 — 계약은 하나여야 한다). 좁힌 목록은 **계약 전체**에 걸린다: 커맨드(목록 밖 값은 안
-// 돈다)·들여오기(claim 이 껍데기를 벗긴다)·상황 줄(칸이 줄어든다)이 한 몸으로 좁아진다 —
-// 상황 줄만 줄이고 커맨드를 열어 두면 플러그인이 그 틈으로 목록 밖 값을 건다.
+// 값 목록을 줄이는 문은 이 팩토리 넷뿐이다(087) — 좁히면 커맨드·들여오기·상황 줄이 한 몸으로 좁아진다(하나만 줄이면 플러그인이 그 틈으로 새어든다).
+// These four factories are the only door for a host to narrow a value list (087) — narrowing hits command, import, and toolbar together, so no single layer leaves a gap a plugin could exploit.
 
 export interface ValueWingOptions {
-  // 남길 값 — 전체 목록의 부분집합. 차례는 준 차례가 아니라 공식 차례다(차례는 부르는 차례가
-  // 아니다 — 툴바 규칙과 같은 결).
+  // 남길 값 — 전체 목록의 부분집합. 차례는 준 차례가 아니라 공식 차례다.
   readonly values?: readonly string[];
 }
 
 // 목록 밖 값은 그 자리에서 죽는다 — 조용히 거르면 사람은 자기가 준 값이 걸린 줄 안다(087 §5).
-// 던지는 말에 받는 목록을 싣는다: CDN 사용자에게는 이 말이 곧 문서다.
+// An out-of-list value dies right here — silently filtering would let someone believe their value took effect (087 §5).
 function narrowed(w: string, full: readonly string[], options: ValueWingOptions): readonly string[] {
   const given = options.values;
   if (given === undefined) return full;
@@ -692,8 +651,6 @@ function narrowed(w: string, full: readonly string[], options: ValueWingOptions)
   return full.filter((value) => given.includes(value));
 }
 
-// --- wing 넷 ------------------------------------------------------------------------------------
-
 export function makeHighlightWing(options: ValueWingOptions = {}): Wing {
   const values = narrowed('hl', HIGHLIGHT_COLORS, options);
   // 기본색은 노랑이다 — 형광펜이라는 말이 먼저 뜻하는 색. 좁혀서 노랑이 빠졌으면 남은 첫 색이다.
@@ -711,7 +668,6 @@ export function makeHighlightWing(options: ValueWingOptions = {}): Wing {
         label: HIGHLIGHT_NAME,
         action: { kind: 'command', command: 'setHighlight', args: { c: first, toggleCurrent: true } },
       },
-      // 형광펜과 글자색이 시트 하나를 나눠 쓴다 — 같은 글이라 문서에는 한 번만 실린다.
       styles: COLOR_CSS,
     }),
     basic: true,
@@ -780,9 +736,8 @@ export const textColorWing: Wing = makeTextColorWing();
 
 export function makeFontSizeWing(options: ValueWingOptions = {}): Wing {
   const values = narrowed('fs', FONT_SIZES, options);
-  // 눌러서 나오는 것은 **크게**다 — 눈금이 작은 것부터라 첫 칸을 걸면 글자가 작아지는데
-  // 크기 단추를 눌러 글자가 작아지기를 바라는 사람은 없다. 좁혀서 lg 가 빠졌으면 남은 것 중
-  // 가장 큰 값이다(목록이 작은 것부터 큰 것 순이라 마지막이 그 값이다).
+  // 눌러서 나오는 건 크게다 — 크기 단추를 눌러 글자가 작아지길 바라는 사람은 없다. 좁혀서 lg가 빠졌으면 남은 값 중 가장 큰 것.
+  // Pressing the button always makes text bigger — nobody expects a size button to shrink text. If `lg` was narrowed out, the largest remaining value wins.
   const first = values.includes('lg') ? 'lg' : (values[values.length - 1] as string);
   const wing: Wing = {
     ...valueMark({
@@ -823,11 +778,11 @@ export function makeFontSizeWing(options: ValueWingOptions = {}): Wing {
 }
 export const fontSizeWing: Wing = makeFontSizeWing();
 
-// md 조립은 **서체 하나뿐**이고 그중 고정폭 하나뿐이다 — 형광펜·글자색·크기는 md 에 자리가
-// 없어서 `toMd` 를 안 단다(그 노드만 html 로 떨어진다).
+// md 조립은 서체 중 고정폭 하나뿐 — 나머지(형광펜·글자색·크기·세리프 등)는 md에 자리가 없어 html로 낸다.
+// Only monospace typeface gets md output — everything else (highlight, color, size, other faces) has no md slot and falls back to html.
 //
-// 코드 조각(`` `x` ``)의 속은 md 에서 평문뿐이다. 마크가 섞였거나 백틱이 양 끝에 선 글은
-// 표식을 못 세우므로 html 로 낸다 — 되읽을 때 조각이 엉뚱한 자리에서 닫히기 때문이다.
+// 마크가 섞였거나 글 양끝에 백틱이 있으면 코드 표식을 못 세워 html로 낸다 — 되읽을 때 엉뚱한 자리에서 닫히기 때문이다.
+// Mixed marks or backticks at either end block the code-span syntax entirely, falling back to html — otherwise re-parsing would close the span in the wrong place.
 const monoMd: MdBuilder = (node, ctx) => {
   if (node.a?.['v'] !== 'mono') return ctx.html();
   let raw = '';
@@ -843,8 +798,8 @@ const monoMd: MdBuilder = (node, ctx) => {
 
 export function makeTypefaceWing(options: ValueWingOptions = {}): Wing {
   const values = narrowed('tf', TYPEFACES, options);
-  // 산세리프는 표식 없는 글이 이미 입고 있는 것이라, 눌러서 나오는 것은 그다음 얼굴이다 —
-  // 세리프가 남았으면 세리프, 아니면 산세리프가 아닌 첫 얼굴, 산세리프뿐이면 그것이다.
+  // 산세리프는 표식 없는 글이 이미 입고 있어, 눌러서 나오는 건 그다음 얼굴 — 세리프가 남았으면 세리프, 아니면 산세리프 아닌 첫 얼굴.
+  // Sans is already the unmarked default, so the button applies the next face instead — serif if available, otherwise the first non-sans option.
   const first = values.includes('serif')
     ? 'serif'
     : (values.find((value) => value !== 'sans') ?? (values[0] as string));
@@ -870,9 +825,8 @@ export function makeTypefaceWing(options: ValueWingOptions = {}): Wing {
       title: TYPEFACE_NAME,
       controls: [
         {
-          // **칸 넷이다 — 슬라이더가 아니다.** 서체는 순서가 없다: 세리프가 고정폭보다 "크거나"
-          // "작지" 않다. 눈금은 순서 있는 값의 모양이고(글자 크기가 그렇다), 순서 없는 값에 눈금을
-          // 씌우면 없는 차례를 있는 것처럼 말하게 된다.
+          // 칸 넷이지 슬라이더가 아니다 — 서체엔 순서가 없다(세리프가 고정폭보다 크지도 작지도 않다), 슬라이더는 없는 순서를 있는 것처럼 말한다.
+          // Four discrete options, not a slider — typefaces have no order (serif isn't "bigger" than mono), and a slider would falsely imply one.
           kind: 'select',
           name: 'face',
           command: 'setTypeface',
@@ -889,5 +843,6 @@ export function makeTypefaceWing(options: ValueWingOptions = {}): Wing {
 }
 export const typefaceWing: Wing = makeTypefaceWing();
 
-// 줄의 차례 — old 배치 그대로다: 글꼴(서체·크기)이 맨 앞에 서고, 색은 글자색이 형광펜보다 앞이다.
+// 툴바에 서는 차례 — 글꼴(서체·크기)이 맨 앞, 색은 글자색이 형광펜보다 앞이다.
+// Toolbar order — font (typeface, size) leads, then color with text-color before highlight.
 export const valueMarkWings: readonly Wing[] = [typefaceWing, fontSizeWing, textColorWing, highlightWing];

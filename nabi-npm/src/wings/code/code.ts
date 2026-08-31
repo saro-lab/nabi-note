@@ -1,14 +1,13 @@
-// 코드 code — 평문 문단 하나 고정이다: 엔터는 분할이 아니라 라인이고(인라인 홀더라
-// doc 이 그렇게 라우팅한다), 속에는 마크가 없다. 마크 금지는 말이 아니라 repair 가 지킨다
-// 어떤 길로 마크가 들어와도 cocoon 을 지나며 껍데기가 벗겨지고 글자만 남는다.
+// 코드 code — 평문 문단 하나 고정. 엔터는 분할이 아니라 라인이고, 마크 금지는 repair가 지킨다(글자만 남긴다).
+// The code box is one fixed plain-text paragraph; Enter adds a line, never a split, and repair strips any mark down to bare text.
 import { BR, P, isElement, isWrapper, type ElementNode, type NabiNode } from '../../schema/index.js';
 import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import { DEFAULT_BUILDERS } from '../../html/index.js';
 import { language } from '../../html/values.js';
-import { caretAt, ordered } from '../../caret/index.js';
+import { caretAt, isCollapsed, ordered } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
 import { replaceAt } from '../../doc/index.js';
-import { blockOwnerAt } from '../../wing/ops.js';
+import { blockOwnerAt, exitWrapper } from '../../wing/ops.js';
 import { type OnKey, type Wing } from '../../wing/index.js';
 import type { MdBuilder } from '../../io/index.js';
 import type { LocaleText } from '../../locale/index.js';
@@ -68,8 +67,8 @@ const CODE_ICON =
   '<g transform="translate(8 8) scale(1.2273) translate(-8 -8)" stroke-width="1.141">' +
   '<path d="M5.75 5.25 2.5 8l3.25 2.75M10.25 5.25 13.5 8l-3.25 2.75"/></g>';
 
-// 상황 줄에 단추로 서는 언어들 — old 목록 그대로다. 이름은 하이라이터에 넘어가는 **값**이라
-// 번역하지 않는다.
+// 상황 줄 단추로 서는 언어들 — 이름은 하이라이터에 넘어가는 값이라 번역하지 않는다.
+// Languages shown as context-toolbar buttons — the names are values passed to the highlighter, never translated.
 const COMMON_LANGUAGES: readonly string[] = [
   'javascript',
   'typescript',
@@ -102,14 +101,14 @@ const COMMON_LANGUAGES: readonly string[] = [
 ];
 
 const CODE_CSS = `
-/* 갓 만들어진 빈 상자도 상자로 보여야 한다 — 속이 한 줄도 없으면 padding 만 남아 납작하게
-   찌그러진다. 한 줄 높이를 바닥으로 둔다. */
+/* 빈 상자도 한 줄 높이를 바닥으로 둔다 — 안 그러면 padding만 남아 납작해진다. */
+/* A freshly made empty box keeps a one-line floor height, or it flattens to just its padding. */
 .nabi-content pre {
   background: var(--nabi-soft); border-radius: var(--nabi-radius, 6px); padding:.7em.9em;
   overflow-x: auto; font-size:.9em; min-block-size: 1.6em; box-sizing: content-box;
 }
-/* 코드 상자의 글꼴도 **서체 갈래의 고정폭과 같은 토큰**을 쓴다 — 호스트가 그 하나를 덮으면
-   서체 wing 의 '고정폭' 과 코드 상자가 함께 따라온다. 여기만 손으로 적으면 둘이 갈라진다. */
+/* 서체 wing의 '고정폭' 토큰을 그대로 쓴다 — 여기만 따로 적으면 호스트가 덮어도 둘이 갈라진다. */
+/* Reuses the typeface wing's monospace token, so a host override moves both together instead of splitting them. */
 .nabi-content pre > code { font-family: var(--nabi-font-mono, var(--nabi-font-mono-fallback)); white-space: pre-wrap; }
 .nabi-content [data-nabi-token="comment"] { color: #7a8a7a; font-style: italic; }
 .nabi-content [data-nabi-token="string"] { color: #a2543a; }
@@ -118,7 +117,8 @@ const CODE_CSS = `
 .nabi-content [data-nabi-token="literal"] { color: #2f8f4e; }
 `;
 
-// 언어 하나를 갈아 끼운다 — 빈 값이면 표식을 걷는다(언어 없음). 코드 상자를 안 만들고 안 없앤다.
+// 언어를 갈아 끼운다 — 빈 값이면 표식을 걷는다. 코드 상자 자체는 안 만들고 안 없앤다.
+// Swaps the language tag, or clears it on an empty value; never creates or removes the code box itself.
 const setCodeLanguage: Command = (doc, sel, args) => {
   const [start] = ordered(sel);
   const owner = blockOwnerAt(doc, start.path, 'code');
@@ -135,7 +135,8 @@ const setCodeLanguage: Command = (doc, sel, args) => {
   return { doc: replaceAt(doc, owner.path, [next]), selection: sel };
 };
 
-// 평문으로 펴기 — 마크는 껍데기를 벗고, 라인은 라인으로 남고, 이웃한 글자는 이어진다.
+// 마크는 벗기고, 라인은 라인으로 남기고, 이웃한 글자는 이어 붙인다.
+// Strips every mark, keeps line breaks as line breaks, and merges adjacent text.
 function plainChildren(nodes: readonly NabiNode[]): NabiNode[] {
   const out: NabiNode[] = [];
   const push = (node: NabiNode): void => {
@@ -178,7 +179,8 @@ function repairCode(node: ElementNode): ElementNode {
   };
 }
 
-// 감싸기·풀기 — 블록 하나가 줄 하나이고, 풀면 줄 하나가 문단 하나다.
+// 감싸기·풀기 — 감싸면 블록 하나가 줄 하나가 되고, 풀면 줄 하나가 문단 하나가 된다.
+// Wrap/unwrap — wrapping turns each block into one line; unwrapping turns each line back into a paragraph.
 const toggleCode: Command = (doc, sel, args, env) => {
   const [start, end] = ordered(sel);
   const a = (start.path[0] ?? 0) as number;
@@ -219,27 +221,20 @@ const toggleCode: Command = (doc, sel, args, env) => {
   const lang = typeof args['lang'] === 'string' ? language(args['lang']) : undefined;
   const box: ElementNode = { w: 'code', ...(lang !== undefined ? { a: { lang } } : {}), ch: lines };
   const next = [...doc.slice(0, a), { w: P, ch: [box] } as ElementNode, ...doc.slice(b + 1)];
-  // 코드 상자 자신이 캐럿의 홀더다 (인라인 홀더 — 속은 글과 라인뿐이다).
+  // 코드 상자 자신이 캐럿의 홀더다 — 인라인 홀더, 속은 글과 라인뿐이다.
+  // The code box is its own caret holder — an inline holder containing only text and line breaks.
   return { doc: next, selection: caretAt({ path: [a, 0], offset: 0 }) };
 };
 
-// --- 탭 — 들여쓰기·내어쓰기 --------------------------------------------------------------
+// 코드 상자는 탭을 가져간다 — 코드에서 탭은 줄의 깊이를 바꾸는 키지, 글자 사이를 옮기는 키가 아니다.
+// The code box claims Tab — inside code it changes a line's indent depth, not caret position.
 //
-// **코드 상자는 탭을 가져간다.** 코드에서 탭은 글자 사이를 옮겨 다니는 키가 아니라 줄의 깊이를
-// 바꾸는 키다. 아무도 안 가져가면 코어가 스페이스 넷을 넣는데(surface/actions), 그 답은 글 문단의
-// 답이지 코드의 답이 아니다 — 여러 줄을 잡고 한 번에 미는 일이 코드에서는 흔하다.
-//
-// 규칙은 흔한 코드 편집기의 것을 그대로 쓴다:
-// 캐럿이 접혀 있으면 — 탭은 **그 자리에** 스페이스 넷을 넣는다(글자를 치는 것과 같다).
-// 범위를 잡았으면 — 걸친 **줄 전부**의 앞에 넷을 붙인다.
-// Shift+탭은 언제나 **줄 단위**다 — 걸친 줄마다 앞의 공백을 넷까지 걷는다.
-//
-// 셈은 글자로 한다. 코드 속은 평문 + 라인뿐이라(repairCode 가 지킨다) 라인을 개행 한 칸으로 펴면
-// 오프셋과 글자 자리가 1:1 이 되고, 그러면 이 일이 문자열 하나 다루기가 된다.
+// 접힌 캐럿이면 그 자리에 스페이스 넷, 범위면 걸친 줄 전부의 앞에 넷을 붙인다. Shift+탭은 언제나 줄 단위다.
+// A collapsed caret inserts four spaces right there; a range indents every touched line; Shift+Tab always works line-wise.
 const INDENT = '    ';
 
-// 코드 속을 칸 배열로 — 글자 하나가 한 칸, 라인이 한 칸(개행)이다.
-// UTF-16 단위로 쪼갠다: 칸 셈(`runLength`)이 `text.length` 라 코드 포인트로 쪼개면 어긋난다.
+// 글자 하나·라인 하나가 칸 하나 — UTF-16 단위로 쪼갠다(코드 포인트로 쪼개면 셈이 어긋난다).
+// One cell per character or line break, split by UTF-16 unit — splitting by code point would misalign the count.
 function codeCells(node: ElementNode): string[] {
   const out: string[] = [];
   for (const child of node.ch) {
@@ -266,14 +261,16 @@ function codeChildren(cells: readonly string[]): NabiNode[] {
   return out;
 }
 
-// 각 줄이 시작하는 칸 — 0 과 개행 바로 뒤.
+// 각 줄이 시작하는 칸 — 0과 개행 바로 뒤.
+// The cell where each line starts — 0, and right after each line break.
 function lineStarts(cells: readonly string[]): number[] {
   const out = [0];
   for (let i = 0; i < cells.length; i += 1) if (cells[i] === '\n') out.push(i + 1);
   return out;
 }
 
-// `from`~`to` 에 걸친 줄들의 시작 자리. 접힌 캐럿이면 그 한 줄이다.
+// `from`~`to`에 걸친 줄들의 시작 자리 — 접힌 캐럿이면 그 한 줄뿐이다.
+// The start of every line `from`-`to` touches; a collapsed caret touches just one.
 function touchedLines(cells: readonly string[], from: number, to: number): number[] {
   const starts = lineStarts(cells);
   return starts.filter((at, i) => {
@@ -283,7 +280,8 @@ function touchedLines(cells: readonly string[], from: number, to: number): numbe
   });
 }
 
-// 줄 앞의 공백을 넷까지 — 넷보다 적으면 있는 만큼만 걷는다.
+// 줄 앞의 공백을 넷까지 걷는다 — 넷보다 적으면 있는 만큼만.
+// Trims up to four leading spaces from a line; fewer than that, and it trims only what's there.
 function trimWidth(cells: readonly string[], at: number): number {
   let n = 0;
   while (n < INDENT.length && cells[at + n] === ' ') n += 1;
@@ -294,17 +292,32 @@ const sameArray = (a: readonly number[], b: readonly number[]): boolean =>
   a.length === b.length && a.every((v, i) => v === b[i]);
 
 const onKey: OnKey = (intent, doc, sel, _env, owner) => {
-  if (intent.key !== 'tab' && intent.key !== 'shiftTab') return null;
   if (owner.node.w !== 'code') return null;
+
+  // 첫/마지막 구조적 줄(개행 기준)에 있으면 래퍼문단 밖으로 탈출 — 표처럼 화면 자동 줄바꿈은 안 본다.
+  // Exits past the wrapper when the caret sits on the first/last structural (newline-based) line — ignores visual wrap, like table does.
+  if (intent.key === 'arrow') {
+    if (!isCollapsed(sel) || (intent.dir !== 'up' && intent.dir !== 'down')) return null;
+    const cells = codeCells(owner.node);
+    const starts = lineStarts(cells);
+    const [line] = touchedLines(cells, sel.focus.offset, sel.focus.offset);
+    const boundary = intent.dir === 'up' ? starts[0] : starts[starts.length - 1];
+    if (line === undefined || line !== boundary) return null;
+    return exitWrapper(doc, owner.path, intent.dir);
+  }
+
+  if (intent.key !== 'tab' && intent.key !== 'shiftTab') return null;
 
   const cells = codeCells(owner.node);
   const [start, end] = ordered(sel);
   const inBox = (pos: { readonly path: readonly number[] }): boolean => sameArray(pos.path, owner.path);
-  // 한쪽이라도 상자 밖이면 그 선택은 코드의 것이 아니다 — 코어에 돌려준다.
+  // 한쪽이라도 상자 밖이면 코어에 돌려준다.
+  // If either end of the selection sits outside the box, this key isn't code's to handle.
   if (!inBox(start) || !inBox(end)) return null;
   const collapsed = start.offset === end.offset;
 
-  // 접힌 캐럿의 탭은 **그 자리에** 넣는다 — 줄 앞으로 밀지 않는다(글자를 치는 것과 같다).
+  // 접힌 캐럿의 탭은 그 자리에 넣는다 — 줄 앞으로 밀지 않고, 글자를 치는 것과 같다.
+  // A collapsed caret's Tab inserts right there, not at the line's start — like typing a character.
   if (intent.key === 'tab' && collapsed) {
     const next = [...cells.slice(0, start.offset), ...INDENT.split(''), ...cells.slice(start.offset)];
     const at = { path: owner.path, offset: start.offset + INDENT.length };
@@ -314,7 +327,8 @@ const onKey: OnKey = (intent, doc, sel, _env, owner) => {
   const lines = touchedLines(cells, start.offset, end.offset);
   if (lines.length === 0) return null;
 
-  // 줄마다 얼마나 넣고 뺄지 먼저 센다 — 자리 옮기기는 그 셈으로 한다(뒤에서부터 고쳐야 인덱스가 안 흔들린다).
+  // 줄마다 넣고 뺄 폭을 먼저 센다 — 뒤에서부터 고쳐야 인덱스가 안 흔들린다.
+  // Counts each line's width delta up front — edits apply back-to-front so indices don't shift mid-way.
   const width = new Map<number, number>();
   for (const at of lines) width.set(at, intent.key === 'tab' ? INDENT.length : -trimWidth(cells, at));
   const moved = [...width.values()].some((n) => n !== 0);
@@ -327,7 +341,8 @@ const onKey: OnKey = (intent, doc, sel, _env, owner) => {
     else if (n < 0) next.splice(at, -n);
   }
 
-  // 자리 옮기기 — 그 자리 **앞**에서 일어난 만큼 밀린다. 제 줄 안에서는 줄 시작 아래로 안 내려간다.
+  // 그 자리 앞에서 일어난 변화만큼 밀리되, 제 줄 시작 아래로는 안 내려간다.
+  // Shifts a position by whatever changed before it, but never below its own line's new start.
   const move = (offset: number): number => {
     let shift = 0;
     let own = 0;
@@ -346,15 +361,16 @@ const onKey: OnKey = (intent, doc, sel, _env, owner) => {
   };
 };
 
-// ```lang 뒤의 스페이스·엔터 — 언어는 그대로 `lang` 이 된다.
+// ```lang 뒤의 스페이스·엔터를 잡는다 — 언어는 그대로 `lang`이 된다.
+// Matches a space/Enter right after ```lang — the language becomes the box's `lang` attr.
 const FENCE = /^```([\w+#.-]{1,24})?$/;
 const fenceArgs = (m: RegExpMatchArray): { name: string; args?: Record<string, unknown> } => ({
   name: 'toggleCode',
   ...(m[1] ? { args: { lang: m[1] } } : {}),
 });
 
-// ```lang … ``` — 속은 이미 평문과 라인뿐이라 **이스케이프를 안 한다**(코드는 글자 그대로다).
-// 울타리는 속의 가장 긴 줄머리 백틱보다 하나 길다 — 코드 안의 ``` 가 상자를 일찍 닫으면 안 된다.
+// 속은 이스케이프하지 않는다(코드는 글자 그대로다) — 울타리는 속 최장 줄머리 백틱보다 하나 길게 잡는다.
+// Never escapes the body (code is verbatim) — the fence is one backtick longer than the longest run inside, so it can't close early.
 const codeMd: MdBuilder = (node) => {
   let body = '';
   for (const child of node.ch) body += typeof child === 'string' ? child : '\n';
@@ -368,10 +384,8 @@ export const codeWing: Wing = {
   place: 'container',
   basic: true,
   holds: 'inline',
-  // **코드 상자는 정렬을 안 받는다.** 다른 물건(표·그림·영상)에게 정렬은 "이 물건이 줄의 어디에
-  // 서는가"인데, 코드 상자는 제 폭이 곧 줄의 폭이라 옮겨 갈 자리가 없다. 그런데 정렬은 문단의
-  // 속성이라 `text-align` 으로 나가고, `pre` 가 그것을 물려받아 **코드 줄이 가운데로 밀린다** —
-  // 들여쓰기가 뜻인 글에서 그것은 옮기는 것이 아니라 망가뜨리는 것이다.
+  // 코드 상자는 정렬을 안 받는다 — 제 폭이 곧 줄의 폭이라 옮길 자리가 없고, 정렬은 들여쓰기를 망가뜨린다.
+  // The code box rejects align — its width already fills the line, and align would break its meaningful indentation instead.
   noAlign: true,
   toHtml: DEFAULT_BUILDERS['code'],
   toMd: codeMd,
@@ -379,12 +393,8 @@ export const codeWing: Wing = {
   onKey,
   currentValue: (node) => language(node.a?.['lang']),
   commands: { toggleCode, setCodeLanguage },
-  // 상황 줄 — 언어를 고르는 자리다. 색칠은 언어를 알아야 도는데(모르면 평문이다), 이 줄이 그
-  // 언어를 정하는 유일한 문이다.
-  //
-  // 셋으로 짜인다: ① 판 — 목록에 없는 언어를 손으로 친다 ② 지우기 — 언어 없음으로 되돌린다
-  // ③ 흔한 언어 단추들 — 대부분은 여기서 한 번에 끝난다.
-  // **언어 이름은 번역하지 않는다** — 하이라이터에 그대로 넘어가는 값이지 사람에게 하는 말이 아니다.
+  // 언어를 정하는 유일한 문 — 직접 입력·지우기·흔한 언어 단추 셋으로 짜인다. 언어 이름은 번역하지 않는다.
+  // The only place to set the language — free-text entry, a clear button, and common-language buttons; names stay untranslated (they're highlighter values).
   context: {
     title: LANGUAGE_NAME,
     controls: [
@@ -402,7 +412,8 @@ export const codeWing: Wing = {
         command: 'setCodeLanguage',
         args: { lang: '' },
         label: LANGUAGE_CLEAR,
-        // 지울 것이 있을 때만 선다 — 없는 언어를 지우는 단추는 아무 말도 안 한다.
+        // 지울 언어가 있을 때만 선다.
+        // Shows only when there's an actual language to clear.
         visible: (node) => typeof node.a?.['lang'] === 'string' && node.a['lang'] !== '',
       },
       ...COMMON_LANGUAGES.map((lang) => ({
@@ -414,7 +425,8 @@ export const codeWing: Wing = {
       })),
     ],
   },
-  // 색칠은 표면 부속이다 (11) — 토큰은 화면 span 에만 살고 트리에는 안 남는다.
+  // 색칠은 표면 부속이다(11) — 토큰은 화면 span에만 살고 트리에는 안 남는다.
+  // Highlighting lives in the surface layer (11) — tokens exist only as screen spans, never in the tree.
   attach: codeAttach,
   inputRules: [
     { trigger: 'space', pattern: FENCE, run: fenceArgs },

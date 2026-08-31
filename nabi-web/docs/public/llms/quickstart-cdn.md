@@ -3,14 +3,14 @@
 The browser build exposes the root API as a single global. Pin a package version in production.
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@0.9.0/dist/nabi.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@1.0.0/dist/nabi.css">
 
 <div id="editor" class="nabi">
   <div id="toolbar" class="nabi-toolbar"></div>
   <div id="content" class="nabi-content"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/nabi-note@0.9.0/dist/browser/nabi-note.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/nabi-note@1.0.0/dist/browser/nabi-note.min.js"></script>
 <script>
   const N = window.NabiNote;
   const content = document.querySelector('#content');
@@ -55,7 +55,7 @@ The picker throws descriptive runtime errors because CDN JavaScript has no TypeS
 ## Published HTML
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@0.9.0/dist/nabi.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nabi-note@1.0.0/dist/nabi.css">
 <article id="article" class="nabi-content"></article>
 <script>
   article.innerHTML = built.nabi.getHtml();
@@ -66,7 +66,7 @@ The root bundle does not include `attachViewer`. Use an ESM CDN import for the v
 
 ```html
 <script type="module">
-  import { attachViewer } from 'https://cdn.jsdelivr.net/npm/nabi-note@0.9.0/dist/viewer/index.js';
+  import { attachViewer } from 'https://cdn.jsdelivr.net/npm/nabi-note@1.0.0/dist/viewer/index.js';
   const viewer = attachViewer(document.querySelector('#article'), { locale: 'en' });
   // Call viewer.refresh() after replacing article HTML.
   // Call viewer.unmount() before removing the page.

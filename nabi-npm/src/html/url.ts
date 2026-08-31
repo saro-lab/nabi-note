@@ -1,18 +1,14 @@
-// URL 화이트리스트 — 밖에서 온 주소가 문서에 박히기 전에 지나는 한 곳 (old 번역).
-// DOM 이 필요 없으므로 조립(render)과 들여오기(parse)가 같은 문을 쓴다 — 같은 질문엔 같은 문.
+// 밖에서 온 주소가 문서에 박히기 전에 지나는 한 곳 — render(조립)와 parse(들여오기)가 DOM 없이 같은 문을 쓴다.
+// The one gate any outside address passes through before landing in a document; render and parse share it since neither needs a DOM.
 
-// `javascript:` 나 낯선 스킴은 받지 않는다.
 const SAFE_SCHEME = /^https?:$/i;
 
-// `blob:` 은 전부 받지만 `data:` 는 그림만 받는다 — `data:text/html` 은 그림이 아니라 문서를 실어 나른다.
-//
-// **`svg` 는 뺀다.** SVG 는 스크립트를 품는 유일한 그림 형식이라(`<svg onload=…>`), `data:` 로
-// 실려 오면 그림의 얼굴을 한 문서다. 업로드 미리보기가 SVG 를 만들 일이 없으므로 잃는 것이 없다.
+// data:는 그림만 받고 svg는 뺀다 — SVG는 스크립트를 품을 수 있는 유일한 그림 형식이라 data:로 오면 그림 얼굴을 한 문서가 된다.
+// data: is accepted only for images, svg excluded — it's the one image format that can carry a script, so over data: it's a document wearing a picture's face.
 const LOCAL_URL = /^(?:blob:|data:image\/(?!svg)[a-z0-9.+-]+[;,])/i;
 
-// 프로토콜 상대 주소 — `//evil.com/x`. 스킴이 없어 상대 경로처럼 보이지만 **호스트가 바뀐다.**
-// XSS 는 아니어도 피싱·오픈 리다이렉트이고, 그림이면 문서를 여는 순간 남의 서버로 요청이 나가
-// IP 와 Referer 가 샌다. 같은 사이트 상대 경로만 받겠다는 아래 분기의 본뜻이 이것을 거른다.
+// 스킴이 없어 상대 경로처럼 보이지만 호스트가 바뀐다(`//evil.com/x`) — 같은 사이트 상대 경로만 받는 아래 분기가 이를 거른다.
+// Schemeless but host-changing (`//evil.com/x`); the branch below, which accepts only same-site relative paths, filters it out.
 const PROTOCOL_RELATIVE = /^\/\//;
 
 // URL parser와 HTML parser가 지우거나 다른 문법으로 해석하는 글자는 주소 문에 들이지 않는다.
@@ -24,8 +20,8 @@ function encodedScheme(value: string): boolean {
   return HTML_REFERENCE.test(end < 0 ? value : value.slice(0, end));
 }
 
-// `http(s)` 절대 주소와 같은 사이트 상대 경로를 받는다. `allowLocal` 이면 `blob:`·`data:image/…` 도.
-// 통과 못 한 것은 null 이다 — "없는 주소"로 다루는 것은 부르는 쪽의 몫이다.
+// 통과 못 한 주소는 null이다 — "없는 주소"로 다룰지는 부르는 쪽의 몫이다.
+// A rejected address returns null; whether to treat that as "no address" is the caller's call.
 export function safeUrl(raw: string | undefined, allowLocal = false): string | null {
   const source = raw ?? '';
   if (URL_CONTROL.test(source) || source.includes('\\')) return null;
@@ -34,21 +30,21 @@ export function safeUrl(raw: string | undefined, allowLocal = false): string | n
   if (PROTOCOL_RELATIVE.test(value)) return null;
   if (encodedScheme(value)) return null;
 
-  // 상대 경로 — 스킴이 없으니 그대로 둔다. 콜론이 섞이면 스킴 흉내이므로 거절한다.
+  // 스킴 없는 상대 경로는 그대로 두되, 콜론이 섞이면 스킴 흉내이므로 거절한다.
+  // A scheme-less relative path passes through; a stray colon looks like a scheme impersonation and is rejected.
   if (/^[./]/.test(value)) return value.includes(':') ? null : value;
 
   try {
     const url = new URL(value);
     if (SAFE_SCHEME.test(url.protocol)) return url.href;
-    // blob:/data: 는 다시 조립하지 않는다 — 원문 그대로여야 가리키는 것이 유지된다.
-    // 판정은 `url.protocol` 이 아니라 원문으로 한다 — data: 는 스킴만 봐서는 그림인지 문서인지 모른다.
+    // blob:/data:는 원문 그대로 돌려준다(다시 조립하면 가리키는 것이 바뀐다) — 판정도 protocol이 아닌 원문으로 한다.
+    // blob:/data: pass through verbatim (reassembling would change what they point to); judged against the raw string, not `url.protocol`.
     return allowLocal && LOCAL_URL.test(value) ? value : null;
   } catch {
     return null;
   }
 }
 
-// 유튜브 영상 id — 임베드 주소를 짓는 값이라 모양이 확실할 때만 받는다.
 const VIDEO_ID = /^[\w-]{11}$/;
 
 export function videoId(raw: string | undefined): string | null {
@@ -56,12 +52,14 @@ export function videoId(raw: string | undefined): string | null {
   return VIDEO_ID.test(value) ? value : null;
 }
 
-// 임베드 주소 — 쿠키를 안 남기는 쪽으로 짓는다(old 와 같은 자리).
+// 쿠키를 안 남기는 임베드 도메인을 쓴다.
+// Uses the cookie-free embed domain.
 export function embedSrc(id: string): string {
   return `https://www.youtube-nocookie.com/embed/${id}`;
 }
 
-// 들여올 때 임베드 주소에서 영상 id 를 되읽는다 — 우리 출력과 흔한 유튜브 주소 몇 모양을 받는다.
+// 들여올 때 임베드 주소에서 영상 id를 되읽는다 — 우리 출력과 흔한 유튜브 주소 몇 모양을 받는다.
+// Reads a video id back out of an embed address on import, accepting our own output plus common YouTube URL shapes.
 const EMBED_PATH = /^\/(?:embed|v|shorts|live)\/([\w-]{11})$/;
 
 export function youtubeId(raw: string | undefined): string | null {

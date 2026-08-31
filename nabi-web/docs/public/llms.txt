@@ -36,7 +36,7 @@ Use this file as a router. Read only the document that owns your question.
 
 ## Package facts
 
-- Release contract documented here: 0.9.0.
+- Release contract documented here: 1.0.0.
 - Runtime dependencies: zero.
 - Node.js for package tooling and SSR: 20 or newer.
 - Declared browser baseline: Chrome and Edge 120, Firefox 120, Safari 17.

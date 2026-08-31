@@ -8,13 +8,13 @@ interface GtagWindow {
   gtag: (...args: unknown[]) => void
 }
 
-// An SPA loads gtag.js once, so automatic page_view would count only the first page
-// SPA 라 gtag.js 는 한 번만 온다 — 자동 page_view 에 맡기면 첫 장만 세고 만다
+// SPA라 gtag.js는 한 번만 온다 — 자동 page_view에 맡기면 첫 장만 세고 만다.
+// An SPA loads gtag.js once, so automatic page_view would count only the first page.
 export function setupGa(router: Router): void {
   const w = window as unknown as GtagWindow
   w.dataLayer = w.dataLayer || []
-  // `arguments` itself is what gtag.js reads, so this cannot become an arrow function
-  // gtag.js 가 읽는 것은 `arguments` 그 자체다 — 화살표 함수로 바꾸면 안 된다
+  // gtag.js가 읽는 것은 `arguments` 그 자체다 — 화살표 함수로 바꾸면 안 된다.
+  // `arguments` itself is what gtag.js reads, so this cannot become an arrow function.
   w.gtag = function gtag() {
     w.dataLayer.push(arguments)
   }
@@ -31,8 +31,8 @@ export function setupGa(router: Router): void {
   }
 
   send()
-  // The title changes while the new page renders, so sending in the same tick reports the previous one
-  // 제목은 새 페이지를 그리는 중에 바뀐다 — 같은 틱에 보내면 이전 제목이 실려 나간다
+  // 제목은 새 페이지를 그리는 중에 바뀐다 — 같은 틱에 보내면 이전 제목이 실려 나간다.
+  // The title changes while the new page renders, so sending in the same tick reports the previous one.
   watch(
     () => router.route.path,
     () => void nextTick(send),

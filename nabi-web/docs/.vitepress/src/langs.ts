@@ -60,8 +60,8 @@ export function useTranslate(): { t: (key: MessageKey | string) => string } {
   return { t: (key) => translate(lang.value, key as string) }
 }
 
-// Empty string at the root locale, so callers can concatenate without a special case
-// 루트 로케일이면 빈 문자열이라 부르는 쪽이 그냥 이어 붙이면 된다
+// 루트 로케일이면 빈 문자열이라 부르는 쪽이 그냥 이어 붙이면 된다.
+// Empty string at the root locale, so callers can concatenate without a special case.
 export function useRoot(): ComputedRef<string> {
   const { localeIndex } = useData()
   return computed(() => (localeIndex.value === 'root' ? '' : `/${localeIndex.value}`))
@@ -76,8 +76,8 @@ function writeCookie(name: string, value: string): void {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`
 }
 
-// Cookie first, then the browser's languages, then the default
-// 쿠키 → 브라우저 언어 → 기본값 순으로 고른다
+// 쿠키 → 브라우저 언어 → 기본값 순으로 고른다.
+// Cookie first, then the browser's languages, then the default.
 function preferredLanguage(): LocaleCode {
   const saved = readCookie(LANG_COOKIE)
   if (isLocaleCode(saved)) {
@@ -105,8 +105,8 @@ function pathWithoutLanguage(): string {
   return segments.join('/') || '/'
 }
 
-// `force` means the user picked it, so it goes into history; auto-detection replaces instead
-// `force` 는 사용자가 직접 고른 것이라 히스토리에 남기고, 자동 판별은 replace 한다
+// `force`는 사용자가 직접 고른 것이라 히스토리에 남기고, 자동 판별은 replace 한다.
+// `force` means the user picked it, so it goes into history; auto-detection replaces instead.
 export function applyLanguage(force: string = ''): void {
   const lang = force || getLanguage() || preferredLanguage()
   writeCookie(LANG_COOKIE, lang)

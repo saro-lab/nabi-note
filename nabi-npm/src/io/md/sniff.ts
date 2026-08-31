@@ -1,6 +1,5 @@
-// "마크다운 같은가" — 가벼운 스니핑이다. 느슨해도 된다: 오탐은 붙여넣기 판에서 사람이
-// 거르고(맨 글자 후보가 늘 옆에 선다), 놓치면 md 후보가 안 뜰 뿐 글은 그대로 붙는다.
-// 신호 하나면 참이다.
+// 느슨해도 된다 — 오탐은 붙여넣기 판에서 사람이 거르고, 놓치면 md 후보만 안 뜨고 글은 그대로 붙는다.
+// Loose is fine — a false positive gets filtered by the person at the paste panel, a miss just skips the md candidate.
 const SIGNALS: readonly RegExp[] = [
   /^ {0,3}#{1,6}[ \t]/m, // 제목
   /^ {0,3}>[ \t]/m, // 인용

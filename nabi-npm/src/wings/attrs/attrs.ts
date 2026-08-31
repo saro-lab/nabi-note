@@ -1,9 +1,5 @@
-// 문단 속성 wing 셋 — 제목(h)·정렬(a)·드롭캡(dc). 문단 속성은 이 셋뿐이다.
-// 노드를 안 세우므로 `toHtml` 이 없다(태그를 정하는 것은 render 의 문단 조립이다) — 얹는 것은
-// attrs 뿐이고, 값 검증은 cocoon·doc 과 같은 목록이다.
-//
-// 이름 하나 — 정렬 wing 의 `w` 는 `align` 이다. attr 키는 `a` 가 맞지만, 그 이름은
-// 링크 마크 wing 이 이미 노드 타입으로 쓰고 있어 registry 가 충돌로 죽인다. 키는 `attrKey: 'a'` 다.
+// 정렬 wing의 w는 'align'이지만 attrKey는 'a' — 'a'는 링크 마크가 이미 노드 타입으로 쓴다.
+// The align wing's w is 'align' but its attrKey is 'a' — 'a' itself is taken by the link mark's node type.
 import { P, takesAlign, type AttrValue, type ElementNode, type NabiDoc } from '../../schema/index.js';
 import {
   comparePositions,
@@ -19,7 +15,6 @@ import type { Command } from '../../editor/index.js';
 import type { InputRule, Wing } from '../../wing/index.js';
 import type { LocaleText } from '../../locale/index.js';
 
-// 이름들 — old 사전 이식(14 로케일).
 const HEADING_NAME: LocaleText = {
   ko: '제목',
   en: 'Heading',
@@ -102,7 +97,8 @@ const ALIGN_LABELS: readonly LocaleText[] = [
     id: 'Rata kanan',
   },
 ];
-// 레벨 이름 — 낱말 하나에 숫자만 붙는다. 열넷을 여섯 번 적지 않고 이 함수 하나가 짓는다.
+// 열넷 로케일 x 여섯 레벨을 손으로 안 적고 함수 하나로 짓는다.
+// Builds all locale x level strings from one function instead of writing them out by hand.
 const headingLevel = (n: number): LocaleText => ({
   ko: `제목 ${n}`,
   en: `Heading ${n}`,
@@ -123,8 +119,8 @@ const headingLevel = (n: number): LocaleText => ({
 const LEVELS: readonly AttrValue[] = [1, 2, 3, 4, 5, 6];
 const ALIGNS: readonly AttrValue[] = ['l', 'c', 'r'];
 
-// 선택이 걸친 문단들 — 여러 문단을 잡고 누르면 **그 전부**가 겨눔이다.
-// `setParagraphAttr` 이 실제로 만지는 것과 같은 목록이라, 토글 판정과 적용이 어긋나지 않는다.
+// setParagraphAttr가 실제로 바꾸는 문단과 같은 목록이어야 토글 판정이 안 어긋난다.
+// Must match exactly what setParagraphAttr touches, or the toggle check would desync from the apply.
 function paragraphsIn(doc: NabiDoc, sel: Selection, env: EditEnv): ElementNode[] {
   const [start, end] = ordered(sel);
   const out: ElementNode[] = [];
@@ -142,17 +138,14 @@ function paragraphsIn(doc: NabiDoc, sel: Selection, env: EditEnv): ElementNode[]
   return out;
 }
 
-// 여러 문단을 잡았을 때의 토글 — **전부 이미 그 값이면 해제, 아니면 전부 걸기.**
-//
-// 시작 문단 하나만 보고 정하면 섞인 선택에서 답이 뒤집힌다: 첫 줄만 제목인 세 줄을 잡고 제목을
-// 누르면 "이미 제목이네" 하고 셋 다 풀어 버린다. 사람이 바란 것은 셋 다 제목이다.
-// 걸 것이 하나도 없으면(래퍼문단만 잡혔다 같은) 거는 쪽으로 답한다 — 해제할 것이 없으니 무변화다.
+// 첫 문단만 보고 토글하면 섞인 선택에서 뒤집힌다 — 전부 같은 값일 때만 해제한다.
+// Toggling off only when every selected paragraph already matches avoids flipping mixed selections.
 function toggledValue(now: readonly (AttrValue | undefined)[], value: AttrValue): AttrValue | null {
   return now.length > 0 && now.every((each) => each === value) ? null : value;
 }
 
-// 문단 속성 커맨드 한 벌 — 값이 목록 밖이면 안 돌고(거절), 잡은 문단이 전부 그 값이면 해제한다.
-// 래퍼문단에 정렬 말고는 안 얹히는 것은 doc 이 지킨다.
+// 래퍼문단엔 정렬 말고 다른 속성이 못 얹히는 것은 doc 쪽이 지킨다(여기서 다시 안 막는다).
+// doc already guarantees wrapper paragraphs take no attr but align, so this doesn't recheck it.
 function attrCommand(key: string, parse: (raw: unknown) => AttrValue | null): Command {
   return (doc, sel, args, env) => {
     const raw = args['value'];
@@ -171,8 +164,8 @@ function attrCommand(key: string, parse: (raw: unknown) => AttrValue | null): Co
 }
 
 // --- 버튼 선언 (12) ------------------------------------------------------------------------------
-// 셋이 **시트 하나**를 나눠 쓴다. 옛 판이 wing 이름으로 시트를 셌기 때문에 같은 규칙이
-// "가족 수만큼" 실렸던 그 자리다 — 이제 열쇠가 글이라 세 wing 이 한 번만 싣는다.
+// 셋이 시트 하나를 나눠 쓴다 — 옛 판은 wing마다 시트를 셌지만 이제 글자가 키라 한 번만 싣는다.
+// The three wings share one stylesheet now, keyed by tag instead of once per wing as before.
 const PARAGRAPH_CSS = `
 .nabi-content h1 { font-size: 1.9em; }
 .nabi-content h2 { font-size: 1.6em; }

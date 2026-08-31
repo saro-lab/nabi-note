@@ -1,19 +1,18 @@
-// 칸 범위의 표면 부속 — 셋을 맡는다: **드래그로 범위 세우기**, 그 범위에서 파생되는 그림(병합
-// 상자 칠), Escape 해제. 계약 밖 리스너가 아니다 — wing 이 선언하고 mount 가 붙이는 attach 훅이다
+// 칸 범위의 표면 부속 — 드래그로 범위 세우기, 병합 상자 칠, Escape 해제 셋을 맡는다.
+// The cell-range surface attach — handles drag-to-select, painting the merged selection box, and Escape to collapse it.
 //
-// 드래그를 왜 우리가 세우는가: 브라우저에 맡겨 두었더니 표 안을 가로지르는 드래그가 **표 통째**로
-// 왔다. Chrome 은 칸을 넘는 순간 선택을 표를 감싼 겉옷(`.nabi-scroll`) 위의 엘리먼트 범위로
-// 바꿔 버리고, 그 점이 트리로 오면 "래퍼문단 안의 물건 하나" 가 된다 — 어느 칸에서 어느 칸까지인지가
-// 그 답에는 아예 없다. 셈이 틀린 것이 아니라 **물어본 것과 다른 것을 답하는** 자리라, 여기서
-// 칸으로 다시 묻는다: 누른 칸과 지금 지나는 칸, 그 둘이 곧 상자의 두 귀퉁이다.
+// 드래그를 직접 세우는 까닭 — Chrome은 표 안 드래그를 표 통째의 엘리먼트 선택으로 바꿔 버려 어느 칸에서 어느 칸까지인지가 안 남는다.
+// Drag is handled by hand because Chrome collapses an in-table drag into a whole-table element selection, losing which cell it started and ended on.
 import { isCollapsed } from '../../caret/index.js';
 import type { Attach } from '../../wing/index.js';
 import type { Position } from '../../doc/index.js';
 import { selectionBox } from './table.js';
 
-// 편집 화면 전용 표식 — 트리·저장 HTML 어디에도 안 실린다 (칠은 redraw 마다 다시 선다).
+// 편집 화면 전용 표식 — 트리·저장 HTML 어디에도 안 실린다(칠은 redraw마다 다시 선다).
+// An editor-screen-only flag — never lands in the tree or saved HTML; repainted fresh on every redraw.
 export const CELL_SELECTED = 'data-nabi-cell-selected';
-// 상자가 선 표 — 그 동안 브라우저의 글 선택을 지우는 손잡이다.
+// 상자가 선 표 — 그동안 브라우저의 글 선택을 지우는 손잡이다.
+// Marks the table currently holding a box selection — used to suppress the browser's own text selection meanwhile.
 export const CELL_BOXED = 'data-nabi-cell-boxed';
 
 export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey }) => {
@@ -28,6 +27,7 @@ export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey }) => {
   };
 
   // 지금 선택이 두 칸에 걸치면 그 사각형(병합이 걸치는 칸까지 넓힌 상자)을 칠한다.
+  // If the current selection spans two cells, paints the rectangle grown to include any straddling merged cell.
   const paint = (): void => {
     clear();
     const boxed = selectionBox(doc(), nabi.getSelection());
@@ -40,18 +40,14 @@ export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey }) => {
       el.setAttribute(CELL_SELECTED, '1');
       painted.push(el);
     }
-    // 상자가 선 동안 **표 전체**에 표식 하나 — 시트가 이것을 보고 브라우저의 글 선택을 지운다.
-    //
-    // 칸에만 걸면 모자란다: 선택은 첫 칸에서 끝 칸까지 **문서 순서로 이어져** 있어서, 상자 밖인데
-    // 그 사이에 낀 칸(2×2 를 잡으면 첫 줄의 셋째 칸)에 브라우저의 파란 칠이 남는다. 상자는 칸
-    // 단위이고 글 선택은 글자 단위라 두 경계가 어긋나 보인다 — 표 하나에 한 번 거는 것이 맞다.
+    // 표 전체에 표식 하나를 건다 — 칸에만 걸면 문서 순서상 상자 밖인데 사이에 낀 칸에 브라우저의 글 선택이 남는다.
+    // Flags the whole table, not just individual cells — otherwise a cell caught between box cells in document order (but outside it) keeps the browser's own text selection visible.
     boxedTable = painted[0]?.closest('table') ?? null;
     boxedTable?.setAttribute(CELL_BOXED, '1');
   };
 
-  // --- 드래그로 상자 세우기 ---------------------------------------------------------------------
-
-  // 이벤트가 난 자리의 칸 — 칸의 `_id` 가 곧 DOM 의 `data-key` 다(칠할 때 쓰는 그 손잡이).
+  // 이벤트가 난 자리의 칸 — 칸의 `_id`가 곧 DOM의 `data-key`다(칠할 때 쓰는 그 손잡이).
+  // The cell an event fired on — a cell's `_id` is the DOM's `data-key`, the same handle painting uses.
   const cellKeyAt = (target: EventTarget | null): string | null => {
     const node = target as Node | null;
     const el = node?.nodeType === 1 ? (node as Element).closest('td, th') : null;
@@ -60,7 +56,8 @@ export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey }) => {
     return key === null || key === '' ? null : key;
   };
 
-  // 칸 하나의 캐럿 자리 — 칸은 문단 **하나**를 품는다(repair 가 보장한다). 그 문단의 처음이다.
+  // 칸 하나의 캐럿 자리 — 칸은 문단 하나만 품으므로(repair가 보장한다) 그 문단의 처음이다.
+  // One cell's caret position — a cell holds exactly one paragraph (repair guarantees it), so this is that paragraph's start.
   const caretInCell = (key: string): Position | null => {
     const path = pathOfKey(key);
     return path ? { path: [...path, 0], offset: 0 } : null;
@@ -74,7 +71,8 @@ export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey }) => {
 
   const onMouseMove = (ev: MouseEvent): void => {
     if (fromKey === null) return;
-    // 단추를 놓은 채 지나가는 것은 드래그가 아니다 — 창 밖에서 놓았을 때 여기로 돌아온다.
+    // 단추를 놓은 채 지나가는 건 드래그가 아니다 — 창 밖에서 놓았을 때 여기로 돌아온다.
+    // Passing through with the button already released isn't a drag — catches a mouseup that happened outside the window.
     if ((ev.buttons & 1) === 0) {
       fromKey = null;
       return;
@@ -84,7 +82,8 @@ export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey }) => {
     const anchor = caretInCell(fromKey);
     const focus = caretInCell(overKey);
     if (!anchor || !focus) return;
-    // 브라우저의 제 선택을 막는다 — 안 막으면 우리가 세운 범위를 다음 몸짓이 곧장 덮는다.
+    // 브라우저 제 선택을 막는다 — 안 막으면 다음 몸짓이 우리가 세운 범위를 곧장 덮어 버린다.
+    // Suppresses the browser's own selection — without this, its next gesture would immediately overwrite the range just set.
     ev.preventDefault();
     nabi.select({ anchor, focus });
   };
@@ -95,7 +94,8 @@ export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey }) => {
 
   const onKeyDown = (ev: KeyboardEvent): void => {
     if (ev.key !== 'Escape' || painted.length === 0) return;
-    // 상자가 서 있을 때의 Escape — 범위를 focus 칸의 캐럿으로 접는다 (드래그로만 다시 선다).
+    // 상자가 서 있을 때의 Escape — 범위를 focus 칸의 캐럿으로 접는다(드래그로만 다시 선다).
+    // Escape while a box is up collapses the range to a caret at the focus cell — only a new drag can re-establish it.
     const sel = nabi.getSelection();
     if (!isCollapsed(sel)) {
       ev.preventDefault();
@@ -107,7 +107,8 @@ export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey }) => {
   root.addEventListener('keydown', onKeyDown);
   root.addEventListener('mousedown', onMouseDown);
   root.addEventListener('mousemove', onMouseMove);
-  // 놓는 것은 편집기 밖에서도 일어난다 — 표 밖으로 끌고 나가 놓으면 root 는 그 말을 못 듣는다.
+  // 놓는 것은 편집기 밖에서도 일어난다 — 표 밖으로 끌고 나가 놓으면 root는 그 말을 못 듣는다.
+  // A mouseup can happen outside the editor entirely — dragging past the table and releasing there, root would never hear it.
   const owner = root.ownerDocument;
   owner.addEventListener('mouseup', onMouseUp);
   paint();

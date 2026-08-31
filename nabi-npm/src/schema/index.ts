@@ -1,4 +1,5 @@
-// schema 층의 문 — 나비트리의 모양·예약어·판별·유효성·왕복·런 뷰가 전부 여기서 나간다.
+// 나비트리의 모양·예약어·판별·유효성·왕복·런 뷰가 전부 여기서 나간다.
+// Every export for the nabi-tree's shape, reserved words, predicates, validation, JSON round-trip, and run views lives here.
 export { isElement, isText } from './types.js';
 export type { AttrValue, Attrs, ElementNode, NabiDoc, NabiNode } from './types.js';
 export { BR, P, RESERVED } from './reserved.js';

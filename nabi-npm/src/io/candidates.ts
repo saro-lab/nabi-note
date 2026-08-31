@@ -1,11 +1,5 @@
-// 붙여넣기 후보 모으기 — DOM 도 레지스트리도 모르는 순수 함수 하나다.
-//
-// 규칙 넷:
-//   1. 글자 계열(html·plain)이 하나라도 있으면 파일은 안 본다 — 엑셀에서 온 표는 그림이
-//      아니라 표다. 파일만 온 붙여넣기는 여기서 후보 0 을 답하고, 파일 처리기는 부르는 쪽의 일이다.
-//   2. 필터를 등록순으로 돌려 후보를 모은다 (호스트 → wing → 내장 순으로 이미 정렬돼 온다).
-//   3. 맨 글자 기본값은 **언제나 마지막**이다 — 어느 필터도 못 읽는 글이 갈 곳이 늘 하나는 있다.
-//   4. 필터가 배열을 답하면 그 순서대로 펴진다.
+// 글자 계열이 하나라도 있으면 파일은 안 보고(엑셀 표는 그림이 아니라 표다), 맨 글자 기본값은 언제나 맨 뒤에 선다.
+// If any text form is present, files are ignored (an Excel table is a table, not an image); the plain-text fallback is always last.
 import { P, type ElementNode } from '../schema/index.js';
 import { $guarded, $ownDataArray, $ownDataObject } from '../schema/json.js';
 import { canonicalTextLines } from '../schema/text.js';
@@ -13,14 +7,15 @@ import type { LocaleText } from '../locale/index.js';
 import type { IoFilter, PasteCandidate, PasteData } from './contract.js';
 
 export interface CollectOptions {
-  // 이미 순서가 정해져 온다.
   readonly filters: readonly IoFilter[];
+  // 아이콘은 부르는 쪽이 고른다 — 이 층은 그림을 안 고른다.
+  // The caller supplies the icon; this layer doesn't choose artwork.
   readonly textLabel: LocaleText | string;
-  // 맨 글자 후보의 그림 — 부르는 쪽이 준다(이 층은 무늬를 안 고른다).
   readonly textIcon?: string;
 }
 
-// 맨 글자 후보 — 줄마다 문단 하나. 한 줄뿐이면 `inline` 이라 캐럿에 이어 쓴다.
+// 줄마다 문단 하나로 쪼갠다 — 한 줄뿐이면 inline 으로 캐럿에 바로 이어 쓴다.
+// One paragraph per line; a single line is marked inline and appended straight at the caret.
 export function textCandidate(plain: string, label: LocaleText | string, icon?: string): PasteCandidate {
   const lines = canonicalTextLines(plain);
   const build = (): readonly ElementNode[] =>
@@ -35,7 +30,6 @@ export function textCandidate(plain: string, label: LocaleText | string, icon?: 
 }
 
 export function collectCandidates(data: PasteData, options: CollectOptions): readonly PasteCandidate[] {
-  // 글자가 아예 없다 — 파일만 온 붙여넣기다.
   if (data.html === '' && data.plain === '') return [];
 
   const out: PasteCandidate[] = [];
@@ -83,7 +77,8 @@ export function collectCandidates(data: PasteData, options: CollectOptions): rea
       });
     }
   }
-  // 맨 글자는 `plain` 에서만 판다 — html 뿐인 붙여넣기에 빈 줄 하나를 세우지 않는다.
+  // 맨 글자 후보는 plain 에서만 판다 — html만 있는 붙여넣기에 빈 줄 하나가 뜨는 것을 막는다.
+  // Build the plain-text candidate only from `plain`, so an html-only paste doesn't add a spurious empty line.
   if (data.plain !== '') out.push(textCandidate(data.plain, options.textLabel, options.textIcon));
   return out;
 }

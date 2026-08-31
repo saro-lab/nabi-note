@@ -1,11 +1,5 @@
-// 블록(최상위 문단) 매칭 — **내용만 본다.** `_id` 는 안 쓴다(260825_001 4절 1번): 이 기능의
-// 흔한 쓰임은 이미 저장된 과거본과 지금 상태의 비교라, 저장된 쪽에 지금 트리로 이어지는 `_id`
-// 계보가 있으리라는 보장이 없다.
-//
-// 세 걸음이다:
-//   1. 조립 HTML 을 그대로 열쇠로 Myers — 같은 블록을 잇는다(결정적 조립이라 같은 내용 = 같은 글자열).
-//   2. 남은 틈 안에서 글자 유사도로 "고쳐진 블록" 짝을 잇고 글자 단위 diff 를 단다.
-//   3. 남은 삭제·추가 중 열쇠가 같은 쌍을 "이동"으로 접는다.
+// 블록 매칭은 내용만 본다 — _id는 안 쓴다: 저장된 과거본엔 지금 트리로 이어지는 id 계보가 없을 수 있다(260825_001 4-1)
+// Block matching looks only at content, not `_id`: a saved past version may lack id lineage to the current tree (260825_001 4-1)
 import { diffSeq, type EditRun } from './myers.js';
 import { changedRanges, type CharRange } from './paint.js';
 
@@ -13,7 +7,8 @@ export type DiffKind = 'same' | 'changed' | 'removed' | 'added' | 'moved';
 
 export interface DiffEntry {
   readonly kind: DiffKind;
-  // 각 문서의 최상위 블록 인덱스 — removed 는 after 가, added 는 before 가 null 이다.
+  // removed는 after가, added는 before가 null이다
+  // removed has null `after`, added has null `before`
   readonly before: number | null;
   readonly after: number | null;
   readonly beforeRanges?: readonly CharRange[];
@@ -26,7 +21,6 @@ export interface MatchBlock {
   readonly formats: readonly string[];
 }
 
-// 두 글자열의 닮음 — 공통 코드포인트 비율(0~1).
 function similarity(a: string, b: string): number {
   if (a === b) return 1;
   const ca = [...a];
@@ -37,7 +31,8 @@ function similarity(a: string, b: string): number {
   return (2 * eq) / (ca.length + cb.length);
 }
 
-// 이 아래면 "고친 블록"이 아니라 지우고 새로 쓴 것이다.
+// 이 아래는 "고친 블록"이 아니라 지우고 새로 쓴 것으로 본다
+// Below this, treat it as delete+add rather than an edited block
 const PAIR_THRESHOLD = 0.4;
 
 function mergeRanges(first: readonly CharRange[], second: readonly CharRange[]): CharRange[] {
@@ -94,7 +89,6 @@ export function matchBlocks(before: readonly MatchBlock[], after: readonly Match
     after.map((block) => block.key),
   );
 
-  // del run 과 ins run 이 붙어 오면 한 틈이다 — 그 안에서 짝을 찾는다.
   let pendingDel: number[] = [];
   const flushGap = (pendingIns: number[]): void => {
     const pairs: Array<{ bi: number; ai: number; score: number }> = [];
@@ -103,9 +97,8 @@ export function matchBlocks(before: readonly MatchBlock[], after: readonly Match
         const score = similarity(before[bi]!.text, after[ai]!.text);
         if (score >= PAIR_THRESHOLD) pairs.push({ bi, ai, score });
       }
-    // Deterministic best-first heuristic: highest score first; document order is the complete tie-breaker. This
-    // makes duplicate blocks and reordered duplicates independent of traversal
-    // or Map/Set insertion details.
+    // 점수 우선, 문서 순서로 동점 정리 — 순회·Map 순서에 안 흔들리게
+    // Score first, document order breaks ties — independent of traversal/Map order
     pairs.sort(
       (x, y) => y.score - x.score || Math.abs(x.bi - x.ai) - Math.abs(y.bi - y.ai) || x.bi - y.bi || x.ai - y.ai,
     );
@@ -145,7 +138,8 @@ export function matchBlocks(before: readonly MatchBlock[], after: readonly Match
   }
   flushGap([]);
 
-  // 이동 접기 — 열쇠가 같은 removed·added 쌍은 한 블록이 자리를 옮긴 것이다.
+  // 열쇠가 같은 removed·added 쌍은 한 블록이 자리를 옮긴 것으로 접는다
+  // A removed/added pair sharing a key collapses into one moved block
   const removedByKey = new Map<string, number[]>();
   entries.forEach((entry, at) => {
     if (entry.kind !== 'removed') return;

@@ -1,7 +1,5 @@
-// Translated — the labels read in Arabic now, and every wing's name is the word its own toolbar
-// button shows. A missing key is still a type error, so the file stays whole.
-// 옮겼다 — 이름표는 이제 아랍어로 읽히고, 날개 이름은 그 날개 툴바 버튼에 뜨는 낱말 그대로다.
-// 키가 하나라도 빠지면 여전히 타입 오류라 파일은 온전해야 한다.
+// 옮겼다 — 키 하나라도 빠지면 타입 오류라 파일이 통째로 채워져 있어야 한다.
+// Translated — a missing key is a type error, so the file must stay filled in whole.
 export const ar = {
   label: 'العربية',
   lang: 'ar',

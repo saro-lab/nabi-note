@@ -1,5 +1,5 @@
-<!-- Teleported to body when narrow: the outer layout is an `@container`, and inside one `fixed` resolves against the container, not the viewport -->
-<!-- 좁을 때 body 로 내보낸다 — 바깥이 `@container` 라 그 안에서는 `fixed` 가 뷰포트가 아니라 컨테이너를 잡는다 -->
+<!-- 좁을 때 body로 내보낸다 — 바깥이 @container라 그 안 fixed는 뷰포트가 아니라 컨테이너를 잡는다. -->
+<!-- Teleported to body when narrow: inside an @container, fixed resolves against it, not the viewport. -->
 <template>
   <Teleport to="body" :disabled="!drawer">
     <div v-if="drawer" class="menu-scrim" @click="close"></div>
@@ -71,22 +71,22 @@ const { page } = useData()
 const { t } = useTranslate()
 const root = useRoot()
 
-// One menu serves every locale — each row's page stands in all fourteen
-// 메뉴는 열넷이 나눠 쓰는 한 벌이다 — 줄마다 그 페이지가 열넷 모두에 선다
+// 메뉴는 모든 로케일이 나눠 쓰는 한 벌이다 — 줄마다 그 페이지가 전 로케일에 선다.
+// One menu serves every locale — each row's page stands in all of them.
 const nav = NAV
 
-// Must use the header hamburger's breakpoint exactly, or some widths get a drawer with no button
-// 헤더 햄버거와 같은 문턱을 써야 한다 — 어긋나면 버튼 없이 층만 뜨는 폭이 생긴다
-// `false` on the server, so it renders in the wide layout and the menu is visible without JavaScript
-// 서버에서는 `false` 라 넓은 화면 배치로 그려진다 — 자바스크립트 없이도 메뉴가 보인다
+// 헤더 햄버거와 같은 문턱을 써야 한다 — 어긋나면 버튼 없이 층만 뜨는 폭이 생긴다.
+// Must use the header hamburger's breakpoint exactly, or some widths get a drawer with no button.
+// 서버에서는 false라 넓은 화면 배치로 그려진다 — 자바스크립트 없이도 메뉴가 보인다.
+// `false` on the server, so it renders in the wide layout and the menu is visible without JavaScript.
 const narrow = ref(false)
 const drawer = computed(() => narrow.value && props.modelValue)
 
 let media: MediaQueryList | null = null
 const onMedia = (event: MediaQueryListEvent | MediaQueryList): void => {
   narrow.value = event.matches
-  // Close on widening, or the drawer snaps back in flow and shoves the article aside
-  // 넓어지면 열려 있던 층을 닫는다 — 안 닫으면 제자리로 돌아가며 본문을 밀어낸다
+  // 넓어지면 열려 있던 층을 닫는다 — 안 닫으면 제자리로 돌아가며 본문을 밀어낸다.
+  // Close on widening, or the drawer snaps back in flow and shoves the article aside.
   if (!event.matches && props.modelValue) close()
 }
 
@@ -110,8 +110,8 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKey)
 })
 
-// A branch has no path, so its locale key stands in as the unique key
-// 묶음은 경로가 없으므로 로케일 키가 그 자리를 대신한다
+// 묶음은 경로가 없으므로 로케일 키가 그 자리를 대신한다.
+// A branch has no path, so its locale key stands in as the unique key.
 function entryKey(entry: NavEntry): string {
   return isLink(entry) ? entry.path : entry.key
 }
@@ -126,8 +126,8 @@ function isCurrent(path: string): boolean {
   border-top: 1px solid color-mix(in srgb, var(--g-border) 55%, transparent);
 }
 
-/* Teleported to body, so `fixed` here really is viewport-relative */
-/* body 로 내보낸 뒤라 여기서 쓰는 `fixed` 는 진짜 뷰포트 기준이다 */
+/* body로 내보낸 뒤라 여기서 쓰는 fixed는 진짜 뷰포트 기준이다. */
+/* Teleported to body, so fixed here really is viewport-relative. */
 .menu-scrim {
   position: fixed;
   inset: 0;
@@ -140,8 +140,8 @@ function isCurrent(path: string): boolean {
   top: 3.4rem;
   inset-inline-start: 0.5rem;
   z-index: 61;
-  /* A long menu scrolls inside itself rather than the page */
-  /* 메뉴가 길어 화면을 넘으면 안쪽만 스크롤한다 */
+  /* 메뉴가 길어 화면을 넘으면 안쪽만 스크롤한다. */
+  /* A long menu scrolls inside itself rather than the page. */
   max-height: calc(100vh - 4rem);
   overflow-y: auto;
   overscroll-behavior: contain;

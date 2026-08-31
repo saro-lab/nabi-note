@@ -1,14 +1,13 @@
-// 접기 details — 제목(summary: 문단 하나 고정, 엔터는 라인) + 문단 배열, 펼침은 `o`(1/0).
-// 자기 속의 복구는 자기가 안다: 제목은 언제나 하나이고 맨 앞이며, 속은 비지 않는다
-// (캐럿이 설 자리가 없는 접기는 못 만든다). 남는 제목은 지우지 않고 문단으로 내려온다.
+// 접기 details — 제목(고정 문단 하나) + 문단 배열, 펼침은 `o`(1/0). 제목은 늘 하나이고 맨 앞, 속은 안 빈다.
+// A details block: a fixed title paragraph plus body paragraphs, open state in `o` (1/0) — always one title up front, body never empty.
 import { P, isElement, isWrapper, type ElementNode, type NabiNode } from '../../schema/index.js';
 import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import { DEFAULT_BUILDERS } from '../../html/index.js';
-import { caretAt, ordered } from '../../caret/index.js';
+import { caretAt, isCollapsed, ordered } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
 import { replaceAt } from '../../doc/index.js';
-import { blockOwnerAt } from '../../wing/ops.js';
-import { type Wing } from '../../wing/index.js';
+import { blockOwnerAt, blocksBoundaryEscape, exitWrapper } from '../../wing/ops.js';
+import { type OnKey, type Wing } from '../../wing/index.js';
 import type { LocaleText } from '../../locale/index.js';
 import { attachDetailsOpen } from './attach.js';
 
@@ -49,12 +48,12 @@ function repairDetails(node: ElementNode): ElementNode {
   for (const child of node.ch) {
     if (isElement(child) && child.w === SUMMARY) {
       if (head === null) head = child;
-      else body.push({ w: P, ch: child.ch }); // 제목이 둘 — 뒤엣것은 문단으로 내려온다
+      else body.push({ w: P, ch: child.ch }); // 제목이 둘이면 뒤엣것은 문단으로 내려온다
       continue;
     }
     body.push(child);
   }
-  if (body.length === 0) body.push({ w: P, ch: [] }); // 캐럿의 집 하나는 늘 있다
+  if (body.length === 0) body.push({ w: P, ch: [] }); // 캐럿의 집 하나는 늘 있어야 한다
   const ch: NabiNode[] = [head ?? { w: SUMMARY, ch: [] }, ...body];
   const same = ch.length === node.ch.length && ch.every((child, i) => child === node.ch[i]);
   if (same) return node;
@@ -66,7 +65,8 @@ function repairDetails(node: ElementNode): ElementNode {
   };
 }
 
-// 감싸기·풀기 — 푼 제목은 문단이 되어 앞에 선다 (글이 사라지는 자리를 안 만든다).
+// 감싸기·풀기 — 풀면 제목이 문단이 되어 앞에 선다(글이 사라지는 자리를 안 만든다).
+// Wrap/unwrap — unwrapping turns the title into a plain leading paragraph, so no text is ever lost.
 const toggleDetails: Command = (doc, sel, _args, env) => {
   const [start, end] = ordered(sel);
   const a = (start.path[0] ?? 0) as number;
@@ -97,14 +97,15 @@ const toggleDetails: Command = (doc, sel, _args, env) => {
   const box: ElementNode = { w: 'details', a: { o: 1 }, ch: [{ w: SUMMARY, ch: [] }, ...covered] };
   const next = [...doc.slice(0, a), { w: P, ch: [box] } as ElementNode, ...doc.slice(b + 1)];
   // 캐럿은 제목으로 — 새 접기에서 제일 먼저 쓰는 것이 제목이다.
+  // The caret lands in the title — it's the first thing you'd write in a fresh details block.
   return { doc: next, selection: caretAt({ path: [a, 0, 0], offset: 0 }) };
 };
 
-// 저장될 때의 펼침 상태 하나를 뒤집는다 — 캐럿이 든 접기가 대상이다.
-// (편집기 화면에서는 늘 펼쳐 둔다: 접힌 속에는 캐럿이 못 들어간다. 이 값은 **저장 HTML** 의 것이다.)
-// **저장될 때 펼쳐져 있을지 접혀 있을지**를 정한다 — 편집 화면에서는 늘 펼쳐 둔다(접힌 속에는
-// 캐럿이 못 들어간다). 인자를 안 주면 토글이고, 주면 그 값으로 정한다: 상황 줄의 두 단추가
-// 각자 자기 상태를 말하려면 "정하기"가 있어야 한다(토글 하나면 지금 어느 쪽인지 단추가 못 말한다).
+// 저장될 때 펼쳐질지 접힐지를 정한다 — 편집 화면은 늘 펼쳐 두고, 이 값은 저장 HTML의 것이다.
+// Sets the open state the saved HTML will carry — the editor always shows it expanded regardless.
+//
+// 인자를 안 주면 토글, 주면 그 값으로 정한다 — 상황 줄의 단추 둘이 자기 상태를 각각 말하려면 필요하다.
+// No argument toggles; a given value sets it directly — needed so each context-toolbar button can state its own side.
 const setDetailsOpen: Command = (doc, sel, args) => {
   const [start] = ordered(sel);
   const owner = blockOwnerAt(doc, start.path, 'details');
@@ -126,6 +127,20 @@ const setDetailsOpen: Command = (doc, sel, args) => {
   return { doc: replaceAt(doc, owner.path, [next]), selection: sel };
 };
 
+// summary는 details의 부품(parts)이라 캐럿이 제목 속일 때 `owner`는 details가 아니라 summary 자신이다.
+// summary is registered as details' part, so `owner` is summary itself when the caret sits in the title, not details.
+//
+// 제목은 늘 details의 첫 자식이라 offset 0의 위쪽 방향키만 탈출 대상 — 아래는 몸 첫 문단으로 가는 보통 걸음이다.
+// Only up-arrow at offset 0 escapes (the title is always child 0); down-arrow is an ordinary step into the body.
+const onKey: OnKey = (intent, doc, sel, env, owner) => {
+  if (owner.node.w === 'summary') {
+    if (intent.key !== 'arrow' || intent.dir !== 'up') return null;
+    if (!isCollapsed(sel) || sel.focus.offset !== 0) return null;
+    return exitWrapper(doc, owner.path.slice(0, -1), 'up');
+  }
+  return blocksBoundaryEscape(intent, doc, sel, env, owner);
+};
+
 export const detailsWing: Wing = {
   w: 'details',
   place: 'container',
@@ -136,10 +151,11 @@ export const detailsWing: Wing = {
   toHtml: DEFAULT_BUILDERS['details'],
   partHtml: { [SUMMARY]: DEFAULT_BUILDERS[SUMMARY] },
   repair: repairDetails,
-  // 눌림 표시 — 저장될 때 펼쳐져 있는가('open' 토큰).
+  onKey,
   currentValue: (node) => (node.w === 'details' ? (node.a?.['o'] === 1 ? 'open' : 'shut') : undefined),
   commands: { toggleDetails, setDetailsOpen },
-  // 삼각형을 누른 것이 곧 저장될 모습이다 — 상황 줄 단추 둘이 하던 일을 이것이 받는다 (attach.ts).
+  // 삼각형을 누른 것이 곧 저장될 모습 — 예전 상황 줄 단추 둘이 하던 일을 이것이 받는다(attach.ts).
+  // Clicking the triangle sets the saved state directly, replacing what two old context-toolbar buttons did (attach.ts).
   attach: attachDetailsOpen,
   button: {
     group: 'container',
@@ -148,10 +164,8 @@ export const detailsWing: Wing = {
     label: DETAILS_NAME,
     action: { kind: 'command', command: 'toggleDetails' },
   },
-  // **상황 줄이 없다.** 여기 있던 단추 둘(`펼친 채로 저장`·`접은 채로 저장`)은 화면이 저장값을
-  // 안 그려서 필요했던 것이다 — 편집 중에는 늘 펼쳐 두었으니 지금 어느 쪽으로 저장될지 화면이
-  // 말을 못 했다. 이제 화면이 저장값 그대로 그리고 삼각형이 그것을 바꾸므로, 같은 말을 두 번
-  // 하는 자리가 됐다.
+  // 상황 줄이 없다 — 예전 단추 둘은 화면이 저장값을 안 그리던 시절의 대체 수단이었다. 이제 같은 말의 중복이다.
+  // No context toolbar — the old two buttons only existed because the screen didn't reflect the saved state; now it does.
   styles: DETAILS_CSS,
 };
 

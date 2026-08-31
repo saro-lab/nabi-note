@@ -1,5 +1,5 @@
-// 구분선 hr — 블록 단말이다. 속도 속성도 없어서 팩토리 선언 한 줄이 전부다.
-// `attrs` 를 빈 벌로 두는 것이 곧 화이트리스트다 — 어떤 속성도 이 노드에 못 붙는다(repair 가 걷는다).
+// 구분선 hr — 속도 속성도 없는 블록 단말이라 팩토리 선언 한 줄이 전부다. 빈 `attrs`가 곧 화이트리스트다.
+// A divider — a leaf block with no attrs at all, so one factory declaration suffices; an empty `attrs` is the whitelist itself.
 import { caretAt, ordered } from '../../caret/index.js';
 import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import type { Command } from '../../editor/index.js';
@@ -46,10 +46,10 @@ export const dividerWing: Wing = {
     styles: DIVIDER_CSS,
   }),
   basic: true,
-  // 하이픈 셋 — 파서의 `^-{3,}$` 와 같은 하나다(별·밑줄도 읽지만 적는 것은 하나로 굳힌다).
+  // 별·밑줄도 읽지만 쓰는 것은 하이픈 셋으로 굳힌다 — 파서의 `^-{3,}$`와 같은 하나다.
+  // Reads asterisks/underscores too, but always writes three hyphens — matches the parser's `^-{3,}$`.
   toMd: () => '---',
   commands: { insertDivider },
-  // `---` 뒤의 엔터 — 하이픈이 셋 이상이면 된다 (old 규격표).
   inputRules: [{ trigger: 'enter', pattern: /^-{3,}$/, run: () => ({ name: 'insertDivider' }) }],
 };
 

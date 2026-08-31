@@ -12,7 +12,9 @@ import {
   type EditResult,
   type Position,
 } from '../doc/index.js';
-import { ordered, type Selection } from '../caret/index.js';
+import { caretAt, isCollapsed, ordered, type Selection } from '../caret/index.js';
+import type { CommandOutcome } from '../editor/index.js';
+import type { KeyIntent, OwnerAt } from './contract.js';
 
 export { unwrapItem } from '../doc/index.js';
 
@@ -207,4 +209,37 @@ export function blockOwnerAt(
     if (isElement(child) && child.w === w) return { path: [...at, 0], node: child };
   }
   return null;
+}
+
+// 컨테이너(표·인용·접기·코드…) 밖으로 — 래퍼문단 자신을 가리키는 자리에 캐럿을 세운다.
+// offset 0 은 래퍼문단 **앞**, 1 은 **뒤**. 이웃 문단이 미리 있을 필요는 없다 — 그 자리에서
+// 실제로 타이핑하면 `doc/insert.ts` 의 `insertText`/`insertLine` 이 그 자리에 새 문단을
+// 즉석에서 만든다(둘 다 `isWrapper` 를 보고 `besideWrapper` 로 간다).
+export function exitWrapper(doc: NabiDoc, ownerPath: readonly number[], dir: 'up' | 'down'): CommandOutcome {
+  return { doc, selection: caretAt({ path: ownerPath.slice(0, -1), offset: dir === 'up' ? 0 : 1 }) };
+}
+
+// `holds: 'blocks'` 컨테이너(인용·접기)의 위/아래 탈출 판정 — 캐럿이 첫 자식의 맨 앞(위)이거나
+// 마지막 자식의 맨 끝(아래)일 때만 `exitWrapper` 로 넘긴다. 자식 사이 이동은 코어 몫이라 null.
+export function blocksBoundaryEscape(
+  intent: KeyIntent,
+  doc: NabiDoc,
+  sel: Selection,
+  env: EditEnv,
+  owner: OwnerAt,
+): CommandOutcome | null {
+  if (intent.key !== 'arrow' || (intent.dir !== 'up' && intent.dir !== 'down')) return null;
+  if (!isCollapsed(sel)) return null;
+  const index = sel.focus.path[owner.path.length];
+  if (index === undefined) return null;
+
+  if (intent.dir === 'up') {
+    if (index !== 0 || sel.focus.offset !== 0) return null;
+    return exitWrapper(doc, owner.path, 'up');
+  }
+  const last = owner.node.ch.length - 1;
+  if (index !== last) return null;
+  const holder = nodeAt(doc, [...owner.path, last]);
+  if (!holder || sel.focus.offset !== holderLength(holder, env)) return null;
+  return exitWrapper(doc, owner.path, 'down');
 }

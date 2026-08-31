@@ -1,11 +1,5 @@
-// diff 순수 모델 — DOM mount와 fullscreen wing은 각각 `mount.ts`·`wing.ts`에 산다.
-//
-// 입력은 `setJson`/`setHtml` 이 받는 것과 같은 결의 **데이터 두 개**다(나비트리 JSON 또는 HTML
-// 글자열) — 살아있는 `Nabi` 인스턴스가 있어야 도는 게 아니라서, 임의의 두 저장본을 그대로
-// 넣을 수 있다. 매칭은 `_id` 를 안 본다(260825_001 4절 1번): 흔한 쓰임이 이미 저장된 과거본과
-// 지금 상태의 비교라, 저장된 쪽에 지금 트리로 이어지는 `_id` 계보가 있으리라는 보장이 없다.
-//
-// `diffDocs`는 블록 매칭 + 글자 단위 diff + 조립 HTML(강조 span 포함)까지 낸다.
+// 입력은 나비트리 JSON/HTML 문자열 두 개 — 살아있는 Nabi 인스턴스 없이 임의의 두 저장본을 비교한다
+// Inputs are two saved snapshots (NabiDoc JSON or HTML) — no live Nabi instance required
 import { $fromJson, $guarded } from '../schema/json.js';
 import type { ElementNode, NabiDoc } from '../schema/types.js';
 import { parseNodes, renderParagraphHtml, type HtmlOptions } from '../html/index.js';
@@ -20,10 +14,8 @@ export type { DiffEntry, DiffKind } from './match.js';
 // --- 순수 비교 ---------------------------------------------------------------------------------
 
 export interface DiffPaneBlock {
-  // 조립 HTML — changed 블록에는 글자 강조 span(.nabi-diff-del/.nabi-diff-ins)이 이미 입혀져 있다.
   readonly html: string;
   readonly text: string;
-  // entries 의 인덱스 — 이 블록이 속한 짝.
   readonly entry: number;
 }
 
@@ -31,7 +23,8 @@ export interface DocDiff {
   readonly entries: readonly DiffEntry[];
   readonly before: readonly DiffPaneBlock[];
   readonly after: readonly DiffPaneBlock[];
-  // kind !== 'same' 인 entry 인덱스 — 이전/다음 점프의 차례표.
+  // kind !== 'same'인 entry 인덱스 — 이전/다음 점프 차례표
+  // Indices where kind !== 'same' — the prev/next jump sequence
   readonly changes: readonly number[];
 }
 
@@ -43,8 +36,8 @@ const jobOf = (registry: Registry, options?: DiffOptions): HtmlOptions => ({
   ...(options?.allowLocalUrls ? { allowLocalUrls: true } : {}),
 });
 
-// 나비트리 JSON 또는 HTML 글자열 → 내부 트리. 거절 규칙은 setJson/setHtml 과 같다(아니면 null).
-// HTML 글자열 갈래는 DOMParser 를 쓰므로 브라우저 전용이다 — 없는 환경에서는 null 로 거절한다.
+// HTML 문자열 갈래는 DOMParser를 쓰므로 브라우저 전용 — 없으면 null
+// The HTML-string branch needs DOMParser, so it's browser-only — null otherwise
 function normalizeInput(input: unknown, registry: Registry, options?: DiffOptions): NabiDoc | null {
   return $guarded('diff', null, () => {
     if (typeof input === 'string') {

@@ -4,8 +4,8 @@
       <header class="g-glass drop-none @min-md:border-b! absolute w-full z-50 text-[0.9rem]">
         <div class="g-frame g-frame-full">
           <div class="header-content select-none flex items-center h-[3rem] gap-1 px-1.5 @max-[46rem]:px-2">
-            <!-- This breakpoint must match `ui/Menu.vue` exactly, or some widths get a menu with no button (or the reverse) -->
-            <!-- 문턱은 `ui/Menu.vue` 의 층 전환과 같은 값이어야 한다 — 어긋나면 버튼 없는 폭이 생긴다 -->
+            <!-- 문턱은 `ui/Menu.vue`의 층 전환과 같은 값이어야 한다 — 어긋나면 버튼 없는 폭이 생긴다. -->
+            <!-- This breakpoint must match `ui/Menu.vue` exactly, or some widths get a menu with no button. -->
             <div v-if="hasMenu" class="hdr-btn g-link-hover min-[60rem]:hidden!" @click="onMenu = !onMenu">
               <Icon name="menu" :weight="1.2" class="text-xl!" />
             </div>
@@ -15,30 +15,16 @@
             </a>
             <div class="flex-1"></div>
 
-            <!-- The only worded link in a bar of icons, so it wears one too and gives its word up at
-                 the same width the language name does — see `ui/SelectLanguage.vue` for why 32rem.
-                 The book is drawn here rather than named from material-symbols because an icon font
-                 paints on a second round trip (`display: block`), and this one sits beside the site's
-                 own mark where a late arrival reads as a broken link. Its size is in `rem` like every
-                 neighbour: the header is sized off the root, so one `html { font-size }` moves the
-                 whole bar together — a pixel value here would stay behind. -->
-            <!-- 아이콘 줄에서 유일하게 글자를 든 링크다 — 그래서 아이콘을 하나 달고, 그 글자는
-                 언어 이름과 **같은 폭에서** 물러난다(32rem 인 까닭은 `ui/SelectLanguage.vue`).
-                 책을 material-symbols 이름으로 부르지 않고 여기 그리는 까닭: 아이콘 글꼴은 한 번
-                 더 오가야 그려지는데(`display: block`), 이 자리는 사이트 마크 바로 옆이라 늦게
-                 도착하면 깨진 링크로 읽힌다. 크기는 이웃들과 같이 `rem` 이다 — 헤더가 뿌리 글자
-                 크기를 타므로 `html { font-size }` 하나로 줄 전체가 같이 움직인다(px 이면 이것만
-                 뒤에 남는다). -->
+            <!-- rem 크기를 쓰고 아이콘 글꼴 대신 인라인 svg로 그린다 — 로고 옆이라 늦게 뜨면 깨진 링크로 보인다. -->
+            <!-- Sized in rem and drawn inline instead of an icon font — next to the site mark, a late icon reads as broken. -->
             <a
               :href="`${root}/guide/getting-started`"
               class="hdr-btn gap-1.5 px-2 font-medium g-link-hover"
               :title="t('menu_docs')"
               :aria-label="t('menu_docs')"
             >
-              <!-- Outer sheet then the spine: two pages opened flat, the shape a reader already
-                   reads as "documents" — stroked to sit with the outlined icons around it -->
-              <!-- 겉장을 두르고 가운데 등을 긋는다 — 펼쳐 놓은 두 쪽, 읽는 사람이 이미 "문서"로
-                   읽는 모양이다. 둘레선으로 그려 옆의 아웃라인 아이콘들과 한 줄에 선다 -->
+              <!-- 펼친 책 모양 — 겉장과 등을 그어 "문서"로 읽히게, 둘레선만 써서 옆 아이콘들과 맞춘다. -->
+              <!-- An open book shape reads as "documents"; stroked outline only, to match the icons beside it. -->
               <svg
                 viewBox="0 0 16 16"
                 class="w-[1.05rem] h-[1.05rem]"
@@ -57,25 +43,14 @@
               <span class="@max-[32rem]:hidden!">{{ t('menu_docs') }}</span>
             </a>
 
-            <!-- Searches the language the reader is already in — one index, this one -->
-            <!-- 읽는 사람이 이미 들어와 있는 그 언어를 찾는다 — 색인은 이 언어의 것 하나다 -->
+            <!-- 읽는 사람이 이미 들어와 있는 그 언어를 찾는다 — 색인은 이 언어의 것 하나다. -->
+            <!-- Searches the language the reader is already in — one index, this one. -->
             <div class="hdr-btn g-link-hover" :title="t('search')" @click="onSearch = true">
               <Icon name="search" :weight="1.6" class="text-[1.05rem]!" />
             </div>
 
-            <!-- The one brand mark in the header — material-symbols has no GitHub glyph, so the
-                 logo rides inline rather than pulling a second icon font over the wire -->
-            <!-- 헤더의 유일한 브랜드 마크 — material-symbols 에 GitHub 글리프가 없어, 아이콘
-                 글꼴을 하나 더 받아 오는 대신 로고를 안에 그린다 -->
-            <!-- Two rules ride on this one link. First, its size is in `rem`, not the `width`/`height`
-                 attributes it used to carry: those are pixels, so the zoom moved every other icon in
-                 the bar and left this one behind. Second, it is the first thing to go when the bar
-                 runs out of room — the repo is one tap away from the footer, while search, theme and
-                 language have nowhere else to be. -->
-            <!-- 이 링크 하나에 규칙이 둘 붙는다. 하나, 크기가 `rem` 이다 — 예전의 `width`/`height`
-                 속성은 픽셀이라 돋보기가 줄의 다른 아이콘을 다 키우는 동안 이것만 그대로였다.
-                 둘, 줄이 좁아지면 **가장 먼저 물러난다** — 저장소는 바닥글에서도 한 번에 닿지만
-                 검색·테마·언어는 갈 곳이 없다. -->
+            <!-- GitHub 글리프가 없어 로고를 인라인으로 그리며, 크기는 rem — 줄이 좁아지면 이게 가장 먼저 빠진다. -->
+            <!-- No GitHub glyph in material-symbols, so the logo is inline and sized in rem; first to drop when the bar narrows. -->
             <a
               :href="REPO"
               target="_blank"
@@ -114,8 +89,8 @@
       </div>
     </template>
 
-    <!-- Root with no language: offer a choice, since the redirect script only runs on the client -->
-    <!-- 언어 없이 들어온 루트 — 고르게 한다. 보내 주는 스크립트는 클라이언트에서만 돌기 때문이다 -->
+    <!-- 언어 없이 들어온 루트 — 고르게 한다. 보내 주는 스크립트는 클라이언트에서만 돌기 때문이다. -->
+    <!-- Root with no language: offer a choice, since the redirect script only runs on the client. -->
     <div v-else class="g-frame pt-[9rem] pb-[10rem] text-center">
       <Mark size="3.5em" class="mx-auto text-[var(--g-accent)]" />
       <div class="mt-4 text-3xl">NABI NOTE</div>
@@ -156,20 +131,18 @@ useRouter().onBeforeRouteChange = () => {
   onSearch.value = false
 }
 
-// ⌘K · Ctrl+K opens it, the way every other docs site does. Not `/`: this site puts a real editor
-// on its front page, and a lone slash belongs to whoever is typing.
-// ⌘K · Ctrl+K 로 연다 — 문서 사이트가 다 그렇게 한다. `/` 는 안 쓴다: 이 사이트 첫 화면에는 진짜
-// 편집기가 있고, 빗금 하나는 지금 글을 치는 사람의 것이다.
+// ⌘K·Ctrl+K로 연다(다른 문서 사이트처럼) — `/`는 안 쓴다, 첫 화면 진짜 편집기에 타이핑용으로 남겨둔다.
+// Opens on ⌘K/Ctrl+K like other docs sites; not `/`, since the front page hosts a real editor for typing.
 function onSearchKey(event: KeyboardEvent): void {
   if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return
   event.preventDefault()
   onSearch.value = true
 }
 
-// Copy buttons come from two places and are rebuilt per page, so one delegated listener beats one per button
-// 복사 버튼은 두 곳에서 생기고 페이지마다 새로 생긴다 — 버튼마다 달지 않고 문서에 하나만 걸어 위임한다
-// `textContent` is the original source — the spans added for painting don't change any characters
-// 칠하느라 심은 span 은 글자를 바꾸지 않으므로 `textContent` 가 곧 원본이다
+// 복사 버튼은 두 곳에서 생기고 페이지마다 새로 생겨, 버튼마다 안 달고 문서에 위임 리스너 하나만 건다.
+// Copy buttons come from two places and rebuild per page, so one delegated listener replaces one-per-button.
+// 칠하느라 심은 span은 글자를 안 바꾸므로 textContent가 곧 원본이다.
+// The spans added for painting don't change any characters, so textContent is the original source.
 function onCopyClick(event: MouseEvent): void {
   const target = event.target as HTMLElement | null
   const button = target?.closest?.('div[class*="language-"] > .copy')

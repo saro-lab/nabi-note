@@ -1,9 +1,5 @@
-// 들여오기의 코어 — 태그 → 노드 역대응이다. **DOM 을 안 쓴다**: 엘리먼트 트리를
-// 최소 부분집합(tag·attrs·children)으로만 보므로 서버·시험에서도 그대로 돈다.
-// DOM 에서 이 모양으로 옮기는 어댑터는 `parse.ts` 한 곳이다 (거기가 DOM 이 허락된 유일한 자리).
-//
-// 여기서 하는 일은 **느슨한 나비트리**를 만드는 것까지다 — 감싸기·쪼개기·격자 복구·_id 는
-// schema 의 cocoon 이 한다. 여기서 다시 구현하면 두 벌이 어긋난다.
+// 태그->노드 역대응이지만 DOM 없이 tag/attrs/children 최소 부분집합만 보고(서버·시험에서도 돔), 감싸기·쪼개기·_id는 schema의 cocoon에 맡겨 여기선 느슨한 나비트리에서 멈춘다.
+// Maps tags back to nodes on a minimal tag/attrs/children subset with no DOM (so it runs server-side and in tests too); wrapping/splitting/`_id` stay with schema's cocoon, stopping here at a loose nabi-tree.
 import { cocoon } from '../schema/cocoon.js';
 import type { SchemaEnv } from '../schema/env.js';
 import { $guarded, $ownDataArray, $ownDataObject, $snapshotNodes } from '../schema/json.js';
@@ -19,7 +15,8 @@ export interface ParseText {
   readonly text: string;
 }
 
-// 태그 이름과 속성 이름은 소문자로 통일해서 넘어온다. 값 없는 속성(`open`)은 빈 글자열이다.
+// 태그·속성 이름은 소문자로 통일해서 온다 — 값 없는 속성(open)은 빈 글자열이다.
+// Tag and attribute names arrive lowercased; a valueless attribute (open) is an empty string.
 export interface ParseElement {
   readonly kind: 'element';
   readonly tag: string;
@@ -90,24 +87,27 @@ export function $snapshotParseNodes(value: unknown): ParseNode[] | null {
 export interface ImportOptions {
   readonly env: SchemaEnv;
   readonly allowLocalUrls?: boolean;
-  // 07 이 wing 의 역방향 주장(claimsHtml·importAttrs)을 잇는 자리 — 먼저 물어보고
-  // null 이면 아래의 기본 대응으로 떨어진다. `inner(block)` 은 이 엘리먼트의 속을 다시 읽는 문이다.
+  // wing의 역방향 주장을 먼저 물어보고, null이면 아래 기본 대응으로 떨어진다.
+  // Asks a wing's reverse claim first; a null falls through to the default mapping below.
   readonly claim?: (el: ParseElement, inner: (block: boolean) => NabiNode[]) => NabiNode[] | null;
 }
 
 interface Cx {
   readonly allowLocal: boolean;
   readonly claim: ImportOptions['claim'];
-  // 지금 리스트 안이면 항목이 무슨 타입인가 — `<li>` 하나가 세 가족을 나눠 쓰기 때문이다.
+  // 리스트 속 항목 타입 — `<li>` 하나를 세 갈래(ul/ol/tl)가 나눠 쓴다.
+  // The item type inside a list — a bare `<li>` is shared by three families (ul/ol/tl).
   readonly item: string;
 }
 
 // --- 태그 갈래 ------------------------------------------------------------------------------
 
-// 문단이 되는 태그. `<div data-nabi-p>` 는 래퍼문단의 출력이고 `<p>` 는 글 문단이라 둘 다 문단이다.
+// `<div data-nabi-p>`는 래퍼문단의 출력이고 `<p>`는 글 문단이라 둘 다 문단이다.
+// `<div data-nabi-p>` is a wrapper paragraph's output and `<p>` is a text paragraph — both count as a paragraph.
 const PARAGRAPH_TAGS: ReadonlySet<string> = new Set(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
 
-// 속까지 통째로 버리는 태그 — 껍데기만 벗기면 스크립트 본문이 글자로 되살아난다.
+// 껍데기만 벗기면 스크립트 본문이 글자로 되살아나므로 속까지 통째로 버린다.
+// Content is dropped whole, not just unwrapped — peeling the shell alone would resurrect script bodies as text.
 const DROP_TAGS: ReadonlySet<string> = new Set([
   'script',
   'style',
@@ -147,8 +147,8 @@ function hasClass(el: ParseElement, want: string): boolean {
   return (el.attrs['class'] ?? '').split(/\s+/).includes(want);
 }
 
-// 옷이지 구조가 아닌 껍데기 — 벗기고 속을 그 자리에 편다.
-// 표의 횡스크롤 겉옷은 우리가 입힌 것이고, tbody 류는 브라우저가 끼워 넣는 것이다.
+// 구조가 아니라 옷인 껍데기(표의 횡스크롤 겉옷, 브라우저가 끼워 넣는 tbody 류) — 벗기고 속을 그 자리에 편다.
+// A shell that's clothing, not structure (our table scroll wrapper, the browser's tbody) — unwrapped and its content spread in place.
 function transparent(item: ParseNode): boolean {
   if (item.kind !== 'element') return false;
   if (item.tag === 'tbody' || item.tag === 'thead' || item.tag === 'tfoot') return true;
@@ -166,7 +166,8 @@ function expand(nodes: readonly ParseNode[]): ParseNode[] {
 
 // --- 조각 짓기 ------------------------------------------------------------------------------
 
-// 값이 없는 attr 는 아예 안 싣는다 — 빈 글자열도 값이라, 실어 두면 왕복에서 없던 속성이 생긴다.
+// 값이 없는 attr는 안 싣는다 — 빈 글자열도 값이라, 실으면 왕복에서 없던 속성이 생긴다.
+// An attr with no value is omitted — an empty string still counts as a value and would appear as a new attr on round-trip.
 function node(w: string, a: Record<string, AttrValue | undefined>, ch: readonly NabiNode[]): ElementNode {
   const attrs: Record<string, AttrValue> = {};
   for (const [key, value] of Object.entries(a)) {
@@ -175,20 +176,22 @@ function node(w: string, a: Record<string, AttrValue | undefined>, ch: readonly 
   return Object.keys(attrs).length > 0 ? { w, a: attrs as Attrs, ch } : { w, ch };
 }
 
-// 화면 받침은 `data-nabi-filler` 표식을 단 br만 아래 단말 문에서 걷는다. 표식 없는 sole br은
-// 사용자가 넣은 실제 줄이라 보존한다.
+// 화면 받침(data-nabi-filler 표식 br)만 아래 단말 문에서 걷는다 — 표식 없는 br은 실제 줄이라 보존한다.
+// Only a screen filler (br marked data-nabi-filler) is dropped downstream; an unmarked br is a real line and stays.
 function dropFiller(nodes: readonly NabiNode[]): NabiNode[] {
   return [...nodes];
 }
 
 // --- 걷기 -----------------------------------------------------------------------------------
 
-// `block` 은 지금 자리가 블록 자리인가다 — 문단이 설 수 있는 자리인지, 글자 사이인지.
+// block은 지금 자리가 문단이 설 수 있는 자리인지, 글자 사이인지를 말한다.
+// `block` says whether this position can hold a paragraph, versus sitting between text.
 function importNodes(nodes: readonly ParseNode[], block: boolean, cx: Cx): NabiNode[] {
   const out: NabiNode[] = [];
   for (const item of expand(nodes)) {
     if (item.kind === 'text') {
-      // 블록 자리의 공백뿐인 글자는 태그 사이의 들여쓰기다 — 문단으로 거두면 없던 빈 줄이 생긴다.
+      // 블록 자리의 공백뿐인 글자는 태그 사이 들여쓰기다 — 거두면 없던 빈 줄이 생긴다.
+      // Whitespace-only text in a block position is just inter-tag indentation; keeping it would create a phantom blank line.
       if (block && item.text.trim() === '') continue;
       if (item.text !== '') out.push(item.text);
       continue;
@@ -202,13 +205,8 @@ function inline(el: ParseElement, cx: Cx): NabiNode[] {
   return importNodes(el.children, false, cx);
 }
 
-// **이사 온 서식** — 서체(tf)와 글자 크기(fs)는 한때 문단 속성이었고 지금은 마크다 (plan 의
-// 결정: 문단 하나에 하나씩만 걸리던 것이 글자 범위마다 걸린다). 그 시절에 저장된 문서는
-// `<p data-nabi-typeface="serif">` 처럼 **블록에** 그 표식을 달고 있는데, 지금 규칙으로 읽으면
-// 문단 속성 화이트리스트에 없어 **조용히 사라진다** — 실제로 그렇게 사라졌다.
-//
-// 그래서 블록에 걸린 것을 **그 속 전체를 덮는 마크 하나**로 옮긴다. 뜻이 그대로 옮겨지고
-// (문단 전체 = 그 문단의 모든 글자), 한 번 읽고 나면 저장값은 새 모양이 된다.
+// 서체(tf)·글자크기(fs)는 한때 문단 속성이었다가 지금은 마크라, 옛 문서의 블록 표식을 속 전체를 덮는 마크 하나로 옮겨 살린다.
+// Typeface (tf) and font-size (fs) used to be paragraph attrs and are marks now; an old document's block-level marker gets moved to one mark covering all its content, so it survives instead of silently vanishing.
 const MOVED_MARKS: readonly (readonly [string, string, string])[] = [
   ['data-nabi-typeface', 'tf', 'v'],
   ['data-nabi-size', 'fs', 'v'],
@@ -224,8 +222,8 @@ function dressMoved(el: ParseElement, inner: NabiNode[]): NabiNode[] {
   return out;
 }
 
-// 문단 하나 — 제목 단계·정렬·드롭캡이 태그와 `data-nabi-*` 에서 되읽힌다.
-// 속은 인라인으로 읽되 물건은 그대로 둔다 — 물건이 섞인 문단을 쪼개는 것은 cocoon 의 일이다.
+// 속은 인라인으로 읽되 물건은 그대로 둔다 — 물건이 섞인 문단을 쪼개는 것은 cocoon의 일이다.
+// Content reads as inline while lumps pass through untouched; splitting a paragraph with a lump inside is cocoon's job.
 function paragraphOf(el: ParseElement, cx: Cx): ElementNode {
   const a: Record<string, AttrValue> = {};
   const level = HEADING.exec(el.tag);
@@ -236,7 +234,8 @@ function paragraphOf(el: ParseElement, cx: Cx): ElementNode {
   return node(P, a, dressMoved(el, dropFiller(inline(el, cx))));
 }
 
-// 체크 상태 — 우리 속성이거나, 출력 관례의 선두 체크박스다.
+// 우리 속성이거나, 출력 관례의 선두 체크박스다.
+// Either our own attribute, or the leading checkbox our output convention emits.
 function checked(el: ParseElement): boolean {
   if (el.attrs['data-nabi-checked'] === 'true') return true;
   const first = expand(el.children).find((k) => k.kind === 'element');
@@ -244,7 +243,8 @@ function checked(el: ParseElement): boolean {
   return first.tag === 'input' && first.attrs['type'] === 'checkbox' && 'checked' in first.attrs;
 }
 
-// 평문 블록(코드)의 속 — 줄바꿈은 라인 노드가 된다. 마크는 여기서 전부 벗겨진다.
+// 줄바꿈은 라인 노드가 되고, 마크는 여기서 전부 벗겨진다.
+// Line breaks become br nodes; every mark is stripped away here.
 function plainText(nodes: readonly ParseNode[]): string {
   let out = '';
   for (const item of nodes) {
@@ -265,7 +265,8 @@ function plainLines(source: string): NabiNode[] {
   return dropFiller(out);
 }
 
-// 바깥 관례(`<code class="language-ts">`)에서 언어를 읽는다 — 붙여넣은 코드 상자도 언어가 따라온다.
+// `<code class="language-ts">` 관례에서 읽으므로 붙여넣은 코드 상자도 언어가 따라온다.
+// Reads from the `<code class="language-ts">` convention, so a pasted code box keeps its language.
 function languageOf(el: ParseElement): string | undefined {
   const own = language(el.attrs['data-nabi-lang']);
   if (own !== undefined) return own;
@@ -301,8 +302,8 @@ function importElement(el: ParseElement, block: boolean, cx: Cx): NabiNode[] {
     case 'img': {
       const src = safeUrl(el.attrs['src'], cx.allowLocal);
       // 못 믿을 주소는 없는 것으로 친다 — 그림이 아니라 통로가 될 수 있다.
+      // An untrustworthy address is treated as none at all — it could be a channel, not a picture.
       if (src === null) return [];
-      // `alt` 는 안 읽는다 — 대체 글이 없는 갈래다(옛 문서의 것도 여기서 떨어진다).
       return [node('img', { src, w: width(el.attrs['data-nabi-width']) }, [])];
     }
     // --- 마크 여섯 ---
@@ -339,10 +340,9 @@ function importElement(el: ParseElement, block: boolean, cx: Cx): NabiNode[] {
 
     // --- 링크 ---
     case 'a': {
-      // **가는 자리라 로컬 주소를 안 받는다** — 호스트가 미리보기 하나를 켜려고 연 것이
-      // 링크에까지 열리면, `data:image/svg+xml` 을 문 `a` 가 문서에 박힌다.
+      // 가는 자리라 로컬 주소를 안 받는다 — 허용하면 `data:image/svg+xml`을 문 링크가 문서에 박힌다.
+      // A navigation target never accepts local addresses — allowing one would let an `a` carrying `data:image/svg+xml` into the document.
       const href = safeUrl(el.attrs['href']);
-      // 화이트리스트를 통과 못 한 주소(`javascript:` 류)는 링크가 아니라 평문이다.
       if (href === null) return importNodes(el.children, false, cx);
       return [node('a', { href, file: text(el.attrs['data-nabi-file']) }, inline(el, cx))];
     }
@@ -396,16 +396,19 @@ function importElement(el: ParseElement, block: boolean, cx: Cx): NabiNode[] {
   }
 
   if (PARAGRAPH_TAGS.has(el.tag)) {
-    // 글자 사이에 선 문단 — 문단 속에 문단은 못 산다. 껍데기를 벗긴다.
+    // 문단 속엔 문단이 못 살므로, 글자 사이에 선 것은 껍데기를 벗긴다.
+    // A paragraph can't live inside another, so one found between text is unwrapped.
     if (!block) return importNodes(el.children, false, cx);
-    // 속에 또 문단이 있다면 이것은 문단이 아니라 묶음이다 (붙여넣은 `<div><p>…</p><p>…</p></div>`).
+    // 속에 또 문단이 있으면 이건 문단이 아니라 묶음이다(붙여넣은 `<div><p>…</p><p>…</p></div>`).
+    // A paragraph tag holding more paragraphs is really a bundle, not one paragraph (a pasted `<div><p>…</p><p>…</p></div>`).
     if (expand(el.children).some((k) => k.kind === 'element' && PARAGRAPH_TAGS.has(k.tag))) {
       return importNodes(el.children, true, cx);
     }
     return [paragraphOf(el, cx)];
   }
 
-  // 모르는 태그 — 껍데기를 벗기고 속만 편다. 낯선 태그가 문서에 서는 길이 없다.
+  // 낯선 태그는 문서에 못 선다 — 껍데기를 벗기고 속만 편다.
+  // An unknown tag never lands in the document — just its content, unwrapped.
   return importNodes(el.children, block, cx);
 }
 

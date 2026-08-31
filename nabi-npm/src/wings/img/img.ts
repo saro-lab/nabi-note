@@ -1,10 +1,8 @@
-// 이미지 img — 블록 단말 물건이다. 래퍼문단이 감싸고, **정렬 attr 은 없다**:
-// 정렬은 래퍼문단의 `a` 가 든다 (물건의 정렬 attr 폐지). 물건 자신의 것은 폭(`w`)뿐이다.
+// 이미지 img — 블록 단말 물건. 정렬은 래퍼문단의 `a`가 들고, 물건 자신의 것은 폭(`w`)뿐이다.
+// The image wing is a leaf block object; align lives on the wrapper paragraph, the object itself keeps only width (`w`).
 //
-// 값 거절이 이 wing 의 성격이다 — 목록 밖 폭·못 믿을 주소는 **거절되어 없는 값이 된다**.
-// 옛 판은 낯선 폭을 가장 가까운 단계로 스냅했고(clampWidth), 그래서 쓰레기 값이 그럴듯한 값으로
-// 살아남았다 (옛 확실 버그 4 — image 값 스냅). 여기서는 boxObject 의 검증기가 null 을 답하고
-// repair 가 그 attr 를 떨어뜨린다.
+// 목록 밖 폭·못 믿을 주소는 가장 가까운 값으로 스냅하지 않고 거절되어 없는 값이 된다.
+// An out-of-list width or untrusted URL is rejected outright, not snapped to the nearest valid value.
 import type { AttrValue } from '../../schema/index.js';
 import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import { replaceAt } from '../../doc/index.js';
@@ -24,8 +22,8 @@ import type { MdBuilder } from '../../io/index.js';
 import type { LocaleText } from '../../locale/index.js';
 import { imageAttach } from './watch.js';
 
-// `![](주소)` — **폭은 잃는다**(md 에 자리가 없다). 대체 글은 처음부터 안 받는 갈래라 빈 칸이다.
-// 주소가 없으면 그림이 아니므로 html 로도 낼 것이 없다 — 빈 글자다.
+// `![](주소)` — 폭은 md에 자리가 없어 잃는다. 주소가 없으면 그림이 아니라 빈 글자다.
+// Renders as `![](url)`, losing width (md has no slot for it); no URL means no image, so it's an empty string.
 const imageMd: MdBuilder = (node) => {
   const src = node.a?.['src'];
   if (typeof src !== 'string' || src === '') return '';
@@ -97,7 +95,6 @@ const VIEW_NAME: LocaleText = {
   ur: 'بڑا دیکھیں',
   id: 'Lihat besar',
 };
-// 돋보기 — 크게 보기 단추의 속.
 const ZOOM_ICON =
   '<g stroke-width="1.5"><circle cx="7" cy="7" r="4.25"/><path d="M10.2 10.2 13.5 13.5M5.2 7h3.6M7 5.2v3.6"/></g>';
 
@@ -109,9 +106,8 @@ const IMAGE_ICON =
 // 폭 표식 하나가 그림·유튜브의 생김새를 다 말한다 — 값은 퍼센트 문자열이다.
 const WIDTH_CSS = `
 .nabi-content img,.nabi-content iframe { max-inline-size: 100%; block-size: auto; }
-/* 그림은 **누르는 것**이다 — 눌러서 통째로 고르고(surface 의 onClick), 보는 쪽에서는 호스트가
-   크게 보기를 건다. 글줄 위의 텍스트 커서가 뜨면 "여기에 캐럿을 놓을 수 있다" 는 거짓말이 된다 —
-   그림 안에는 캐럿이 못 선다. */
+/* 그림은 누르는 것이다 — 캐럿이 못 서므로 텍스트 커서 대신 손가락 커서를 쓴다. */
+/* An image is clicked, not typed into — no caret can land inside it, so it gets a pointer cursor, not a text one. */
 .nabi-content.nabi-editing img { cursor: pointer; }
 .nabi-content [data-nabi-width="30"] { inline-size: 30%; }
 .nabi-content [data-nabi-width="40"] { inline-size: 40%; }
@@ -122,11 +118,8 @@ const WIDTH_CSS = `
 .nabi-content [data-nabi-width="90"] { inline-size: 90%; }
 .nabi-content [data-nabi-width="100"] { inline-size: 100%; }
 
-/* 깨진 그림 — 죽은 주소·만료된 서명 주소·사라진 blob: 이 그리는 것을 우리 그림으로 갈아 끼운다.
-   고유 크기가 0 이라 표식이 없으면 납작한 한 줄로 주저앉고, 그 자리에 브라우저의 깨진 아이콘과
-   alt 글자가 그려진다 — 문서 한가운데에 브라우저의 살림이 비치는 자리다. content 가 그려지는
-   것을 통째로 대신하므로 그 둘이 아예 안 그려진다. src 는 절대 안 건드리므로 주소가 되살아나면 load 가 표식을
-   떼고 그림이 저절로 돌아온다. 그림 자체는 old 의 것 그대로다. */
+/* 깨진 그림(죽은/만료/사라진 주소)을 우리 그림으로 갈아 끼운다 — src는 안 건드리므로 되살아나면 load가 표식을 뗀다. */
+/* A broken image (dead/expired/gone URL) gets swapped for our own placeholder — src is never touched, so a revived URL clears it on load. */
 .nabi-content img[data-nabi-broken] {
   inline-size: min(100%, 16rem);
   aspect-ratio: 1;
@@ -135,23 +128,23 @@ const WIDTH_CSS = `
 }
 `;
 
-// 폭 칸의 이름은 값 그대로다 — `40%` 는 그 자체가 이름이라 번역할 것이 없다.
+// 폭 칸의 이름은 값 그대로다 — `40%`는 그 자체가 이름이라 번역할 것이 없다.
 const widthChoices = (widths: readonly string[]): readonly WingChoice[] =>
   widths.map((value) => ({ value, label: { en: `${value}%` } }));
 
-// 폭 단계 — old 번역(30% 부터 10 단위). 그림은 글 옆에 작게 앉히고 싶을 때가 있어 바닥이 낮다.
+// 30%부터 10 단위 — 그림을 글 옆에 작게 앉히고 싶을 때가 있어 바닥이 낮다.
 export const IMAGE_WIDTHS: readonly string[] = ['30', '40', '50', '60', '70', '80', '90', '100'];
 
-// 저장값은 문자열 퍼센트다 (의 `"w": "40"`). 숫자로 들어와도 같은 값이므로 표기만 맞춘다
-// 목록 밖은 **거절**이지 가장 가까운 단계로의 스냅이 아니다.
+// 저장값은 문자열 퍼센트다 — 목록 밖 값은 거절이지 가장 가까운 단계로의 스냅이 아니다.
+// Stored as a percent string; an out-of-list value is rejected, never snapped to the nearest valid step.
 function widthAttr(value: AttrValue): AttrValue | null {
   const raw = typeof value === 'number' ? String(value) : typeof value === 'string' ? value.trim() : '';
   return IMAGE_WIDTHS.includes(raw) ? raw : null;
 }
 
 export interface ImageWingOptions {
-  // 로컬 주소(`blob:`·`data:image/…`)를 살릴지. 업로드 미리보기가 쓰는 길이라 옵션으로 열되
-  // **기본은 꺼짐**이다 — 페이지를 벗어나면 죽는 주소가 문서에 박히면 안 된다.
+  // 업로드 미리보기용 로컬 주소(`blob:`·`data:image/…`) 허용 여부 — 문서에 박히면 안 되니 기본은 꺼짐.
+  // Whether to accept local URLs (`blob:`, `data:image/…`) for upload previews — off by default, since they die outside the page.
   readonly allowLocalUrls?: boolean;
 }
 
@@ -160,7 +153,8 @@ export function makeImageWing(options: ImageWingOptions = {}): Wing {
   const srcAttr = (value: AttrValue): AttrValue | null =>
     typeof value === 'string' ? safeUrl(value, allowLocal) : null;
 
-  // 이미지 하나를 캐럿 자리에 세운다 — 래퍼문단은 insertLump 가 입힌다 (wing/ops 의 한 벌).
+  // 이미지 하나를 캐럿 자리에 세운다 — 래퍼문단은 insertLump가 입힌다.
+  // Places one image at the caret — insertLump wraps it in its owning paragraph.
   const insertImage: Command = (doc, sel, args, env) => {
     const raw = args['src'];
     if (typeof raw !== 'string') return null;
@@ -176,13 +170,14 @@ export function makeImageWing(options: ImageWingOptions = {}): Wing {
       a['w'] = LUMP_DEFAULT_WIDTH; // 말 없이 넣은 그림의 폭 (old 와 같은 값)
     }
     const [start] = ordered(sel);
-    // 래퍼문단이 **가운데**로 선다 — 물건의 정렬은 물건이 아니라 래퍼문단의 것이다.
-    // 이미 서 있던 빈 문단을 쓰는 길에서는 그 문단이 들고 있던 정렬이 이긴다 (wing/ops).
+    // 래퍼문단은 가운데로 선다 — 이미 있던 빈 문단을 쓰는 길에서는 그 문단의 정렬이 이긴다.
+    // The wrapper defaults to center align, but reusing an existing empty paragraph keeps its own align instead.
     const r = insertLump(doc, start, { w: 'img', a, ch: [] }, env, { a: LUMP_DEFAULT_ALIGN });
     return { doc: r.doc, selection: caretAt(r.caret) };
   };
 
-  // 폭 하나를 갈아 끼운다 — 캐럿이 든 래퍼문단의 이미지가 대상이다(캐럿은 물건 속에 못 선다).
+  // 캐럿이 든 래퍼문단의 이미지를 대상으로 폭을 갈아 끼운다.
+  // Swaps the width on the image owned by the wrapper the caret sits in.
   const setImageWidth: Command = (doc, sel, args) => {
     const width = widthAttr((args['w'] ?? '') as AttrValue);
     if (width === null) return null;
@@ -205,9 +200,11 @@ export function makeImageWing(options: ImageWingOptions = {}): Wing {
   const wing: Wing = {
     ...boxObject({
       w: 'img',
-      // 이름이 곧 화이트리스트다 — 여기 없는 attr(옛 판의 정렬 `a` 가 그것이다)는 떨어진다.
+      // 이름이 곧 화이트리스트다 — 여기 없는 attr은 떨어진다.
+      // The declared keys are the whitelist itself — anything else gets dropped.
       attrs: { src: srcAttr, w: widthAttr },
-      // 주소 없는 그림은 그림이 아니다 — 못 믿을 주소를 걸러 낸 자리에 유령을 안 남긴다.
+      // 주소 없는 그림은 그림이 아니다 — 걸러진 자리에 유령을 안 남긴다.
+      // No URL means no image — a rejected address leaves no ghost node behind.
       requires: ['src'],
       button: {
         group: 'media',
@@ -216,13 +213,8 @@ export function makeImageWing(options: ImageWingOptions = {}): Wing {
         action: {
           kind: 'prompt',
           command: 'insertImage',
-          // **주소 하나뿐이다.** 대체 글 칸은 걷었다 — 깨진 그림 자리에 우리 그림이 서므로
-          // "안 보일 때 대신 읽을 글" 의 화면 몫이 이미 채워져 있고, 넣을 때마다 비워 둘 칸이
-          // 하나 더 있으면 그 칸은 늘 비어 있게 된다.
-          // 확인은 `insertImage` 가 받을 주소일 때만 눌린다 — 같은 `safeUrl(값, allowLocal)` 이다.
-          // **`allowLocal` 까지 같아야 한다**: 로컬 주소를 여는 인스턴스에서는 `blob:` 도 눌려야
-          // 하고, 안 여는 인스턴스에서는 눌러 봐야 커맨드가 거절한다. 그래서 이 검사는 모듈이
-          // 아니라 이 팩토리 안에 산다(인스턴스마다 답이 다른 검사다).
+          // 주소 하나뿐이다 — 대체 글 칸은 없다. 깨진 그림 표식이 그 화면 몫을 이미 채운다.
+          // Just one field, the address — no alt-text slot, since the broken-image placeholder already covers that role.
           fields: [
             { name: 'src', kind: 'url', label: ADDRESS_NAME, validate: (value) => safeUrl(value, allowLocal) !== null },
           ],
@@ -232,17 +224,14 @@ export function makeImageWing(options: ImageWingOptions = {}): Wing {
     }),
     basic: true,
     toMd: imageMd,
-    // 상황 줄 — **폭과 크게 보기 둘뿐**이다. 정렬은 래퍼문단의 것이라 여기 없고
-    // 대체 글도 여기 없다 — old 의 상황 줄에도 없었다. 대체 글은 그림을 **넣을 때** 한 번 묻는
-    // 것이지(단추의 prompt 가 그 자리다) 그림을 고른 채 늘 곁에 두고 고치는 것이 아니다.
-    // 늘 띄워 두면 자주 쓰는 폭이 글칸 하나만큼 밀리고, 상황 줄은 그 물건의 **지금 모양**을
-    // 말하는 자리인데 대체 글은 모양이 아니다.
+    // 상황 줄엔 폭과 크게 보기 둘뿐 — 정렬은 래퍼문단 몫이고, 대체 글은 넣을 때 한 번 묻는 값이라 여기 없다.
+    // Context toolbar has only width and view-large — align belongs to the wrapper, and alt text is asked once at insert time, not shown here.
     context: {
       title: IMAGE_NAME,
       controls: [
         {
-          // 눈금이다 — 폭은 순서를 갖는 값이라 칸 여덟보다 슬라이더 하나가 맞다. 옆의 글자가
-          // 지금 몇 %인지 말한다.
+          // 폭은 순서를 갖는 값이라 칸 여덟 대신 슬라이더 하나 — 옆 글자가 지금 값을 말해 준다.
+          // Width is ordered, so one slider beats eight buttons — the adjacent readout shows the current percent.
           kind: 'range',
           name: 'width',
           command: 'setImageWidth',
@@ -252,17 +241,20 @@ export function makeImageWing(options: ImageWingOptions = {}): Wing {
           values: widthChoices(IMAGE_WIDTHS),
           readout: true,
         },
-        // 크게 보기 — 커맨드를 안 돌린다(본다고 문서가 바뀌지 않는다). 주소가 비면 안 선다.
+        // 커맨드를 안 돌린다 — 보는 것으로는 문서가 안 바뀐다. 주소가 비면 안 선다.
+        // Runs no command — viewing never mutates the document; hidden when there's no address.
         { kind: 'lightbox', name: 'view', src: 'src', svg: ZOOM_ICON, label: VIEW_NAME },
       ],
     },
     commands: { insertImage, setImageWidth },
-    // 깨짐 감시·라이트박스 자리 — 선언만 하고 붙이는 것은 surface 의 mount 다.
+    // 깨짐 감시·라이트박스 자리 — 선언만 하고 붙이는 것은 surface의 mount다.
+    // Just a declaration; surface's mount does the actual attaching for broken-image watching and the lightbox.
     attach: imageAttach,
   };
   $markBuiltinAttrOwner(wing, ['img']);
   return wing;
 }
 
-// 기본 인스턴스 — 로컬 주소는 꺼져 있다. 업로드 미리보기를 쓰는 호스트가 makeImageWing 으로 연다.
+// 기본 인스턴스 — 로컬 주소는 꺼져 있다. 업로드 미리보기를 쓰는 호스트는 makeImageWing으로 연다.
+// The default instance keeps local URLs off; a host using upload previews opens them via makeImageWing.
 export const imageWing: Wing = makeImageWing();
