@@ -1,6 +1,5 @@
-// 그릇 — parts 없는 컨테이너(인용·접기·코드)다. 탈출은 빠른 이중 엔터 (, 옛 048):
-// 첫 엔터가 남긴 흔적(마지막 빈 문단·끝 라인) 위에서 빠르게 한 번 더 치면, 그 흔적을 걷고
-// 래퍼문단 다음의 새 빈 문단으로 나간다. 타이밍 창은 조정 가능한 상수다 (surface 옵션).
+// 그릇은 parts 없는 컨테이너(인용·접기·코드)다 — 첫 엔터가 남긴 흔적(마지막 빈 문단·끝 라인) 위에서 빠르게 한 번 더 치면(이중 엔터, 048) 그 흔적을 걷고 래퍼문단 뒤 새 빈 문단으로 나간다
+// A vessel is a part-less container (quote/details/code); a quick second Enter (double-tap, 048) on the trace of the first (a trailing empty paragraph or line) removes that trace and exits to a fresh empty paragraph after the wrapper
 import {
   P,
   isElement,
@@ -21,14 +20,8 @@ export interface VesselAt {
   readonly node: ElementNode;
 }
 
-// 캐럿을 품은 가장 안쪽 그릇 — 컨테이너 wing 의 노드다.
-//
-// **`parts` 가 있는지로 가르지 않는다.** 접기는 요약(summary)을 부품으로 데려오지만 본문은 자기
-// 자식으로 직접 든다 — 그릇이 맞다. `parts` 로 걸렀더니 접기에서 빠른 엔터 탈출이 아예 안 됐다.
-//
-// 표·리스트가 안 걸리는 것은 여기가 아니라 `canEscape` 가 이미 지킨다: 그 둘은 캐럿의 홀더가
-// 컨테이너의 **직계 자식이 아니라** 부품 속(표는 tr>td>문단, 리스트는 li>문단)이라 깊이가 안 맞는다.
-// 조건 하나로 두 번 거를 이유가 없다 — 자리로 갈리는 것을 이름으로 또 가르면 곧 어긋난다.
+// 캐럿을 품은 가장 안쪽 그릇(컨테이너 wing 노드)을 찾는다 — parts 유무로는 안 가른다(접기는 요약만 부품이고 본문은 직계 자식이라, parts로 거르면 접기의 빠른 엔터 탈출이 안 됐다). 표·리스트는 여기가 아니라 canEscape가 깊이 불일치로 이미 걸러 준다
+// Finds the innermost vessel (a container-wing node) holding the caret; it doesn't branch on whether the node has `parts` (details' body is a direct child, only its summary is a part, so filtering by parts broke double-Enter escape there). Tables/lists are already excluded by canEscape via depth mismatch, not here
 export function vesselAt(doc: NabiDoc, focus: Position, registry: Registry): VesselAt | null {
   for (let depth = focus.path.length; depth >= 1; depth -= 1) {
     const path = focus.path.slice(0, depth);
@@ -43,9 +36,8 @@ export function vesselAt(doc: NabiDoc, focus: Position, registry: Registry): Ves
 const samePrefix = (prefix: readonly number[], path: readonly number[]): boolean =>
   prefix.every((v, i) => v === path[i]);
 
-// 탈출 조건 — 캐럿이 "첫 엔터의 흔적" 위에 서 있다:
-//   블록 그릇(인용·접기): 그릇의 마지막 블록인 빈 문단의 첫머리
-//   인라인 그릇(코드): 글 끝이고 마지막 칸이 라인
+// 탈출 조건: 캐럿이 첫 엔터의 흔적 위에 있다 — 블록 그릇(인용·접기)은 마지막 빈 문단의 첫머리, 인라인 그릇(코드)은 글 끝이자 마지막 칸이 라인일 때
+// Escape condition: the caret sits on the trace of the first Enter -- for a block vessel (quote/details), the start of its last (empty) paragraph; for an inline vessel (code), the text's end where the last unit is a line
 export function canEscape(doc: NabiDoc, focus: Position, vessel: VesselAt, env: SchemaEnv): boolean {
   const node = nodeAt(doc, vessel.path);
   if (!node) return false;
@@ -66,8 +58,8 @@ export function canEscape(doc: NabiDoc, focus: Position, vessel: VesselAt, env: 
   return block !== undefined && isElement(block) && block.w === P && block.ch.length === 0;
 }
 
-// 탈출 연산 — 흔적을 걷고, 래퍼문단 다음에 빈 문단을 세워 캐럿을 놓는다.
-// 그릇이 통째로 비면 그릇(래퍼째)도 같이 사라진다 — 방금 걸어 나온 빈 그릇을 남길 이유가 없다.
+// 탈출 연산 — 흔적을 걷고 래퍼문단 다음에 빈 문단을 세워 캐럿을 놓는다. 그릇이 통째로 비면 래퍼째 함께 사라진다(방금 나온 빈 그릇을 남길 이유가 없다)
+// Removes the trace and plants a new empty paragraph after the wrapper for the caret; if the vessel ends up entirely empty, the wrapper vanishes with it (no reason to leave behind the empty vessel just exited)
 export function escapeVesselOp(vessel: VesselAt): Command {
   return (doc, _sel, _args, env) => {
     const wrapperPath = vessel.path.slice(0, -1);
@@ -76,7 +68,8 @@ export function escapeVesselOp(vessel: VesselAt): Command {
     const node = nodeAt(doc, vessel.path);
     if (!wrapper || !node || !isWrapper(wrapper, env)) return null;
 
-    // 첫 엔터의 흔적을 걷는다 — 코드는 끝 라인 하나, 블록 그릇은 마지막 빈 문단 하나.
+    // 첫 엔터의 흔적을 걷는다 — 코드는 끝 라인 하나, 블록 그릇은 마지막 빈 문단 하나
+    // Removes the first Enter's trace: for code, its trailing line; for a block vessel, its last empty paragraph
     let kept: ElementNode | null;
     if (env.inlineHolders.has(node.w)) {
       const runs = runsOf(node, terminalOf(env));

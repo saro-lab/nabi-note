@@ -1,8 +1,5 @@
-// 표 그물 — 064 의 표 버그 다섯(3·4·5·6·7)이 구조적으로 안 나는지 고정한다.
-// grid 수학(배치·병합 상자·걸음 — old 그물의 번역)
-// repair: 들쭉 행·span 초과·행 아닌 자식·칸 속 여러 블록 — setJson·setHtml 두 경로 다
-// 병합 토글 하나(범위 병합 ↔ 해제) + 캐럿 실재성· 제목 행·열 토글 + currentValue
-// onKey: tab 칸 이동(마지막 칸 = 행 추가)· shiftTab· 화살표/삭제는 pass(칸 경계 보호)
+// 표 그물 — 옛 표 버그 다섯 가지가 구조적으로 재발하지 않는지 고정한다: grid 수학, repair(들쭉 행·span 초과 등), 병합 토글, 제목 행/열 토글, onKey(tab 이동·경계 보호).
+// Table test net pinning down five historical table bugs so they can't structurally recur — grid math, repair (ragged rows, span overflow, etc.), merge toggling, header row/column toggling, and onKey (tab movement, boundary guards).
 import { cocoon, isElement, type ElementNode, type NabiNode } from '../src/schema/index.js';
 import { nodeAt, positionExists, type Position } from '../src/doc/index.js';
 import { caretAt, type Selection } from '../src/caret/index.js';
@@ -26,7 +23,8 @@ import {
 import { tinyHtml } from './tiny-html.js';
 import { done, eq, ok } from './net.js';
 
-// defaultWings 가 이제 표를 품는다(코디네이터 병합) — 중복 등록을 피한다.
+// defaultWings 가 이제 표를 품는다 — 중복 등록을 피한다.
+// defaultWings now includes the table wing — avoid double registration.
 const WINGS = defaultWings.some((w) => w.w === 'table') ? [...defaultWings] : [...defaultWings, tableWing];
 const registry = makeRegistry(WINGS);
 const env = registry.env;
@@ -42,6 +40,7 @@ const range = (a: Position, b: Position): Selection => ({ anchor: a, focus: b })
 const make = (doc: readonly unknown[]) => $createNabiWith(WINGS, { doc, parseHtml: tinyHtml }).nabi;
 
 // 2×2 표(a·b / c·d)를 래퍼문단에 세운 문서.
+// A 2x2 table (a·b / c·d) wrapped in a paragraph.
 const grid22 = (): ElementNode => p([el('table', [tr(td(['a']), td(['b'])), tr(td(['c']), td(['d']))])]);
 
 // --- registry — 표가 계약을 지난다 -------------------------------------------------------------
@@ -223,7 +222,8 @@ eq('spanOf — 숫자도 받는다', spanOf(3), 3);
   ok('칸 repair 도 멱등이다(참조 유지)', repairCell(fixed) === fixed);
 }
 {
-  // cocoon 경로 — setJson 급 입력: 맨몸 표·들쭉 행·칸 속 중첩 표가 전부 한 규칙을 탄다.
+  // cocoon 경로 — 맨몸 표·들쭉 행·칸 속 중첩 표도 setJson 급 입력처럼 같은 규칙을 탄다.
+  // cocoon path — bare tables, ragged rows, and nested tables all go through the same repair rule as setJson-level input.
   const nested = el('td', [el('table', [tr(td(['깊은']))])]);
   const doc = cocoon([el('table', [tr(nested, td(['b'])), tr(td(['c']))])], env);
   const table = (doc[0] as ElementNode).ch[0] as ElementNode;
@@ -234,8 +234,8 @@ eq('spanOf — 숫자도 받는다', spanOf(3), 3);
   ok('칸 속 중첩 표는 글줄로 눌린다', isElement(first) && first.w === 'p' && first.ch.includes('깊은'));
 }
 {
-  // 빈 칸 (ailog 102) — 바깥 HTML 의 <td></td>. isElement 가 undefined 를 안 걸러 repairCell 이
-  // 터졌었다. 남의 에디터가 쓴 글·DB 의 옛 글이 반드시 밟는 길이라 세 입구를 전부 세운다.
+  // 빈 칸(<td></td>)에서 isElement 가 undefined 를 못 걸러 repairCell 이 터졌었다 — 옛 글이 반드시 밟는 길이라 입구 셋을 다 세운다.
+  // Empty <td></td> used to crash repairCell because isElement let undefined slip through — legacy content always hits this path, so all three entry points are covered.
   const emptyCellShape = { w: 'td', ch: [{ w: 'p', ch: [] }] };
   const nabi = make([]);
   ok('빈 칸 HTML — setHtml 이 참', nabi.setHtml('<table><tr><td>a</td><td></td></tr></table>'));
@@ -258,9 +258,8 @@ eq('spanOf — 숫자도 받는다', spanOf(3), 3);
   eq('repairCell 직접 — 빈 칸은 문단 하나', repairCell(el('td', [])).ch, [{ w: 'p', ch: [] }]);
 }
 {
-  // 실전 원문 (ailog 106 — 애니시아 편성표): 제목행(thead/th) + 링크 칸 + **링크를 안 적은 빈
-  // 칸**. 터지지 않는 것으로 끝이 아니다 — 내용이 무시되거나 사라지면 안 되고, 빈 칸은 교정돼
-  // 제자리에 남아야 한다(3열 유지).
+  // 실전 원문(제목행+링크 칸+빈 칸) — 안 터지는 것으로 끝이 아니다, 내용 유지와 빈 칸 교정이 둘 다 맞아야 한다.
+  // Real-world input (header row + link cell + empty cell) — not crashing isn't enough; content must survive and the empty cell must be repaired in place.
   const nabi = make([]);
   ok(
     '실전 원문 — setHtml 이 참',
@@ -333,7 +332,7 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   eq('insertTable — 캐럿은 첫 칸', nabi.getSelection().focus.path, [0, 0, 0, 0, 0]);
 }
 
-// --- 새 표의 첫 행은 예외 없이 제목 행 (084 ③) ------------------------------------------------
+// --- 새 표의 첫 행은 예외 없이 제목 행 ----------------------------------------------------------
 
 {
   const nabi = make([p([])]);
@@ -357,7 +356,6 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   ok('새 표 — 나머지는 td 그대로', html.includes('<td>'));
 }
 {
-  // 제목 줄에 구멍이 안 뚫린다 — 열을 더해도 제목 행은 제목 행이다.
   const nabi = make([p([])]);
   nabi.applyCommand('insertTable', { rows: 2, cols: 2 });
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 0)));
@@ -374,7 +372,6 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
     true,
   );
 
-  // 행 추가는 따라가지 않는다 — 제목 행 하나뿐인 표에서 아래 새 행까지 제목이 되면 안 된다.
   nabi.applyCommand('addRowBelow');
   const g2 = cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode);
   eq(
@@ -384,7 +381,8 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   );
 }
 {
-  // 행 수를 안 본다 — 한 행짜리 표도 그 한 행이 제목이다(주인 답: 예외 없이).
+  // 행 수와 무관하게 첫 행은 제목이다 — 한 행짜리 표도 예외 없다.
+  // The rule ignores row count — even a single-row table gets a header row, no exception.
   const nabi = make([p([])]);
   nabi.applyCommand('insertTable', { rows: 1, cols: 3 });
   const g = cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode);
@@ -395,7 +393,8 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   );
 }
 {
-  // **생성 길에만 선다** — 들여온 문서·이미 있는 문서는 그대로다.
+  // 제목 행 자동 지정은 생성 경로에만 선다 — 들여오거나 이미 있는 문서는 그대로 둔다.
+  // Auto header-row assignment applies only on the create path — imported or existing docs are left as-is.
   const imported = make([]);
   imported.setHtml('<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>');
   const g = cellGrid((hostOf(imported).doc()[0] as ElementNode).ch[0] as ElementNode);
@@ -406,7 +405,7 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   eq('setJson(cocoon) 로 들어온 표도 그대로다', g2.cells.filter((c) => c.cell.a?.['th'] === 1).length, 0);
 }
 
-// --- 상황 줄에서 표삭제 단추를 걷었다 (084 ④) — 지우는 길은 남는다 ----------------------------
+// --- 상황 줄에서 표삭제 단추를 걷었다 — 지우는 길은 남는다 ------------------------------------
 
 {
   const names = (tableWing.context?.controls ?? []).map((control) => control.name);
@@ -426,10 +425,11 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   );
 }
 
-// --- 표 만들기 격자 — 작은 화면에서는 5×5 (084 ②) ---------------------------------------------
+// --- 표 만들기 격자 — 작은 화면에서는 5×5 -------------------------------------------------------
 
 {
-  // 폭 판정은 CSS 가 한다(리사이즈를 따라간다) — 그물이 볼 수 있는 것은 wing 이 실어 나르는 시트다.
+  // 폭 판정은 CSS 몫이다(리사이즈에 따라간다) — 테스트에서 보이는 건 wing 이 실어 나르는 시트뿐이다.
+  // Width decisions belong to CSS (it tracks resize) — tests can only see the sheet the wing carries.
   const css = tableWing.styles ?? '';
   ok('작은 화면 분기가 표 시트에 있다', css.includes('@media (max-width: 40rem)'));
   ok('작은 화면 격자는 5열이다', css.includes('grid-template-columns: repeat(5, var(--nabi-grid-cell)) !important'));
@@ -490,7 +490,8 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   );
 }
 {
-  // 위에서 내려온 rowspan 을 가진 행 삭제 — 병합 칸이 아랫줄로 옮겨 한 칸 준다.
+  // 위에서 내려온 rowspan 행 삭제 — 병합 칸이 아랫줄로 옮겨 한 칸을 메운다.
+  // Deleting a row under an inbound rowspan — the merged cell moves down to fill the gap.
   const t = el('table', [tr(td(['a'], { rowspan: '2' }), td(['b'])), tr(td(['c'])), tr(td(['d']), td(['e']))]);
   const nabi = make([p([t])]);
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 0))); // a(병합 시작 줄)
@@ -529,7 +530,6 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   caretExists('병합 뒤 캐럿 실재 (옛 mergeBox 버그)', nabi);
   eq('병합 칸의 눌림 표시', tableWing.currentValue?.(g.cells[0]?.cell as ElementNode), 'merged');
 
-  // 같은 자리를 한 번 더 — 눌린 토글을 다시 누르면 풀린다.
   nabi.applyCommand('mergeCells');
   const g2 = cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode);
   eq('해제 — 다시 2×2 네 칸', g2.cells.length, 4);
@@ -545,7 +545,6 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   );
 }
 {
-  // 표 둘에 걸친 선택 — 병합은 pass.
   const nabi = make([grid22(), grid22()]);
   nabi.select(range(at([0, 0, 0, 0, 0], 0), at([1, 0, 0, 0, 0], 1)));
   eq('다른 표에 걸친 병합은 pass', nabi.applyCommand('mergeCells'), false);
@@ -590,7 +589,6 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   );
 }
 {
-  // 불리언 규칙 — th 는 1 만 남는다 (cocoon).
   const doc = cocoon([p([el('table', [tr(td(['a'], { th: 2 }), td(['b'], { th: 1 }))])])], env);
   const g = cellGrid((doc[0] as ElementNode).ch[0] as ElementNode);
   eq(
@@ -600,7 +598,7 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   );
 }
 
-// --- onKey — tab 칸 이동· Shift+방향키/삭제는 pass (·7) ----------------------------------
+// --- onKey — tab 칸 이동 · Shift+방향키/삭제는 pass ---------------------------------------
 
 {
   const nabi = make([grid22()]);
@@ -622,9 +620,8 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   );
   eq('마지막 칸의 tab — 캐럿은 새 행 첫 칸', grown?.selection.focus.path, [0, 0, 2, 0, 0]);
 
-  // 화살표는 **격자를 따라** 걷는다 — 화면 좌표를 따르는 브라우저 걸음은 칸 폭이 다르면 옆
-  // 열로 샌다. 칸 안에 갈 자리가 남았으면 pass, 격자 밖으로 나가면 표 경계로 보낸다.
-  // (Shift+방향키는 mount 가 아예 안 보낸다 — 범위 걸음은 브라우저의 것이다.)
+  // 화살표는 격자를 따라 걷는다 — 화면 좌표 기준 브라우저 걸음은 칸 폭이 다르면 옆 열로 샌다.
+  // Arrows move along the grid — screen-coordinate movement drifts into the wrong column when cell widths differ.
   const arrow = (dir: 'left' | 'right' | 'up' | 'down', sel: Selection) =>
     routeKey({ key: 'arrow', dir }, doc, sel, env, registry);
 
@@ -663,7 +660,8 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   );
 }
 {
-  // 칸 경계 보호 — 칸 첫머리의 백스페이스는 코어 삭제 표에서도 아무 일 없다(형제가 없는 문단).
+  // 칸 경계 보호 — 칸 첫머리 백스페이스는 코어 삭제 표에서도 무반응이다(형제 문단이 없어서).
+  // Cell-boundary guard — backspace at a cell's start is a no-op even in the core delete table (no sibling paragraph to merge with).
   const nabi = make([grid22()]);
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 0)));
   const before = hostOf(nabi).doc();
@@ -673,7 +671,8 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   eq('칸 끝 Delete — 무변화', nabi.applyCommand('deleteForward'), false);
 }
 {
-  // 칸 안의 엔터 = 라인 (td 는 singleParagraph).
+  // 칸 안의 엔터는 분할이 아니라 라인이다 — td 는 singleParagraph라서.
+  // Enter inside a cell inserts a line, not a split — td is singleParagraph.
   const nabi = make([grid22()]);
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 1)));
   nabi.applyCommand('splitParagraph');

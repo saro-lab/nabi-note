@@ -30,7 +30,6 @@ const imageMd: MdBuilder = (node) => {
   return `![](${src.replace(/[\\()]/g, '\\$&').replace(/ /g, '%20')})`;
 };
 
-// 이름들 — old 사전 이식(14 로케일).
 const IMAGE_NAME: LocaleText = {
   ko: '이미지',
   en: 'Image',

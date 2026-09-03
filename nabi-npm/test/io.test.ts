@@ -1,6 +1,5 @@
-// io 그물 — 붙여넣기 후보 수집의 규칙 넷, 레지스트리가 IO 필터·md 조립을 접는 자리,
-// 내장 필터 셋, 그리고 **붙여넣기 한 걸음**(surface/paste — DOM 없는 정책부)이다.
-// 판은 여기 없다: 고르는 판에서 잡을 것은 순환 산수 하나뿐이라 그것만 부른다.
+// io 그물 — 붙여넣기 후보 수집 규칙, 레지스트리의 IO 필터·md 조립 접기, 내장 필터 셋, 붙여넣기 정책(DOM 없이)을 검사한다.
+// IO test net covering paste-candidate collection rules, the registry's IO-filter/md-builder folding, the built-in filter set, and the DOM-free paste policy.
 import {
   collectCandidates,
   makeBuiltinFilters,
@@ -404,8 +403,8 @@ function throws(name: string, fn: () => void, wants?: string): void {
   ok('줄이 없으면 겨눌 것도 없다', gridStep(0, 0, 'ArrowRight') === -1);
 
   // --- 판에 서는 그림 넷 -------------------------------------------------------------------------
-  // path 를 글자 그대로 잡지 않는다 — 모양은 다듬는 것이고, 지켜야 할 것은 **넷이 한 벌로 보이는
-  // 성질**이다: 같은 껍데기(viewBox 16), 제 굵기를 안 드는 속, 그리고 종이·상자 없는 선뿐.
+  // path 모양 자체는 안 고정한다 — 지킬 것은 넷이 한 벌로 보이는 성질(같은 16 껍데기, 제 굵기를 안 드는 속, 선으로만 그림)뿐이다.
+  // The four icons — the exact path shapes aren't pinned down, only that they read as one set (shared 16-unit viewBox, no self-declared stroke width, drawn with lines only).
   {
     const marks: readonly (readonly [string, string])[] = [
       ['HTML', HTML_ICON],
@@ -444,10 +443,9 @@ function throws(name: string, fn: () => void, wants?: string): void {
     ok('그 줄들은 길이가 다르다', new Set(runs).size >= 3);
   }
 
-  // --- 저장 판의 그림 — **붙여넣기 판의 것을 그대로 쓴다** ---------------------------------------
-  // 한 라운드 앞의 "종이에 확장자를 적은" 그림 셋은 주인이 물렀다(2026-08-23). 지켜야 할 것은
-  // 셋이 **한 벌로 보이는 성질**이다: 같은 껍데기(viewBox 16), 제 굵기를 안 드는 속(나비만
-  // 제 것을 드는데 그것은 칠 기반이라 그렇다), 그리고 html·md 는 **글자 그대로 같은 그림**.
+  // --- 저장 판의 그림 — 붙여넣기 판의 것을 그대로 쓴다 ---------------------------------------
+  // 앞서 쓰던 "종이에 확장자를 적은" 그림 셋은 물렀다 — 지킬 것은 한 벌로 보이는 성질이다: 같은 껍데기, 제 굵기를 안 드는 선(나비만 예외, 칠 기반이라), html·md는 글자 그대로 같은 그림.
+  // The save picker's icons reuse the paste picker's — an earlier "paper with an extension" icon set was reverted. What matters is reading as one set: shared viewBox, no self-declared stroke (except the fill-based butterfly), and html/md icons literally identical to the paste picker's.
   {
     eq('html 은 붙여넣기 판의 그 그림이다', saveMark(NHTML_FILE_EXTENSION), HTML_ICON);
     eq('밖에서 온 .html 도 같은 얼굴이다', saveMark('.html'), HTML_ICON);
@@ -459,9 +457,8 @@ function throws(name: string, fn: () => void, wants?: string): void {
     // 나비 마크는 `assets/nabi-butterfly.svg` 그대로다 — 색은 하나, 톤은 불투명도로만.
     ok('나비 마크는 한 색뿐이다', !/(fill|stroke)="(?!currentColor")[^"]+"/.test(NABI_MARK));
     ok('나비 마크의 날개는 넷이다', NABI_MARK.split('<path').length - 1 === 4);
-    // 톤은 넷 다 다르다 — 겹친 날개의 층이 그것으로만 보인다(색은 하나뿐이다).
-    // 값은 마스터(1/.78/.55/.40)보다 한 단계 올린 아이콘 사본의 것이다: 24px 에서 옅은 날개
-    // 둘이 사라지지 않을 만큼. 원본 파일은 안 건드렸다.
+    // 톤 넷은 서로 달라야 한다 — 색이 하나뿐이라 겹친 날개 층은 불투명도로만 구별된다. 값은 마스터(1/.78/.55/.40)보다 한 단계 올려, 아이콘 크기(24px)에서 옅은 날개 둘이 안 사라지게 잡았다.
+    // The four opacity tones must differ — with one color, layering is legible only through opacity. Values are bumped one notch above the master (1/.78/.55/.40) so the two faintest wings stay visible at icon size (24px).
     const tones = [...NABI_MARK.matchAll(/opacity="([\d.]+)"/g)].map((hit) => Number(hit[1]));
     ok('나비 마크의 톤은 불투명도로만 난다', tones.length === 4 && new Set(tones).size === 4, String(tones));
     ok('옅은 날개도 아이콘 크기에서 보인다', Math.min(...tones) >= 0.5, String(Math.min(...tones)));
@@ -481,10 +478,8 @@ function throws(name: string, fn: () => void, wants?: string): void {
   }
 
   // --- 저장 판의 순수 판정 ----------------------------------------------------------------------
-  //
-  // 판을 안 띄우고 잡는다 — 확장자 표식이 겨눈 칸을 따라가는 산수와, 칸에 서는 이름이다.
-  // **열릴 때의 겨눔은 여기 없다**: 붙여넣기 판과 같은 `initialChoice` 하나를 쓰기로 했다
-  // (주인 지시 2026-08-23 — 옛 "기본은 원본(.nabi)" 을 뒤집은 자리다. 형식 셋이면 HTML 이다).
+  // 판을 안 띄우고 잡는다 — 겨눈 칸을 따라가는 확장자 산수와 칸 이름. 열릴 때 겨눔은 붙여넣기 판과 같은 initialChoice를 쓴다(예전 기본이던 "원본(.nabi)"을 뒤집은 자리 — 형식 셋이면 HTML이 첫 겨눔이다).
+  // The save picker's pure logic, tested without opening the picker — the extension math and cell names. The initial focus reuses the same initialChoice as the paste picker (reversing the old default of "original (.nabi)" — with three formats, HTML gets initial focus).
   {
     const fmt = (id: string, extension: string, lossy = false): SaveFormat => ({ id, label: id, extension, lossy });
     const three = [fmt('nabi', '.nabi'), fmt('html', NHTML_FILE_EXTENSION), fmt('markdown', '.md', true)];
@@ -787,11 +782,9 @@ function throws(name: string, fn: () => void, wants?: string): void {
     ]);
   }
 
-  // --- 클립보드에 직접 싣기 (260823_008 ㉡) ----------------------------------------------------
-  //
-  // 봉해진 첨부는 `user-select: none` 이라 크롬이 클립보드에 아예 안 실었다(실측). 그래서
-  // 실을 글자를 우리가 짓는다. 조각 다듬기는 글자 함수라 DOM 없이 여기서 잡히고, 조상 훑기
-  // (`clipContextOf`)만 실기의 몫이다.
+  // --- 클립보드에 직접 싣기 ----------------------------------------------------
+  // 봉해진 첨부는 `user-select: none` 이라 크롬이 클립보드에 아예 안 실었다(실측) — 그래서 실을 글자를 직접 짓는다. 조각 다듬기는 DOM 없이 여기서 잡히고, 조상 훑기만 실기의 몫이다.
+  // Writing to the clipboard directly — a sealed attachment (`user-select: none`) simply doesn't get copied by Chrome (measured), so the clipboard text is built by hand instead. Fragment cleanup is a pure function tested here; only ancestor-walking is left to the real DOM.
   {
     const raw =
       '<a href="https://x/f.txt" data-nabi-file="txt" download="" contenteditable="false"' +
@@ -806,6 +799,7 @@ function throws(name: string, fn: () => void, wants?: string): void {
     );
 
     // 받침 br 은 **노드째** 걷는다 — 속성만 걷으면 진짜 라인이 되어 없던 줄이 생긴다.
+    // A filler br is stripped as a whole node — stripping just the attribute would turn it into a real line break that never existed.
     eq(
       '받침 br 은 노드째 걷힌다',
       dressClipHtml('<p data-key="k1">글<br data-nabi-filler=""></p>'),
@@ -876,10 +870,9 @@ function throws(name: string, fn: () => void, wants?: string): void {
     );
   }
 
-  // --- 첨부는 문단으로 감싸고 빈 문단을 잇는다 (260823_010) ------------------------------------
-  //
-  // 주인의 확정: "파일링크는 링크와 달리 object 객체로 인식하는 게 맞기 때문에 예외적으로 빈 줄을
-  // 하나 더 넣어줘. 안 그러면 파일링크끼리 엉켜서 길어지는 이상한 현상이 일어나."
+  // --- 첨부는 문단으로 감싸고 빈 문단을 잇는다 ------------------------------------
+  // 파일링크는 링크와 달리 object로 인식해야 맞기 때문에 예외적으로 빈 줄을 하나 더 넣는다 — 안 그러면 파일링크끼리 엉켜 길어지는 문제가 생긴다.
+  // A file link, unlike a plain link, should be treated as an object — so an extra blank paragraph follows it; without it, consecutive file links run together oddly.
   {
     const link = '<a href="https://x/f.txt" data-nabi-file="txt" download="">첨부파일</a>';
 

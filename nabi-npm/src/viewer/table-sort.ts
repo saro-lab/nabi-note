@@ -1,17 +1,13 @@
-// 표 정렬 — 보는 쪽에서만 도는 로직이다. 편집기는 이 파일을 부르지 않는다.
-//
-// 저장값에 남는 것은 `data-nabi-sortable` 표식 하나뿐이다 — 어느 열을 어느 방향으로 정렬했는지는
-// 보는 쪽의 순간 상태이고, 나비트리에도 undo 이력에도 어느 출력에도 안 들어간다.
-//
-// import 는 `locale/` 하나뿐이다 — 읽는 페이지가 편집기 무게 없이 이 모듈만 실을 수 있어야 한다
-// (그물 test/entry.test.ts 가 그것을 기계로 지킨다).
+// 표 정렬은 보는 쪽에서만 도는 로직이다(편집기는 안 부른다) — 저장값엔 data-nabi-sortable 표식만 남고, 정렬 방향·열은 순간 상태라 나비트리·undo·어떤 출력에도 안 들어간다. import는 locale/ 하나뿐이라 편집기 무게 없이 이 모듈만 실을 수 있다(test/entry.test.ts가 기계로 지킨다)
+// Table sort is reader-only logic (the editor never calls this) -- only the data-nabi-sortable marker persists, while which column/direction is sorted is transient state that never enters the NABI TREE, undo history, or any output. The only import is locale/, so a reading page can load just this module without editor weight (enforced mechanically by test/entry.test.ts)
 import { localeOf, makeTranslator, type LocaleText } from '../locale/index.js';
 
-// 값 없는 불리언 속성 — 있으면 켜짐이다. 적는 쪽은 호스트(또는 표 wing)이고 읽는 쪽이 이 파일이다.
+// 값 없는 불리언 속성 — 있으면 켜짐이다. 적는 쪽은 호스트(또는 표 wing)이고 읽는 쪽이 이 파일이다
+// A valueless boolean attribute; present means on. The host (or table wing) writes it, this file reads it
 export const SORTABLE_ATTR = 'data-nabi-sortable';
 
-// 값이 2 이상일 때만 병합이다 — `[colspan]` 존재만 보면 남아 있던 `colspan="1"` 이
-// 병합 아닌 표의 정렬을 조용히 끈다.
+// 값이 2 이상일 때만 병합이다 — [colspan] 존재만 보면 남아 있던 colspan="1"이 병합 아닌 표의 정렬을 조용히 끈다
+// Only a value of 2+ counts as merged; checking for [colspan]'s mere presence would let a leftover colspan="1" silently disable sorting on an unmerged table
 export function hasMergedCells(table: Element): boolean {
   return [...table.querySelectorAll('[colspan], [rowspan]')].some(
     (cell) =>
@@ -20,7 +16,8 @@ export function hasMergedCells(table: Element): boolean {
   );
 }
 
-// 화살표만으로는 스크린 리더가 읽을 것이 없다 — 이름을 함께 단다.
+// 화살표만으로는 스크린 리더가 읽을 것이 없다 — 이름을 함께 단다
+// Arrows alone give a screen reader nothing to read, so a name is attached alongside them
 const TEXT = {
   sort: {
     ko: '정렬',
@@ -88,8 +85,8 @@ const TEXT = {
   },
 } as const satisfies Record<string, LocaleText>;
 
-// 꽉 찬 삼각형 둘 — 어느 표 프로그램에서나 쓰는 모양이다. 정렬 안 된 열은 둘 다 연하고
-// 정렬된 열은 **하나만** 보인다: 반대쪽의 빈자리가 어느 쪽으로 갔는지를 가장 크게 말한다.
+// 꽉 찬 삼각형 둘 — 표 프로그램 어디서나 쓰는 모양이다. 정렬 안 된 열은 둘 다 연하고, 정렬된 열은 하나만 보여 방향을 가장 크게 말한다
+// Two filled triangles, the shape used everywhere in spreadsheet software; an unsorted column shows both faintly, a sorted one shows only one, making the direction the loudest signal
 const UP = 'M8 2.9 12 7.4H4Z';
 const DOWN = 'M8 13.1 4 8.6h8Z';
 
@@ -99,8 +96,8 @@ const ICONS = {
   descending: `<path d="${DOWN}"/>`,
 } as const;
 
-// 이 파일이 쓴 SVG 이지 사용자 입력이 아니다. 선이 아니라 채움이다 — 이만한 삼각형은
-// 윤곽선으로 그리면 얼룩으로 읽힌다.
+// 이 파일이 쓴 SVG이지 사용자 입력이 아니다 — 선이 아니라 채움이다(이만한 삼각형은 윤곽선이면 얼룩으로 읽힌다)
+// This SVG is written by this file, not user input; it's filled, not outlined, since a triangle this small reads as a smudge when only outlined
 function iconSvg(body: string): string {
   return `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">${body}</svg>`;
 }
@@ -112,30 +109,30 @@ export interface SortState {
   readonly direction: SortDirection;
 }
 
-// 세 상태 순환 — 원본 → 내림차순 → 오름차순 → 원본. 다른 열을 누르면 그 열이 내림차순으로
-// 시작하고 이전 열은 원본으로 돌아간다.
+// 세 상태 순환 — 원본 → 내림차순 → 오름차순 → 원본. 다른 열을 누르면 그 열이 내림차순으로 시작하고 이전 열은 원본으로 돌아간다
+// A three-state cycle: original -> descending -> ascending -> original. Clicking a different column starts it at descending and resets the previous column to original
 export function nextSortState(active: SortState | null, column: number): SortState | null {
   if (active?.column !== column) return { column, direction: 'descending' };
   return active.direction === 'descending' ? { column, direction: 'ascending' } : null;
 }
 
-// 좁게 잡는다 — 쉼표는 세 자리 묶음일 때만이고 단위가 붙으면 글자다. `1,23,4` 를 느슨하게
-// `1234` 로 읽으면 사용자가 적은 적 없는 값으로 정렬된다.
+// 좁게 잡는다 — 쉼표는 세 자리 묶음일 때만 숫자고 단위가 붙으면 글자다. 1,23,4를 느슨하게 1234로 읽으면 사용자가 적은 적 없는 값으로 정렬된다
+// Deliberately narrow; a comma only counts as a thousands separator, and a unit suffix makes it text. Loosely reading "1,23,4" as 1234 would sort by a value the user never actually wrote
 const NUMBER = /^-?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/;
 
-// NUMBER 에 맞는 값에만 부른다 — 바로 넘기면 `12abc` 를 `12` 로 삼킨다.
+// NUMBER에 맞는 값에만 부른다 — 바로 넘기면 12abc를 12로 삼킨다
+// Only called on values matching NUMBER; calling it directly would silently read "12abc" as 12
 function toNumber(value: string): number {
   return Number.parseFloat(value.replaceAll(',', ''));
 }
 
-// 비교자는 정렬 한 번에 한 번 정한다 — 쌍마다 고르면 전이성이 깨진다 (`10<9`(숫자)
-// `9<사과`·`사과<10`(글자)로 한 바퀴 돈다). 빈 칸은 방향과 무관하게 항상 아래다.
-// 답은 번호 순열이다 — DOM 절반은 행을 순서대로 다시 붙이기만 한다.
+// 비교 방식(숫자/글자)은 정렬 한 번에 한 번만 정한다 — 쌍마다 고르면 전이성이 깨진다(10<9는 숫자로, 9<사과·사과<10은 글자로 판정돼 한 바퀴 돈다). 빈 칸은 방향과 무관하게 항상 아래다. 답은 행 순서를 매기는 번호 순열이고, DOM 쪽은 그 순서로 다시 붙이기만 한다
+// The comparison mode (numeric vs. text) is decided once per sort, not per pair, or transitivity breaks (10<9 numerically, but 9<apple and apple<10 textually loop back on themselves). Blank cells always sink to the bottom regardless of direction. The result is an index permutation; the DOM side just re-appends rows in that order
 export function rankRows(values: readonly string[], direction: SortDirection, locale: string): number[] {
   const filled = values.filter((value) => value !== '');
   const numeric = filled.length > 0 && filled.every((value) => NUMBER.test(value));
-  // Intl rejects '' and malformed BCP 47 tags. Sorting is optional reader behavior, so a bad host
-  // lang must degrade to the runtime default rather than make a table unusable.
+  // Intl은 ''나 잘못된 BCP 47 태그를 거부한다 — 정렬은 있으면 좋은 기능이라, 잘못된 lang 값이 표를 통째로 못 쓰게 만들면 안 되고 런타임 기본값으로 낮춰야 한다
+  // Intl rejects '' and malformed BCP 47 tags. Sorting is optional reader behavior, so a bad host lang must degrade to the runtime default rather than make a table unusable.
   let collator: Intl.Collator;
   try {
     collator = new Intl.Collator(localeOf(locale), { numeric: true });
@@ -156,13 +153,14 @@ export function rankRows(values: readonly string[], direction: SortDirection, lo
 
 export interface TableSortOptions {
   readonly locale?: string;
-  // 어떤 표를 붙일까 — 기본은 표식(`data-nabi-sortable`)이 달린 표만이다. `'all'` 은 뿌리 안의
-  // 표 전부를 받는다(발행 HTML 에 표식을 못 심는 호스트·데모의 길).
+  // 어떤 표를 붙일까 — 기본은 표식(data-nabi-sortable)이 달린 표만이다. 'all'은 뿌리 안의 표 전부를 받는다(발행 HTML에 표식을 못 심는 호스트·데모의 길)
+  // Which tables to attach to; the default is only tables carrying the marker (data-nabi-sortable). 'all' takes every table under the root, a path for hosts (or demos) that can't embed the marker in their published HTML
   readonly tables?: 'marked' | 'all';
 }
 
 function attachOne(table: HTMLTableElement, locale: string): (() => void) | null {
-  // 표식이 있어도 병합이 보이면 거절한다 — 병합된 행은 묶여 있어 재배열이 격자를 부순다.
+  // 표식이 있어도 병합이 보이면 거절한다 — 병합된 행은 묶여 있어 재배열이 격자를 부순다
+  // Declines even a marked table if it has merged cells; merged rows are bound together, and reordering them would break the grid
   if (hasMergedCells(table)) return null;
 
   const rows = [...table.rows];
@@ -170,8 +168,8 @@ function attachOne(table: HTMLTableElement, locale: string): (() => void) | null
   const body = rows.slice(1);
   if (!header || body.length === 0) return null;
 
-  // 붙인 시점의 순서가 원본이다. 행들이 한 부모 안에 있어야 재배열·복원이 온전하다
-  // 흩어진 남의 HTML 은 받지 않는다.
+  // 붙인 시점의 순서가 원본이다 — 행들이 한 부모 안에 있어야 재배열·복원이 온전하다(흩어진 남의 HTML은 안 받는다)
+  // The order at attach time is the original; rows must share one parent for reorder/restore to stay intact (structurally scattered foreign HTML is rejected)
   const parent = body[0]?.parentElement;
   if (!parent || body.some((row) => row.parentElement !== parent)) return null;
 
@@ -181,7 +179,8 @@ function attachOne(table: HTMLTableElement, locale: string): (() => void) | null
   const t = makeTranslator(locale);
   const label = (key: keyof typeof TEXT): string => t.pick(TEXT[key], key);
 
-  // 상태는 `active` 하나뿐이다.
+  // 상태는 active 하나뿐이다
+  // The only state is `active`
   let active: SortState | null = null;
   const buttons: HTMLButtonElement[] = [];
   const buttonCells = new Map<HTMLButtonElement, HTMLTableCellElement>();
@@ -196,7 +195,8 @@ function attachOne(table: HTMLTableElement, locale: string): (() => void) | null
       button.setAttribute('aria-label', `${label('sort')}: ${name}`);
       button.dataset['nabiTip'] = name;
       button.toggleAttribute('data-nabi-sort-active', state !== null);
-      // aria-sort 는 제목 칸의 것이다 — "이 열은 정렬된다" 를 리더가 알 유일한 자리다.
+      // aria-sort는 제목 칸의 것이다 — "이 열은 정렬된다"를 리더가 알 유일한 자리다
+      // aria-sort belongs on the header cell; it's the only place a screen reader learns "this column is sorted"
       const cell = buttonCells.get(button);
       if (!cell) continue;
       if (!aria.has(cell)) aria.set(cell, cell.getAttribute('aria-sort'));
@@ -212,13 +212,15 @@ function attachOne(table: HTMLTableElement, locale: string): (() => void) | null
           locale,
         ).map((index) => original[index] as HTMLTableRowElement)
       : original;
-    // 제목 행은 손대지 않는다 — 몸통 행만 순서대로 다시 붙인다.
+    // 제목 행은 손대지 않는다 — 몸통 행만 순서대로 다시 붙인다
+    // The header row is untouched; only body rows are re-appended in order
     for (const row of order) parent.append(row);
     renderedSequence = [...parent.children];
   };
 
   const detach = (): void => {
-    // 순서·단추·aria 를 전부 되돌린다 — 해제 뒤의 DOM 은 붙이기 전과 같다.
+    // 순서·단추·aria를 전부 되돌린다 — 해제 뒤의 DOM은 붙이기 전과 같다
+    // Restores order, buttons, and aria all together; the DOM after detach matches before attach
     const current = [...parent.children];
     if (current.length === renderedSequence.length && current.every((node, at) => node === renderedSequence[at])) {
       for (const row of original) parent.append(row);
@@ -263,7 +265,8 @@ function attachOne(table: HTMLTableElement, locale: string): (() => void) | null
   return detach;
 }
 
-// 해제는 원본 행 순서까지 되돌린다 — 정렬된 채 떼면 그 순서가 호스트 DOM 에 굳는다.
+// 해제는 원본 행 순서까지 되돌린다 — 정렬된 채 떼면 그 순서가 호스트 DOM에 굳는다
+// Detaching restores the original row order too; leaving it sorted would freeze that order into the host's DOM
 export function attachTableSort(root: HTMLElement, options: TableSortOptions = {}): () => void {
   const owner = root.ownerDocument;
   const locale = options.locale ?? owner.documentElement.lang ?? '';
@@ -281,6 +284,7 @@ export function attachTableSort(root: HTMLElement, options: TableSortOptions = {
       try {
         detach();
       } catch {
+        // 설정 실패를 보존하며 앞선 표들을 기준선으로 되돌린다
         // Preserve the setup failure while returning earlier tables to their baseline.
       }
     }

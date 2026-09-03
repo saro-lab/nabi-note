@@ -1,5 +1,5 @@
-// wing 고르기 빌더(087) — 타입 없는 CDN 사용자가 주 청중이라 다섯 가지 실수를 부른 자리에서 고칠 방법과 함께 죽인다.
-// A wing picker (087) for CDN users without types — five kinds of mistakes die right where they're called, with a fix hint.
+// wing 고르기 빌더 — 타입 없는 CDN 사용자가 주 청중이라 다섯 가지 실수를 부른 자리에서 고칠 방법과 함께 죽인다.
+// A wing picker for CDN users without types — five kinds of mistakes die right where they're called, with a fix hint.
 import type { Wing } from '../wing/index.js';
 import { $isBuiltinWing, $markBuiltinAttrOwner } from '../schema/env.js';
 import { boldWing, italicWing, strikeWing, subscriptWing, superscriptWing, underlineWing } from './marks/marks.js';
@@ -101,8 +101,8 @@ export interface WingsBuilder {
   build(): readonly Wing[];
 }
 
-// --- 런타임 — 항목을 느슨한 한 모양으로 본다 (옵션 타입이 wing 마다 달라 유니온 그대로는
-// 호출부가 성립하지 않는다 — 타입은 위에서 뽑았고, 여기서는 모양만 쓴다) ------------------------
+// 런타임은 항목을 느슨한 한 모양으로 본다 — 옵션 타입이 wing마다 달라 유니온 그대로는 호출부가 안 선다.
+// At runtime, entries are treated as one loose shape — a raw union of option types wouldn't typecheck at the call site, so only the shape is used here (the precise types live above).
 
 interface Entry {
   readonly w: string;
@@ -142,8 +142,8 @@ function distance(a: string, b: string): number {
   return row[b.length] as number;
 }
 
-// 컴파일러 없는 사람에게 자동완성을 대신하는 한 줄(087). 앞머리가 겹치면 편집거리보다 그것부터 잡는다.
-// Stands in for autocomplete when there's no compiler (087) — a shared prefix wins over raw edit distance.
+// 컴파일러 없는 사람에게 자동완성을 대신하는 한 줄. 앞머리가 겹치면 편집거리보다 그것부터 잡는다.
+// Stands in for autocomplete when there's no compiler — a shared prefix wins over raw edit distance.
 function suggest(name: string, pool: readonly string[]): string | null {
   const low = name.toLowerCase();
   let best: string | null = null;
@@ -212,8 +212,8 @@ function optioned(entry: Entry, options: object): Wing {
   return wing;
 }
 
-// `w`가 ex로 시작해야 하는 까닭은 이름 충돌이 아니라 문서 손상이다 — `w`는 저장값에 박혀 남의 글을 못 되돌린다(087 §4).
-// The `ex` prefix guards against corrupting saved documents, not naming clashes — `w` is baked into storage forever (087 §4).
+// `w`가 ex로 시작해야 하는 까닭은 이름 충돌이 아니라 문서 손상이다 — `w`는 저장값에 박혀 남의 글을 못 되돌린다.
+// The `ex` prefix guards against corrupting saved documents, not naming clashes — `w` is baked into storage forever.
 const EX_SHAPE = /^ex[A-Z0-9][A-Za-z0-9]*$/;
 
 // `allBasic()`의 유일한 잣대 — 선언만 본다. `if (w === 'upload')` 같은 하드코딩은 어디에도 없다.
@@ -232,8 +232,8 @@ export function wings(): WingsBuilder {
 
   const has = (w: string): boolean => official.has(w) || customs.has(w);
 
-  // 딛는 wing이 하나도 없으면 조용히 끌어온다(087 §검토 C) — wing이 선언한 차례의 첫 공식 후보를 쓴다.
-  // Silently pulls in a dependency when none is present (087 review C) — the first official candidate it declared.
+  // 딛는 wing이 하나도 없으면 조용히 끌어온다 — wing이 선언한 차례의 첫 공식 후보를 쓴다.
+  // Silently pulls in a dependency when none is present — the first official candidate the wing declared.
   const pullDeps = (wing: Wing): void => {
     const needs = wing.requiresAnyOf;
     if (needs === undefined || needs.some((n) => has(n))) return;
@@ -314,8 +314,8 @@ export function wings(): WingsBuilder {
       if (!ENTRIES.some((entry) => entry.w === w) && !EX_SHAPE.test(w)) unknownName(w);
       die(`'${w}' 는 지금 목록에 없다 — .all()·.allBasic() 이나 .use() 로 든 것만 뺄 수 있다`);
     }
-    // makeRegistry도 이걸 잡지만 mount 때라 늦다 — 빌더는 "일찍 알려 준다"는 값이 있어 여기서도 던진다(087 §검토 C).
-    // makeRegistry catches this too, but only at mount time — the builder's whole point is catching it earlier (087 review C).
+    // makeRegistry도 이걸 잡지만 mount 때라 늦다 — 빌더는 일찍 알려 준다는 값이 있어 여기서도 던진다.
+    // makeRegistry catches this too, but only at mount time — the builder's whole point is catching it earlier.
     const rest = [...official.values(), ...customs.values()].filter((wing) => wing.w !== w);
     const present = new Set(rest.map((wing) => wing.w));
     for (const wing of rest) {

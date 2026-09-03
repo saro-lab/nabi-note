@@ -195,18 +195,19 @@
         <!-- 도구 자리가 툴바보다 앞에 선다 — 코어가 float로 띄우는데, float는 뒤에 오는 줄만 비켜 간다. -->
         <!-- The tools slot comes BEFORE the toolbar: the core floats it, and a float only clears lines after it. -->
         <div class="demo-toolbar-row">
-          <!-- 미리 그린 뷰 도구 둘(097) — 툴바와 같은 길이다. -->
+          <!-- 미리 그린 뷰 도구 둘 — 툴바와 같은 줄이다. -->
+          <!-- The pre-rendered view tools — same row as the toolbar. -->
           <span ref="toolsEl" v-html="props.viewToolsHtml ?? ''"></span>
-          <!-- 미리 그린 툴바를 그대로 심는다(096) — mountToolbar가 이미 선 줄을 알아보고 배선만 건다. -->
-          <!-- The toolbar HTML is pre-rendered (096); mountToolbar recognizes the existing markup and just wires it. -->
+          <!-- 미리 그린 툴바를 그대로 심는다 — mountToolbar가 이미 선 줄을 알아보고 배선만 건다. -->
+          <!-- The toolbar HTML is pre-rendered; mountToolbar recognizes the existing markup and just wires it. -->
           <!-- nabi-toolbar-row는 첫 그림부터 단다 — mount 때 달면 여백이 붙어 줄이 밀린다(2026-08-19). -->
           <!-- nabi-toolbar-row is set on first paint, not on mount, or its margin shifts the row (2026-08-19). -->
           <div ref="toolbarEl" class="nabi-toolbar-row" v-html="props.toolbarHtml ?? ''"></div>
         </div>
         <div ref="contextToolbarEl" hidden></div>
       </div>
-      <!-- 미리 그려 둔 문서를 그대로 심는다 — 서버·브라우저 첫 그림이 같아야 hydrate가 맞는다(095ⓐ). -->
-      <!-- The pre-rendered document is planted as-is; server and browser must match on first paint to hydrate (095a). -->
+      <!-- 미리 그려 둔 문서를 그대로 심는다 — 서버·브라우저 첫 그림이 같아야 hydrate가 맞는다. -->
+      <!-- The pre-rendered document is planted as-is; server and browser must match on first paint to hydrate. -->
       <div
         ref="editorEl"
         class="nabi-content"
@@ -272,8 +273,8 @@ import Icon from './Icon.vue'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useData } from 'vitepress'
 
-// 편집기 시트는 정적으로 문다(095) — 런타임에 붙이면 서버가 그린 문서가 맨몸으로 그려졌다 펴진다.
-// The editor sheet is linked statically (095); injecting it at runtime flashes unstyled content first.
+// 편집기 시트는 정적으로 문다 — 런타임에 붙이면 서버가 그린 문서가 맨몸으로 그려졌다 펴진다.
+// The editor sheet is linked statically; injecting it at runtime flashes unstyled content first.
 import 'nabi-note/nabi.css'
 import { useTranslate } from '../src/langs.ts'
 import { loadSampleTrees, type SampleKey, type SampleTree } from '../src/sample.ts'
@@ -292,18 +293,18 @@ import type { CodeHighlighter, Wing } from 'nabi-note'
 // foldWings is the front page's alone: its chip list once pushed the editor off a phone's first screen.
 // sample은 예문 이름표다 — 굳혀 둔 나비트리 중 읽는 쪽 언어 한 벌만 mount 때 불러온다.
 // sample names the sample; the frozen nabi-tree for the page's language is fetched on mount.
-// ssrHtml은 미리 그려 둔 편집기 HTML이다(095ⓐ) — mount가 hydrate로 그 DOM을 이어받아 빈 상자가 안 생긴다.
-// Pre-rendered editor HTML (095a): mount adopts that DOM via hydrate instead of starting from empty.
+// ssrHtml은 미리 그려 둔 편집기 HTML이다 — mount가 hydrate로 그 DOM을 이어받아 빈 상자가 안 생긴다.
+// Pre-rendered editor HTML: mount adopts that DOM via hydrate instead of starting from empty.
 const props = defineProps<{
   wings?: readonly string[]
   sample?: SampleKey
   foldWings?: boolean
   ssrHtml?: string
-  // 미리 그려 둔 툴바 HTML(096) — 주면 아이콘 줄이 코어를 기다리지 않는다.
-  // Pre-rendered toolbar HTML (096); the icon row doesn't wait on the core when supplied.
+  // 미리 그려 둔 툴바 HTML — 주면 아이콘 줄이 코어를 기다리지 않는다.
+  // Pre-rendered toolbar HTML; the icon row doesn't wait on the core when supplied.
   toolbarHtml?: string
-  // 미리 그려 둔 뷰 도구 HTML(097) — 미리보기·전체화면 둘.
-  // Pre-rendered view-tools HTML (097) — preview and fullscreen.
+  // 미리 그려 둔 뷰 도구 HTML — 미리보기·전체화면 둘.
+  // Pre-rendered view-tools HTML — preview and fullscreen.
   viewToolsHtml?: string
 }>()
 
@@ -438,8 +439,8 @@ for (const item of catalog.value) picked[item.id] = props.wings ? props.wings.in
 // wing은 언제나 다 보이고 꺼진 것은 꺼진 모양일 뿐이다 — 패키지 자신의 데모와 같은 결이다.
 // Every wing stays on screen and an off one merely looks off — the same shape the package's own demo uses.
 
-// mount 때 한 번만 불러온다 — 모듈이 클라이언트에서만 오기 때문이다(§ SSR).
-// Loaded once on mount — the module only arrives on the client (§ SSR).
+// mount 때 한 번만 불러온다 — 모듈이 클라이언트에서만 오기 때문이다.
+// Loaded once on mount — the module only arrives on the client.
 type NabiModule = typeof import('nabi-note')
 let nabiModule: NabiModule | null = null
 // 보는 쪽 런타임은 다른 엔트리다(nabi-note/viewer) — 편집기와 같은 규칙으로 클라이언트에서만 온다.
@@ -533,7 +534,8 @@ let uploadView: Unmountable | null = null
 let fileMount: (Unmountable & Record<string, unknown>) | null = null
 let historyMount: (Unmountable & { sessionId: string }) | null = null
 let diffMount: (Unmountable & { open(): void }) | null = null
-// 첫 조립인가 — 서버가 그린 DOM을 이어받을 수 있는 것은 이때뿐이다(095ⓐ).
+// 첫 조립인가 — 서버가 그린 DOM을 이어받을 수 있는 것은 이때뿐이다.
+// Whether this is the first build — only then can the server-rendered DOM be adopted.
 let firstBuild = true
 let nabi: ReturnType<NabiModule['createNabiWith']>['nabi'] | null = null
 let registry: ReturnType<NabiModule['createNabiWith']>['registry'] | null = null
@@ -625,7 +627,7 @@ function build(): void {
   registry = made.registry
   if (value) nabi.setHtml(value)
 
-  // 2. 시트는 여기서 안 붙인다 — 파일 맨 위에서 nabi-note/nabi.css를 정적으로 문다(095).
+  // 2. 시트는 여기서 안 붙인다 — 파일 맨 위에서 nabi-note/nabi.css를 정적으로 문다.
   // Sheets are linked statically at the top of this file, not injected here — see the import.
 
   // 3. 배선이 있어야 사는 wing 다섯: upload·save·open·localHistory·diff — 등록만으론 커맨드가 조용히 죈다.
@@ -689,11 +691,11 @@ function build(): void {
     registry,
     root: content,
     allowLocalUrls: true,
-    // 말이 곧 방향이다(098) — 아랍어·우르두를 고르면 편집 영역만 오른쪽에서 왼쪽으로 선다(쪽의 말과 별개).
-    // Language decides direction (098) — Arabic/Urdu flips only the edit area to RTL, independent of the page's language.
+    // 말이 곧 방향이다 — 아랍어·우르두를 고르면 편집 영역만 오른쪽에서 왼쪽으로 선다(쪽의 말과 별개).
+    // Language decides direction — Arabic/Urdu flips only the edit area to RTL, independent of the page's language.
     locale: here,
-    // 첫 조립에서만 이어받는다(095ⓐ) — 그때만 서버가 그린 DOM이 화면에 있어, 나중엔 새로 그리는 쪽이 안전하다.
-    // Hydrates only on the first build (095a) — later builds redraw instead, since the DOM by then is the editor's own.
+    // 첫 조립에서만 이어받는다 — 그때만 서버가 그린 DOM이 화면에 있어, 나중엔 새로 그리는 쪽이 안전하다.
+    // Hydrates only on the first build — later builds redraw instead, since the DOM by then is the editor's own.
     hydrate: firstBuild && props.ssrHtml !== undefined,
     // 드롭·붙여넣기 파일은 전부 업로드로 간다 — 파일로 문서를 여는 길은 열기 단추 하나뿐이다.
     // Every dropped file goes to upload; opening a document by file is the open button's job alone.
@@ -978,8 +980,8 @@ const code = computed(() => {
       : '// The preview and fullscreen buttons — they stand their own box at the end of the row',
     "mountViewTools({ ...shared, root, container: document.querySelector('#toolbar')! })",
     '',
-    // 예문은 **그대로 복사해서 돌아가야 한다** — `저장(...)` 은 이 자리에 없는 함수라, 살려 두면
-    // 붙여 넣는 순간 던진다. 무엇을 걸어야 하는지는 보여 주되 줄은 주석으로 내린다.
+    // 예문은 그대로 복사해 돌려도 되어야 한다 — 존재하지 않는 함수라 실행 코드로 두면 붙여넣는 순간 던진다.
+    // The sample must run as pasted — this callback doesn't exist, so it stays commented out instead of throwing.
     ko ? '// 값이 바뀔 때마다 — 여기에 당신의 코드를 건다' : '// on every change — hook up your own code here',
     '// nabi.onChange(() => user_callback(nabi.getHtml()))',
   ]
@@ -1041,8 +1043,8 @@ onMounted(async () => {
   // The actual typeface fonts — handwriting is shared across locales; body fallbacks load only for this page's script.
   loadEditorFonts(locale.value)
   window.addEventListener('resize', measureViewport)
-  // 셋을 함께 부른다 — 차례로 await하면 왕복이 셋이 되어 그동안 데모 자리가 빈 상자로 남는다(095).
-  // Fetched together, not sequentially, or the demo would sit empty across three round-trips (095).
+  // 셋을 함께 부른다 — 차례로 await하면 왕복이 셋이 되어 그동안 데모 자리가 빈 상자로 남는다.
+  // Fetched together, not sequentially, or the demo would sit empty across three round-trips.
   const [nabi, viewer, diff, trees] = await Promise.all([
     import('nabi-note'),
     import('nabi-note/viewer'),
@@ -1207,8 +1209,8 @@ onBeforeUnmount(() => {
   border-radius: 12px;
 }
 
-/* 편집기가 오기 전에도 자리를 잡아 둔다(095) — 안 그러면 빈 상자가 갑자기 차며 페이지가 밀린다. */
-/* Holds space before the editor lands (095), or the empty box fills suddenly and the page jumps. */
+/* 편집기가 오기 전에도 자리를 잡아 둔다 — 안 그러면 빈 상자가 갑자기 차며 페이지가 밀린다. */
+/* Holds space before the editor lands, or the empty box fills suddenly and the page jumps. */
 .demo-host:has(> .nabi-content:empty) {
   min-block-size: 22rem;
 }

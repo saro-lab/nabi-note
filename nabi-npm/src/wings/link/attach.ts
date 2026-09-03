@@ -84,7 +84,8 @@ function fileAnchorGroups(holderEl: Element): Element[][] {
   return groups;
 }
 
-// 속성 선택자용 — _id 는 안전 문자만 갖지만(schema), surface/map 과 같은 방어를 한다.
+// 속성 선택자용 — _id 는 안전 문자만 갖지만(schema), surface/map과 같은 방어를 한다.
+// For attribute selectors; `_id` is already restricted to safe characters (schema), but this mirrors surface/map's defense anyway.
 const escapeId = (id: string): string => id.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
 export const attachFileLink: Attach = ({ root, nabi, doc, env, pathOfKey }) => {

@@ -2,6 +2,7 @@
 // Internal and external share one shape, only `_`-prefixed fields are internal; text is a bare string, marks nest as elements, and runs (runs.ts) are a derived view, not what's stored.
 
 // 문자열이 기본이고, 숫자는 불리언(1/0)과 제목 단계(h: 1~6)에만 온다.
+// String is the default; a number appears only for a boolean (1/0) or a heading level (h: 1-6).
 export type AttrValue = string | number;
 export type Attrs = Readonly<Record<string, AttrValue>>;
 
@@ -20,8 +21,8 @@ export type NabiNode = ElementNode | string;
 // The root is just an array of paragraphs; there's no root object.
 export type NabiDoc = readonly ElementNode[];
 
-// undefined도 받아 거절한다 — `ch[0]`처럼 없을 수 있는 자리를 그대로 물려도 안전하게 하려고(실제로 빈 표칸에서 터졌었다, ailog 102).
-// Accepts and rejects undefined too, so a possibly-missing slot like `ch[0]` can be passed straight through safely (this actually crashed once, on an empty table cell — ailog 102).
+// undefined도 받아 거절한다 — `ch[0]`처럼 없을 수 있는 자리를 그대로 물려도 안전하게 하려고(실제로 빈 표칸에서 터진 적이 있다).
+// Accepts and rejects undefined too, so a possibly-missing slot like `ch[0]` can be passed straight through safely (this actually crashed once, on an empty table cell).
 export function isElement(node: NabiNode | undefined): node is ElementNode {
   return node !== undefined && typeof node !== 'string';
 }

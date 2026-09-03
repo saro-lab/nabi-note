@@ -23,8 +23,8 @@ interface InertCell {
 const inertCells = new WeakMap<HTMLElement, InertCell>();
 const modalRoots = new WeakMap<Document, Set<HTMLElement>>();
 
-// Modal siblings are inert while a layer is up. Entries compose for nested layers and only restore
-// an attribute that still carries the value this layer owns.
+// 레이어가 떠 있는 동안 형제는 inert가 된다 — 항목은 중첩 레이어끼리 쌓이고, 이 레이어가 소유한 값을 아직 든 속성만 되돌린다.
+// Modal siblings go inert while a layer is up; entries stack for nested layers, and release restores an attribute only if it still holds the value this layer set.
 export function inertDocumentBackground(owner: Document, layerRoot: HTMLElement): () => void {
   const token = {};
   const touched: HTMLElement[] = [];
@@ -102,7 +102,8 @@ export function inertDocumentBackground(owner: Document, layerRoot: HTMLElement)
   return release;
 }
 
-// Modal surfaces share one document stack even when they come from separate editor mounts.
+// 모달 표면은 서로 다른 편집기 마운트에서 와도 문서 스택 하나를 같이 쓴다.
+// Modal surfaces share one document stack even across separate editor mounts.
 export function pushDocumentLayer(owner: Document, focus: HTMLElement | null = null): DocumentLayer {
   const token = {};
   let stack = stacks.get(owner);

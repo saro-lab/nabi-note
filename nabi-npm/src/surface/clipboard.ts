@@ -1,21 +1,5 @@
-// 복사·잘라내기가 클립보드에 실을 글자를 짓는다 — 007 이 세운 곁눈질(브라우저가 채우게 두고
-// 우리는 한 벌 떠 두기)을 걷고, **우리가 직접 싣는** 자리다 (260823_008).
-//
-// **왜 우리가 싣나.** 봉해진 첨부(`a[data-nabi-file][contenteditable="false"]`)에는
-// `user-select: none` 이 걸려 있고, 크롬은 그 서브트리를 클립보드에 **아예 안 싣는다** —
-// 실측으로 잰 답이다: 데모에서 첨부를 골라 복사하면 `text/html` 은 조각 주석만 든 빈 껍데기(60자)로
-// 오고 `text/plain` 은 빈 글자다. 앞서 실려 있던 글자마저 그 빈 것으로 덮인다. 그러니 판정
-// 복사 출처를 추측하는 옛 판정을 아무리 넓혀도 붙일 것이 없다 — 실을 글자를 짓는 것이 유일한 길이었다.
-//
-// **덤으로 닫히는 것.** `cloneContents()` 는 조상을 안 든다 — `<h1>` 의 글자를 전부 골라
-// 복사해도 "제목이었다" 가 클립보드에 없었다(옛 코어가 `input/copy.ts` 를 둔 그 까닭).
-// 여기 `clipContextOf` 가 그 맥락을 되씌운다.
-//
-// 몸 셋 중 둘은 **글자 함수**다(`dressClipHtml`·`wrapClipHtml`) — DOM 없이 그물이 잡는다.
-// DOM 을 보는 것은 조상을 훑는 `clipContextOf` 하나뿐이라 그것만 실기의 몫으로 남는다.
-//
-// **첨부(파일링크)만은 맥락 두르기가 아니라 문단 감싸기로 간다** (260823_010) — 아래
-// `loneFileLink`·`fileClipHtml` 이 그 예외이고, 그 까닭은 그 자리에 적었다.
+// 복사·잘라내기 HTML을 직접 짓는다(007→260823_008) — 크롬이 user-select:none 첨부 서브트리를 클립보드에서 통째로 빼먹어(실측 60자 빈 껍데기) 브라우저에 맡길 수 없다. cloneContents()가 조상을 안 들고 오는 문제는 clipContextOf가 되씌워 보완한다
+// Builds copy/cut HTML ourselves (007 -> 260823_008); Chrome drops a user-select:none attachment's subtree from the clipboard entirely (measured: a 60-byte empty shell), so we can't rely on the browser. clipContextOf re-wraps ancestor context that cloneContents() otherwise loses
 import { FILLER_ATTR } from '../html/index.js';
 import {
   comparePositions,
@@ -76,60 +60,37 @@ export function clipboardBodyOf(doc: NabiDoc, selection: Selection, env: EditEnv
   return body;
 }
 
-// 화면에만 사는 표식 — 밖으로 나가는 글자에서는 걷는다.
-//
-//  - `contenteditable`·`draggable` — `html/builders.ts` 가 **편집기 HTML 에만** 다는 봉인.
-//  - `data-nabi-picked` — `wings/link/attach.ts` 의 "지금 골라져 있다" 표시.
-//  - `data-nabi-dropcap-letter` — 편집기에서만 첫 글자를 실제 상자로 그리는 표시.
-//
-// `data-key` 는 HTML fallback에 남겨도 해가 없다(들여오기가 모르는 속성은 조용히 흘린다).
+// 화면 전용 표식(contenteditable·draggable·data-nabi-picked·data-nabi-dropcap-letter)은 밖으로 나가는 글자에서 걷는다 — data-key는 남아도 무해하다(들여오기가 모르는 속성은 조용히 흘린다)
+// Screen-only markers (contenteditable, draggable, data-nabi-picked, data-nabi-dropcap-letter) are stripped from outgoing text; data-key is harmless to leave (import silently drops attributes it doesn't recognize)
 const DISPLAY_ONLY = ['contenteditable', 'draggable', 'data-nabi-picked', 'data-nabi-dropcap-letter'];
 const DISPLAY_ATTR = new RegExp(`\\s+(?:${DISPLAY_ONLY.join('|')})(?:\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]*))?`, 'gi');
 
-// 태그 하나 — 속성 자리는 따옴표 안의 `>` 를 삼킨다. 우리 조립이 낸 HTML 만 읽으면 되므로
-// 이만큼이면 넉넉하다(우리 조립 결과에만 적용하며 외부 HTML 판정에는 쓰지 않는다).
+// 태그 하나를 매치 — 따옴표 안 `>`도 삼킨다. 우리가 조립한 HTML에만 적용하므로 이 정도로 충분하다(외부 HTML 판정에는 안 쓴다)
+// Matches one tag, tolerating a quoted `>` inside an attribute; good enough since this only runs on HTML we assembled ourselves, never on untrusted external HTML
 const TAG = /<(\/?)([a-z][a-z0-9-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)>/gi;
 const FILLER = new RegExp(`\\s${FILLER_ATTR}\\b`, 'i');
 const DROP_CAP_SPAN =
   /<span\b(?=[^>]*\bdata-nabi-dropcap-letter(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*))?)[^>]*>([^<]*)<\/span>/gi;
 
-// 표시 전용 걷기 — 밖으로 나가는 글자에서 화면의 사정을 지운다.
+// 표시 전용 걷기 — 밖으로 나가는 글자에서 화면 전용 표식을 지운다
+// Strips screen-only display markers from text headed outside the editor
 export function dressClipHtml(html: string): string {
   return html.replace(DROP_CAP_SPAN, '$1').replace(TAG, (all: string, slash: string, name: string, attrs: string) => {
-    // 받침 br 은 **노드째** 걷는다. 속성만 걷으면 진짜 라인이 되어 없던 줄이 생긴다 —
-    // `html/import.ts` 의 `dropFiller` 는 **혼자 선 br 하나**만 걷으므로 글 뒤에 붙은 받침은
-    // 그대로 라인으로 살아난다.
+    // 받침 br은 노드째 걷는다 — 속성만 걷으면 진짜 라인이 되어, dropFiller가 못 잡는 "글 뒤에 붙은 받침"이 되살아난다
+    // A filler br is removed entirely, not just its attribute, or it becomes a real line break that dropFiller (which only strips a lone standalone br) won't catch when it trails real text
     if (name.toLowerCase() === 'br' && FILLER.test(attrs)) return '';
     const kept = attrs.replace(DISPLAY_ATTR, '');
     return kept === attrs ? all : `<${slash}${name}${kept}>`;
   });
 }
 
-// --- 파일링크 예외 -------------------------------------------------------------------------------
-//
-// 첨부(파일링크)는 마크지만 **하나의 객체**다 — 주인의 확정 (2026-08-23):
-//
-// > "파일링크는 링크와 달리 object 객체로 인식하는 게 맞기 때문에 **예외적으로 빈 줄을 하나 더
-// >  넣어줘.** 안 그러면 파일링크끼리 엉켜서 길어지는 이상한 현상이 일어나."
-//
-// 그 엉킴의 자리는 붙여넣기다. 첨부만 고르면 조각이 `<a>` 하나라, 들여오면 문단 하나짜리
-// **인라인 조각**이 되고 `insertFragmentOp` 의 `spliceInline` 이 그것을 캐럿의 문단 **안**에
-// 글줄로 잇는다(260823_008 이 세운 옳은 답이다 — 글에는). 그런데 첨부는 글이 아니라 물건이라,
-// 첨부가 이미 선 줄 끝에 붙이면 배지 둘이 한 줄에 나란히 서서 **하나의 긴 첨부처럼** 보인다.
-//
-// 그래서 실을 때 모양을 바꾼다 — **문단 하나로 감싸고 빈 문단 하나를 뒤에 잇는다.**
-//  - 감싸기가 조각을 문단 둘짜리로 만들어 `inlineFragment` 문을 못 지나게 한다 = 제 줄에 선다.
-//  - 빈 문단이 **뒤**인 까닭: 붙인 뒤 캐럿이 그 빈 줄에 서서 바로 이어 쓸 수 있다. 앞에 두면
-//    첨부 위에 빈 줄이 남고 캐럿은 여전히 첨부 뒤다.
-//  - **첨부 하나만 정확히 골랐을 때의 예외다.** 글자와 섞어 긁은 선택은 사람이 "문장을 복사한
-//    것"이라 그 자리에서 첨부만 제 줄로 튀어 나가면 안 된다 — 지금 동작(글줄로 잇기)이 맞다.
-//
-// 감싸는 문단은 **맨 `<p>`** 다 — 첨부가 살던 문단은 다른 글자를 든 남의 문단이라, 그 제목·정렬을
-// 첨부 하나가 물고 나올 이유가 없다.
+// --- 파일링크 예외: 첨부는 마크지만 하나의 객체로 다뤄, 붙여넣을 때만 문단으로 감싸고 뒤에 빈 문단을 잇는다(2026-08-23) — 안 그러면 인라인 조각으로 취급돼 이미 있는 줄 끝에 붙어 첨부 둘이 하나처럼 엉킨다. 빈 문단이 뒤인 까닭은 캐럿이 거기 서서 바로 이어 쓰게 하려는 것. 글자와 섞어 고른 선택엔 이 예외가 안 걸린다 ---
+// File-link exception: an attachment is a mark but treated as one object, so pasting wraps it in a plain paragraph plus a trailing empty one (2026-08-23) -- otherwise it's treated as inline text and tacked onto an existing line, making two attachments look like one merged badge. The empty paragraph trails so the caret lands there ready to type; a selection mixing text with the attachment skips this exception
 const FILE_OPEN = /^<a\s[^>]*>/i;
 const FILE_ATTR = /\sdata-nabi-file="[^"]+"/i;
 
-// 조각이 첨부 `a` **하나로 끝나는가** — 앞뒤에 글자 한 자도 없고 속에 또 다른 `a` 도 없다.
+// 조각이 첨부 a 태그 하나뿐인가 — 앞뒤에 글자도 없고 속에 다른 a도 없다
+// Whether the fragment is exactly one attachment <a> tag, with no surrounding text and no nested <a>
 export function loneFileLink(html: string): boolean {
   const s = html.trim();
   const open = FILE_OPEN.exec(s)?.[0];
@@ -138,14 +99,14 @@ export function loneFileLink(html: string): boolean {
   return FILE_ATTR.test(open);
 }
 
-// 첨부 하나를 클립보드에 실을 모양으로 — 문단으로 감싸고 빈 문단 하나를 잇는다.
-// 빈 문단의 `<br/>` 는 조립의 빈 문단 표기 그대로다(`html/render.ts` 의 FILLER) — 들여오기의
-// "혼자 선 br 하나 = 빈 것" 규칙이 그것을 도로 빈 문단으로 읽는다.
+// 첨부 하나를 문단으로 감싸고 빈 문단을 잇는다 — 빈 <br/>은 html/render.ts의 FILLER 표기와 같아 들여오기가 그대로 빈 문단으로 읽는다
+// Wraps a lone attachment in a paragraph plus a trailing empty one; the empty <br/> matches html/render.ts's FILLER marker, so import reads it back as an empty paragraph
 export function fileClipHtml(inner: string): string {
   return `<p>${inner.trim()}</p><p></p>`;
 }
 
-// 여는 태그 목록으로 조각을 두른다 — 목록은 **안쪽부터** 온다(`clipContextOf` 가 그 차례로 준다).
+// 여는 태그 목록으로 조각을 두른다 — 목록은 안쪽부터 온다(clipContextOf가 그 순서로 준다)
+// Wraps the fragment in a list of opening tags, given innermost-first (the order clipContextOf produces)
 export function wrapClipHtml(inner: string, opens: readonly string[]): string {
   let out = inner;
   for (const open of opens) {
@@ -161,8 +122,8 @@ export function wrapClipHtml(inner: string, opens: readonly string[]): string {
 const START_TO_START = 0;
 const END_TO_END = 2;
 
-// 이 블록의 글자를 범위가 **전부** 덮었나 — 끝의 받침 br 은 셈에서 뺀다(그것은 화면의 것이라
-// 사람이 고를 수 없고, 그것 때문에 "다 골랐는데 안 덮었다" 가 되면 안 된다).
+// 범위가 이 블록의 글자를 전부 덮었나 — 화면 전용인 끝의 받침 br은 사람이 고를 수 없어 셈에서 뺀다
+// Whether the range covers all of this block's text; a trailing filler br is screen-only and unselectable, so it's excluded from the count
 function coversAll(range: Range, el: Element): boolean {
   const owner = el.ownerDocument;
   if (!owner) return false;
@@ -178,16 +139,8 @@ function coversAll(range: Range, el: Element): boolean {
   return range.compareBoundaryPoints(START_TO_START, whole) <= 0 && range.compareBoundaryPoints(END_TO_END, whole) >= 0;
 }
 
-// 조각 위에 되씌울 조상들 — **안쪽부터 바깥쪽으로** 준다.
-//
-// 옛 코어의 규칙 셋(`AGENTS.md` §9.14)이 한 줄로 접힌다. `data-key` 가 그 갈림이기 때문이다 —
-// 키는 문단 급 이상에만 붙으므로 키 없는 조상은 전부 마크다.
-//
-//  - **마크**(`b`·`a`·`mark`·`span` …) — **언제나** 씌운다. 굵게 안의 글자를 복사하면 굵게가 온다.
-//  - **블록**(`data-key` 를 든 것: 문단·항목·칸·목록·표) — 그 속을 **전부 덮었을 때만** 씌운다.
-//    반쯤 덮은 블록을 만나면 거기서 멈춘다(그 위의 `ul`·`table` 도 안 씌운다) — 그것이 옛
-//    규칙의 "칸은 조각에 이미 구조가 있을 때만" 과 같은 답이다: 항목을 통째로 덮었을 때만
-//    조각에 그 항목이 들어 있다.
+// 조각 위에 되씌울 조상들을 안쪽부터 바깥쪽 순으로 모은다 — data-key 없는 조상(마크)은 항상 씌우고, data-key 있는 블록(문단·칸·표 등)은 그 속을 전부 덮었을 때만 씌우며, 반쯤 덮으면 거기서 멈춘다
+// Collects ancestors to re-wrap the fragment in, innermost first; ancestors without data-key (marks) are always included, but a data-key'd block (paragraph/cell/table) is included only if fully covered, stopping there otherwise
 export function clipContextOf(range: Range, root: Element): readonly Element[] {
   const out: Element[] = [];
   const start = range.commonAncestorContainer;
@@ -201,18 +154,16 @@ export function clipContextOf(range: Range, root: Element): readonly Element[] {
   return out;
 }
 
-// 껍데기만 복제해 여는 태그 글자를 뜬다 — 속성을 손으로 다시 적지 않는다.
+// 얕은 복제로 여는 태그 글자를 뜬다 — 속성을 손으로 다시 안 적는다
+// Gets the opening tag text via a shallow clone, so attributes aren't retyped by hand
 function openTagOf(el: Element): string {
   const html = (el.cloneNode(false) as Element).outerHTML;
   const close = `</${el.tagName.toLowerCase()}>`;
   return html.toLowerCase().endsWith(close) ? html.slice(0, html.length - close.length) : html;
 }
 
-// 범위 하나 → 클립보드에 실을 html.
-//
-// 첨부 하나만 고른 선택은 **맥락 두르기 대신** 문단 감싸기로 간다(위 `fileClipHtml` 의 까닭).
-// 두 길이 겹칠 일은 없다: 첨부가 제 문단을 통째로 덮고 있어도 그 문단은 래퍼문단이 아니라
-// 글 문단이라, 첨부의 정체(물건)를 말해 주는 것은 그 문단이 아니라 감싼 새 문단이다.
+// 범위 하나를 클립보드 HTML로 — 첨부 하나만 고른 선택은 맥락 두르기 대신 문단 감싸기로 간다(fileClipHtml). 두 길은 절대 안 겹친다: 첨부의 부모 문단은 글 문단이라 물건임을 말해 주지 못한다
+// Converts one range to clipboard HTML; a selection of exactly one attachment takes the paragraph-wrap path instead of ancestor-wrapping (fileClipHtml). The two paths never overlap, since an attachment's parent paragraph is a text paragraph and can't itself signal "this is an object"
 export function clipHtmlOf(range: Range, root: Element, owner: Document): string {
   const box = owner.createElement('div');
   box.appendChild(range.cloneContents());
@@ -224,7 +175,8 @@ export function clipHtmlOf(range: Range, root: Element, owner: Document): string
 
 // --- 싣기 ---------------------------------------------------------------------------------------
 
-// `ClipboardEvent.clipboardData` 중 우리가 쓰는 만큼 — 그물이 가짜 하나로 이 자리를 잡는다.
+// ClipboardEvent.clipboardData 중 우리가 쓰는 부분만 — 테스트는 가짜 구현으로 이 자리를 채운다
+// The slice of ClipboardEvent.clipboardData we actually use; tests fill this with a fake implementation
 export interface ClipTarget {
   setData(type: string, value: string): void;
 }

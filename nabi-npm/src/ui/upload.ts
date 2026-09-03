@@ -1,26 +1,5 @@
-// 업로드 화면 — 자리표시자·진행률·취소.
-//
-// **거절 문구는 여기 없다** (084 ⑦). 예전에는 화면 구석에 인라인 쪽지를 띄웠는데, 그것은 이
-// 기능만의 알림 자리를 하나 더 세운 셈이었다 — 지금은 오류가 전부 인스턴스의 toast 로 나가고
-// 그 손은 배치를 아는 쪽(`surface/parts/upload.ts`)이 든다. 화면은 상자만 그린다.
-//
-// **자리표시자는 둘이다.** 올라가는 것이 그림이냐 아니냐로 갈리는데, 숫자를 만드는 손은 하나다
-// (시계 둘 — 진짜 콜백 + 대역폭 예측 티커). 갈리는 것은 그 숫자를 **그리는 모양**뿐이다.
-// 그림  — 올라갈 그림 자신이 서고(폭 60%·가운데, 곧 앉을 그 크기 그대로) 그 위의 사각형
-//            타일이 %만큼 걷힌다. 끝나는 순간 크기도 문단 속성도 아무것도 안 변하는 것이 요점이다.
-// 그 밖 — 첨부 링크(클립 상자)의 모양으로 서고, 그 안을 왼쪽에서 오른쪽으로 차오르는 띠가
-//            %를 말한다. 한 줄 높이라 타일 판이 들어갈 자리가 없다.
-//
-// **상자는 그 자리에 뜬다.** 파일을 넘겨받던 순간 캐럿이 든 최상위 블록 **바로 뒤**에, 흐름 안에
-// 서는 형제로 선다 — 올라간 그림이 결국 앉을 그 자리다. 화면 구석에 따로 모아 두면 "무엇이
-// 어디로 들어가는가" 를 사람이 눈으로 잇지 못한다.
-//
-// **상자는 문서가 아니다.** 나비트리에는 한 줄도 안 들어간다: 올라가는 중인 것은 아직 문서가
-// 아니고, 트리에 넣으면 되돌리기·저장·출력이 전부 그 유령을 보게 된다. 그래서 편집기 DOM 에만
-// 산다 — 대신 재그리기가 지우면 `onChange` 뒤에 살아 있는 것들을 순서대로 다시 꽂는다.
-//
-// **진행률은 값 하나(`--nabi-per`)가 몬다.** 숫자·격자가 그 하나를 보므로 함께 움직인다. 그 값을
-// 미는 것은 `parts/ticker.ts`(시계 둘)이고, 이 파일은 받아 그리기만 한다.
+// 자리표시자는 문서(나비트리)에 안 들어간다 — 화면 DOM에만 살아, 재그리기가 지우면 onChange 뒤에 순서대로 다시 꽂는다. 상자는 캐럿이 든 최상위 블록 바로 뒤에 흐름 안의 형제로 서고, 진행률은 값 하나(--nabi-per)가 숫자와 격자를 함께 몬다.
+// The placeholder never enters the document (the NABI TREE) — it lives only in the screen DOM, and a redraw that wipes it gets it re-inserted in order after onChange. It sits as a flow sibling right after the block the caret was in when the file arrived, and progress is driven by one value (--nabi-per) that both the number and tile grid read.
 import { hostOf, type Nabi } from '../editor/index.js';
 import type { Translator } from '../locale/index.js';
 import { makeTranslator } from '../locale/index.js';
@@ -30,38 +9,46 @@ import { suppressMousedownTap } from './parts/button.js';
 import { make } from './parts/dom.js';
 import { createTicker, type Ticker } from './parts/ticker.js';
 
-// 상자·격자·칸의 태그 — 등록된 커스텀 엘리먼트가 아니라 **모르는 태그**다. 그래서 들여오기가
-// 만나도 껍데기를 벗기고, 어느 wing 도 자기 것이라 주장하지 않는다.
+// 상자·격자·칸의 태그 — 등록된 커스텀 엘리먼트가 아니라 모르는 태그다. 그래서 들여오기가 만나도 껍데기를 벗기고, 어느 wing도 자기 것이라 주장하지 않는다.
+// Tags for the box, grid, and tiles — deliberately unregistered custom elements. Import strips them without asking, and no wing claims them as its own.
 const BOX_TAG = 'nabi-upload';
 const GRID_TAG = 'nabi-grid';
 const TILE_TAG = 'nabi-tile';
 
 // 칸 하나가 덮는 크기의 목표와 조임쇠 — 작은 그림에도 격자가 생기고, 큰 그림의 칸이 폭주하지 않게.
+// Target size and clamps for one tile — small images still get a grid, and large ones don't explode into too many tiles.
 const TILE_TARGET = 42;
 const TILE_MIN = 2;
 const TILE_MAX = 16;
 // 한 칸이 걷히는 데 걸리는 진행률 폭 — 시트의 `--nabi-span` 과 같아야 한다.
+// The progress span it takes to clear one tile — must match the stylesheet's `--nabi-span`.
 const TILE_SPAN = 25;
 
 export interface UploadViewOptions {
   // 편집 표면 — 상자가 이 안에, 최상위 블록의 형제로 선다.
+  // The edit surface — the box is placed inside it, as a sibling of the top-level block.
   readonly nabi: Nabi;
   readonly surface: HTMLElement;
   // 취소 단추가 부를 곳. 없으면 단추를 안 그린다.
+  // Where the cancel button calls into; without it, no button is drawn.
   readonly upload?: Pick<UploadMount, 'cancel'>;
   readonly locale?: string;
   readonly translator?: Translator;
   // 회선 짐작 — 그물이 티커를 끄고(0) 진짜 콜백만 보게 할 때 쓴다.
+  // Bandwidth estimate — tests set this to 0 to disable the ticker and see only real callbacks.
   readonly bandwidth?: number;
 }
 
 export interface UploadView {
   // `mountUpload` 의 `onStart` 에 그대로 잇는다.
+  // Wired straight to `mountUpload`'s `onStart`.
   start(tasks: readonly StartedTask[]): void;
   progress(id: string, percent: number): void;
   // `onSettle` 에 잇는다 — 숫자를 100 까지 몰고 그때까지 기다린다(아직 안 걷는다).
+  // Wired to `onSettle` — drives the number to 100 and waits for that (doesn't clear yet).
   settle(): Promise<void>;
   // `onDone` 에 잇는다 — 실물이 선 **그 자리에서** 자리표시자를 걷는다. 기다리지 않는다.
+  // Wired to `onDone` — clears the placeholder the instant the real thing is in, no waiting.
   done(): void;
   unmount(): void;
 }
@@ -71,6 +58,7 @@ interface Box {
   readonly el: HTMLElement;
   readonly ticker: Ticker;
   // 미리보기 blob 주소의 임자는 이 상자 하나다 — 상자가 걷힐 때 그 주소만 되돌린다.
+  // This box alone owns its preview blob URL — it's revoked only when the box is cleared.
   revoke?: () => void;
 }
 
@@ -86,6 +74,7 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
   // --- 자리 잡기 -------------------------------------------------------------------------------
 
   // 캐럿이 든 최상위 블록의 키 — 파일을 넘겨받던 그 순간의 자리다.
+  // The key of the top-level block holding the caret — captured at the instant the file arrived.
   const anchorNow = (): string | null => {
     const top = hostOf(nabi).doc()[nabi.getSelection().focus.path[0] ?? -1];
     if (top && typeof top._id === 'string') return top._id;
@@ -94,6 +83,7 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
   };
 
   // 재그리기가 상자를 지웠으면 다시 꽂는다 — 순서대로, 그 자리에.
+  // If a redraw removed the boxes, they're reinserted — in order, back where they were.
   const place = (): void => {
     let anchor: Element | null = anchorKey
       ? surface.querySelector(`[data-key="${anchorKey.replace(/["\\]/g, '\\$&')}"]`)
@@ -107,14 +97,13 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
       }
       anchor = box.el;
     }
-    // 다시 꽂은 뒤에는 **가장 가까운 만큼만** 움직인다 — 재그리기는 글자를 칠 때마다 도는데
-    // 그때마다 화면이 가운데로 튀면 쓰던 자리를 잃는다.
+    // 다시 꽂은 뒤에는 가장 가까운 만큼만 움직인다 — 재그리기는 글자를 칠 때마다 도는데 그때마다 화면이 가운데로 튀면 쓰던 자리를 잃는다.
+    // Reinserting only scrolls the nearest amount needed — a redraw fires on every keystroke, and jumping to center each time would lose the user's place.
     boxes[0]?.el.scrollIntoView?.({ block: 'nearest' });
   };
 
-  // 배치가 막 섰다 — 여기서는 **가운데까지** 데려간다. 자리표시자는 캐럿이 있던 블록 뒤에 서므로
-  // 화면 밖이나 접힌 아래에 있을 수 있고, 그러면 올라가는 동안 아무 일도 안 일어나는 것처럼 보인다.
-  // 진행률은 보라고 있는 것이라, 시작할 때 한 번은 잘 보이는 자리로 옮긴다.
+  // 자리표시자는 캐럿이 있던 블록 뒤에 서므로 화면 밖이나 접힌 아래에 있을 수 있다 — 시작할 때만 잘 보이는 가운데로 옮겨, 올라가는 동안 아무 일도 안 일어나는 것처럼 보이지 않게 한다.
+  // The placeholder sits after the block the caret was in, so it can land offscreen or below the fold — scrolled to center only at the start, so progress doesn't look like nothing is happening.
   const aim = (): void => {
     boxes[0]?.el.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
   };
@@ -122,6 +111,7 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
   const stopWatch = nabi.onChange(() => {
     if (!running) return;
     // 표면의 재그리기가 어느 순서로 돌았든 그 뒤로 미룬다.
+    // Deferred until after the surface's own redraw, whatever order it ran in.
     queueMicrotask(() => {
       if (running) place();
     });
@@ -129,14 +119,15 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
 
   // --- 상자 하나 -------------------------------------------------------------------------------
 
-  // Math.random 을 안 쓴다 — 무작위 화면은 그물이 못 붙든다. 자리표시자 id 가 씨앗이다.
+  // Math.random을 안 쓴다 — 무작위 화면은 그물이 못 붙든다. 자리표시자 id가 씨앗이다.
+  // No Math.random — a nondeterministic layout can't be asserted on in tests. The placeholder's id is the seed instead.
   const seedOf = (id: string): number => {
     const digits = id.replace(/\D/g, '');
     return digits === '' ? 1 : Number(digits);
   };
 
-  // 작은 LCG 로 도는 피셔-예이츠. 32비트끼리의 보통 곱셈은 낮은 자리를 흘리는데, 아래 나머지
-  // 연산이 읽는 것이 바로 그 자리다 — 그래서 `Math.imul` 이다.
+  // 작은 LCG로 도는 피셔-예이츠. 32비트끼리의 보통 곱셈은 낮은 자리를 흘리는데, 아래 나머지 연산이 읽는 것이 바로 그 자리다 — 그래서 Math.imul이다.
+  // Fisher-Yates driven by a small LCG. Plain 32-bit multiplication loses low bits, and the modulo below reads exactly those bits — hence `Math.imul`.
   const shuffledRanks = (count: number, seed: number): number[] => {
     const ranks = Array.from({ length: count }, (_, index) => index);
     let state = Math.imul(seed, 2654435761) >>> 0 || 1;
@@ -153,9 +144,8 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
   const tileCount = (size: number): number =>
     size > 0 ? Math.min(TILE_MAX, Math.max(TILE_MIN, Math.round(size / TILE_TARGET))) : 0;
 
-  // 격자 — 미리보기 위에 정확히 겹치는 칸들. 칸은 격자 순서대로 놓이고, **섞인 것은 자리가 아니라
-  // 걷히는 시점**이다. 열 수를 인라인으로 박는 까닭: `auto-fill` 이면 칸 수를 레이아웃이 정해
-  // 버려서 여기서 순위를 매길 수가 없다.
+  // 격자 — 미리보기 위에 정확히 겹치는 칸들. 칸은 격자 순서대로 놓이고, 섞인 것은 자리가 아니라 걷히는 시점이다. 열 수를 인라인으로 박는 까닭: auto-fill이면 칸 수를 레이아웃이 정해 버려서 여기서 순위를 매길 수가 없다.
+  // A grid of tiles overlaid exactly on the preview. Tiles sit in grid order — what's shuffled is the order they clear, not their position. The column count is set inline because with auto-fill, layout would decide the tile count and this couldn't rank them.
   const buildGrid = (id: string, width: number, height: number): HTMLElement | null => {
     const columns = tileCount(width);
     const rows = tileCount(height);
@@ -191,9 +181,8 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
     el.style.setProperty('--nabi-per', String(value));
   };
 
-  // 첨부 상자의 속 — 클립·이름·확장자 배지. 이름의 기본값은 **파일 이름이 아니라 "첨부파일"**
-  // 이다: 올라가는 동안 사람이 알아야 하는 것은 "무엇이 들어오는 중인가" 이고, 파일 이름은
-  // 끝난 뒤 링크의 글자가 대신 말한다.
+  // 첨부 상자의 속 — 클립·이름·확장자 배지. 이름의 기본값은 파일 이름이 아니라 "첨부파일"이다: 올라가는 동안 사람이 알아야 하는 것은 "무엇이 들어오는 중인가"이고, 파일 이름은 끝난 뒤 링크의 글자가 대신 말한다.
+  // The inside of an attachment box — clip, name, extension badge. The default name is "attachment," not the filename — while uploading, what matters is "something is coming in," and the filename is told by the link's text once it's done.
   const clipParts = (): HTMLElement[] => {
     const clip = make(owner, 'span', 'nabi-upload-clip');
     clip.textContent = '📎';
@@ -206,6 +195,7 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
     const el = owner.createElement(BOX_TAG);
     el.setAttribute('data-nabi-id', task.id);
     // 캐럿이 못 들어간다 — 문서가 아니기 때문이다.
+    // The caret can't enter it — it isn't part of the document.
     el.setAttribute('contenteditable', 'false');
     el.setAttribute('data-nabi-label', extensionOf(task.name).toUpperCase() || '');
     el.setAttribute('data-nabi-name', task.name);
@@ -213,6 +203,7 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
     paint(el, 0);
 
     // 미리보기를 만들 수 있는 그림인가 — 이 한 줄이 두 모양을 가른다.
+    // Whether it's an image a preview can be built from — this one line decides which of the two shapes is drawn.
     let revoke: (() => void) | undefined;
     const url = task.image ? blobUrlOf(task.file) : null;
     if (url) revoke = () => owner.defaultView?.URL.revokeObjectURL(url);
@@ -220,9 +211,8 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
     if (url) {
       const preview = owner.createElement('img');
       preview.alt = '';
-      // 못 그리는 그림은 첨부 상자로 되돌린다 — 시트가 `:has(img)` 로 가른다.
-      // **여기서는 toast 를 안 낸다**: 미리보기를 못 그렸을 뿐 전송은 그대로 가고, 상자가 그
-      // 자리에서 모양을 바꾸는 것으로 이미 뜻이 보인다 (084 ⑦ — 같은 말을 두 번 안 한다).
+      // 못 그리는 그림은 첨부 상자로 되돌린다 — 시트가 :has(img)로 가른다. 여기서는 toast를 안 낸다: 미리보기를 못 그렸을 뿐 전송은 그대로 가고, 상자가 그 자리에서 모양을 바꾸는 것으로 이미 뜻이 보인다.
+      // An image that fails to render falls back to the attachment box shape — the stylesheet branches on :has(img). No toast fires here: only the preview failed, not the upload, and the box changing shape already says so without repeating it.
       preview.addEventListener(
         'error',
         () => {
@@ -232,8 +222,8 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
         },
         { once: true },
       );
-      // 격자는 **그려진 크기**를 알아야 하는데 그건 로드 뒤에 생긴다. 기다리면 업로드가 늦어지므로
-      // 격자만 뒤늦게 합류하고, 그때까지 진행률은 숫자가 혼자 나른다.
+      // 격자는 그려진 크기를 알아야 하는데 그건 로드 뒤에 생긴다. 기다리면 업로드가 늦어지므로 격자만 뒤늦게 합류하고, 그때까지 진행률은 숫자가 혼자 나른다.
+      // The grid needs the rendered size, which only exists after load — rather than delay the upload, the grid joins late while the number alone carries progress until then.
       preview.addEventListener(
         'load',
         () => {
@@ -247,8 +237,8 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
       preview.src = url;
       el.append(preview);
     } else {
-      // 그림이 아니다 — 첨부 링크와 같은 클립 상자로 선다. 그림 한 장을 대신 세우지 않는다:
-      // 올라가는 것이 무엇인지 그 그림은 어차피 말해 주지 못했고, 크기가 제멋대로라 문단을 밀었다.
+      // 그림이 아니다 — 첨부 링크와 같은 클립 상자로 선다. 그림 한 장을 대신 세우지 않는다: 올라가는 것이 무엇인지 그 그림은 어차피 말해 주지 못했고, 크기가 제멋대로라 문단을 밀었다.
+      // Not an image — shown as the same clip box as an attachment link, not a generic placeholder image, which never said what was coming anyway and pushed the paragraph around with its arbitrary size.
       el.setAttribute('data-nabi-kind', 'file');
       el.append(...clipParts());
     }
@@ -305,13 +295,14 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
       boxes.find((box) => box.id === id)?.ticker.report(percent);
     },
 
-    // 숫자를 100 까지 — 87% 에서 사라지면 "끝난 건가?" 가 남는다. **여기서는 안 걷는다**:
-    // 걷는 것은 실물이 선 뒤라야 하고(`done`), 그래야 둘이 함께 보이는 순간이 없다.
+    // 숫자를 100까지 — 87%에서 사라지면 "끝난 건가?"가 남는다. 여기서는 안 걷는다: 걷는 것은 실물이 선 뒤라야 하고(done), 그래야 둘이 함께 보이는 순간이 없다.
+    // Drives the number to 100 — disappearing at 87% would leave "is it done?" unanswered. It doesn't clear here; that only happens after the real thing is in (done), so the two are never visible at once.
     async settle() {
       await Promise.all(boxes.map((box) => box.ticker.finish()));
     },
 
     // 실물이 방금 문서에 섰다 — 같은 그리기 안에서 자리표시자를 걷는다.
+    // The real thing just landed in the document — the placeholder clears within the same draw.
     done() {
       clearBoxes();
     },

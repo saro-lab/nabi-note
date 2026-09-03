@@ -1,4 +1,5 @@
 // schema 그물 — 왕복 멱등·래퍼 불변식·빈 문단 보존·_id 결정성·attrs 정책·런 뷰.
+// Schema test net for roundtrip idempotence, wrapper invariants, empty-paragraph preservation, _id determinism, attrs policy, and run views.
 import { cocoon } from '../src/schema/cocoon.js';
 import { isWrapper, makeEnv } from '../src/schema/env.js';
 import { $fromJson, $parseJson, $toJson } from '../src/schema/json.js';
@@ -6,7 +7,8 @@ import { lengthOf, marksBefore, runsOf } from '../src/schema/runs.js';
 import { isElement, type ElementNode, type NabiNode } from '../src/schema/types.js';
 import { done, eq, ok } from './net.js';
 
-// 07 이 wing 선언에서 지을 환경을, 여기서는 확정된 기본 wing 갈래로 손수 짓는다.
+// wing 선언에서 짓는 환경을 여기서는 확정된 기본 갈래로 손수 짓는다.
+// The env normally built from wing declarations is hand-built here from a fixed default set.
 const ENV = makeEnv({
   voids: ['hr', 'img', 'youtube'],
   lumps: ['hr', 'img', 'youtube', 'table', 'ul', 'ol', 'tl', 'quote', 'details', 'code'],
@@ -15,7 +17,8 @@ const ENV = makeEnv({
   boolAttrs: ['dc', 'o', 'ck'],
 });
 
-// 의 전체 예시 — 확정 스키마의 정본 문서다.
+// EX — 확정 스키마의 정본 문서 전체 예시다.
+// EX is the canonical full example document for the finalized schema.
 const EX = [
   { w: 'p', a: { h: 1, a: 'c' }, ch: ['제목글'] },
   {

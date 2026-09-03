@@ -1,4 +1,5 @@
 // 0.9 수명 회귀망 - 취소, unmount, 늦은 Promise, document 전역 자원의 소유권을 고정한다.
+// 0.9 lifecycle regression net — pins down ownership of cancellation, unmount, late promises, and document-global resources.
 import { JSDOM } from 'jsdom';
 import { writeNabiFile, type FileStore } from '../src/io/index.js';
 import { createNabiWith, makeRegistry, simpleMark } from '../src/wing/index.js';

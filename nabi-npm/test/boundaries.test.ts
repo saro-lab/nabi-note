@@ -1,15 +1,5 @@
-// 경계 시험 — 층 계약을 사람의 주의가 아니라 기계가 지킨다 (plan·§6).
-// `src/` 의 소스를 정적으로 훑어(실행하지 않는다) import 방향과 금지 어휘를 검사한다.
-// 검사 대상이 없으면 통과다 — 층이 하나씩 서는 동안 이 그물이 먼저 자리를 잡고 기다린다.
-//
-// 여기서 막는 것 다섯:
-//   1. `wings/` 가 `ui/` 를 부르는 것 (wing 은 화면 도구를 모른다)
-//   2. wing 폴더가 형제 wing 폴더를 부르는 것 (공용은 `wing/` 층에만 둔다)
-//   3. surface 아래 층에서 DOM 어휘(document·window) — 조립도 편집 연산도 DOM 없는 값이다
-//      (: 서버에서 그대로 돈다). `html/parse.ts` 만 예외이고, wing 이 표면에 손을 대야 할 때는
-//      리스너를 직접 달지 않고 `attach` 로 선언한다 — 손잡이(root)는 mount 가 넘겨준다
-//   4. schema~wings 층의 모듈 최상위 가변 상태(top-level `let`/`var`) — 인스턴스는 서로 모른다
-//   5. 층 의존 방향 — 아래가 위를 모른다
+// 층 계약을 사람이 아니라 기계로 지킨다 — src를 정적으로 훑어 import 방향·DOM 어휘·최상위 상태를 검사한다.
+// Enforces layer contracts by machine, not review — statically scans src for import direction, DOM vocabulary, and top-level state.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,17 +7,8 @@ import { done, ok } from './net.js';
 
 const SRC = fileURLToPath(new URL('../src', import.meta.url));
 
-// 의 층 순서. 낮을수록 아래층이고, 아래층은 위층을 모른다.
-// `locale`(문자열 사전)은 아무것도 안 부르는 맨 아래에 둔다 — 어느 층이든 말 한 마디는 필요하다.
-// `code`(코드 색칠의 지식)도 아무것도 안 부르는 맨 아래다 — **무는 이가 양 끝**이라 그렇다:
-// 아래의 `wings/code`(편집 화면의 색칠)와 맨 위의 `viewer`(발행 HTML 의 색칠)가 같은 토크나이저·
-// 같은 span 얹기를 쓴다. 둘 중 어느 쪽에 두어도 반대쪽이 층을 거스르므로, 둘 모두의 아래에 세웠다 (088).
-// `html` 은 schema 만 딛는 조립층이라 editor 아래에 선다 — editor 의 getHtml 계열이 부른다 (05).
-// `io`(필터 계약·md 파서)는 html 위 editor 아래다: 다루는 값이 전부 그 아래 것(ElementNode·
-// SchemaEnv·importDoc·LocaleText)이고, wing 계약이 `ioFilter`·`toMd` 를 무는 방향이 그래야 선다.
-// `style`(시트의 글·지문·접기)도 아무것도 안 무는 맨 아래다 — 화면(ui)이 문서에 붙일 때도,
-// io 가 `.html` 한 장을 지을 때도 같은 글을 봐야 해서 둘 모두의 아래에 세웠다. 붙이는 문
-// (`injectSheets`)만 DOM 이 필요해 ui 에 남았다.
+// 아래가 위를 모르는 순서다 — code·style은 서로 다른 두 상위 층에서 함께 쓰이기 때문에 맨 아래에 고정했다.
+// Lower layers stay unaware of upper ones — code and style sit lowest since two unrelated upper layers each depend on them.
 const ORDER = [
   'style',
   'locale',
@@ -45,19 +26,16 @@ const ORDER = [
   'viewer',
 ];
 
-// 예외 천장은 없다 — 07 결과 계약 타입(HtmlBuilder)은 html 자신이 정의하고 wing 이 그것을
-// 잇는 방향이 됐으므로, html 은 제 층 아래(schema)만 딛으면 된다. 낡은 `html: 'wing'` 천장은
-// editor 위로의 몰래 import 를 못 잡는 과잉 허용이라 걷었다 (07).
+// 예외 천장 없음 — html은 schema만 딛으면 되고, 과잉 허용이던 옛 wing 천장은 걷었다.
+// No exception ceilings — html only needs schema below it; the old, overly permissive wing ceiling was removed.
 const CEILING: Record<string, string> = {};
 
 // 모듈 최상위 가변 상태를 금지하는 층 — 상태는 editor·caret 인스턴스 안에만 산다.
+// Layers barred from top-level mutable state — state lives only inside editor/caret instances.
 const NO_TOP_LEVEL_STATE = ['schema', 'doc', 'caret', 'editor', 'wing', 'wings'];
 
-// DOM 어휘가 사는 층 — 표면 위쪽이다. 그 아래에서 허락된 유일한 파일이 들여오기 어댑터다.
-//
-// `code/apply.ts` 는 요소를 만지면서도 여기 안 든다 — **넘겨받은 요소 하나**만 알고 필요한
-// 것은 전부 `el.ownerDocument` 에서 온다(전역 `document`·`window` 를 안 부른다). 이 규칙이
-// 그 파일을 맨 아래층에 세우고도 서버에서 죽지 않게 한다 (088).
+// DOM 어휘는 surface 위쪽 층만 쓴다 — html/parse.ts만 예외로, 넘겨받은 el.ownerDocument로 돈다.
+// DOM vocabulary is confined to surface and above — html/parse.ts is the sole exception, working via the element it's given (el.ownerDocument), never globals.
 const DOM_LAYERS = ['surface', 'ui', 'viewer'];
 const DOM_EXEMPT = 'html/parse.ts';
 
@@ -73,10 +51,8 @@ const wingOf = (rel: string): string => {
 const lineAt = (source: string, index: number): number => source.slice(0, index).split('\n').length;
 
 // --- 소스 훑기 -----------------------------------------------------------------------------
-// 주석과 문자열 속을 지우는 작은 스캐너. 두 벌을 낸다:
-//   code — 주석만 지운 것. import 문의 경로 문자열이 살아 있어야 하므로.
-//   bare — 문자열·정규식 속까지 지운 것. `"document"` 같은 글자가 DOM 사용으로 오인되면 안 되므로.
-// 지운 자리는 공백으로 채우고 줄바꿈은 남긴다 — 줄 번호가 원본과 같아진다.
+// 주석만 지운 code와 문자열·정규식까지 지운 bare, 두 벌을 낸다 — "document" 같은 문자열이 DOM 사용으로 오인되지 않게.
+// Produces two scrubbed variants: code (comments stripped) and bare (strings/regex stripped too) so literal text isn't mistaken for DOM usage.
 function scan(source: string): { code: string; bare: string } {
   const code: string[] = [];
   const bare: string[] = [];
@@ -93,7 +69,8 @@ function scan(source: string): { code: string; bare: string } {
     code.push(ch);
     bare.push(ch === '\n' ? '\n' : ' ');
   };
-  // 정규식 시작인지 나눗셈인지 — 직전 의미 있는 글자로 가른다(값이 끝난 자리면 나눗셈이다).
+  // 정규식 시작인지 나눗셈인지 — 직전 의미 있는 글자로 가른다(값이 끝난 자리면 나눗셈).
+  // Regex literal vs division — decided by the last meaningful character (a completed value means division).
   const startsRegex = (prev: string): boolean => prev === '' || !/[\w$)\]]/.test(prev);
 
   const modes: string[] = ['code'];
@@ -148,7 +125,8 @@ function scan(source: string): { code: string; bare: string } {
         continue;
       }
       if (ch === '}' && modes.length > 1 && braces[braces.length - 1] === 0) {
-        // 템플릿 `${ }` 를 닫는 자리 — 바깥 템플릿으로 돌아간다.
+        // 템플릿 `${ }`를 닫는 자리 — 바깥 템플릿 모드로 되돌아간다.
+        // Closes a template `${ }` — returns to the enclosing template mode.
         keep(ch);
         modes.pop();
         braces.pop();
@@ -192,7 +170,8 @@ function scan(source: string): { code: string; bare: string } {
   return { code: code.join(''), bare: bare.join('') };
 }
 
-// import·export 가 가리키는 경로를 뽑는다 — 정적 문, 동적 `import`, 부작용 import 셋 다.
+// 정적 import, 동적 import(), 부작용 import 세 형태 모두에서 경로를 뽑는다.
+// Extracts specifiers from all three import forms — static, dynamic import(), and side-effect only.
 function specifiers(code: string): { spec: string; index: number }[] {
   const found: { spec: string; index: number }[] = [];
   const patterns = [
@@ -240,9 +219,9 @@ const topLevelState: string[] = [];
 
 for (const file of sources) {
   for (const { spec, index } of specifiers(file.code)) {
-    if (!spec.startsWith('.')) continue; // 패키지 이름 — 층 규칙 밖이다
+    if (!spec.startsWith('.')) continue;
     const joined = join(dirname(file.rel), spec).split(sep).join('/');
-    if (joined.startsWith('..')) continue; // src 밖 — 여기서 볼 것이 아니다
+    if (joined.startsWith('..')) continue;
     const target = layerOf(joined);
     const targetWing = wingOf(joined);
     const at = `${file.rel}:${lineAt(file.code, index)} → ${spec}`;
@@ -261,8 +240,8 @@ for (const file of sources) {
       siblingWing.push(`${at} (${file.wing} → ${targetWing})`);
       continue;
     }
-    if (file.layer === '' || target === '' || file.layer === target) continue; // 진입점·같은 층은 자유다
-    if (rank(file.layer) < 0 || rank(target) < 0) continue; // 층 밖 폴더는 안 본다
+    if (file.layer === '' || target === '' || file.layer === target) continue;
+    if (rank(file.layer) < 0 || rank(target) < 0) continue;
     const ceiling = rank(CEILING[file.layer] ?? file.layer);
     if (rank(target) > ceiling) wrongWay.push(`${at} (${file.layer} 이 ${target} 을 부른다)`);
   }

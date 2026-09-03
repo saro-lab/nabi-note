@@ -1,15 +1,14 @@
-// 덮개(scrim) — **하나**다. 미리보기·라이트박스·(호스트의) 패널이 전부 이 위에 선다.
-// 덮개가 드는 책임 셋이 옛 판에서는 세 파일에 흩어져 있었다:
-//   Escape 로 닫기· 덮개 자신을 누르면 닫기· 닫을 때 **포커스를 원래 자리로 돌려주기**
-//
-// 포커스 복원은 `focusQuiet` 한 길이다 — 화면을 던지지 않는다 (040 §6.1).
+// 미리보기·라이트박스·(호스트의) 패널이 전부 이 위에 선다 — Escape로 닫기·바깥 클릭으로 닫기·닫을 때 포커스 복원, 셋을 한 곳에서 맡는다.
+// Preview, lightbox, and host panels all sit on this — closing via Escape, closing via an outside click, and restoring focus on close are all handled in one place.
 import { focusQuiet, make } from './dom.js';
 import { inertDocumentBackground, pushDocumentLayer, topLayerFocus, type DocumentLayer } from '../../layer.js';
 
 export interface ScrimOptions {
   // 덮개 위에 올릴 알맹이 — 이 요소 밖을 누르면 닫힌다.
+  // The content placed on the scrim — a press outside this element closes it.
   readonly card: HTMLElement;
   // 닫힌 뒤 포커스가 돌아갈 자리.
+  // Where focus returns after closing.
   readonly restore?: HTMLElement | null;
   readonly onClose?: () => void;
   readonly className?: string;
@@ -59,7 +58,8 @@ export function openScrim(owner: Document, options: ScrimOptions): Scrim {
   let releaseInert: (() => void) | null = null;
   const top = (): boolean => layer?.isTop() === true;
   const close = (): void => {
-    // 두 번 닫아도 한 번만 닫힌다 — 덮개 클릭과 Escape 가 같은 순간에 오는 일이 있다.
+    // 두 번 닫아도 한 번만 닫힌다 — 덮개 클릭과 Escape가 같은 순간에 오는 일이 있다.
+    // Closing twice only closes once — a scrim click and Escape can arrive in the same instant.
     if (closed) return;
     closed = true;
     try {

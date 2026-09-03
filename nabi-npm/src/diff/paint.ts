@@ -1,8 +1,7 @@
-// 조립이 낸 HTML 글자열 위에서 글자 강조를 얹는다 — DOM 없이 돈다(그물이 그대로 잰다).
-//
-// 읽는 대상이 **우리 조립(render.ts)이 낸 HTML 뿐**이라 걷기가 단순하다: 텍스트에는 날 `<`·`>` 가
-// 없고(escapeText), 속성 값 안의 `>` 도 이스케이프돼 있어 태그는 `<`~`>` 한 구간이다.
-// 오프셋 단위는 **코드포인트**다 — 서로게이트 쌍 한가운데를 가르면 안 된다.
+// 조립이 낸 HTML 글자열 위에서 글자 강조를 얹는다 — DOM 없이 돈다.
+// Overlays character highlights onto assembled HTML strings, with no DOM involved.
+// 읽는 대상이 우리 조립(render.ts)이 낸 HTML 뿐이라 태그는 항상 `<`~`>` 한 구간이고, 오프셋 단위는 서로게이트 안전한 코드포인트다.
+// Since the only input is our own render.ts output, a tag is always one `<`~`>` span, and offsets are surrogate-safe code points.
 import type { EditRun } from './myers.js';
 
 export interface CharRange {
@@ -19,8 +18,8 @@ const NAMED: Readonly<Record<string, string>> = {
   nbsp: ' ',
 };
 
-// 텍스트 조각 맨 앞의 토큰 하나 — 엔티티 한 덩이 또는 코드포인트 하나.
-// 엔티티는 통째로 한 토큰이다(가운데를 가를 수 없다).
+// 텍스트 조각 맨 앞의 토큰 하나 — 엔티티 한 덩이 또는 코드포인트 하나(가운데를 가를 수 없다).
+// The first token of a text chunk: one whole entity or one code point, never split down the middle.
 function tokenAt(source: string, i: number): { readonly src: string; readonly text: string } {
   if (source[i] === '&') {
     const m = /^&(#[xX]?[0-9a-fA-F]+|[a-zA-Z]+);/.exec(source.slice(i, i + 12));
@@ -43,6 +42,7 @@ function tokenAt(source: string, i: number): { readonly src: string; readonly te
 }
 
 // 태그·텍스트 구간을 차례로 부른다. 텍스트는 토큰(코드포인트) 단위로 온다.
+// Calls back over tag and text spans in order; text arrives token by token (code point at a time).
 function walk(html: string, onTag: (src: string) => void, onToken: (src: string, text: string) => void): void {
   let i = 0;
   while (i < html.length) {
@@ -80,10 +80,8 @@ export function htmlText(html: string): string {
   return out;
 }
 
-// 글자마다 자신을 감싼 HTML 껍데기의 지문을 낸다. 첫 태그는 최상위 블록 자체라 제외한다:
-// 행 배경이 이미 제목·정렬 같은 블록 변경을 나타내고, 진한 강조는 그 안에서 실제로 서식이
-// 달라진 글자만 가리켜야 한다. 조립 HTML 은 올바르게 중첩되어 있으므로 닫는 태그는 제일
-// 안쪽 껍데기 하나를 걷으면 된다.
+// 글자마다 자신을 감싼 HTML 껍데기의 지문을 낸다. 최상위 블록 태그는 제외한다 — 행 배경이 이미 그 변경을 나타내므로, 강조는 실제 서식이 달라진 글자만 가리켜야 한다.
+// Fingerprints each character's wrapping HTML shells, excluding the top-level block tag since the row background already marks that change — highlighting should point only at characters whose formatting actually differs.
 export function htmlTextFormats(html: string): readonly string[] {
   const formats: string[] = [];
   const stack: string[] = [];
@@ -110,8 +108,8 @@ export function htmlTextFormats(html: string): readonly string[] {
   return formats;
 }
 
-// 코드포인트 구간들에 span 을 입힌다. 구간이 엘리먼트 경계를 걸치면 경계마다 끊어 입으므로
-// 결과는 언제나 올바른 중첩이다. 구간은 정렬·비겹침을 전제한다(diff 가 그렇게 낸다).
+// 코드포인트 구간들에 span 을 입힌다. 구간이 엘리먼트 경계를 걸치면 경계마다 끊어 입으므로 결과는 언제나 올바른 중첩이다.
+// Wraps code-point ranges in spans; a range crossing an element boundary is split at that boundary, so nesting always stays valid.
 export function paintHtml(html: string, ranges: readonly CharRange[], className: string): string {
   if (ranges.length === 0) return html;
   const open = `<span class="${className}">`;
@@ -136,6 +134,7 @@ export function paintHtml(html: string, ranges: readonly CharRange[], className:
     html,
     (src) => {
       // 태그를 span 속에 가두지 않는다 — 경계에서 닫고 다시 연다.
+      // Tags are never trapped inside a span; painting closes at the boundary and reopens after.
       setPainting(false);
       out += src;
     },
@@ -150,6 +149,7 @@ export function paintHtml(html: string, ranges: readonly CharRange[], className:
 }
 
 // del/ins 편집 열 → 양쪽의 바뀐 구간(코드포인트 오프셋).
+// Converts del/ins edit runs into changed ranges (code-point offsets) on each side.
 export function changedRanges(runs: readonly EditRun[]): { readonly del: CharRange[]; readonly ins: CharRange[] } {
   const del: CharRange[] = [];
   const ins: CharRange[] = [];

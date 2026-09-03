@@ -1,4 +1,5 @@
 // 0.9 신뢰 경계 회귀망 - 입력 문 하나에서 시작한 예외나 활성 문맥이 밖으로 새지 않아야 한다.
+// 0.9 trust-boundary regression net — an exception or an active context starting at one input gate must never leak outside it.
 import { JSDOM } from 'jsdom';
 import { DEFAULT_BUILDERS, importDoc, parseNodes, safeUrl } from '../src/html/index.js';
 import { writeHtmlFile, writeNabiFile } from '../src/io/index.js';

@@ -7,7 +7,6 @@ import type { Command } from '../../editor/index.js';
 import type { Wing } from '../../wing/index.js';
 import type { LocaleText } from '../../locale/index.js';
 
-// 이름 둘 — old 사전 이식(14 로케일).
 const SAVE_NAME: LocaleText = {
   ko: '저장',
   en: 'Save',

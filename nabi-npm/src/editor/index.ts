@@ -1,4 +1,5 @@
 // editor 층의 문 — 상태 엔진(커맨드의 유일한 문·undo·단일 신호)과 그 계약이 여기서 나간다.
+// The door to the editor layer: the state engine (the one door for commands, undo, a single signal) and its contracts.
 export { createNabi } from './nabi.js';
 export type { CommandHand, Nabi, NabiCoreOptions, NabiOptions } from './nabi.js';
 export { hostOf } from './host.js';

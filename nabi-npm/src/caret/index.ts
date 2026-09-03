@@ -1,4 +1,5 @@
 // caret 층의 문 — 선택·경계 정규화·걸음·예약 상태.
+// The door to the caret layer — selection, boundary normalization, stepping, armed state.
 export {
   caretAt,
   isCollapsed,

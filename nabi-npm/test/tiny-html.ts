@@ -1,6 +1,5 @@
-// 그물 전용 초소형 HTML 토크나이저 — `src/html/import.ts` 가 보는 최소 엘리먼트 모양을 짓는다.
-// 들여오기의 코어는 DOM 이 아니라 이 모양 위에서 돌기 때문에, 브라우저 없이도 왕복을 잴 수 있다.
-// **제품 코드가 아니다** — 우리 조립이 낸 HTML 과 그물이 손으로 적은 HTML 만 읽으면 된다.
+// 그물 전용 초소형 HTML 토크나이저 — 제품 코드가 아니다. 들여오기 코어는 이 최소 엘리먼트 모양 위에서 돌아 브라우저 없이도 왕복을 잴 수 있다.
+// A tiny test-only HTML tokenizer, not production code — the import core runs on this minimal element shape, so roundtrips can be measured without a browser.
 import type { ParseNode } from '../src/html/import.js';
 
 interface Draft {
@@ -26,6 +25,7 @@ const VOID: ReadonlySet<string> = new Set([
 ]);
 
 // 속이 태그가 아니라 글자인 것들 — 여기까지 태그로 읽으면 스크립트 본문이 트리에 선다.
+// Elements whose content is text, not tags — parsing their insides as tags would let script bodies land in the tree.
 const RAW: ReadonlySet<string> = new Set(['script', 'style', 'textarea', 'title']);
 
 const NAMED: Readonly<Record<string, string>> = {

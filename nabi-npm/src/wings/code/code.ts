@@ -13,7 +13,6 @@ import type { MdBuilder } from '../../io/index.js';
 import type { LocaleText } from '../../locale/index.js';
 import { codeAttach } from './paint.js';
 
-// 이름들 — old 사전 이식(14 로케일).
 const CODE_NAME: LocaleText = {
   ko: '코드',
   en: 'Code',

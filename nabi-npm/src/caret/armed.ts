@@ -1,24 +1,23 @@
-// 예약 상태 — 경계 정규화("앞 글자를 따른다")를 거스르는 유일한 문 (, ask-1 Q12).
-// 스펙 4단계: ① 버튼/단축키가 예약을 만든다 ② 캐럿 이동·방향키·마우스·Del/백스페이스 = 해제
-// ③ 글자 입력 = 그때 마크를 만들어 글자에 입히고 예약을 풀며 캐럿 이동 ④ escapeKeys(마크
-// 벗고 쓰기)는 같은 상태의 음수 방향. 문서를 안 바꾸므로 undo 지점이 없다.
-// 인스턴스 소유 — 모듈 전역이 아니라 팩토리 클로저다. 신호는 콜백 하나로 05 의 단일 신호에 합류.
+// 예약 상태 — 인스턴스마다 독립된 클로저이며, 문서를 안 바꾸므로 undo 지점이 없다.
+// Armed state; each instance owns its own closure and never mutates the doc, so it has no undo point.
 import { type ElementNode } from '../schema/index.js';
 import { sameMark } from '../doc/index.js';
 
 export interface ArmedState {
   // 같은 이름·같은 값 재예약 = 해제(토글), 같은 이름·다른 값 = 교체, 새 이름 = 추가.
+  // Re-arming the same name+value toggles it off; same name+different value replaces it; a new name adds.
   arm(mark: ElementNode): void;
   // 음수 예약 — 다음 입력이 이 마크 "밖"에 선다 (링크 끝 탈출 류).
+  // A negative reservation; the next input lands outside this mark (e.g. escaping past a link's end).
   escape(w: string): void;
-  // 이동·삭제류 몸짓 — 예약 전부 해제.
   clear(): void;
-  // 입력 순간 — 기본 마크 더미(경계 정규화의 답)에 예약을 적용한 최종 더미를 내주고, 예약을 푼다.
+  // 입력 순간 — 기본 마크 더미에 예약을 적용한 최종 더미를 내주고, 예약을 푼다.
+  // At insert time, applies the reservations onto the base marks and clears them.
   takeForInsert(base: readonly ElementNode[]): readonly ElementNode[];
-  // 눌림 표시용 — 이 이름이 양수 예약돼 있나 / 예약이 하나라도 있나.
   isArmed(w: string): boolean;
   isEmpty(): boolean;
-  // 지금 상태 훔쳐보기 (시험·툴바) — 복사본이다.
+  // 복사본을 내준다 — 시험·툴바가 안전하게 들여다보는 자리.
+  // Returns a copy, so tests and the toolbar can peek without risk of mutation.
   peek(): { readonly plus: readonly ElementNode[]; readonly minus: readonly string[] };
 }
 
@@ -34,13 +33,13 @@ export function makeArmed(onChange?: () => void): ArmedState {
     arm(mark) {
       const at = plus.findIndex((m) => m.w === mark.w);
       if (at >= 0 && sameMark(plus[at] as ElementNode, mark)) {
-        plus = plus.filter((_, i) => i !== at); // 같은 값 재예약 = 해제
+        plus = plus.filter((_, i) => i !== at);
       } else if (at >= 0) {
-        plus = plus.map((m, i) => (i === at ? mark : m)); // 다른 값 = 교체
+        plus = plus.map((m, i) => (i === at ? mark : m));
       } else {
         plus = [...plus, mark];
       }
-      minus = minus.filter((w) => w !== mark.w); // 양수 예약은 같은 이름의 음수를 지운다
+      minus = minus.filter((w) => w !== mark.w);
       notify();
     },
     escape(w) {

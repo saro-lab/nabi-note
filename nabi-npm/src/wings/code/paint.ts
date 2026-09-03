@@ -4,8 +4,8 @@
 // 경합은 잠금이 아니라 순서로 막는다: 프레임당 한 번, 조합(IME) 중엔 안 돎, 서명이 같으면 DOM 안 건드림.
 // Races are avoided by ordering, not locks: once per frame, never mid-IME-composition, and skipped when the signature is unchanged.
 //
-// 색칠의 지식은 `code/` 층에 산다(088, viewer도 같이 문다) — 여기 남은 건 편집 화면만의 사정뿐이다.
-// The actual highlighting logic lives in `code/` (088, shared with viewer) — this file only handles the editor-side scheduling.
+// 색칠의 지식은 `code/` 층에 산다(viewer도 같이 문다) — 여기 남은 건 편집 화면만의 사정뿐이다.
+// The actual highlighting logic lives in `code/` (shared with the viewer) — this file only handles the editor-side scheduling.
 import { isElement, type ElementNode, type NabiNode } from '../../schema/index.js';
 import type { Attach } from '../../wing/index.js';
 import { applyTokens, tokensFor, type CodeHighlighter } from '../../code/index.js';

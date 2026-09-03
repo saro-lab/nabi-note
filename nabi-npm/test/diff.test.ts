@@ -1,5 +1,5 @@
-// diff 그물 — Myers 편집 열·HTML 글자 강조·블록 매칭(추가/삭제/이동/글자 변경)·렌더 모델.
-// 전부 DOM 없이 돈다 — diffDocs 는 조립 HTML 글자열 위에서 일하기 때문이다.
+// diff 그물 — Myers 편집 열·HTML 글자 강조·블록 매칭·렌더 모델을 검사한다. diffDocs는 DOM 없이 HTML 글자열 위에서 돈다.
+// Diff test net for the Myers edit sequence, HTML text highlighting, block matching, and the render model — diffDocs works on assembled HTML strings, no DOM required.
 import { defaultWings, makeRegistry, renderStoredHtml } from '../src/ssr.js';
 import { diffDocs } from '../src/diff/index.js';
 import { diffSeq } from '../src/diff/myers.js';
@@ -38,6 +38,7 @@ const registry = makeRegistry(defaultWings);
 }
 {
   // 편집 열의 불변식 — 어떤 입력이든 a 쪽 소비량과 b 쪽 소비량이 원본 길이와 같다.
+  // Edit-sequence invariant — for any input, the amount consumed from a and from b equals each source's length.
   const cases: [string, string][] = [
     ['kitten', 'sitting'],
     ['가나다라마', '가나마다라'],
@@ -161,6 +162,7 @@ const DOC = [
 
 {
   // 1번 문단이 맨 끝으로 — 내용이 같으므로 removed+added 가 아니라 moved 하나로 접힌다.
+  // Paragraph 1 moves to the end — same content collapses into one "moved" instead of removed+added.
   const after = [DOC[0], DOC[2], DOC[3], DOC[1]];
   const result = diffDocs(DOC, after, registry);
   ok('문단 이동 — 결과가 있다', result !== null);
@@ -252,6 +254,7 @@ const DOC = [
 
 // --- 거절 ---------------------------------------------------------------------------------------
 
+// 짝짓기와 의미 단위 줄바꿈 회귀 시험.
 // Pairing and semantic line-break regressions.
 {
   const before = [
@@ -318,6 +321,7 @@ const DOC = [
 {
   ok('나비트리가 아니면 null', diffDocs({ not: 'tree' }, DOC, registry) === null);
   // HTML 글자열 갈래는 DOMParser 가 필요하다 — 없는 환경(Node)에서는 같은 답(null)으로 거절한다.
+  // The HTML-string branch needs a DOMParser — where none exists (Node), it rejects with the same answer (null).
   ok('DOM 없는 곳의 HTML 입력은 null', diffDocs('<p>hi</p>', DOC, registry) === null);
 }
 

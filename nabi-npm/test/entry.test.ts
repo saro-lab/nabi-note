@@ -1,12 +1,5 @@
-// 표면 그물 (13) — 패키지의 **바깥 면**을 잰다: 엔트리 둘·발행 CSS·데모.
-//
-// 여기서 지키는 것 넷:
-//   1. viewer 엔트리가 코어를 안 문다 — 소스를 정적으로 훑는다(boundaries 와 같은 방식).
-//      읽는 페이지가 편집기 무게를 안 지는 값이 여기서만 지켜진다.
-//   2. 코어 엔트리에서 호스트가 쓰는 심볼이 실제로 나온다 — 이름 오탈자·빠뜨림을 여기서 잡는다.
-//   3. 발행 CSS 의 접기 — `scripts/build-css.mjs` 의 순수부를 그대로 부른다(빌드 없이).
-//   4. 데모가 산다 — 파일 셋과 뷰포트 메타. 데모의 **타입 통과**는 `npm run typecheck` 의 몫이다.
-//   5. CDN 예문이 부르는 이름이 전부 엔트리에서 나온다 — 그 한 장은 타입 검사를 안 지나서다.
+// 패키지의 바깥 면을 잰다 — 엔트리 둘(코어·viewer)의 경계, 공개 심볼, 발행 CSS 접기, 데모, CDN 예문의 이름 짝.
+// Measures the package's outer surface — the core/viewer entry boundary, public symbols, published-CSS folding, the demo, and CDN sample name matching.
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,9 +26,11 @@ import {
   simpleMark,
   translate,
 } from '../src/index.js';
-// 이름 하나하나가 아니라 **내보내는 목록 자체**가 필요한 자리가 있다 (CDN 예문 맞춰 보기).
+// 이름 하나하나가 아니라 내보내는 목록 자체가 필요한 자리다 (CDN 예문 이름 맞춰 보기).
+// Needs the export list itself, not individual names — used to cross-check the CDN sample.
 import * as entry from '../src/index.js';
-// SSR 엔트리 — 화면을 안 무는 것이 값이라 그 자체를 시험한다 (095).
+// SSR 엔트리는 화면을 안 무는 것 자체가 값이라 별도로 시험한다.
+// The SSR entry's value is precisely that it pulls in no UI code, so it's tested on its own.
 import * as ssrEntry from '../src/ssr.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -43,7 +38,8 @@ const read = (rel: string): string => readFileSync(join(ROOT, rel.split('/').joi
 const has = (rel: string): boolean => existsSync(join(ROOT, rel.split('/').join(sep)));
 
 // --- 1. viewer 는 코어를 안 문다 ---------------------------------------------------------------
-// 주석을 지우고(주석 속 경로가 import 로 오인되면 안 된다) 상대 경로를 따라 닫힐 때까지 걷는다.
+// 주석을 지우고(주석 속 경로가 import로 오인되면 안 된다) 상대 경로를 따라 닫힐 때까지 걷는다.
+// Strips comments first (so a path mentioned in one isn't mistaken for an import) and walks relative paths to closure.
 const strip = (source: string): string => source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
 
 function closure(entry: string): string[] {
@@ -68,9 +64,8 @@ const viewerLayers = [...new Set(viewerFiles.map((rel) => rel.split('/')[1] as s
 
 ok('viewer 엔트리가 있다', has('src/viewer/index.ts'));
 ok('코어 엔트리가 있다', has('src/index.ts'));
-// 딛는 층 셋 — `locale`(말)·`code`(색칠의 지식)·제 층이다. `code` 가 는 자리다(088): 색칠은
-// 편집 화면과 발행 페이지가 **같은 토크나이저**로 해야 해서, 그 지식이 둘 모두의 아래층에 산다.
-// 여기서 지키는 값은 그대로다 — 이 셋 중 어느 것도 편집기를 안 끌고 온다.
+// viewer가 딛는 층은 locale·code·제 층뿐이다 — code가 낀 것은 편집 화면과 발행 페이지가 같은 토크나이저를 써야 해서다.
+// The only layers viewer touches are locale, code, and itself — code is included because the editor and the published page must share one tokenizer.
 eq('viewer 가 딛는 층은 viewer·locale·code·lifecycle 뿐이다', viewerLayers, [
   'code',
   'lifecycle.ts',
@@ -89,9 +84,9 @@ ok(
   ),
 );
 
-// --- 1-b. ssr 엔트리는 화면을 한 파일도 안 문다 (095) ------------------------------------------
-// 이 엔트리의 값이 그것 하나다 — 서버가 저장본을 그리는 데 드는 것만 싣는다. 화면 층이 한
-// 파일이라도 새어 들면 서버 묶음에 DOM 코드가 실리고, 그러면 이 엔트리를 둘 까닭이 없어진다.
+// --- 1-b. ssr 엔트리는 화면을 한 파일도 안 문다 ------------------------------------------
+// 이 엔트리의 값은 그것 하나다 — 화면 층이 한 파일이라도 새면 서버 묶음에 DOM 코드가 실려 엔트리를 둔 까닭이 없어진다.
+// This entry's whole point is that — if even one UI-layer file leaked in, the server bundle would carry DOM code and this entry would lose its reason to exist.
 const ssrFiles = closure('src/ssr.ts');
 
 ok('ssr 엔트리가 있다', has('src/ssr.ts'));
@@ -101,6 +96,7 @@ ok(
   ssrFiles.filter((rel) => /^src\/(surface|ui|viewer)\//.test(rel)),
 );
 // 코어 엔트리보다 정말로 작은가 — 작지 않다면 나눈 뜻이 없다.
+// Is it really smaller than the core entry? If not, splitting it out was pointless.
 const coreFiles = closure('src/index.ts');
 ok(`ssr 이 코어 엔트리보다 작다 (${ssrFiles.length} < ${coreFiles.length} 파일)`, ssrFiles.length < coreFiles.length);
 // 그리는 문이 실제로 나간다.
@@ -139,6 +135,7 @@ ok(
 );
 
 // 엔트리만으로 정말 조립되는가 — 데모가 하는 그 걸음을 DOM 없이 한 번 밟는다.
+// Does the entry alone actually assemble an editor? Retraces the demo's own steps, without a DOM.
 const { nabi, registry } = createNabiWith(defaultWings, { doc: [{ w: 'p', a: { h: 1 }, ch: ['나비'] }] });
 ok(
   '엔트리로 세운 에디터가 문서를 든다',
@@ -150,8 +147,8 @@ ok(
   nabi.applyCommand('없는커맨드') === false && nabi.undo() === false,
 );
 
-// 저장본 문 (090) — 에디터가 낼 것과 같은 HTML 을 registry 만으로 낸다. 편집기 HTML 의
-// data-key 가 에디터의 것과 같아야 hydrate 가 산다 (cocoon 의 _id 가 결정적이라 같다).
+// 저장본 문은 registry만으로 에디터가 낼 것과 같은 HTML을 낸다 — data-key가 같아야 hydrate가 산다.
+// The stored-render gate produces the same HTML as the live editor using only the registry — hydration depends on matching data-key values (cocoon's _id is deterministic, so they match).
 ok('저장본 문이 에디터와 같은 보기 HTML 을 낸다', renderStoredHtml(nabi.getJson(), registry) === nabi.getHtml());
 ok(
   '저장본 문이 에디터와 같은 편집기 HTML(data-key 포함)을 낸다',
@@ -164,6 +161,7 @@ ok(
 ok('저장본이 아니면 null 로 거절한다', renderStoredHtml({ not: 'tree' }, registry) === null);
 {
   // 조립 중에 던지는 값도 같은 답(null)이다 — 읽기 쪽 문이라 예외가 페이지로 못 번진다.
+  // A value that throws during assembly gets the same answer (null) — this is a read-side gate, so exceptions can't spread to the page.
   const real = console.error;
   let told = 0;
   let getterCalls = 0;
@@ -189,6 +187,7 @@ ok('저장본이 아니면 null 로 거절한다', renderStoredHtml({ not: 'tree
 }
 
 // 안쪽 것은 안 나간다 — 이름이 엔트리 소스에 없으면 나갈 길도 없다.
+// Internal names stay internal — if a name isn't in the entry source, it has no way out.
 const entrySource = strip(read('src/index.ts'));
 const INTERNAL = [
   'planRedraw',
@@ -210,7 +209,8 @@ ok(
 );
 
 // --- 3. 발행 CSS ---------------------------------------------------------------------------------
-// 정적 경로로 적으면 타입 검사가.mjs 선언을 찾는다 — URL 로 넘겨 런타임 해석에 맡긴다.
+// 정적 경로로 적으면 타입 검사가 .mjs 선언을 찾는다 — URL 로 넘겨 런타임 해석에 맡긴다.
+// A static path would make typechecking look for a .mjs declaration — passed as a URL instead, resolved at runtime.
 const { nabiCss } = (await import(new URL('../scripts/build-css.mjs', import.meta.url).href)) as {
   nabiCss(sheets: readonly string[]): string;
 };
@@ -246,11 +246,8 @@ ok(
   '데모: 편집기 선언부가 갈려 있다 (main 이 editor.ts 를 부른다)',
   read('demo/main.ts').includes("from './editor.js'"),
 );
-// 무는 것은 **발행되는 엔트리뿐**이다 — `nabi-note` 와 `nabi-note/viewer` 둘. 층 소스를 직접
-// 파는 것(`../src/ui/parts/…`)만 막는 규칙이라 엔트리는 둘 다 열려 있다. 보는 쪽 런타임을
-// 여기서 무는 까닭: 미리보기의 표 정렬은 **호스트의 일**이다(viewer 는 ui 의 위층이라 코어가
-// 대신 걸 수 없다 — 경계 그물이 그것을 막는다).
-// diff 도 발행되는 엔트리다 — tsup 이 dist/diff 를 낸다 (package.json 의 exports 항목은 주인 몫).
+// 발행되는 엔트리(코어·viewer·diff)만 허용한다 — 층 소스를 직접 파는 것만 막는 규칙이라 이 셋은 열려 있다.
+// Only the published entries (core, viewer, diff) are allowed — the rule blocks reaching into layer source directly, so these three stay open.
 const DEMO_ENTRIES = ['../src/index.js', '../src/viewer/index.js', '../src/diff/index.js'];
 ok(
   '데모: 선언부가 발행 엔트리만 문다 (층 소스를 직접 안 판다)',
@@ -262,10 +259,8 @@ ok(
 ok('데모: 시작 문서가 제 파일에 산다 (CDN 예문과 나눠 쓴다)', has('demo/sample.ts'));
 
 // --- 4-b. CDN 예문 -------------------------------------------------------------------------------
-//
-// 이 한 장은 **베껴 쓰라고 있는 글**이라, 여기 적힌 이름이 하나라도 틀리면 그것을 베낀 사람의
-// 페이지가 죽는다. 그런데 이 페이지는 타입 검사도 번들도 안 지난다(일부러 그렇다 — 태그 둘이
-// 곧 설치라는 것을 보이는 자리다). 그래서 **부르는 이름을 여기서 엔트리와 맞춰 본다.**
+// 이 한 장은 베껴 쓰라고 있는 글이라 이름이 하나라도 틀리면 베낀 사람의 페이지가 죽는다 — 타입 검사도 번들도 안 거치므로 여기서 엔트리와 이름을 맞춰 본다.
+// This page exists to be copy-pasted, so one wrong name breaks whoever copies it — it skips typechecking and bundling by design, so names are cross-checked against the entry here instead.
 ok('CDN: 파일 셋이 있다', ['cdn/index.html', 'cdn/cdn.css'].every(has) && has('scripts/build-cdn.mjs'));
 const cdnPage = read('cdn/index.html');
 ok('CDN: 뷰포트 메타가 있다', /<meta\s+name="viewport"[^>]*width=device-width/.test(cdnPage));
@@ -283,6 +278,7 @@ ok(
 );
 {
   // `N` 은 전역 `NabiNote` 의 별명이다 — 이 페이지가 부르는 이름 전부를 뽑는다.
+  // `N` is a shorthand for the global `NabiNote` — extracts every name this page calls.
   const called = new Set([...cdnPage.matchAll(/\bN\.([A-Za-z_$][\w$]*)/g)].map((m) => m[1] as string));
   const exported = new Set(Object.keys(entry));
   const missing = [...called].filter((name) => !exported.has(name)).sort();
@@ -307,11 +303,8 @@ ok(
   'package: unpkg 가 tsup 이 내는 자리를 가리킨다',
   pkg.unpkg === './dist/browser/nabi-note.min.js' && read('tsup.config.mjs').includes("'nabi-note.min'"),
 );
-// 발행 판과 **파일 형식 판**이 같아야 한다 — `NABI_VERSION` 은 저장되는 `.nabi` 파일에 박히는
-// 값이고(앞 둘만 쓴다: `1.2.3` → `1.2`), 코어가 package.json 을 안 읽으므로 손으로 맞춘다
-// (번들러마다 JSON 을 읽는 법이 다르고 서버에서도 돌아야 한다). 판을 올리면서 이 한 줄을
-// 빠뜨리면 **내보낸 파일이 남의 판을 자기 판이라고 적는다** — 나중에 "이 판을 읽을 수 있나" 를
-// 물을 때 답할 것이 없어진다. 발행 전에 여기서 걸린다.
+// 발행 판과 파일 형식 판(NABI_VERSION, 손으로 맞춘 값)이 같아야 한다 — 안 맞으면 내보낸 파일이 엉뚱한 판을 자기 판이라 적는다.
+// The published version and the file-format version (NABI_VERSION, kept in sync by hand since the core doesn't read package.json) must match — otherwise saved files would carry the wrong version stamp.
 eq(
   'package: 발행 판과 NABI_VERSION 이 같다',
   /NABI_VERSION = '([^']+)'/.exec(read('src/io/file.ts'))?.[1],
@@ -328,4 +321,5 @@ ok(
 done(`entry(viewer 소스 ${viewerFiles.length}개)`);
 
 // registry 는 조립 스모크의 짝이다 — 안 쓰면 린트가 운다.
+// registry is the pair from the assembly smoke test above — kept referenced so lint doesn't complain.
 void registry;

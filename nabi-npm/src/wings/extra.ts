@@ -37,8 +37,8 @@ export {
 } from './local-history/local-history.js';
 export type { HistoryRecord, HistoryStorage, HistoryView } from './local-history/local-history.js';
 export { CLEARED_ATTRS, CLEARED_MARKS, clearFormatWing } from './clear-format/clear-format.js';
-// 색칠의 지식은 `code/` 층에 산다(088) — 나가는 이름은 그대로라 호스트는 자리가 옮겨간 줄 모른다.
-// Highlighting logic lives in `code/` (088) — the exported names are unchanged, so hosts never notice the move.
+// 색칠의 지식은 `code/` 층에 산다 — 나가는 이름은 그대로라 호스트는 자리가 옮겨간 줄 모른다.
+// Highlighting logic lives in `code/` — the exported names are unchanged, so hosts never notice the move.
 export {
   CODE_TOKEN_ATTR,
   CODE_TOKEN_TYPES,

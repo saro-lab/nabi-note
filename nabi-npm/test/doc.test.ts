@@ -1,5 +1,5 @@
-// doc 그물 — 입력 표(§2.4)·삭제 표(§2.5) 전 행 + 병합 속성 + 범위·물건(042) + 리스트 부품 +
-// 마크 연산 + 공통 계약(반환 자리는 반환 문서에 실재한다 — 옛 mergeBox 버그의 교훈).
+// doc 그물 — 입력·삭제 표 전 행, 병합 속성, 범위·물건, 리스트 부품, 마크 연산, 공통 계약을 검사한다.
+// Doc test net covering the full insert/delete tables, attribute merging, range and object deletion, list parts, mark ops, and the shared result contract.
 import { makeEnv, type ElementNode, type NabiDoc, type NabiNode } from '../src/schema/index.js';
 import {
   comparePositions,
@@ -45,6 +45,7 @@ const wrap = (lump: ElementNode, a?: Record<string, string | number>): ElementNo
 const at = (path: readonly number[], offset: number): Position => ({ path, offset });
 
 // 공통 계약 — 모든 연산의 반환 자리는 반환 문서에 실재한다.
+// Shared contract — every operation's returned position must actually exist in the returned document.
 function checked(name: string, result: EditResult): EditResult {
   ok(`${name} — 캐럿 실재`, positionExists(result.doc, result.caret, ENV), JSON.stringify(result.caret));
   if (result.anchor) {
@@ -101,10 +102,8 @@ function checked(name: string, result: EditResult): EditResult {
   eq('분할: 캐럿 새 문단 처음', r.caret, at([1], 0));
 }
 {
-  // 분할 속성 — 셋이 서로 다른 규칙을 쓴다:
-  //   a  양쪽 다 (자리잡기라 이어진다)
-  //   dc 첫 글자를 가진 쪽만 (첫 글자에 걸리는 것이라 글을 따라간다)
-  //   h  **글이 있는 쪽만** — 빈 문단은 제목이 아니다
+  // 분할 속성 — a는 양쪽 다(자리잡기), dc는 첫 글자 쪽만, h는 글이 있는 쪽만(빈 문단은 제목이 아니다).
+  // Split attributes — a copies to both sides (positioning), dc follows the first character, h only to the side with text (an empty paragraph isn't a heading).
   const doc: NabiDoc = [p(['Xy'], { h: 2, a: 'c', dc: 1 })];
   const mid = checked('분할: 속성(중간)', splitParagraph(doc, at([0], 1), ENV));
   eq('분할: 가운데를 가르면 양쪽 다 제목이다', mid.doc, [
@@ -118,8 +117,8 @@ function checked(name: string, result: EditResult): EditResult {
     p(['Xy'], { h: 2, a: 'c', dc: 1 }),
   ]);
 
-  // 제목 끝에서 엔터 — **다음 줄은 본문을 쓰려는 자리다.** 빈 문단이 제목을 물려받으면
-  // 글자를 치는 순간 제목 둘이 되어, 사람이 매번 제목을 풀어야 했다.
+  // 제목 끝 엔터의 다음 줄은 본문 자리다 — 빈 문단이 제목을 물려받으면 칠 때마다 제목이 둘로 늘었다.
+  // The line after Enter at a heading's end is meant for body text — inheriting the heading made every keystroke create a second heading.
   const tailDoc: NabiDoc = [p(['제목글'], { h: 1 })];
   const end = checked('분할: 제목 끝', splitParagraph(tailDoc, at([0], 3), ENV));
   eq('분할: 제목 끝의 엔터는 평범한 문단을 연다', end.doc, [p(['제목글'], { h: 1 }), p([])]);
@@ -199,15 +198,15 @@ function checked(name: string, result: EditResult): EditResult {
   eq('BS: 캐럿 유지', r.caret, at([0], 0));
 }
 {
-  // 앞이 **글을 품은 그릇**이면 통째 삭제가 아니라 **그 속 마지막 글자리에 이어 붙는다.**
-  // 목록 뒤에서 백스페이스 한 번에 목록 전체가 사라지던 자리다.
+  // 앞이 글을 품은 그릇이면 통째 삭제가 아니라 그 속 마지막 글자리에 이어 붙는다.
+  // When the prior sibling is a container holding text, backspace merges into its last text spot instead of deleting it whole — backspace after a list used to wipe the whole list.
   const quote = el('quote', [p(['quoted'])]);
   const r = checked('BS: 앞 그릇에 이어 붙는다', deleteBackward([wrap(quote), p(['tail'])], at([1], 0), ENV));
   eq('BS: 그릇 속 마지막 글자리에 붙었다', r.doc, [wrap(el('quote', [p(['quotedtail'])]))]);
   eq('BS: 캐럿은 이어 붙은 자리', r.caret, at([0, 0, 0], 6));
 
-  // 목록 사이에 끼어 있던 문단이 사라지면 **위아래 목록은 원래 하나였다** — 둘로 남기면
-  // 번호가 1 부터 다시 시작한다.
+  // 목록 사이 문단이 사라지면 위아래 목록을 하나로 합친다 — 둘로 남기면 번호가 1부터 다시 시작한다.
+  // Deleting a paragraph between two lists merges them back into one — leaving them split would restart numbering at 1.
   const listOf = (...texts: string[]) =>
     el(
       'ul',
@@ -305,9 +304,8 @@ function checked(name: string, result: EditResult): EditResult {
   eq('범위: 잘리고 병합(윗 속성)', cross.doc, [p(['abef'], { h: 1 })]);
   eq('범위: 캐럿 시작', cross.caret, at([0], 2));
 
-  // 빈 문서의 모양은 하나다 — 어느 길로 비웠든 맨몸 문단이다 (주인 신고 2026-08-20).
-  // 전체선택 삭제는 시작 문단의 껍데기를 남기는데, 거기 붙어 있던 정렬·제목이 빈 줄에 살아
-  // 남으면 다 지운 자리가 여전히 가운데 정렬이고 다시 쓰는 글도 그 서식으로 써진다.
+  // 빈 문서의 모양은 하나다 — 전체선택 삭제가 시작 문단의 정렬·제목 속성까지 남기면 다 지운 자리가 여전히 그 서식으로 남는다.
+  // An emptied document has one shape — if select-all-delete kept the first paragraph's alignment/heading, the blank result would still carry that formatting.
   const wipeAlign = checked(
     '범위: 통째로 지우면 정렬이 안 남는다',
     deleteRange([p(['abc'], { a: 'c' })], { anchor: at([0], 0), focus: at([0], 3) }, ENV),
@@ -361,11 +359,9 @@ function checked(name: string, result: EditResult): EditResult {
   ]);
   eq('범위: 캐럿 시작', r.caret, at([0], 1));
 }
-// --- 목록 앞 문단 끝 + Delete (§9 B) -------------------------------------------------
-//
-// §7(목록 뒤 문단 첫머리 + 백스페이스)의 **거울**이다. 전에는 뒤 그릇을 통째로 지웠다 — 그
-// 가지는 속이 없는 물건(그림·구분선)의 답인데 그릇에도 그대로 맞아서, 문단 끝에서 Delete 한 번에
-// 목록이 항목 둘을 든 채 사라졌다.
+// --- 목록 앞 문단 끝 + Delete -------------------------------------------------
+// 뒤 그릇을 통째로 지우던 옛 규칙은 속 없는 물건(그림 등)의 답이라, 목록에 그대로 적용하면 항목을 든 채 통째로 사라졌다.
+// The old whole-container delete was meant for empty objects (images, rules) — applied to a list, Delete at a paragraph's end wiped the whole list, items and all.
 {
   const item = (text: string) => ({ w: 'li', ch: [p([text])] });
   const ul = (...texts: string[]) => p([{ w: 'ul', ch: texts.map(item) }]);
@@ -386,9 +382,9 @@ function checked(name: string, result: EditResult): EditResult {
   eq('Delete: 구분선은 통째로 걷힌다', rule.doc, [p(['head'])]);
 }
 
-// --- 범위 삭제 — 지운 뒤 두 끝이 만난다 (§11 B) ------------------------------------
-//
-// 글 문단끼리는 원래 그랬다. 목록이 걸치면 반쪽들이 따로 남던 것을 같은 규칙으로 맞췄다.
+// --- 범위 삭제 — 지운 뒤 두 끝이 만난다 ------------------------------------
+// 글 문단끼리는 원래 그랬다 — 목록이 걸친 범위도 반쪽으로 남기지 않고 같은 규칙으로 맞췄다.
+// Deleting a range joins the two remaining ends — always true for plain paragraphs, now also enforced when the range spans a list.
 {
   const item = (text: string) => ({ w: 'li', ch: [p([text])] });
   const ul = (...texts: string[]) => p([{ w: 'ul', ch: texts.map(item) }]);

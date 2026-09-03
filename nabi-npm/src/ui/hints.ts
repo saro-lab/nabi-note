@@ -1,11 +1,5 @@
-// 힌트 — Shift 를 두 번 두드리면 버튼마다 한 글자 배지가 뜨고, 그 글자를 누르면 그 버튼이 눌린다.
-//
-// 규칙 둘 (판정 19):
-//   1. **버튼만 누른다** — fallback 이 없다. 툴바가 안 서 있으면 힌트도 없는 것이 맞다.
-//      (옛 판은 버튼을 못 찾으면 커맨드를 직접 불렀고, 그래서 "안 보이는 버튼"이 눌렸다.)
-//   2. 상황 줄 탐색은 **공식 API** 로 — mount 가 돌려준 목록을 본다. DOM 구조를 안 뒤진다.
-//
-// 배지는 요소를 새로 안 짓는다 — 크롬에 클래스 하나가 붙고, 시트가 `[data-hint]::before` 로 그린다.
+// 힌트는 버튼만 누른다 — fallback 없이(옛 판은 버튼을 못 찾으면 커맨드를 직접 불러 안 보이는 버튼이 눌렸다). 배지는 새 요소가 아니라 크롬 클래스 + `[data-hint]::before` 로 그린다.
+// Hints only press real buttons, no fallback (the old version could invoke a command via a hidden button when it couldn't find one). The badge itself is a chrome class painted by `[data-hint]::before`, not a new element.
 import { focusQuiet } from './parts/dom.js';
 import { TAP_MS } from '../surface/actions.js';
 import { acquireGestureRoot, activateGestureRoot, ownsActiveGestureRoot, ownsGestureRoot } from '../lifecycle.js';
@@ -19,6 +13,7 @@ export interface HintOptions {
   readonly toolbar: Toolbar;
   readonly context?: ContextToolbar;
   // 배지 클래스가 붙는 자리 — 툴바와 상황 줄을 함께 품은 크롬이 알맞다.
+  // Where the badge class gets attached — the chrome holding both the toolbar and context row.
   readonly root: HTMLElement;
   readonly surface?: HTMLElement;
   readonly tapMs?: number;
@@ -34,11 +29,8 @@ const isTyping = (target: EventTarget | null): boolean =>
   (target as Node | null)?.nodeType === 1 &&
   ((target as Element).tagName === 'INPUT' || (target as Element).tagName === 'TEXTAREA');
 
-// 이 편집기의 땅인가 — 표면과 크롬(툴바·상황 줄)이 한 섬이다.
-//
-// **한 장에 편집기가 둘 이상 설 수 있다.** 힌트는 문서에 캡처로 붙으므로 그냥 두면 편집기마다
-// 달린 귀가 **같은 키를 저마다 한 번씩** 먹는다 — Shift 두 번에 배지가 양쪽에서 뜨고, 이어 친
-// 글자가 양쪽 툴바의 단추를 눌러 표가 두 곳에 생기고 화면이 남의 편집기로 끌려간다.
+// 이 편집기의 땅인가 — 표면과 크롬(툴바·상황 줄)이 한 섬이다. 한 장에 편집기가 둘 이상 있으면, 문서에 캡처로 붙는 힌트 리스너가 저마다 같은 키를 먹어 양쪽에서 같이 반응한다.
+// Is this target inside this editor's island (surface + toolbar chrome)? With two or more editors on one page, hint listeners are document-captured, so an unscoped check would let every editor react to the same keystroke.
 const inside = (root: Node, target: EventTarget | null): boolean =>
   target !== null &&
   typeof (target as Node).nodeType === 'number' &&
@@ -49,7 +41,8 @@ export function mountHints(options: HintOptions): Hints {
   const releaseRoot = acquireGestureRoot(options.root, options.surface ? [options.surface] : []);
   try {
     let releaseActive = (): void => {};
-    // 두 번째 두드림까지 참아 주는 시간 — 이름이 window 면 전역을 가린다.
+    // 두 번째 두드림까지 참아 주는 시간.
+    // How long to wait for the second tap.
     const tapWindow = options.tapMs ?? TAP_MS;
 
     let active = false;
@@ -59,6 +52,7 @@ export function mountHints(options: HintOptions): Hints {
     let refocus = false;
 
     // 힌트 글자 → 그 버튼. 툴바가 돌려준 공식 목록에서만 짓는다.
+    // Hint letter to its button, built only from the toolbar's official button list.
     const byCode = new Map<string, Toolbar['buttons'][number]>();
     for (const button of options.toolbar.buttons) {
       if (!button.shortcut) continue;
@@ -90,8 +84,8 @@ export function mountHints(options: HintOptions): Hints {
       });
       navAt = -1;
       options.root.classList.add(HINTING);
-      // 편집기에서 포커스를 떼어 놓는다 — IME 가 물고 있으면 다음 글자가 조합으로 빨려 들어가
-      // 물리 키가 안 온다. 겨눔의 정본은 트리라 포커스가 떠도 안 사라진다.
+      // 편집기에서 포커스를 떼어 놓는다 — IME가 물고 있으면 다음 글자가 조합으로 빨려 들어가 물리 키가 안 온다. 겨눔의 정본은 트리라 포커스가 떠도 안 사라진다.
+      // Focus is deliberately moved off the editor — a live IME would swallow the next keystroke into composition. Selection lives in the tree, so it survives losing focus.
       if (owner.activeElement === options.surface && options.surface) {
         refocus = true;
         options.surface.blur();
@@ -136,15 +130,13 @@ export function mountHints(options: HintOptions): Hints {
       paintNav();
     };
 
-    // 이 키가 내 것인가. **켜져 있으면 내 것이다** — 켤 때 표면의 겨눔을 일부러 떼어 놓으므로
-    // (IME 가 물면 다음 글자가 조합으로 빨려 든다) 그때부터 target 은 문서의 몸통이다. 켜지기
-    // 전이라면 겨눔이 이 섬 안에 있을 때만 센다: 어느 편집기도 안 잡고 있는 Shift 두 번은
-    // 누구의 것도 아니다(편집기가 둘이면 고를 근거가 없다).
+    // 이 키가 내 것인가 — 켜진 뒤에는(포커스를 일부러 뗐으므로) target이 문서 몸통이라도 내 것이다. 켜지기 전이라면 겨눔이 이 섬 안에 있을 때만 센다.
+    // Whether this key belongs to this mount. Once active (focus was deliberately dropped), a body-shaped target still counts; before that, only a selection inside this island does.
     const mine = (target: EventTarget | null): boolean => {
       if (inside(options.root, target) || (options.surface !== undefined && inside(options.surface, target)))
         return ownsGestureRoot(options.root, target, options.surface ?? options.root);
-      // An actual foreign target always wins over this mount's active hint layer. `active` only owns
-      // the body-shaped target left behind when this mount deliberately blurred its own surface.
+      // 실제 남의 땅을 겨눈 target은 이 힌트 층보다 항상 앞선다 — active는 이 마운트가 일부러 블러한 뒤 남은 몸통 모양 target만 품는다.
+      // An actual foreign target always wins over this mount's active hint layer — `active` only owns the body-shaped target left behind when this mount deliberately blurred its own surface.
       if (target === owner.body || target === owner.documentElement || target === owner)
         return active && ownsActiveGestureRoot(options.root, options.surface ?? options.root);
       if (target !== null && typeof (target as Node).nodeType === 'number') return false;
@@ -158,6 +150,7 @@ export function mountHints(options: HintOptions): Hints {
     const onKey = (event: Event): void => {
       const key = event as KeyboardEvent;
       // IME 철칙 — 조합 중에는 아무것도 안 센다.
+      // IME rule — nothing counts while composing.
       if (key.isComposing || key.keyCode === 229) {
         taps = 0;
         return;
@@ -181,6 +174,7 @@ export function mountHints(options: HintOptions): Hints {
         taps = now - lastTapAt <= tapWindow ? taps + 1 : 1;
         lastTapAt = now;
         // 세 번째 두드림도 같은 갈래로 떨어진다 — 켜진 채로 있을 뿐이다(모바일 캡스락 겹침).
+        // A third tap falls into the same branch — it just stays active (covers mobile caps-lock overlap).
         if (taps >= 2) show();
         return;
       }
@@ -197,6 +191,7 @@ export function mountHints(options: HintOptions): Hints {
       const hinted = byCode.get(key.code);
       if (hinted && !hinted.el.hidden && !key.metaKey && !key.ctrlKey && !key.altKey) {
         // 조합이 시작되기 전에 막는다 — 이 키는 글자가 아니라 몸짓이다.
+        // Blocked before composition can start — this key is a gesture, not a character.
         event.preventDefault();
         hide();
         hinted.press();
@@ -204,6 +199,7 @@ export function mountHints(options: HintOptions): Hints {
       }
 
       // 상황 줄 걸음 — 공식 목록 위를 걷는다.
+      // Context row navigation — walks the official button list.
       if (key.key === 'Tab' || key.key === 'ArrowRight' || key.key === 'ArrowLeft') {
         const back = key.key === 'ArrowLeft' || (key.key === 'Tab' && key.shiftKey);
         event.preventDefault();
@@ -226,8 +222,8 @@ export function mountHints(options: HintOptions): Hints {
       hide();
     };
 
-    // 어딘가를 누르면 배지를 걷는다. 다만 **남의 땅을 눌렀으면 겨눔을 도로 뺏지 않는다**
-    // 켤 때 떼어 둔 겨눔을 여기서 돌려주는데, 그 누름이 옆 편집기로 가는 길이면 우리가 가로챈다.
+    // 어딘가를 누르면 배지를 걷는다. 다만 남의 땅을 눌렀으면 겨눔을 도로 뺏지 않는다 — 옆 편집기로 가는 누름을 우리가 가로채면 안 된다.
+    // Any pointer press hides the badges, but a press on foreign ground doesn't reclaim selection — we must not intercept a click headed for another editor.
     const onDown = (event: Event): void => {
       if (
         refocus &&

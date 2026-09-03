@@ -545,12 +545,12 @@ const swatchChoices = (
 const namedChoices = (values: readonly string[], names: Readonly<Record<string, LocaleText>>): readonly WingChoice[] =>
   values.map((value) => ({ value, label: names[value] ?? { en: value } }));
 
-// --- 상황 줄 (12) --------------------------------------------------------------------------------
-// 네 wing 이 같은 자리에 선다: 캐럿이 그 마크 안이면 **지금 걸린 값**이 보이고 거기서 바로 바꾼다.
-// 색 둘은 견본 줄(칸 대여섯이 한눈에 들어온다), 크기·서체 둘은 슬라이더다 — 값이 **순서를 갖기**
-// 때문이다(작게→크게). 칸으로 늘어놓으면 줄을 넷씩 먹는데 슬라이더는 하나로 끝난다.
+// 상황 줄 — 캐럿이 마크 안이면 지금 걸린 값이 보이고 거기서 바로 바뀐다. 색 둘은 견본 줄, 크기·서체
+// 둘은 값이 순서를 갖기(작게→크게) 때문에 슬라이더 — 칸으로 늘어놓으면 줄을 넷씩 먹는다.
+// The context bar shows the currently applied value when the caret sits in the mark, changed right there. The two colors get a swatch row; size and typeface get a slider since their values are ordered (small to large) — laid out as buttons instead, they'd eat four times the row space.
 
 // 기본 칸 — 값 없음. 손잡이가 여기 앉으면 아무것도 안 걸린 것이고, 여기로 옮기면 벗는다.
+// The default slot means no value — the handle resting here means nothing is applied, and moving it here strips the mark.
 const BASE_LABEL: LocaleText = {
   ko: '기본',
   en: 'Default',
@@ -568,8 +568,8 @@ const BASE_LABEL: LocaleText = {
   id: 'Bawaan',
 };
 
-// 순서가 있는 눈금 — 기본 칸이 **가운데**가 아니라 맨 앞이다: 목록이 작은 것부터 큰 것 순이라
-// 그 앞이 "안 걸림" 의 자리다.
+// 순서가 있는 눈금 — 기본 칸이 가운데가 아니라 맨 앞이다: 목록이 작은 것부터 큰 것 순이라 그 앞이 "안 걸림"의 자리다.
+// An ordered scale — the default slot sits at the front, not the middle, since the list runs small to large and "unset" belongs before the smallest.
 const scale = (values: readonly string[], names: Readonly<Record<string, LocaleText>>): readonly WingChoice[] => [
   { value: '', label: BASE_LABEL },
   ...namedChoices(values, names),
@@ -623,16 +623,16 @@ const FACE_CSS = `
 }
 `;
 
-// 값 목록을 줄이는 문은 이 팩토리 넷뿐이다(087) — 좁히면 커맨드·들여오기·상황 줄이 한 몸으로 좁아진다(하나만 줄이면 플러그인이 그 틈으로 새어든다).
-// These four factories are the only door for a host to narrow a value list (087) — narrowing hits command, import, and toolbar together, so no single layer leaves a gap a plugin could exploit.
+// 값 목록을 줄이는 문은 이 팩토리 넷뿐이다 — 좁히면 커맨드·들여오기·상황 줄이 한 몸으로 좁아진다(하나만 줄이면 플러그인이 그 틈으로 새어든다).
+// These four factories are the only door for a host to narrow a value list — narrowing hits command, import, and toolbar together, so no single layer leaves a gap a plugin could exploit.
 
 export interface ValueWingOptions {
   // 남길 값 — 전체 목록의 부분집합. 차례는 준 차례가 아니라 공식 차례다.
   readonly values?: readonly string[];
 }
 
-// 목록 밖 값은 그 자리에서 죽는다 — 조용히 거르면 사람은 자기가 준 값이 걸린 줄 안다(087 §5).
-// An out-of-list value dies right here — silently filtering would let someone believe their value took effect (087 §5).
+// 목록 밖 값은 그 자리에서 죽는다 — 조용히 거르면 사람은 자기가 준 값이 걸린 줄 안다.
+// An out-of-list value dies right here — silently filtering would let someone believe their value took effect.
 function narrowed(w: string, full: readonly string[], options: ValueWingOptions): readonly string[] {
   const given = options.values;
   if (given === undefined) return full;

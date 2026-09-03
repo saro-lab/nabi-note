@@ -12,6 +12,7 @@ const LOCAL_URL = /^(?:blob:|data:image\/(?!svg)[a-z0-9.+-]+[;,])/i;
 const PROTOCOL_RELATIVE = /^\/\//;
 
 // URL parser와 HTML parser가 지우거나 다른 문법으로 해석하는 글자는 주소 문에 들이지 않는다.
+// Characters that a URL parser or HTML parser strips or reinterprets are never let through the address gate.
 const URL_CONTROL = /[\u0000-\u001f\u007f]/;
 const HTML_REFERENCE = /&(?:#[0-9]+|#x[0-9a-f]+|[a-z][a-z0-9]+);/i;
 

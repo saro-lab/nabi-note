@@ -31,7 +31,8 @@ export class DisposerStack {
       try {
         this.#items[at]?.();
       } catch {
-        // One extension teardown must not strand the rest of the mount.
+        // 확장 하나의 정리 실패가 나머지 마운트 해제를 막으면 안 된다.
+        // One extension's teardown failure must not strand the rest of the mount's disposal.
       }
     }
     this.#items.length = 0;
@@ -263,7 +264,8 @@ export class HostElementLease {
       try {
         this.#handles.get(this.#order[at] as string)?.dispose();
       } catch {
-        // A host property failure must not strand the other leased properties.
+        // 호스트 속성 하나의 해제 실패가 다른 대여 속성들의 해제를 막으면 안 된다.
+        // One host property's release failure must not strand the other leased properties.
       }
     }
     this.#handles.clear();
@@ -378,7 +380,8 @@ export function openFilePicker(owner: Document, options: FilePickerOptions): Dis
         try {
           options.onError?.(callbackError);
         } catch {
-          // Cleanup has already completed; error reporting cannot reopen the picker.
+          // 정리는 이미 끝났다 — 오류를 알려도 파일 선택창을 다시 열 수는 없다.
+          // Cleanup has already run; reporting the error can't reopen the picker.
         }
       }
     }
@@ -424,8 +427,8 @@ export function openFilePicker(owner: Document, options: FilePickerOptions): Dis
 
 const mountedRoots = new WeakMap<Document, Map<HTMLElement, object>>();
 
-// Document listeners belong to the innermost mounted editor.  Several UI pieces may
-// register the same root, so this is a reference count rather than a second claim.
+// 문서 리스너는 가장 안쪽에 마운트된 편집기가 갖는다 — 여러 UI 조각이 같은 root를 등록할 수 있어 두 번째 점유가 아니라 참조 카운트로 센다.
+// Document listeners belong to the innermost mounted editor — several UI pieces may register the same root, so this counts references rather than treating it as a second claim.
 interface GestureEntry {
   refs: number;
   readonly lands: Map<HTMLElement, number>;

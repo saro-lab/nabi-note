@@ -14,6 +14,7 @@ import {
 } from './env.js';
 
 // 정렬 값은 첫 글자 표기 하나로 통일한다.
+// Alignment values are normalized to a single first-letter code.
 const ALIGNS: ReadonlySet<string> = new Set(['l', 'c', 'r']);
 
 const BUILTIN_ATTRS: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -163,9 +164,10 @@ function runRepair(
 
 // --- 인라인 정리 ----------------------------------------------------------------------------
 
-// 문단·마크·인라인 홀더의 속을 고른다: 빈 글자는 걷고, 이웃한 글자는 잇고, 라인(br)은 속을
-// 비우고, 마크는 속으로 내려간다. 물건이 인라인 자리에 잘못 서 있으면 그대로 두지 않고
-// 걷어낸다 — 그 물건의 자리는 문단 층이지 글자 사이가 아니다 (허용 규칙의 정밀한 판정은 07).
+// 문단·마크·인라인 홀더의 속을 고른다: 빈 글자는 걷고, 이웃한 글자는 잇고, 라인(br)은 속을 비우고,
+// 마크는 속으로 내려간다. 물건이 인라인 자리에 잘못 서 있으면 걷어낸다 — 그 자리는 문단 층이지 글자 사이가 아니다.
+// Cleans the content of a paragraph/mark/inline holder: drops empty text, merges neighboring text, empties a br's
+// content, and recurses into marks. A lump wrongly sitting in an inline slot is dropped — its place is the paragraph layer, not between text.
 function inlineChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] {
   const out: NabiNode[] = [];
   const push = (node: NabiNode): void => {
@@ -196,9 +198,12 @@ function inlineChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] 
       push(rebuild(node, BR, undefined, node.ch.length === 0 ? node.ch : []));
       continue;
     }
-    if (env.lumps.has(node.w)) continue; // 인라인 자리의 물건 — 설 수 없는 자리라 걷는다
+    // 인라인 자리의 물건 — 설 수 없는 자리라 걷는다.
+    // A lump in an inline slot — it can't stand there, so it's dropped.
+    if (env.lumps.has(node.w)) continue;
     if (node.w === P) {
-      // 문단 속 문단 — 속만 이 자리로 푼다 (모양 자체가 불가능하므로 껍데기를 벗긴다).
+      // 문단 속 문단 — 그 모양은 불가능하므로 껍데기를 벗기고 속만 이 자리로 푼다.
+      // A paragraph inside a paragraph is an impossible shape, so its wrapper is dropped and only its content unfolds here.
       for (const inner of inlineChildren(node.ch, env)) push(inner);
       continue;
     }
@@ -245,7 +250,8 @@ function lumpNode(node: ElementNode, env: SchemaEnv): ElementNode | null {
   return runRepair(repair, next, env);
 }
 
-// p 가 아닌 블록 노드 하나 — 갈래(단말/블록 홀더/인라인 홀더)에 따라 속을 고치고 repair 를 태운다.
+// p가 아닌 블록 노드 하나 — 갈래(단말/블록 홀더/인라인 홀더)에 따라 속을 고치고 repair를 태운다.
+// One non-`p` block node — its content is cleaned per grade (terminal/block holder/inline holder), then repair runs.
 function blockNode(node: ElementNode, env: SchemaEnv): ElementNode {
   const a = wingAttrs(node.w, node.a, env);
   let next: ElementNode;
@@ -256,11 +262,13 @@ function blockNode(node: ElementNode, env: SchemaEnv): ElementNode {
   } else if (env.inlineHolders.has(node.w)) {
     next = rebuild(node, node.w, a, inlineChildren(node.ch, env));
   } else {
-    // 모르는 타입 — 속을 인라인으로만 고르고 그대로 둔다. 걸러내는 것은 wing 계약(07)의 몫이다.
+    // 모르는 타입 — 속을 인라인으로만 고르고 그대로 둔다. 걸러내는 것은 wing 계약의 몫이다.
+    // An unknown type — only its content gets cleaned (as inline) and it's left standing; filtering it out is the wing contract's job.
     next = rebuild(node, node.w, a, inlineChildren(node.ch, env));
   }
   const repair = repairOf(env, next.w);
-  // 블록 자리에서는 벗기지 않는다 — 껍데기만 벗기면 속의 블록들이 갈 곳을 잃는다(계약 주석).
+  // 블록 자리에서는 벗기지 않는다 — 껍데기만 벗기면 속의 블록들이 갈 곳을 잃는다.
+  // Never unwrapped in a block slot — stripping just the wrapper would leave its inner blocks with nowhere to go.
   if (!repair) return next;
   return runRepair(repair, next, env) ?? next;
 }
@@ -275,8 +283,10 @@ function unwrapUnknown(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] {
 }
 
 // 문단 하나를 문단 목록으로 — 물건이 섞여 있으면 쪼개지고, 물건 하나뿐이면 래퍼문단이 된다.
+// One paragraph into a list of paragraphs — mixed-in lumps split it apart; a single lone lump becomes a wrapper.
 function paragraph(node: ElementNode, env: SchemaEnv): ElementNode[] {
   // 문단 바로 밑에서 물건과 인라인을 가른다 — 문단 속 문단은 인라인 정리에서 풀린다.
+  // Splits lumps from inline content right under the paragraph — a nested paragraph gets unwound in inline cleanup.
   const lumps: ElementNode[] = [];
   const slots: (ElementNode | NabiNode[])[] = [];
   let buffer: NabiNode[] = [];
@@ -298,12 +308,14 @@ function paragraph(node: ElementNode, env: SchemaEnv): ElementNode[] {
   }
   flush();
 
-  // 물건이 없다 — 글 문단 하나. 빈 문단도 그대로 선다 (공백은 내용이다).
+  // 물건이 없다 — 글 문단 하나. 빈 문단도 그대로 선다(공백은 내용이다).
+  // No lump — one text paragraph. An empty one still stands (blank is still content).
   if (lumps.length === 0) {
     return [rebuild(node, P, paragraphAttrs(node.a, false), inlineChildren(children, env))];
   }
 
   // 물건 하나에 글이 없다 — 이미 래퍼문단이다. attrs 만 정렬로 좁힌다.
+  // One lump, no text — already a wrapper paragraph; attrs just narrow down to alignment.
   if (lumps.length === 1 && slots.length === 1) {
     const only = lumps[0] as ElementNode;
     const attrs = paragraphAttrs(node.a, true, !refusesAlign(only.w, env));
@@ -311,11 +323,14 @@ function paragraph(node: ElementNode, env: SchemaEnv): ElementNode[] {
   }
 
   // 섞였다 — 쪼갠다. 글 조각은 글 문단으로(속성 화이트리스트), 물건마다 래퍼문단이 선다(정렬만 상속).
+  // Mixed — split apart. A text piece becomes a text paragraph (attr whitelist); each lump gets its own wrapper (alignment only).
   const out: ElementNode[] = [];
   for (const slot of slots) {
     if (Array.isArray(slot)) {
       const inline = inlineChildren(slot, env);
-      if (inline.length === 0) continue; // 쪼개다 나온 빈 조각 — 쓴 적 없는 빈 문단은 안 만든다
+      // 쪼개다 나온 빈 조각 — 쓴 적 없는 빈 문단은 안 만든다.
+      // An empty piece from splitting — never fabricates a paragraph nobody wrote.
+      if (inline.length === 0) continue;
       const attrs = paragraphAttrs(node.a, false);
       out.push(attrs ? { w: P, a: attrs, ch: inline } : { w: P, ch: inline });
     } else {
@@ -326,8 +341,8 @@ function paragraph(node: ElementNode, env: SchemaEnv): ElementNode[] {
   return out;
 }
 
-// 블록 자리(루트·블록 홀더의 속)의 자식들 — 문단·물건·컨테이너는 블록으로 서고
-// 떠도는 인라인은 이웃끼리 모여 문단 하나로 감싸진다.
+// 블록 자리(루트·블록 홀더의 속)의 자식들 — 문단·물건·컨테이너는 블록으로 서고 떠도는 인라인은 이웃끼리 모여 문단 하나로 감싸진다.
+// Children of a block slot (the root or a block holder's content) — paragraphs, lumps, and containers stand as blocks; stray inline neighbors get wrapped together into one paragraph.
 function blockChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] {
   const out: NabiNode[] = [];
   let buffer: NabiNode[] = [];
@@ -345,7 +360,9 @@ function blockChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] {
       continue;
     }
     if (isLump(node, env)) {
-      const wrapped = lumpNode(node, env); // 맨몸 물건 — 래퍼문단을 입는다
+      // 맨몸 물건 — 래퍼문단을 입는다.
+      // A bare lump — gets a wrapper paragraph put on.
+      const wrapped = lumpNode(node, env);
       if (!wrapped) continue;
       flush();
       out.push({ w: P, ch: [wrapped] });
@@ -353,10 +370,14 @@ function blockChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] {
     }
     if (isElement(node) && (env.blockHolders.has(node.w) || env.inlineHolders.has(node.w))) {
       flush();
-      out.push(blockNode(node, env)); // 물건 아닌 구조 조각(행·칸·항목·제목) — 제자리 블록이다
+      // 물건 아닌 구조 조각(행·칸·항목·제목) — 제자리 블록이다.
+      // A structural piece that isn't a lump (row, cell, item, heading) — a block in its own right.
+      out.push(blockNode(node, env));
       continue;
     }
-    buffer.push(node); // 글자·라인·마크·모르는 타입 — 인라인으로 모은다
+    // 글자·라인·마크·모르는 타입 — 인라인으로 모은다.
+    // Text, line, mark, or an unknown type — collected as inline.
+    buffer.push(node);
   }
   flush();
   return out;
@@ -365,6 +386,7 @@ function blockChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] {
 // --- _id — 결정적 유도 ----------------------------------------------------------------------
 
 // data-key 로 그대로 나가도 안전한 글자만 받는다 — 밖에서 온 JSON 이 키를 마음대로 정하기 때문이다.
+// Only accepts characters safe to emit as-is in data-key, since incoming JSON can set the key to anything.
 const SAFE_ID = /^[A-Za-z0-9._~-]+$/;
 
 function collectIds(nodes: readonly NabiNode[], seen: Map<string, number>): void {
@@ -411,14 +433,17 @@ function assignIds(doc: readonly ElementNode[]): NabiDoc {
 
 // --- 문 -------------------------------------------------------------------------------------
 
-// 나비트리 전체를 고친다. 들어오는 것은 느슨한 노드 목록이어도 되고(맨몸 물건·떠도는 글자)
-// 나가는 것은 불변식이 선 문단 배열이다. 문서가 통째로 비면 캐럿이 설 빈 문단 하나를 세운다.
+// 나비트리 전체를 고친다 — 들어오는 것은 느슨한 노드 목록이어도 되고(맨몸 물건·떠도는 글자), 나가는 것은 불변식이 선 문단 배열이다. 문서가 통째로 비면 캐럿이 설 빈 문단 하나를 세운다.
+// Repairs an entire nabi-tree — the input may be a loose node list (a bare lump, stray text); the output is a paragraph array with invariants established. An entirely empty doc gets one empty paragraph for the caret.
 export function cocoon(input: readonly NabiNode[], env: SchemaEnv): NabiDoc {
   const blocks = blockChildren(input, env);
-  const doc = blocks.filter(isElement); // blockChildren 은 블록만 내놓지만 타입을 좁혀 둔다
+  // blockChildren은 블록만 내놓지만 타입을 좁혀 둔다.
+  // blockChildren only ever emits blocks; this narrows the type accordingly.
+  const doc = blocks.filter(isElement);
   const settled = doc.length > 0 ? doc : [{ w: P, ch: [] } as ElementNode];
   const withIds = assignIds(settled);
   // 아무것도 안 바뀌었으면 입력 배열 참조를 그대로 돌려준다 — 매 커맨드 호출이 공짜가 되는 길.
+  // If nothing changed, the input array reference is returned as-is — the path that makes every command call free.
   if (withIds.length === input.length && withIds.every((node, i) => node === input[i])) {
     return input as NabiDoc;
   }

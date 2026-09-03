@@ -1,4 +1,5 @@
 // 0.9 P1 회귀망 - 원인이 한 함수나 한 수명 경계로 좁혀지는 사례만 먼저 고정한다.
+// 0.9 P1 regression net — pins down only the cases whose cause narrows to a single function or lifecycle boundary.
 import { JSDOM } from 'jsdom';
 import { safeUrl } from '../src/html/index.js';
 import { createNabiWith } from '../src/wing/index.js';

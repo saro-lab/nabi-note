@@ -1,5 +1,5 @@
-// 공용 부품 — wings 구현들이 나눠 쓰는 연산. 형제 wing import 를 없애는 자리다 (경계 시험이 지킨다).
-// 전부 순수 함수이고, 반환 자리는 반환 문서에 실재한다 (doc 층 공통 계약).
+// 공용 부품 — wings 구현들이 나눠 쓰는 연산. 형제 wing import를 없애는 자리다(경계 시험이 지킨다).
+// Shared ops that wings implementations reuse instead of importing each other (enforced by a boundary test); all pure functions.
 import { P, isElement, runsOf, type Attrs, type ElementNode, type NabiDoc } from '../schema/index.js';
 import {
   holderLength,
@@ -18,16 +18,8 @@ import type { KeyIntent, OwnerAt } from './contract.js';
 
 export { unwrapItem } from '../doc/index.js';
 
-// --- 접힌 캐럿이 든 마크의 범위 ---------------------------------------------------------------
-//
-// **접힌 캐럿은 "아무것도 안 골랐다"가 아니다.** 상황 줄에 그 마크의 그룹이 떠 있다는 것은 캐럿이
-// 그 마크 **안**에 서 있다는 뜻이고, 그러면 사람이 겨누고 있는 것은 그 마크가 덮은 글 전체다.
-// 형광펜 한가운데를 찍고 색을 바꾸면 "형광펜"이라는 낱말 전체가 바뀌어야지, 다음에 칠 글자만
-// 예약되면 안 된다 — 그것은 사람이 부탁한 적 없는 일이다.
-//
-// 범위를 **긁어서** 골랐으면 그 범위가 그대로 겨눔이다(이 함수를 안 부른다). 접혔을 때만 넓힌다.
-//
-// 캐럿이 그 마크 밖이면 null 이다 — 그때는 걸 글자가 없으므로 예약(다음 글자에 걸기)이 맞다.
+// 접힌 캐럿은 "아무것도 안 골랐다"가 아니다 — 마크 안에 서 있으면 그 마크가 덮은 글 전체가 겨눔이다.
+// A collapsed caret isn't "nothing selected" — standing inside a mark means the whole span it covers is the target (e.g. changing a highlight's color mid-word recolors the whole word, not just future keystrokes).
 export function markSpanAt(
   doc: NabiDoc,
   at: Position,
@@ -38,6 +30,7 @@ export function markSpanAt(
   if (!holder) return null;
   const runs = runsOf(holder, terminalOf(env));
   // 런의 시작 오프셋 표 — 넓히기가 양옆으로 걷기 때문에 먼저 재 둔다.
+  // A table of each run's start offset, precomputed since widening walks both directions.
   const starts: number[] = [];
   let total = 0;
   for (const run of runs) {
@@ -49,14 +42,11 @@ export function markSpanAt(
     const offset = starts[i] as number;
     const length = (i + 1 < runs.length ? (starts[i + 1] as number) : total) - offset;
     const mark = markIn(i);
-    // 경계 정규화와 같은 규칙 — 캐럿은 **바로 앞 글자**의 마크를 따른다. 그래서 끝 오프셋도 든다.
+    // 경계 정규화와 같은 규칙 — 캐럿은 바로 앞 글자의 마크를 따른다. 그래서 끝 오프셋도 든다.
+    // Same rule as boundary normalization — the caret follows the mark of the character right before it, so the end offset is included too.
     if (mark && at.offset > offset && at.offset <= offset + length) {
-      // 같은 값의 이웃 런까지 넓힌다 — 한 마크가 여러 런으로 쪼개져 있을 수 있다(굵게가 중간에 낀 형광펜).
-      //
-      // 다만 **이어진 런만이다.** 홀더 전체에서 같은 값을 긁어 모으면(min/max) 마크가 끊긴 자리
-      // 너머의 동색 조각까지 하나로 묶이고, 그 사이에 낀 **남의 글**(다른 색·맨글)이 통째로 겨눔에
-      // 들어간다 — 초록|코랄|초록에서 첫 초록을 바꿨는데 코랄이 물드는 길이 그것이다. 사람이 "그
-      // 마크"라고 여기는 것은 캐럿 자리에서 이어져 보이는 조각 하나뿐이다.
+      // 같은 값의 이웃 런까지 넓히되 이어진 런만이다 — 안 그러면 사이에 낀 남의 글(다른 색 등)까지 겨눔에 묶인다.
+      // Widens into neighboring runs with the same value, but only contiguous ones — otherwise unrelated text in between (a different color, say) would get swept into the target too.
       let from = offset;
       let to = offset + length;
       for (let j = i - 1; j >= 0; j -= 1) {
@@ -78,7 +68,8 @@ export function markSpanAt(
   return null;
 }
 
-// 문서 처음/조각 안의 첫 캐럿 자리 — 없으면 [0].0 (빈 문단 하나는 cocoon 이 보장한다).
+// 문서 처음/조각 안의 첫 캐럿 자리 — 없으면 [0].0(빈 문단 하나는 cocoon이 보장한다).
+// The first caret position in the document or a slice of it; falls back to [0].0 (cocoon guarantees at least one empty paragraph).
 function firstCaretIn(doc: NabiDoc, env: EditEnv, topIndex?: number): Position {
   for (const holder of holders(doc, env)) {
     if (topIndex !== undefined && holder.path[0] !== topIndex) continue;
@@ -87,27 +78,15 @@ function firstCaretIn(doc: NabiDoc, env: EditEnv, topIndex?: number): Position {
   return { path: [0], offset: 0 };
 }
 
-// 물건의 **기본 차림** — 말 없이 넣은 물건이 입는 폭과 정렬이다 (old 와 같은 값).
-//
-// 왜 여기 사는가: 물건을 문서에 세우는 길이 하나가 아니다 — 툴바의 "그림 넣기" 가 하나, 업로드가
-// 끝나고 커밋하는 길이 또 하나다. 둘이 저마다 제 숫자를 들면 "기본값" 이란 말이 거짓이 되고
-// 실제로 한쪽만 고쳐진 채로 갈라져 있었다. 갈래끼리는 서로를 안 부르므로(경계 규칙) 이 값의
-// 자리는 둘 다 부르는 이 층이다.
-//
-// 정렬이 물건이 아니라 **래퍼문단**의 것인 까닭은 다 — 물건의 정렬은 상황 줄이 아니라
-// 툴바가 맡고, 툴바의 겨눔은 캐럿이 든 최상위 문단이다.
+// 물건의 기본 차림 — 말 없이 넣은 물건이 입는 폭과 정렬이다. 여러 삽입 경로(툴바, 업로드 커밋)가
+// 서로 다른 숫자를 들면 "기본값"이 거짓이 되므로, 그 경로들이 공유하는 이 층에 값을 둔다.
+// The default width/alignment an object gets when inserted with no explicit choice. Lives here (shared by toolbar insert and upload commit) so the multiple insertion paths can't drift apart.
 export const LUMP_DEFAULT_WIDTH = '60';
 export const LUMP_DEFAULT_ALIGN = 'c';
 
-// 물건 하나를 캐럿 자리의 최상위에 세운다 — 래퍼문단을 입혀서.
-// 캐럿의 최상위 문단이 빈 문단이면 **교체**된다(규칙: 빈 문단 + 단일 물건 = 교체
-// 같은 노드의 자식만 갈리고 정렬(a)·_id 가 산다). 아니면 그 최상위 다음에 선다.
-//
-// `wrap` 은 **래퍼문단이 처음 입는 속성**이다 — 그림이 가운데로 서는 자리가 여기다. 물건의
-// 정렬은 물건이 아니라 래퍼문단이 든다(plan 의 결정: 물건의 정렬은 툴바가 맡고 겨눔은 래퍼문단)
-// 그래서 "가운데 정렬된 그림" 이란 곧 "가운데 정렬된 문단 안의 그림" 이다.
-// 이미 서 있던 빈 문단을 교체하는 길에서는 **그 문단이 들고 있던 것이 이긴다** — 사람이 왼쪽으로
-// 맞춰 둔 자리에 그림을 넣었는데 가운데로 튕기면, 넣은 적 없는 결정이 끼어든 것이 된다.
+// 물건 하나를 캐럿 자리의 최상위에 세운다 — 캐럿의 최상위가 빈 문단이면 교체되고, 아니면 다음에 선다.
+// 이미 서 있던 빈 문단을 교체할 때는 그 문단이 들고 있던 정렬이 이긴다(넣은 적 없는 결정이 끼어들지 않게).
+// Inserts an object at the top of the caret position, wrapped in a paragraph — replacing an existing empty paragraph there, or standing after it otherwise. When replacing, the existing paragraph's own alignment wins over any default, so inserting never silently overrides a choice the user already made.
 export function insertLump(doc: NabiDoc, caret: Position, lump: ElementNode, _env: EditEnv, wrap?: Attrs): EditResult {
   const top = caret.path[0] ?? doc.length - 1;
   const node = doc[top];
@@ -136,8 +115,8 @@ export function insertLump(doc: NabiDoc, caret: Position, lump: ElementNode, _en
   return { doc: next, caret: { path: [at], offset: 1 } };
 }
 
-// 최상위의 래퍼문단(물건) 하나를 통째로 걷는다 — 캐럿은 앞 문단의 끝(없으면 다음 문단의 처음)
-// 문서가 비면 빈 문단 하나가 선다 (의 삭제 착지 규칙과 같은 결).
+// 최상위의 래퍼문단(물건) 하나를 통째로 걷는다 — 캐럿은 앞 문단의 끝(없으면 다음 문단의 처음).
+// Removes a whole top-level wrapper paragraph (object); the caret lands at the end of the preceding paragraph, or the start of the next one if there's none before it.
 export function removeLump(doc: NabiDoc, topIndex: number, env: EditEnv): EditResult {
   const rest = [...doc.slice(0, topIndex), ...doc.slice(topIndex + 1)] as NabiDoc;
   if (rest.length === 0) {
@@ -145,6 +124,7 @@ export function removeLump(doc: NabiDoc, topIndex: number, env: EditEnv): EditRe
     return { doc: [empty], caret: { path: [0], offset: 0 } };
   }
   // 앞쪽에서 가장 가까운 홀더의 끝 — 없으면 문서의 첫 홀더의 처음.
+  // The end of the nearest preceding holder, or the start of the document's first holder if none.
   let landing: Position | null = null;
   for (const holder of holders(rest, env)) {
     if ((holder.path[0] as number) < topIndex) {
@@ -157,8 +137,8 @@ export function removeLump(doc: NabiDoc, topIndex: number, env: EditEnv): EditRe
   return { doc: rest, caret: landing ?? { path: [0], offset: 0 } };
 }
 
-// 감싸기 토글 — 선택이 걸친 최상위 블록들을 컨테이너 하나로 감싸거나(래퍼문단을 입고 선다)
-// 이미 전부 그 컨테이너(의 래퍼)면 속의 블록들을 제자리에 편다. quote 류가 그대로 쓴다.
+// 감싸기 토글 — 선택이 걸친 최상위 블록들을 컨테이너 하나로 감싸거나, 이미 그 컨테이너면 도로 편다.
+// Toggles wrapping — wraps the top-level blocks a selection spans into one container, or unwraps them if they're already that container (used by quote and similar).
 export function toggleWrap(doc: NabiDoc, sel: Selection, containerW: string, env: EditEnv): EditResult {
   const [start, end] = ordered(sel);
   const a = (start.path[0] ?? 0) as number;
@@ -172,6 +152,7 @@ export function toggleWrap(doc: NabiDoc, sel: Selection, containerW: string, env
 
   if (wrapped && covered.length > 0) {
     // 푼다 — 컨테이너 속 블록들이 제자리에 선다.
+    // Unwrap: the container's inner blocks take its place.
     const inner: ElementNode[] = [];
     for (const node of covered) {
       const lump = node.ch[0] as ElementNode;
@@ -183,6 +164,7 @@ export function toggleWrap(doc: NabiDoc, sel: Selection, containerW: string, env
   }
 
   // 감싼다 — 걸친 블록 전부가 컨테이너의 속이 되고, 컨테이너는 래퍼문단을 입는다.
+  // Wrap: all covered blocks become the container's contents, and the container itself gets a wrapper paragraph.
   const container: ElementNode = { w: containerW, ch: covered };
   const wrapper: ElementNode = { w: P, ch: [container] };
   const next = [...doc.slice(0, a), wrapper, ...doc.slice(b + 1)] as NabiDoc;
@@ -190,7 +172,8 @@ export function toggleWrap(doc: NabiDoc, sel: Selection, containerW: string, env
   return { doc: next, caret: positionExists(next, caret, env) ? caret : { path: [a], offset: 0 } };
 }
 
-// 최상위 인덱스의 노드 — wings 가 자기 물건을 찾을 때 쓰는 잔 도우미.
+// 최상위 인덱스의 노드 — wings가 자기 물건을 찾을 때 쓰는 잔 도우미.
+// The node at a path's top-level index; a small helper wings use to locate their own objects.
 export function topNodeAt(doc: NabiDoc, path: readonly number[]): ElementNode | null {
   return nodeAt(doc, [path[0] ?? 0]);
 }
@@ -211,16 +194,15 @@ export function blockOwnerAt(
   return null;
 }
 
-// 컨테이너(표·인용·접기·코드…) 밖으로 — 래퍼문단 자신을 가리키는 자리에 캐럿을 세운다.
-// offset 0 은 래퍼문단 **앞**, 1 은 **뒤**. 이웃 문단이 미리 있을 필요는 없다 — 그 자리에서
-// 실제로 타이핑하면 `doc/insert.ts` 의 `insertText`/`insertLine` 이 그 자리에 새 문단을
-// 즉석에서 만든다(둘 다 `isWrapper` 를 보고 `besideWrapper` 로 간다).
+// 컨테이너(표·인용·접기·코드…) 밖으로 — 래퍼문단을 가리키는 자리에 캐럿을 세운다(0=앞, 1=뒤).
+// 이웃 문단이 미리 있을 필요는 없다 — 거기서 타이핑하면 `doc/insert.ts` 가 새 문단을 즉석에서 만든다.
+// Exits a container (table, quote, details, code...) by placing the caret next to its wrapper paragraph (offset 0 = before, 1 = after). No neighboring paragraph needs to exist yet — typing there makes `doc/insert.ts` create one on the spot.
 export function exitWrapper(doc: NabiDoc, ownerPath: readonly number[], dir: 'up' | 'down'): CommandOutcome {
   return { doc, selection: caretAt({ path: ownerPath.slice(0, -1), offset: dir === 'up' ? 0 : 1 }) };
 }
 
-// `holds: 'blocks'` 컨테이너(인용·접기)의 위/아래 탈출 판정 — 캐럿이 첫 자식의 맨 앞(위)이거나
-// 마지막 자식의 맨 끝(아래)일 때만 `exitWrapper` 로 넘긴다. 자식 사이 이동은 코어 몫이라 null.
+// `holds: 'blocks'` 컨테이너(인용·접기)의 위/아래 탈출 판정 — 첫/마지막 자식의 끝단일 때만 `exitWrapper` 로 넘긴다.
+// Escape check for `holds: 'blocks'` containers (quote, details) — only hands off to `exitWrapper` at the very start of the first child or end of the last; movement between children stays the core's job.
 export function blocksBoundaryEscape(
   intent: KeyIntent,
   doc: NabiDoc,

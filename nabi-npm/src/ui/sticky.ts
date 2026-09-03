@@ -1,5 +1,5 @@
-// 캐럿을 편집 가능 띠 안에 붙드는 스크롤 보정 — 계산은 band.ts, iOS는 브라우저 자체 리빌에 맡긴다(040)
-// Keeps the caret inside the visible edit band by scrolling; math lives in band.ts, iOS defers to the browser's own reveal (040)
+// 캐럿을 편집 가능 띠 안에 붙드는 스크롤 보정 — 계산은 band.ts, iOS는 브라우저 자체 리빌에 맡긴다
+// Keeps the caret inside the visible edit band by scrolling; math lives in band.ts, iOS defers to the browser's own reveal
 import type { Nabi } from '../editor/index.js';
 import {
   KEYBOARD_STEPS,
@@ -19,8 +19,8 @@ import { HostElementLease } from '../lifecycle.js';
 
 export const KEYBOARD_TOP_VAR = '--nabi-keyboard-top';
 export const KEYBOARD_BOTTOM_VAR = '--nabi-keyboard-bottom';
-// 시트의 scroll-margin 어림값이 실기와 크게 어긋나(011) 실측 높이를 따로 낸다
-// The sheet's scroll-margin guess diverges from real devices (011), so we expose the measured height instead
+// 시트의 scroll-margin 어림값이 실기와 크게 어긋나 실측 높이를 따로 낸다
+// The sheet's scroll-margin guess diverges from real devices, so we expose the measured height instead
 const BAR_HEIGHT_VAR = '--nabi-bar-height';
 
 // 주소줄 접힘(수십 px)과 키보드(수백 px)를 가르는 문턱 — 작은 변화까지 밀면 화면이 떨린다
@@ -31,8 +31,8 @@ const KEYBOARD_RATIO = 0.15;
 // After a user scroll we hold off pushing the screen for this long; the aim session (`armed` below) stays ended meanwhile
 const USER_QUIET = 250;
 
-// 뷰포트가 방금 움직였으면 브라우저가 미는 중으로 본다 — 사람 스크롤과 헷갈리면 무한 루프가 난다(015/020)
-// A viewport change just now counts as the browser's own scroll; confusing it with a user scroll causes an infinite loop (015/020)
+// 뷰포트가 방금 움직였으면 브라우저가 미는 중으로 본다 — 사람 스크롤과 헷갈리면 무한 루프가 난다
+// A viewport change just now counts as the browser's own scroll; confusing it with a user scroll causes an infinite loop
 const VIEW_QUIET = 300;
 
 // getBoundingClientRect는 소수를 낸다 — 이 문턱 아래 차이는 흔들림이지 진짜 어긋남이 아니다
@@ -50,8 +50,8 @@ export interface StickyOptions {
   // 주면 편집 뒤에 스스로 한 번 겨눈다 — 안 주면 호스트가 aim()을 부를 때만 돈다
   // If given, aims itself once after an edit; otherwise only `aim()` from the host does
   readonly nabi?: Nabi;
-  // iOS 분기를 끄고 모든 플랫폼이 같은 띠 규칙만 쓰게 한다(040)
-  // Disables the iOS branch so every platform runs the same band rule (040)
+  // iOS 분기를 끄고 모든 플랫폼이 같은 띠 규칙만 쓰게 한다
+  // Disables the iOS branch so every platform runs the same band rule
   readonly iosBranch?: boolean;
 }
 
@@ -98,8 +98,8 @@ export function mountSticky(options: StickyOptions): Sticky {
     styles.style(name, value <= 0 ? null : `${value}px`);
   };
 
-  // fixed 표식의 client top 기준이 iOS(보이는 창)와 안드로이드(레이아웃 창)에서 갈려, offsetTop을 더해 좌표계를 맞춘다(011)
-  // A `position:fixed` probe's client top is measured from different origins on iOS vs Android; adding offsetTop aligns both (011)
+  // fixed 표식의 client top 기준이 iOS(보이는 창)와 안드로이드(레이아웃 창)에서 갈려, offsetTop을 더해 좌표계를 맞춘다
+  // A `position:fixed` probe's client top is measured from different origins on iOS vs Android; adding offsetTop aligns both
   const probeTop = (offsetTop: number): number => {
     if (!view || offsetTop <= 0) return 0;
     const probe = owner.createElement('div');
@@ -108,8 +108,8 @@ export function mountSticky(options: StickyOptions): Sticky {
       'position:fixed;inset-block-start:0;inset-inline-start:0;inline-size:1px;block-size:1px;' +
       'opacity:0;pointer-events:none';
     owner.body.append(probe);
-    // 표식을 상주시키면 사파리가 그 자체로 좌표계를 바꿔 굴었다 — 잴 때만 만들고 곧장 지운다(011)
-    // Keeping the probe resident made Safari itself shift its coordinate origin; create it only to measure, then remove it (011)
+    // 표식을 상주시키면 사파리가 그 자체로 좌표계를 바꿔 굴었다 — 잴 때만 만들고 곧장 지운다
+    // Keeping the probe resident made Safari itself shift its coordinate origin; create it only to measure, then remove it
     const top = probe.getBoundingClientRect().top;
     probe.remove();
     return top;
@@ -141,20 +141,20 @@ export function mountSticky(options: StickyOptions): Sticky {
   };
   const scrolling = (): boolean => Date.now() - userAt < USER_QUIET;
 
-  // 세션은 겨눔·문서 변경·키보드 급변에 서고, 자리잡기가 끝나거나 사람이 굴리면 내려간다 — 사람 스크롤로 끝나면 재개는 사람 몫이다(015/020)
-  // The session arms on aim/doc-change/keyboard jumps and disarms once settled or the user scrolls; after a user scroll only the user resumes it (015/020)
+  // 세션은 겨눔·문서 변경·키보드 급변에 서고, 자리잡기가 끝나거나 사람이 굴리면 내려간다 — 사람 스크롤로 끝나면 재개는 사람 몫이다
+  // The session arms on aim/doc-change/keyboard jumps and disarms once settled or the user scrolls; after a user scroll only the user resumes it
   let armed = false;
   let closing = false;
 
-  // 밀어도 caret-band 간격이 그대로면(툴바가 캐럿과 함께 구르는 자리) 그 간격을 적어 두고 다음 편집에서는 안 민다 — 세션당 한 번 배운다(015)
-  // If a push leaves the caret-band gap unchanged (toolbar scrolling alongside the caret), remember that gap and stop pushing for it — learned once per session (015)
+  // 밀어도 caret-band 간격이 그대로면(툴바가 캐럿과 함께 구르는 자리) 그 간격을 적어 두고 다음 편집에서는 안 민다 — 세션당 한 번 배운다
+  // If a push leaves the caret-band gap unchanged (toolbar scrolling alongside the caret), remember that gap and stop pushing for it — learned once per session
   let stuck = Number.NaN;
 
   const follow = (): void => {
     if (!view) return;
     const visual = view.visualViewport;
-    // 자국은 뷰포트의 키(height)가 실제로 달라진 때만 찍는다 — 매 호출마다 찍으면 손가락 스크롤도 영영 사람 것으로 안 세어져 무한 루프가 난다(020)
-    // We mark this only when the viewport's height actually changes; marking on every call meant a finger-scroll never counted as the user's, causing an infinite loop (020)
+    // 자국은 뷰포트의 키(height)가 실제로 달라진 때만 찍는다 — 매 호출마다 찍으면 손가락 스크롤도 영영 사람 것으로 안 세어져 무한 루프가 난다
+    // We mark this only when the viewport's height actually changes; marking on every call meant a finger-scroll never counted as the user's, causing an infinite loop
     const seeing = Math.round(visual ? visual.height : view.innerHeight);
     if (seeing !== viewHeight) {
       viewHeight = seeing;
@@ -172,8 +172,8 @@ export function mountSticky(options: StickyOptions): Sticky {
       writeVar(BAR_HEIGHT_VAR, height);
     }
 
-    // 툴바가 창 맨 위로 옮겨 앉는 것도 캐럿을 가릴 수 있어 걸음을 걸지만, 문턱 이하(주소줄 접힘)에는 안 연다(011)
-    // The toolbar relocating to the window top can cover the caret too, so we step here, but not below the threshold (address-bar collapse) (011)
+    // 툴바가 창 맨 위로 옮겨 앉는 것도 캐럿을 가릴 수 있어 걸음을 걸지만, 문턱 이하(주소줄 접힘)에는 안 연다
+    // The toolbar relocating to the window top can cover the caret too, so we step here, but not below the threshold (address-bar collapse)
     const jump = Math.max(KEYBOARD_JUMP, owner.documentElement.clientHeight * KEYBOARD_RATIO);
     const big = sighted
       ? Math.abs(Math.round(top) - seenTop) >= jump || Math.abs(seeing - seenHeight) >= jump
@@ -206,8 +206,8 @@ export function mountSticky(options: StickyOptions): Sticky {
     return { top: fallback.top, bottom: fallback.bottom };
   };
 
-  // 선택을 뺐다 도로 넣으면 WebKit이 자기 방식으로 캐럿을 보여준다 — 자리는 우리가 안 정한다(040)
-  // Removing and re-adding the selection makes WebKit reveal the caret itself; we never set a position (040)
+  // 선택을 뺐다 도로 넣으면 WebKit이 자기 방식으로 캐럿을 보여준다 — 자리는 우리가 안 정한다
+  // Removing and re-adding the selection makes WebKit reveal the caret itself; we never set a position
   const reAim = (): void => {
     const selection = owner.getSelection?.() ?? view?.getSelection() ?? null;
     if (!selection || selection.rangeCount === 0) return;
@@ -219,18 +219,18 @@ export function mountSticky(options: StickyOptions): Sticky {
   const bandNow = (): { readonly band: Band; readonly aim: Band; readonly limit: number } | null => {
     if (!view) return null;
     const visual = view.visualViewport;
-    // ruler + offsetTop으로 보이는 창을 캐럿·크롬의 rect와 같은 좌표계로 옮긴다 — {0, height}만 쓰면 안드로이드에서 띠가 뒤집힌다(011)
-    // Adding `ruler` aligns the visual viewport to the caret/chrome rect's coordinate system; using {0, height} alone flips the band on Android (011)
+    // ruler + offsetTop으로 보이는 창을 캐럿·크롬의 rect와 같은 좌표계로 옮긴다 — {0, height}만 쓰면 안드로이드에서 띠가 뒤집힌다
+    // Adding `ruler` aligns the visual viewport to the caret/chrome rect's coordinate system; using {0, height} alone flips the band on Android
     const top = visual ? ruler + visual.offsetTop : 0;
     const height = visual ? visual.height : view.innerHeight;
     const viewport: Rect = { top, bottom: top + height };
     const chromeBox = chrome ? chrome.getBoundingClientRect() : null;
     const chromeBottom = chromeBox ? chromeBox.bottom : null;
-    // 띠 = 창 ∩ 툴바 아래 — 그 교집합이 비어 뒤집히면 눈이 머니 그때는 툴바를 무시하고 창만 본다(011)
-    // Band = window intersect below-toolbar; when that flips empty we'd go blind, so we fall back to just the window (011)
+    // 띠 = 창 ∩ 툴바 아래 — 그 교집합이 비어 뒤집히면 눈이 머니 그때는 툴바를 무시하고 창만 본다
+    // Band = window intersect below-toolbar; when that flips empty we'd go blind, so we fall back to just the window
     const usable = chromeBottom !== null && chromeBottom < viewport.bottom ? chromeBottom : null;
-    // 과녁 띠는 툴바가 창 맨 위에 붙었을 때의 키만 쓴다 — 지금 툴바 위치가 흔들려도 과녁은 안 흔들린다(011)
-    // The aim band uses only the height as if the toolbar were pinned to the top, so it doesn't wobble with the toolbar's current position (011)
+    // 과녁 띠는 툴바가 창 맨 위에 붙었을 때의 키만 쓴다 — 지금 툴바 위치가 흔들려도 과녁은 안 흔들린다
+    // The aim band uses only the height as if the toolbar were pinned to the top, so it doesn't wobble with the toolbar's current position
     const aimTop = viewport.top + (chromeBox ? chromeBox.height : 0);
     return {
       band: bandOf(usable, viewport),
@@ -263,8 +263,8 @@ export function mountSticky(options: StickyOptions): Sticky {
     });
   };
 
-  // 편집(백스페이스·엔터 등 가로챈 입력)은 preventDefault라 브라우저 리빌이 안 돌고, 브라우저가 넣는 글자는 시트의 어림 여백만 본다 — 둘 다 캐럿이 가려질 수 있어 우리가 다음 프레임에 민다(260823_000)
-  // Intercepted edits skip the browser's reveal (preventDefault), and browser-typed input only respects the sheet's guessed margin — both can hide the caret, so we nudge it next frame (260823_000)
+  // 편집(백스페이스·엔터 등 가로챈 입력)은 preventDefault라 브라우저 리빌이 안 돌고, 브라우저가 넣는 글자는 시트의 어림 여백만 본다 — 둘 다 캐럿이 가려질 수 있어 우리가 다음 프레임에 민다
+  // Intercepted edits skip the browser's reveal (preventDefault), and browser-typed input only respects the sheet's guessed margin — both can hide the caret, so we nudge it next frame
   let watching = false;
   let frame = 0;
   // 이 걸음을 연 문 — edit(문서 변경) 또는 view(키보드·뷰포트 변경). 뷰포트 문이 우선한다.
@@ -294,8 +294,8 @@ export function mountSticky(options: StickyOptions): Sticky {
       mine = window_.scrollY;
       return window_.scrollY - before;
     };
-    // 편집 문은 키보드 유무와 무관하게 위 변만 본다 — 아래 변까지 보면 편집마다 사람이 굴려 내린 화면을 도로 끌어올린다(015)
-    // The edit door only checks the top edge regardless of the keyboard; also checking the bottom would pull back a scroll the user made on every keystroke (015)
+    // 편집 문은 키보드 유무와 무관하게 위 변만 본다 — 아래 변까지 보면 편집마다 사람이 굴려 내린 화면을 도로 끌어올린다
+    // The edit door only checks the top edge regardless of the keyboard; also checking the bottom would pull back a scroll the user made on every keystroke
     if (by !== 'view') {
       const seen = look();
       if (!seen) return;
@@ -319,8 +319,8 @@ export function mountSticky(options: StickyOptions): Sticky {
       if (last) armed = false;
       return;
     }
-    // 먼저 가림·창 밖을 최소로 고치고, 그다음 툴바를 창 맨 위로 붙여 빈자리를 걷어낸다 — 밀고 다시 재는 두 걸음이다(011)
-    // First fix any covering/off-screen minimally, then pin the toolbar to the window top to remove empty space — two measure-push-remeasure steps (011)
+    // 먼저 가림·창 밖을 최소로 고치고, 그다음 툴바를 창 맨 위로 붙여 빈자리를 걷어낸다 — 밀고 다시 재는 두 걸음이다
+    // First fix any covering/off-screen minimally, then pin the toolbar to the window top to remove empty space — two measure-push-remeasure steps
     underWalk(KEYBOARD_STEPS, look, push);
     placeWalk(KEYBOARD_STEPS, lookAim, push);
     if (last) armed = false;
@@ -334,8 +334,8 @@ export function mountSticky(options: StickyOptions): Sticky {
     frame = view.requestAnimationFrame(reveal);
   };
 
-  // 크롬은 우리가 민 뒤에도 계속 자라 다시 어긋나므로, 뷰포트 사건이 멎은 뒤 딱 한 번 더 재고 맞춘다(011)
-  // The chrome keeps growing after our own push and drifts again, so once things settle we measure and correct exactly one more time (011)
+  // 크롬은 우리가 민 뒤에도 계속 자라 다시 어긋나므로, 뷰포트 사건이 멎은 뒤 딱 한 번 더 재고 맞춘다
+  // The chrome keeps growing after our own push and drifts again, so once things settle we measure and correct exactly one more time
   let settling = false;
   const afterQuiet = (): void => {
     if (settling) return;
@@ -343,8 +343,8 @@ export function mountSticky(options: StickyOptions): Sticky {
     settle.afterViewport(() => {
       if (unmounted) return;
       settling = false;
-      // 사람이 그사이 굴렸으면 이 마지막 걸음은 취소된다 — 손을 뗀 순간 캐럿을 도로 끌어오면 안 된다(015)
-      // If the user scrolled meanwhile, this final step is canceled — we must not pull the caret back the moment they let go (015)
+      // 사람이 그사이 굴렸으면 이 마지막 걸음은 취소된다 — 손을 뗀 순간 캐럿을 도로 끌어오면 안 된다
+      // If the user scrolled meanwhile, this final step is canceled — we must not pull the caret back the moment they let go
       if (!armed) return;
       closing = true;
       afterEdit('view');
@@ -366,8 +366,8 @@ export function mountSticky(options: StickyOptions): Sticky {
     throw error;
   }
 
-  // 잰 뒤에 툴바가 더 자라 캐럿을 도로 덮을 수 있어(상황 줄·줄바꿈·늦은 폰트), 타이머 대신 ResizeObserver로 그 키 변화만 직접 듣는다(015)
-  // The toolbar can keep growing after we measure and re-cover the caret (context row, wrapped buttons, late fonts); we listen for that height change directly via ResizeObserver instead of a timer (015)
+  // 잰 뒤에 툴바가 더 자라 캐럿을 도로 덮을 수 있어(상황 줄·줄바꿈·늦은 폰트), 타이머 대신 ResizeObserver로 그 키 변화만 직접 듣는다
+  // The toolbar can keep growing after we measure and re-cover the caret (context row, wrapped buttons, late fonts); we listen for that height change directly via ResizeObserver instead of a timer
   let watcher: { observe(el: Element): void; disconnect(): void } | null = null;
   let seenBar = -1;
   const onChromeSize = (): void => {

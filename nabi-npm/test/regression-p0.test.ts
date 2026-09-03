@@ -1,4 +1,5 @@
 // 0.9 P0 회귀망 - 화면과 트리가 갈릴 때 글자를 잃는 세 경로를 각각 고정한다.
+// 0.9 P0 regression net — pins down three paths that lose text when the screen and the tree diverge.
 import { JSDOM } from 'jsdom';
 import { createNabiWith } from '../src/wing/index.js';
 import { encodeClipboardBody, mountSurface, NABI_CLIPBOARD_MIME, type Surface } from '../src/surface/index.js';

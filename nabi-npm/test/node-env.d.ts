@@ -1,5 +1,5 @@
-// 그물이 쓰는 노드 전역·모듈만 최소로 손으로 적는다 — `@types/node` 는 dev 로도 안 무는
-// 의존성이다. 여기 없는 API 를 그물에서 쓰게 되면 그때 한 줄씩 늘린다.
+// 그물이 쓰는 노드 전역·모듈만 최소로 손으로 적는다 — `@types/node` 는 dev로도 안 무는 의존성이다.
+// Hand-declares only the Node globals/modules the test nets use — `@types/node` isn't even a dev dependency here. Add a line when a net needs an API not listed.
 declare const process: { exit(code?: number): never };
 
 declare module 'node:fs' {

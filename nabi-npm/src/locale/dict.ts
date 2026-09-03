@@ -1,17 +1,15 @@
-// 사전 **하나**. 코어가 자기 이름으로 하는 말만 여기 산다 — wing 의 버튼·상황 줄 이름은 그 wing 의
-// 선언(`button.label`·`context[].label`)에 붙어 다닌다. wing 을 빼면 그 말도 함께 사라지는 것이
-// 맞고, 그러려면 말이 wing 옆에 있어야 한다.
-//
-// old 의 `locale.ts` 이식으로 시작했으며, 아래 원본은 `completeLocaleTree`에서 지원하는
-// 24개 로케일의 실제 번역으로 완성된다.
+// 말 사전은 하나뿐이다 — 코어가 쓰는 말만 여기 살고, wing 버튼·상황 줄 이름은 그 wing 선언에 붙어야 wing을 빼면 이름도 함께 사라진다.
+// One dictionary only — only the words core itself uses live here; a wing's button/context names stay attached to that wing's declaration, so removing the wing removes its words too.
 import { normalizedLocale } from './normalize.js';
 import { completeLocaleTree } from './complete.js';
 
 // 로케일 코드 → 그 말. `en` 은 폴백이라 사실상 필수다.
+// Locale code to its text; `en` is the fallback, so it's effectively required.
 export type LocaleText = Readonly<Record<string, string>>;
 export type Dictionary = Readonly<Record<string, LocaleText>>;
 
-// 코어가 제공하는 24개 언어. 사전이 이 목록을 강제하지는 않는다 — 목록은 호스트가 고르는 자리의 안내다.
+// 코어가 제공하는 언어 목록. 사전이 이 목록을 강제하지는 않는다 — 목록은 호스트가 고르는 자리의 안내다.
+// The languages core ships; the dictionary doesn't enforce this list — it's just guidance for wherever a host builds a picker.
 export const LOCALES: readonly string[] = [
   'en',
   'zh',
@@ -40,23 +38,19 @@ export const LOCALES: readonly string[] = [
 ];
 
 // 오른쪽에서 왼쪽으로 쓰는 말. 사전의 폴백은 글 방향과 독립적이다.
+// Right-to-left languages; the dictionary's fallback is independent of text direction.
 export const RTL_LOCALES: readonly string[] = ['ar', 'ur', 'fa'];
 
-// 말 하나의 글 방향. 모르는 말은 왼쪽에서 오른쪽이다 — 폴백(en)과 같은 결이다.
-//
-// **왜 사전 옆에 사는가**: 방향은 번역문처럼 그 말에 딸린 사실이고, 화면 층이 정할 것이 아니다.
-// 서버(`nabi-note/ssr`)도 이 답을 알아야 미리 그린 HTML 에 같은 `dir` 을 적을 수 있다.
+// 말 하나의 글 방향 — 모르는 말은 en과 같은 결로 좌횡서다. 방향은 그 말에 딸린 사실이라 사전 옆에 살고, 서버(nabi-note/ssr)도 미리 그릴 HTML에 같은 dir을 적으려면 이 답이 필요하다.
+// A locale's text direction — an unknown locale defaults ltr, the same fallback logic as en. Direction lives beside the dictionary since it's a fact about the language, and the server (nabi-note/ssr) needs this same answer to set `dir` on pre-rendered HTML.
 export function localeDirection(code: string | undefined): 'ltr' | 'rtl' {
   return RTL_LOCALES.includes(normalizedLocale(code)) ? 'rtl' : 'ltr';
 }
 
 const RAW_DICTIONARY: Dictionary = {
   // --- 갈래의 이름 (`wing.<w>`) ----------------------------------------------------------------
-  // ui 가 이름을 찾는 마지막 자리다: 선언에 이름이 없으면 여기를 본다
-  // (`t.pick(decl.label, `wing.${wing.w}`)`). 대개는 선언이 제 이름을 들고 있어 여기 올 일이
-  // 없지만, **단추를 여럿 내는 갈래**는 단추마다 제 이름이 있고 갈래 자신의 이름은 없다
-  // 정렬이 그렇다(왼쪽·가운데·오른쪽 셋이 줄에 나란히 선다). 목록에서 그 갈래를 한 낱말로
-  // 불러야 하는 쪽(문서 사이트의 wing 칩 같은)이 이 이름을 쓴다.
+  // ui가 이름을 찾는 마지막 자리다(t.pick(decl.label, `wing.${wing.w}`)). 대개 선언이 제 이름을 들고 있어 여기 올 일이 없지만, 단추를 여럿 내는 갈래(정렬처럼)는 갈래 자체엔 이름이 없어 한 낱말로 불러야 할 때 이걸 쓴다.
+  // The last place ui looks up a name (t.pick(decl.label, `wing.${wing.w}`)). Usually the declaration already carries its own name, but a wing exposing several buttons (like alignment) has none for the group itself, so anywhere needing to name the group in one word falls back here.
   'wing.align': {
     ko: '정렬',
     en: 'Alignment',
@@ -74,7 +68,7 @@ const RAW_DICTIONARY: Dictionary = {
     id: 'Perataan',
   },
 
-  // --- old 코어 아홉 마디 (14 로케일 그대로) ---------------------------------------------------
+  // --- old 코어 아홉 마디 (모든 로케일 그대로) -------------------------------------------------
   preview: {
     ko: '미리보기',
     en: 'Preview',
@@ -171,14 +165,8 @@ const RAW_DICTIONARY: Dictionary = {
     ur: 'فائلیں یہاں چھوڑیں',
     id: 'Letakkan berkas di sini',
   },
-  // 물어보는 판의 확인 단추 글자 (084 ⑧). ▶ svg 를 걷고 그 자리에 선 글자다.
-  //
-  // `confirm` 과 따로 사는 까닭: `confirm` 은 **물음에 답하는 말**이고("정말 지울까요?" 의
-  // 예), 이것은 적어 넣은 값을 넣겠다는 **한 줄짜리 단추**다. 단추는 주소 칸 옆에 나란히
-  // 서므로 짧아야 한다 — `confirm` 을 그대로 쓰면 러시아어의 'Подтвердить' 처럼 칸보다 넓은
-  // 말이 몇 나라에서 그 자리를 차지한다. 그래서 나라마다 **그 나라의 확인 단추 글자**를 든다
-  // (많은 말이 'OK' 를 그대로 쓴다 — 지어낸 번역이 아니라 그 나라 화면의 관례다).
-  // 사람이 읽고 누르는 자리라 14 로케일을 다 채운다 — 폴백으로 en 을 보이면 안 된다.
+  // confirm과 다른 확인 단추 글자 — confirm은 물음에 답하는 말(정말 지울까요?)이고 이건 주소 칸 옆의 짧은 한 줄짜리 단추라, 나라마다 그 화면 관례의 확인 글자를 쓴다(러시아어 Подтвердить처럼 confirm을 그대로 쓰면 칸을 넘친다). 사람이 읽고 누르는 자리라 모든 로케일을 다 채운다.
+  // A confirm-button label distinct from `confirm` — `confirm` answers a question ("Really delete?"), while this is a short button beside an address field, so each locale uses its own screen convention for OK (many just keep "OK" as-is, which is convention, not an invented translation; reusing `confirm` would overflow the field, e.g. Russian "Подтвердить"). Filled for every locale since it's read and pressed directly.
   ok: {
     ko: '확인',
     en: 'OK',
@@ -195,12 +183,8 @@ const RAW_DICTIONARY: Dictionary = {
     ur: 'ٹھیک ہے',
     id: 'OK',
   },
-  // 마크 단추를 직접 클릭했는데 캐럿이 접혀 있을 때 (084 ⑨) — 포인터 손은 예약을 안 만들므로
-  // 이 말이 침묵의 자리를 대신한다.
-  //
-  // **한 마디로 끝낸다** (주인 지시 2026-08-18: "선택된 글자가 없습니다." 처럼 간결하게).
-  // 앞판은 "…없습니다 — 먼저 글자를 선택하세요" 로 사실과 지시를 겹쳐 말했는데, 1초 사는 말에
-  // 두 마디는 길다. 무엇이 없는지만 말하면 무엇을 해야 하는지는 저절로 읽힌다.
+  // 마크 단추를 눌렀는데 캐럿이 접혀 있을 때의 말 — 포인터는 선택을 안 만드니 이 말이 그 침묵을 대신한다. 한 마디로 끝낸다(사실만 말하면 할 일은 저절로 읽힌다).
+  // Shown when a mark button is clicked with the caret collapsed — a pointer click makes no selection, so this fills that silence. Kept to one short sentence; stating only what's missing makes the next step obvious.
   noTarget: {
     ko: '선택된 글자가 없습니다.',
     en: 'No text selected.',
@@ -217,7 +201,6 @@ const RAW_DICTIONARY: Dictionary = {
     ur: 'کوئی متن منتخب نہیں ہے۔',
     id: 'Tidak ada teks yang dipilih.',
   },
-  // 11 이 `mountFile` 에 한국어로 박아 둔 그 말이 여기로 왔다 — 문구는 사전의 것이다.
   openWhileChanged: {
     ko: '작성 중인 문서가 있습니다. 그래도 여시겠습니까?',
     en: 'This document has unsaved changes. Open anyway?',
@@ -260,19 +243,18 @@ const RAW_DICTIONARY: Dictionary = {
     ko: '문서가 바뀌어 붙여넣기를 취소했습니다.',
     en: 'Paste was canceled because the document changed.',
   },
-  // 표 격자 피커의 읽음 — `{rows} × {cols}`.
   gridSize: { ko: '{rows} × {cols}', en: '{rows} × {cols}' },
   // 힌트(Shift 연타) 안내 — 버튼 툴팁 꼬리에 붙는다.
+  // A shortcut-hint suffix (Shift double-tap), appended to a button's tooltip.
   hintTail: { ko: '{label} (⇧⇧ {key})', en: '{label} (⇧⇧ {key})' },
-  // 연타 이름표 — 힌트의 `⇧⇧` 와 같은 무늬로 "그 키를 두 번" 을 그린다. 자판 글자뿐이라
-  // 옮길 말이 없다(hintTail 과 같은 판단 — 열넷을 채우면 같은 글자가 열넷 는다).
+  // 연타 이름표 — 힌트의 ⇧⇧와 같은 무늬로 '그 키를 두 번'을 그린다. 자판 글자뿐이라 옮길 말이 없다(hintTail과 같은 판단).
+  // A double-tap label — draws "press that key twice" with the same pattern as the ⇧⇧ hint. Just a keyboard glyph, nothing to translate (same call as hintTail).
   twiceTail: { ko: '{label} ({key} {key})', en: '{label} ({key} {key})' },
   hintsOn: { ko: '단축 힌트', en: 'Shortcut hints' },
   lightbox: { ko: '크게 보기', en: 'View image' },
   chooseFile: { ko: '파일 선택', en: 'Choose files' },
-  // 빈 편집기의 안내글 — 아무것도 없을 때 첫 줄에 흐리게 선다(시트가 `--nabi-placeholder` 로
-  // 읽는다). **열넷을 다 채운다**: 문서를 열면 제일 먼저, 그리고 아무 말 없이 눈에 드는
-  // 한 마디라 영어 폴백이 뜨면 그 화면만 낯설어진다.
+  // 빈 편집기의 안내글 — 아무것도 없을 때 첫 줄에 흐리게 선다(시트가 --nabi-placeholder로 읽는다). 문서를 열자마자 눈에 드는 말이라 모든 로케일을 다 채운다.
+  // The empty-editor hint — shown faded on the first line when there's nothing else (read by the stylesheet as --nabi-placeholder). Filled for every locale since it's the first thing seen on opening a document.
   placeholder: {
     ko: '여기에 글을 쓰세요',
     en: 'Write here…',
@@ -372,6 +354,7 @@ const RAW_DICTIONARY: Dictionary = {
     id: 'Hapus entri ini',
   },
   // 지우기는 되돌리기가 없다 — 되돌리기는 문서의 것이지 저장소의 것이 아니다. 그래서 묻는다.
+  // Clearing has no undo — undo belongs to the document, not the store — so this asks first.
   'history.clearAsk': {
     ko: '로컬 기록을 전부 지웁니다. 되돌릴 수 없습니다. 계속할까요?',
     en: 'This clears the whole local history. It cannot be undone. Continue?',
@@ -404,8 +387,8 @@ const RAW_DICTIONARY: Dictionary = {
     ur: 'یہ اندراج حذف ہو جائے گا۔ واپس نہیں لایا جا سکتا۔ جاری رکھیں؟',
     id: 'Entri ini akan dihapus dan tidak bisa dikembalikan. Lanjutkan?',
   },
-  // 저장소가 막힌 자리에서 wing 단추를 눌렀을 때 (084 ⑤) — **무엇을 해야 하는지**까지 든 말이라
-  // 열넷을 다 채운다. 폴백으로 영어가 뜨면 "안 되는구나" 만 남고 "서버에 올리면 된다" 가 안 읽힌다.
+  // 저장소가 막힌 자리에서 wing 단추를 눌렀을 때의 말 — 무엇을 해야 하는지까지 담아 모든 로케일을 다 채운다. 폴백 영어만 뜨면 '안 되는구나'만 남고 해결법이 안 읽힌다.
+  // Shown when a wing button is pressed where storage is blocked — filled for every locale since it also states what to do; an English fallback alone would leave only "it doesn't work," losing the fix.
   'history.blocked': {
     ko: '로컬 파일(file://)에서는 브라우저가 저장소를 막아 로컬 기록을 쓸 수 없다.\n서버에 올려서 열어라.',
     en: 'The browser blocks storage on local files (file://), so there is no local history here.\nServe the page from a server.',
@@ -423,20 +406,16 @@ const RAW_DICTIONARY: Dictionary = {
     id: 'Pada berkas lokal (file://) peramban memblokir penyimpanan, jadi riwayat lokal tidak jalan.\nBuka halaman dari server.',
   },
   // 목록의 만든 때 — 고친 때와 벌어진 줄에만 선다. `{when}` 은 아래의 "얼마 전" 한 마디다.
+  // The list's created-time label — shown only on a row where it differs from the modified time; `{when}` is one of the "time ago" entries below.
   'history.created': { ko: '만든 때 {when}', en: 'created {when}' },
   'history.now': { ko: '방금', en: 'just now' },
   'history.minutes': { ko: '{n}분 전', en: '{n} min ago' },
   'history.hours': { ko: '{n}시간 전', en: '{n} h ago' },
   'history.days': { ko: '{n}일 전', en: '{n} d ago' },
 
-  // --- 붙여넣기 판 (14 로케일 — 사람이 읽고 고르는 자리다) -------------------------------------
-  //
-  // 판이 뜨는 자리는 하나다: 붙여넣은 것을 읽는 길이 둘 이상일 때. 제목은 **지금 무슨 몸짓
-  // 중인가**를 한 낱말로 말한다 — 무엇이 감지됐는지는 나란히 선 형식 셋이 이미 보여 준다.
-  //
-  // 형식의 이름(`HTML`·`MARKDOWN`·`TEXT`·`NABI`)은 사전에 안 산다: 번역하는 낱말이 아니라
-  // 확장자에 가깝고, 판에서 나란히 견주는 자리라 말마다 길이가 달라지면 줄이 흔들린다.
-  // 그 넷은 `io/marks.ts` 에 영어 고정 대문자로 서 있고, 아이콘도 거기서 함께 온다.
+  // --- 붙여넣기 판 (모든 로케일 — 사람이 읽고 고르는 자리다) -----------------------------------
+  // 판이 뜨는 자리는 하나 — 붙여넣은 것을 읽는 길이 둘 이상일 때다. 제목은 지금 무슨 동작 중인지만 말한다(형식은 나란히 선 셋이 이미 보여 준다). 형식 이름(HTML·MARKDOWN·TEXT·NABI)은 사전에 안 산다 — 확장자에 가깝고 줄이 흔들리면 안 되니 io/marks.ts에 영어 고정 대문자로 둔다.
+  // The panel appears in exactly one place: when a paste can be read more than one way. The title just names the action underway — the three format choices shown side by side already say what was detected. Format names (HTML/MARKDOWN/TEXT/NABI) don't live in the dictionary — closer to extensions than words, and translating them would jitter the row, so they stay fixed English caps in io/marks.ts.
   'io.title': {
     ko: '붙여넣기',
     en: 'Paste',
@@ -453,12 +432,9 @@ const RAW_DICTIONARY: Dictionary = {
     ur: 'پیسٹ کریں',
     id: 'Tempel',
   },
-  // --- 저장 판 (14 로케일 — 사람이 읽고 누르는 자리다) -----------------------------------------
-  //
-  // 판이 뜨는 자리는 하나다: 저장 단추와 ⌘S. 두 손이 같은 판을 연다 — 형식이 여럿이 된 뒤로는
-  // "지금 그대로 저장"이라는 뜻 하나로 답할 수가 없다(무엇으로 저장할지가 먼저다).
-  // 제목은 **한 낱말**이다(주인 지시 2026-08-23: "문서저장 → 저장"). 판 가운데에 서는 글자라
-  // 길면 아래 격자 셋과 무게가 안 맞는다 — 무엇을 저장하는지는 이미 화면이 말하고 있다.
+  // --- 저장 판 (모든 로케일 — 사람이 읽고 누르는 자리다) ---------------------------------------
+  // 판이 뜨는 자리는 하나 — 저장 단추와 ⌘S(형식이 여럿이 된 뒤로는 '그대로 저장' 하나로 안 끝난다). 제목은 한 낱말이다(주인 지시: '문서저장 → 저장') — 판 가운데 서는 글자라 길면 아래 격자 셋과 무게가 안 맞는다.
+  // The panel appears in exactly one place: the save button and Cmd+S — once there were several formats, "just save as-is" stopped being a single answer. The title is one word by design (owner's call: "Save document" shortened to "Save"), since it sits centered above the three format cells and a longer title would outweigh them.
   'save.title': {
     ko: '저장',
     en: 'Save',
@@ -476,6 +452,7 @@ const RAW_DICTIONARY: Dictionary = {
     id: 'Simpan',
   },
   // 이름 칸의 이름 — 저장 wing 의 선언에서 옮겨 왔다(칸이 wing 이 아니라 판의 것이 되었다).
+  // The name-field label, moved here from the save wing's own declaration now that the field belongs to the panel, not the wing.
   'save.name': {
     ko: '파일 이름',
     en: 'File name',
@@ -492,8 +469,8 @@ const RAW_DICTIONARY: Dictionary = {
     ur: 'فائل کا نام',
     id: 'Nama berkas',
   },
-  // 형식 한 칸의 **도우미가 읽는 말** — 자리표(`{ext}`)는 확장자다(판에는 점 없는 대문자 `MD`
-  // 가 서고 이 말이 그 칸의 aria-label 이 된다). **칸이 곧 저장이다**(확인 단추 없음).
+  // 형식 칸의 도우미 말 — {ext}는 확장자다(판엔 점 없는 대문자 MD가 서고 이 말이 그 칸의 aria-label이 된다). 칸이 곧 저장이다(확인 단추 없음).
+  // The helper text for a format cell — `{ext}` is the extension (the panel shows a bare uppercase like MD, and this text becomes that cell's aria-label). Clicking the cell saves directly; there's no separate confirm button.
   'save.as': {
     ko: '{ext} 로 저장',
     en: 'Save as {ext}',
@@ -510,9 +487,8 @@ const RAW_DICTIONARY: Dictionary = {
     ur: '{ext} کے طور پر محفوظ کریں',
     id: 'Simpan sebagai {ext}',
   },
-  // 되돌아오지 못한다는 한 마디 — 막는 것이 아니라 알리는 것이다(md 가 그 자리다).
-  // **이름 아래 아주 작은 글씨**로 서므로 짧아야 한다(주인 지시 2026-08-23: "(손실저장)").
-  // 긴 설명("일부 서식이 사라집니다")은 칸 하나를 두 줄로 늘려 셋의 키가 갈린다.
+  // 되돌아오지 못한다는 표시 — 막는 게 아니라 알리는 것(md가 그 자리)이다. 이름 아래 아주 작은 글씨라 짧아야 한다(주인 지시: '(손실저장)').
+  // Flags a lossy round trip — informs, doesn't block (md is the case that needs it). Rendered as tiny text under the name, so it must stay short (owner's call: "(lossy)").
   'save.lossy': {
     ko: '(손실저장)',
     en: '(lossy)',
@@ -530,11 +506,9 @@ const RAW_DICTIONARY: Dictionary = {
     id: '(ada yang hilang)',
   },
 
-  // --- 업로드가 거절할 때의 말 (14 로케일 — 이건 사람이 읽고 **무엇을 고쳐야 하는지** 아는 자리라
-  //     폴백으로 en 을 보이면 안 된다) ----------------------------------------------------------
-  // 자리표(`{name}`·`{max}`)는 파일 이름과 한도다.
-  // 올라가는 중인 첨부의 이름 — **파일 이름이 아니다.** 올라가는 동안 알아야 하는 것은 "무엇이
-  // 들어오는 중인가" 이고, 그 파일이 무엇이었는지는 끝난 뒤 링크의 글자가 말한다.
+  // --- 업로드가 거절할 때의 말 (모든 로케일 — 무엇을 고쳐야 하는지 아는 자리라 폴백 영어를 안 보인다) --
+  // 자리표 {name}·{max}는 파일 이름과 한도다. 올라가는 첨부의 이름이지 파일 이름이 아니다 — 무엇이 들어오는 중인지가 중요하고, 끝난 뒤엔 링크 글자가 그 파일이 뭐였는지 말한다.
+  // Placeholders `{name}`/`{max}` are the file name and the limit. Names the in-flight attachment, not the final file — what matters while uploading is what's coming in; once done, the link's own text says what it was.
   'upload.attachment': {
     ko: '첨부파일',
     en: 'Attachment',
@@ -615,9 +589,9 @@ const RAW_DICTIONARY: Dictionary = {
     ur: 'ایک بار میں زیادہ سے زیادہ {max}',
     id: 'maksimal {max} sekali unggah',
   },
-  // --- 업로드가 실패했을 때의 말 (084 ⑦ — 예전에는 전부 침묵이던 자리다) ------------------------
-  // 전송 훅이 던졌거나 주소를 못 돌려준 파일. 한 파일이면 이름을, 여럿이면 수를 말한다 —
-  // 이름 다섯 개를 늘어놓으면 정작 "몇 개가 안 올라갔나" 가 안 읽힌다.
+  // --- 업로드가 실패했을 때의 말 (예전엔 전부 침묵이던 자리) ------------------------------------
+  // 전송 훅이 던졌거나 주소를 못 돌려준 파일. 한 파일이면 이름을, 여럿이면 수를 말한다(이름 다섯을 늘어놓으면 몇 개가 안 됐는지가 안 읽힌다).
+  // A file whose upload hook threw or never returned an address. Names it if there's one, counts it if there are several; listing five names would bury how many actually failed.
   'upload.failed': {
     ko: '{name} — 올리지 못했다',
     en: '{name} — upload failed',
@@ -651,6 +625,7 @@ const RAW_DICTIONARY: Dictionary = {
     id: '{n} berkas gagal diunggah',
   },
   // 도는 배치가 있는 동안 떨어뜨린 파일 — 무시되지만, 무시됐다는 것만은 말한다(다시 하면 된다).
+  // A file dropped while a batch is already running — it's ignored, but this at least says so (just try again).
   'upload.busy': {
     ko: '올리는 중이다 — 끝난 뒤에 다시 놓아라',
     en: 'an upload is running — try again when it finishes',
@@ -667,7 +642,7 @@ const RAW_DICTIONARY: Dictionary = {
     ur: 'اپ لوڈ جاری ہے — مکمل ہونے پر دوبارہ کوشش کریں',
     id: 'sedang mengunggah — coba lagi setelah selesai',
   },
-  // --- diff 화면의 말 (260825_001) -------------------------------------------------------------
+  // --- diff 화면의 말 --------------------------------------------------------------------------
   'diff.prev': { ko: '이전 변경', en: 'Previous change' },
   'diff.next': { ko: '다음 변경', en: 'Next change' },
   'diff.onlyChanges': { ko: '바뀐 부분만', en: 'Changes only' },

@@ -1,5 +1,5 @@
-// wing 그물 — registry fail-fast 전 케이스· 환경/조립/repair/claim 접힘· onKey pass 의미
-// 키 소유 판정· 팩토리 산출물· 공용 부품. 계약은 기계가 지킨다는 것을 여기서 증명한다.
+// wing 그물 — registry의 fail-fast 전체 케이스, 환경/조립/repair/claim 접힘, onKey의 pass 의미, 키 소유 판정, 팩토리 산출물, 공용 부품을 검사한다. 계약은 기계가 지킨다는 것을 여기서 증명한다.
+// Wing test net for every registry fail-fast case, env/builder/repair/claim folding, onKey's pass semantics, key-ownership resolution, factory output, and shared parts — proving the contract is machine-enforced.
 import { cocoon, isElement, type ElementNode, type NabiDoc, type NabiNode } from '../src/schema/index.js';
 import { $markBuiltinAttrOwner } from '../src/schema/env.js';
 import { positionExists, type Position } from '../src/doc/index.js';
@@ -74,7 +74,8 @@ const quote: Wing = {
   toHtml: DEFAULT_BUILDERS['quote'] as NonNullable<Wing['toHtml']>,
 };
 
-// 표 — onKey 로 tab 만 받는다(그 밖은 null = pass). 09 파이프라인의 계약을 그대로 시험한다.
+// 표 더미 — onKey 로 tab 만 받는다(그 밖은 null = pass).
+// Table double — onKey accepts only tab (everything else is null = pass).
 const table: Wing = {
   w: 'table',
   place: 'container',
@@ -368,7 +369,8 @@ throws(
   eq('연타 선언이 표로 접힌다', registry.doubles.get('Escape'), 'doStamp');
   ok('선언 안 한 키는 표에 없다', registry.doubles.get('Enter') === undefined);
   ok('연타를 안 선언하면 표가 빈다', makeRegistry([italic]).doubles.size === 0);
-  // 이름표에 몸짓이 실린다 — 힌트의 `⇧⇧` 와 같은 무늬로 "Esc 두 번"이 보인다.
+  // 툴팁에도 연타가 실린다 — 힌트의 `⇧⇧` 무늬처럼 "Esc 두 번"으로 표시된다.
+  // The tooltip shows the double-key too, formatted like the `Shift Shift` hint pattern.
   const slot = toolbarSlots(registry, makeTranslator('ko'))[0];
   eq('이름표가 Esc 두 번을 말한다', slot?.tip, '찍기 (Esc Esc)');
 }
@@ -405,7 +407,8 @@ ok('ownerOf — 모르는 타입은 null', registry.ownerOf('ghost') === null);
 // --- repair 접힘 — cocoon 을 지나며 wing 의 복구가 실제로 돈다 -------------------------------
 
 {
-  // boxObject: 목록 밖 값은 거절(스냅 금지), 모르는 attr(정렬 a — 폐지됨)는 떨어진다.
+  // img 의 정렬(a) attr 는 폐지돼 계약 밖이라 떨어진다.
+  // img's alignment attr was deprecated, so it falls outside the contract and gets dropped.
   const doc = cocoon([el('img', [], { src: '/x.png', w: '40', a: 'c' })], registry.env);
   const lump = (doc[0] as ElementNode).ch[0] as ElementNode;
   eq('img repair — 아는 값은 남는다', lump.a?.['src'], '/x.png');
@@ -418,7 +421,6 @@ ok('ownerOf — 모르는 타입은 null', registry.ownerOf('ghost') === null);
 }
 
 {
-  // listFamily: 항목 아닌 블록은 항목으로 감싸진다.
   const doc = cocoon([el('ul', [p(['떠돌이'])])], registry.env);
   const list = (doc[0] as ElementNode).ch[0] as ElementNode;
   const item = list.ch[0] as ElementNode;
@@ -427,7 +429,6 @@ ok('ownerOf — 모르는 타입은 null', registry.ownerOf('ghost') === null);
 }
 
 {
-  // allows: quote 는 p 만 — 속의 표는 껍데기를 벗고 글이 살아남는다.
   const doc = cocoon([el('quote', [el('table', [el('tr', [el('td', [p(['칸 글'])])])])])], registry.env);
   const lump = (doc[0] as ElementNode).ch[0] as ElementNode;
   eq(
@@ -470,7 +471,8 @@ ok('ownerOf — 모르는 타입은 null', registry.ownerOf('ghost') === null);
     [p(['맨글']), el('table', [el('tr', [el('td', [p(['칸 글'])])])]), el('ul', [el('li', [p(['항목'])])])],
     registry.env,
   );
-  // doc: [0]=글 문단, [1]=래퍼(표), [2]=래퍼(리스트)
+  // doc 경로: [0]=글 문단, [1]=래퍼(표), [2]=래퍼(리스트)
+  // doc paths: [0]=text paragraph, [1]=wrapper(table), [2]=wrapper(list)
   const inCell = caretAt(at([1, 0, 0, 0, 0], 1));
   const owner = keyOwnerAt(doc, inCell, registry);
   ok('칸 속 캐럿의 소유자는 표 wing', owner?.wing === table);
@@ -511,7 +513,6 @@ eq('listFamily — 체크는 override 훅(boolAttrs)', task.parts?.['tli']?.bool
 // --- 공용 부품 -------------------------------------------------------------------------------
 
 {
-  // 빈 문단 + 단일 물건 = 교체 — 정렬이 산다.
   const doc = cocoon([p([], { a: 'c' })], registry.env);
   const r = insertLump(doc, at([0], 0), el('img', [], { src: '/x.png' }), registry.env);
   const wrapper = r.doc[0] as ElementNode;
@@ -521,7 +522,6 @@ eq('listFamily — 체크는 override 훅(boolAttrs)', task.parts?.['tli']?.bool
   ok('insertLump — 반환 자리 실재', positionExists(cocoon(r.doc, registry.env), r.caret, registry.env));
 }
 {
-  // 글 있는 문단이면 그다음에 선다.
   const doc = cocoon([p(['글']), p(['뒤'])], registry.env);
   const r = insertLump(doc, at([0], 1), el('hr'), {
     ...registry.env,

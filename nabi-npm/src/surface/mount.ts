@@ -1,9 +1,5 @@
-// contenteditable 표면 — 정책(actions·autoformat·vessel·redraw)은 전부 아래 순수부에 있고
-// 이 파일은 그것을 브라우저 이벤트에 배선만 한다. EditContext 가 서는 날 갈리는 것도 이 파일이다
-// (포트 뒤 교체).
-//
-// 원칙: 정본은 트리다. 화면 캐럿은 파생이고, 어긋나면 트리 쪽으로 교정한다.
-// 예외 구간은 IME 조합뿐 — 그동안은 DOM 이 정답이고, 끝나는 순간 한 번에 따라잡는다.
+// contenteditable 표면 — 정책(actions·autoformat·vessel·redraw)은 순수부에 있고 이 파일은 브라우저 이벤트 배선만 한다(EditContext가 서는 날 포트 뒤에서 교체될 파일). 원칙: 트리가 정본, 화면 캐럿은 파생이라 어긋나면 트리로 교정한다. 예외는 IME 조합 중뿐 — 그동안은 DOM이 정답이고 끝나는 순간 한 번에 따라잡는다
+// The contenteditable surface; policy (actions/autoformat/vessel/redraw) lives in the pure layer, this file only wires it to browser events (and is what a future EditContext implementation would replace, behind the port). Principle: the tree is authoritative, the screen caret is derived and gets corrected back to it when they diverge -- except during IME composition, when the DOM is authoritative and gets reconciled back in one shot at the end
 import { $toJson, isElement, isWrapper, type NabiDoc } from '../schema/index.js';
 import { comparePositions, holderLength, holders, isHolder, nodeAt, terminalOf } from '../doc/index.js';
 import { caretAt, isCollapsed, ordered, sameSelection, selectObject, type Selection } from '../caret/index.js';
@@ -35,25 +31,25 @@ export interface SurfaceOptions {
   readonly nabi: Nabi;
   readonly registry: Registry;
   readonly root: HTMLElement;
-  // 서버가 그린 편집기 DOM 을 다시 그리지 않고 이어받는다 — 어긋나면 그때만 새로 그린다.
+  // 서버가 그린 편집기 DOM을 다시 그리지 않고 이어받는다 — 어긋나면 그때만 새로 그린다
+  // Adopts the server-rendered editor DOM instead of redrawing it; only redraws if it turns out to mismatch
   readonly hydrate?: boolean;
   readonly allowLocalUrls?: boolean;
-  // 글의 말 — **방향을 정한다** (098). 주면 편집 영역에 `dir` 을 적어, 아랍어·우르두에서는
-  // 오른쪽에서 왼쪽으로 쓴다. 페이지가 `<html dir>` 로 아무 말도 안 해도 그렇다.
-  // 안 주면 안 건드린다 — 방향을 제 손으로 쥐는 호스트의 것을 덮으면 안 된다.
+  // 글의 언어가 쓰기 방향을 정한다(098) — 주면 dir을 적어 아랍어·우르두는 페이지의 <html dir>과 무관하게 오른쪽에서 왼쪽으로 쓴다. 안 주면 안 건드린다(방향을 직접 쥔 호스트를 덮지 않는다)
+  // The text's language decides writing direction (098); when given, `dir` is set so Arabic/Urdu write right-to-left regardless of the page's own <html dir>. When omitted, it's left untouched, so a host managing direction itself isn't overridden
   readonly locale?: string;
-  // 빈 편집기의 안내글 — 아무것도 없을 때 첫 줄에 흐리게 서는 그 말이다.
-  // 안 주면 코어 사전의 말이 로케일대로 선다. **빈 글자열을 주면 안내글이 없다**(끄는 손).
-  // 줄바꿈(`\n`)은 그대로 줄바꿈으로 선다 — 여러 줄짜리 안내글이 된다.
+  // 빈 편집기의 안내글 — 안 주면 코어 사전의 로케일 말이 선다. 빈 글자열을 주면 안내글이 꺼진다. 줄바꿈은 그대로 여러 줄 안내글이 된다
+  // The empty-editor placeholder; omitted, it falls back to the core dictionary's localized text. An empty string turns it off. Newlines are preserved, producing a multi-line placeholder
   readonly placeholder?: string;
-  // 호스트가 이 표면에만 끼우는 IO 필터 — **맨 앞에 선다**. 레지스트리에 끼운 것
-  // (`makeRegistry(wings, { ioFilters })`)은 이미 wing 필터 앞에 접혀 있고, 내장 셋(html·md)은
-  // 늘 마지막이다. 그래서 최종 순서는 여기 것 → 레지스트리 것 → 내장이다.
+  // 이 표면에만 끼우는 IO 필터 — 맨 앞에 선다. 최종 순서: 여기 것 → 레지스트리 것(makeRegistry의 ioFilters, wing 필터 앞) → 내장 셋(html·md, 늘 마지막)
+  // IO filters scoped to this surface, placed first. Final order: these -> registry filters (makeRegistry's ioFilters, already ahead of wing filters) -> built-ins (html/md, always last)
   readonly ioFilters?: readonly IoFilter[];
-  // 드롭·붙여넣기로 온 파일이 흘러가는 곳 (업로드 wing 이 11 에서 잇는다). 없으면 삼킨다.
+  // 드롭·붙여넣기로 온 파일이 흘러가는 곳(업로드 wing이 11에서 잇는다) — 없으면 그냥 버린다
+  // Where dropped/pasted files flow to (the upload wing connects this at mount extra 11); without it, files are simply discarded
   readonly fileSink?: (files: readonly File[]) => void;
   readonly doubleEnterMs?: number;
-  // 교정 핑퐁 유예(ms) — 우리 교정 직후 브라우저가 되받아치면 한 프레임 쉬었다 다시 쓴다 (Q10).
+  // 교정 핑퐁 유예(ms) — 우리 교정 직후 브라우저가 되받아치면 한 프레임 쉬었다 다시 쓴다(Q10)
+  // Correction ping-pong debounce (ms); if the browser bounces back right after our own correction, wait one frame before writing again (Q10)
   readonly correctionDeferMs?: number;
 }
 
@@ -80,15 +76,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       builders: registry.builders,
       ...(options.allowLocalUrls ? { allowLocalUrls: true } : {}),
     };
-    // 일반 편집 상태인가 — **연타 몸짓의 문**이다 (260823_004 ④).
-    //
-    // 새 전역 깃발을 안 세운다: 위에 뜬 것들은 이미 DOM 에 제 표식을 남기고 있고, 업로드 잠금은
-    // 인스턴스의 `$lock` 이 든다(그쪽은 actions 가 직접 묻는다). 여기서 보는 것은 셋이다 —
-    // 전체화면(크롬 뿌리의 클래스)· 힌트 배지(같은 뿌리의 클래스)· 문서에 실재하는 덮개와 판.
-    //
-    // 덮개·판은 사실 캡처에서 `preventDefault`(+ 덮개는 `stopPropagation`)까지 하므로 키가
-    // 여기 오지도 않는다 — 그래도 함께 본다. **실제로 새는 자리는 전체화면 하나**다:
-    // `ui/overlay.ts` 의 귀는 문서 **버블**이라 편집기가 먼저 먹고, 막지도 소비하지도 않는다.
+    // 일반 편집 상태인가 — 연타 몸짓의 문이다(260823_004 ④). 새 전역 깃발 없이 DOM의 기존 표식 셋(전체화면·힌트 배지 클래스, 실재하는 덮개·판)만 본다. 실제로 새는 자리는 전체화면 하나뿐이다 — 덮개·판은 캡처 단계에서 이미 막아 여기까지 안 온다
+    // Whether editing is in a "plain" state, the gate for tap gestures (260823_004 4); rather than a new global flag, it checks three existing DOM markers (fullscreen/hint-badge classes, actual overlay/panel elements). Fullscreen is the only real leak, since overlays/panels already stop the key at the capture phase before it gets here
     const layered = '.nabi-scrim, .nabi-panel';
     const plain = (): boolean =>
       root.closest('.is-fullscreen') === null &&
@@ -102,7 +91,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       ...(options.doubleEnterMs !== undefined ? { doubleEnterMs: options.doubleEnterMs } : {}),
     });
 
-    // 붙여넣기가 지나는 필터 목록 — 짓는 법은 `filters.ts` 하나다(저장 판도 같은 목록을 본다).
+    // 붙여넣기가 지나는 필터 목록 — 짓는 법은 filters.ts 하나다(저장 판도 같은 목록을 본다)
+    // The filter list paste flows through; built in one place (filters.ts), which the save panel also shares
     const takePaste = makePasteFlow({
       nabi,
       filters: ioFiltersOf({
@@ -117,8 +107,12 @@ export function mountSurface(options: SurfaceOptions): Surface {
     // --- 상태 (전부 이 mount 의 것) ------------------------------------------------------
     let composing = false;
     let reconciling = false;
-    let syncing = false; // 화면 → 트리 동기화 중 — 트리 → 화면 되쓰기를 멈춘다(왕복 차단)
-    let expected: Selection | null = null; // 쓰기 토큰 — 우리가 쓴 선택의 지문 (setTimeout 금지)
+    // 화면 → 트리 동기화 중 — 트리 → 화면 되쓰기를 멈춘다(왕복 차단)
+    // Screen-to-tree sync in progress; suppresses tree-to-screen write-back (blocks a round trip)
+    let syncing = false;
+    // 쓰기 토큰 — 우리가 쓴 선택의 지문(setTimeout 금지)
+    // A write token: the fingerprint of the selection we just wrote (no setTimeout)
+    let expected: Selection | null = null;
     let lastCorrectionAt = 0;
     let correctionQueued = false;
     let correctionFrame = 0;
@@ -152,7 +146,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       return ids;
     };
 
-    // --- 그리기 (문단 단위 — 전체 innerHTML 은 mount 최초와 어긋난 hydrate 뿐) ------------------
+    // --- 그리기(문단 단위) — 전체 innerHTML 재그리기는 mount 최초와 어긋난 hydrate뿐 ---
+    // --- Drawing (per-paragraph); a full innerHTML redraw happens only on mount's initial render or a mismatched hydrate ---
     const childOf = (id: string): Element | null => {
       for (const el of Array.from(root.children)) if (el.getAttribute('data-key') === id) return el;
       return null;
@@ -217,9 +212,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       expected = sel;
       try {
         s.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
-        // 빈 편집기를 지운 직후처럼 포커스가 이미 안에 있는 상태에서는 다음 compositionstart 를
-        // 기다리면 Android IME 가 <br> 위에서 조합 대상을 먼저 정해 버린다. 캐럿을 쓴 이 순간에
-        // 진짜 텍스트 노드 자리를 함께 준비한다.
+        // 포커스가 이미 안에 있는 상태(빈 편집기를 지운 직후 등)에서 다음 compositionstart를 기다리면 Android IME가 <br> 위에서 조합 대상을 먼저 정해 버린다 — 캐럿을 쓰는 이 순간 텍스트 노드 자리를 함께 마련한다
+        // If focus is already inside (e.g. right after clearing an empty editor) and we wait for the next compositionstart, Android's IME can pick its composition target on a <br> first; preparing a real text-node slot right when the caret is written avoids that
         if (owner.activeElement === root || root.contains(owner.activeElement)) ensureCaretSlot();
       } catch {
         expected = null;
@@ -238,9 +232,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       };
     };
 
-    // DOM Selection은 화면에서 방금 일어난 몸짓의 자리이고, 트리 Selection은 마지막으로
-    // selectionchange를 받은 자리다. 그 이벤트는 task로 예약되므로 다음 keydown/beforeinput보다
-    // 늦을 수 있다. 구조 입력을 실행하기 직전에는 화면의 최신 자리를 트리가 한 번 따라잡는다.
+    // DOM Selection은 화면의 최신 몸짓 자리, 트리 Selection은 마지막 selectionchange 자리다 — 그 이벤트는 task로 예약돼 다음 keydown/beforeinput보다 늦을 수 있어, 구조 입력 직전엔 트리가 화면을 한 번 따라잡는다
+    // The DOM Selection reflects the screen's latest gesture, while the tree Selection reflects the last selectionchange received; since that event is scheduled as a task, it can lag behind the next keydown/beforeinput, so the tree catches up to the screen right before running a structural input
     const adoptSelection = (selection: Selection): void => {
       expected = null;
       if (!sameSelection(nabi.getSelection(), selection)) {
@@ -251,7 +244,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
           syncing = false;
         }
       }
-      // 첨부처럼 구독자가 표현 가능한 바깥 경계로 넓힌 경우에는 화면도 그 답을 따른다.
+      // 첨부처럼 구독자가 표현 가능한 바깥 경계로 선택을 넓힌 경우 화면도 그 답을 따른다
+      // If a subscriber (e.g. for an attachment) widened the selection to the nearest representable boundary, the screen follows that result too
       const settled = nabi.getSelection();
       if (!sameSelection(settled, selection)) writeCaret(settled);
     };
@@ -271,9 +265,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       return checked !== null && sameSelection(checked.selection, settled);
     };
 
-    // beforeinput의 target range는 "브라우저가 이번 입력으로 바꿀 내용"이다. 특히 모바일
-    // 가상 키보드는 keydown 없이 이 이벤트만 내고, Backspace 한 번이 지울 글자 수도 플랫폼과
-    // 문자군마다 다르므로 현재의 접힌 캐럿을 다시 계산하는 것보다 이 범위가 더 정확하다.
+    // beforeinput의 target range는 브라우저가 이번 입력으로 바꿀 내용이다 — 모바일 가상 키보드는 keydown 없이 이 이벤트만 내고, Backspace가 지울 글자 수도 플랫폼·문자군마다 달라 접힌 캐럿을 다시 계산하는 것보다 이 범위가 더 정확하다
+    // beforeinput's target range is what the browser is about to change; mobile virtual keyboards fire only this event with no keydown, and how much a single Backspace deletes varies by platform and script, so trusting this range beats recomputing a collapsed caret ourselves
     const targetSelectionOf = (ev: InputEvent): Selection | null => {
       let ranges: readonly StaticRange[];
       try {
@@ -293,8 +286,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       const live = readCaret();
       const target = targetSelectionOf(ev);
       if (target) {
-        // 접힌 캐럿의 문단 경계 Backspace는 목록·인용 같은 nabi 구조 규칙이 먼저다. 브라우저가
-        // 제안한 문단 간 삭제 범위로 바꾸면 그 규칙을 건너뛰므로, 그때만 실제 접힌 캐럿을 쓴다.
+        // 접힌 캐럿의 문단 경계 Backspace는 목록·인용 같은 구조 규칙이 먼저다 — 브라우저가 제안한 문단 간 삭제 범위를 그대로 쓰면 그 규칙을 건너뛰므로, 그때만 실제 접힌 캐럿을 쓴다
+        // A collapsed-caret Backspace at a paragraph boundary must run structural rules (list/quote) first; using the browser's suggested cross-paragraph deletion range would skip those rules, so the actual collapsed caret is used instead in that case
         const crosses = !samePath(target.anchor.path, target.focus.path);
         if (!(live && isCollapsed(live.selection) && crosses)) {
           adoptSelection(target);
@@ -328,7 +321,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
     // --- 화면 선택 → 트리 (교정 포함) -----------------------------------------------------------
     const onSelectionChange = (): void => {
       if (composing || reconciling) return;
-      // 포커스가 편집기 밖이면 화면 선택은 정답이 아니다 — 트리가 정답이다 (옛 059 의 교훈).
+      // 포커스가 편집기 밖이면 화면 선택은 정답이 아니다 — 트리가 정답이다(059)
+      // If focus is outside the editor, the screen selection isn't authoritative -- the tree is (059)
       const active = owner.activeElement;
       if (active !== root && !root.contains(active)) return;
       const read = readCaret();
@@ -339,8 +333,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       }
       adoptSelection(read.selection);
       if (read.corrected) {
-        // 표현 불가 자리(문단 사이·물건 속)의 캐럿 — 트리 자리로 되쓴다. 직후에 또 오면 한 프레임
-        // 쉬어 브라우저와의 교정 핑퐁을 끊는다 (Q10 — 조정 가능한 상수).
+        // 표현 불가 자리(문단 사이·물건 속)의 캐럿은 트리 자리로 되쓴다 — 바로 또 오면 한 프레임 쉬어 브라우저와의 교정 핑퐁을 끊는다(Q10)
+        // A caret at a position the tree can't express (between paragraphs, inside an object) is written back to the tree's position; if it recurs immediately, one frame is skipped to break a correction ping-pong with the browser (Q10)
         const deferMs = options.correctionDeferMs ?? 80;
         const t = Date.now();
         if (t - lastCorrectionAt < deferMs) {
@@ -361,10 +355,11 @@ export function mountSurface(options: SurfaceOptions): Surface {
 
     // --- 트리 → 화면 (단일 신호의 바뀐 문단 목록 = 재그리기 목록) --------------------------------
     const offChange = nabi.onChange((change) => {
-      // 조합·되맞추기 중에는 DOM 이 정답이다 — 그리지도 되쓰지도 않는다.
+      // 조합·reconcile 중에는 DOM이 정답이다 — 그리지도 되쓰지도 않는다
+      // While composing or reconciling, the DOM is authoritative; neither redraw nor caret write-back happens
       if (composing) {
-        // 조합 밖에서 온 문서 변경은 버리지 않고 끝까지 기억한다. 활성 문단 자체가 바뀌었다면
-        // DOM 조합 결과로 그 명시적 변경을 덮지 않는다 — 끝에서 트리를 다시 그려 데이터가 이긴다.
+        // 조합 밖에서 온 문서 변경은 버리지 않고 끝까지 기억한다 — 활성 문단 자체가 바뀌었으면 DOM 조합 결과로 그 명시적 변경을 덮지 않고, 끝에서 트리를 다시 그려 데이터가 이긴다
+        // Document changes arriving from outside composition are remembered until the end, not discarded; if the active paragraph itself changed, its explicit change isn't overwritten by the DOM's composition result -- the tree wins by redrawing at the end
         if (change.doc) {
           redrawAfterComposition = true;
           if (
@@ -387,17 +382,15 @@ export function mountSurface(options: SurfaceOptions): Surface {
 
     // --- 키 -------------------------------------------------------------------------------------
     const onKeyDown = (ev: KeyboardEvent): void => {
-      // 누가 이미 가져간 키는 두 번 안 먹는다.
-      //
-      // 상황 줄의 힌트 모드가 문서에 **캡처**로 먼저 붙어(ui/hints) Tab·방향키를 제 걸음으로 쓴다.
-      // 그 걸음이 여기까지 흘러오면 한 몸짓이 두 번 일한다 — 상황 줄의 겨눔이 옮겨지면서 동시에
-      // 코드 상자가 들여쓰기까지 했다. `defaultPrevented` 가 "이건 이미 누구의 것"이라는 표식이다.
+      // 이미 가져간 키는 두 번 안 먹는다 — ui/hints가 문서에 캡처로 먼저 붙어 Tab·방향키를 제 걸음으로 쓰는데, 그 걸음이 여기까지 흘러오면 상황 줄 겨눔 이동과 코드 상자 들여쓰기가 동시에 일어났다. defaultPrevented가 그 표식이다
+      // A key already claimed isn't consumed twice; ui/hints attaches at the document's capture phase and uses Tab/arrows for its own navigation, and letting that fall through here made context-row focus move and a code block indent happen from one gesture. defaultPrevented is the marker for "someone already took this"
       if (ev.defaultPrevented) return;
       if (ev.isComposing || ev.keyCode === 229) {
-        // 조합이 지나면 연타 셈이 끊긴다 — 조합을 끝낸 직후의 Esc 가 조합 앞의 Esc 와 이어져
-        // 세어지면 안 된다(힌트의 IME 철칙과 같다: 조합 중에는 아무것도 안 센다).
+        // 조합이 지나면 연타 셈이 끊긴다 — 조합 직후의 Esc가 조합 앞의 Esc와 이어져 세어지면 안 된다(힌트와 같은 IME 철칙: 조합 중엔 아무것도 안 센다)
+        // A composition passing through resets the tap count, or an Esc right after composition would chain with one from before it (same IME rule as hints: nothing counts during composition)
         actions.breakDouble();
-        // 조합 중의 보조키+A — 브라우저가 조합 확정에 써 버려 씹힌다. 표식만 남겨 끝에 재생한다.
+        // 조합 중의 Cmd/Ctrl+A는 브라우저가 조합 확정에 써 버려 씹힌다 — 표식만 남겨 끝에 재생한다
+        // Cmd/Ctrl+A during composition gets swallowed by the browser committing the composition; a flag is left to replay it afterward
         if ((ev.metaKey || ev.ctrlKey) && !ev.altKey && (ev.key.toLowerCase() === 'a' || ev.code === 'KeyA')) {
           replaySelectAll = true;
         }
@@ -480,7 +473,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       if (t !== 'insertParagraph') actions.breakDouble();
       if (composing || ev.isComposing || t.includes('Composition')) {
         if (t === 'insertParagraph' || t === 'insertLineBreak') {
-          // 조합 중의 엔터 — IME 의 것이 아니라 사람의 분할이다. 조합이 끝난 뒤로 미룬다 (옛 교훈).
+          // 조합 중의 엔터는 IME가 아니라 사람의 분할이다 — 조합이 끝난 뒤로 미룬다
+          // Enter during composition is the user's own split, not the IME's; it's deferred until composition ends
           ev.preventDefault();
           deferred.push(() => {
             if (t === 'insertParagraph') actions.enter();
@@ -543,7 +537,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
                 data: ev.data,
               }
             : null;
-        // 래퍼문단(0/1)·여러 홀더에 걸친 범위 — 브라우저가 고칠 텍스트 노드가 없거나 구조를 헤집는다.
+        // 래퍼문단(0/1)이거나 여러 홀더에 걸친 범위는 브라우저가 고칠 텍스트 노드가 없거나 구조를 헤집는다
+        // A wrapper paragraph (0/1) or a range spanning multiple holders has no text node for the browser to edit, or would disturb the structure
         if (crosses || (holder && isWrapper(holder, env))) {
           pendingTextInput = null;
           ev.preventDefault();
@@ -551,7 +546,9 @@ export function mountSurface(options: SurfaceOptions): Surface {
             nabi.applyCommand('insertText', { text: ev.data });
           }
         }
-        return; // 문단 안 타이핑은 브라우저가 하고 input 에서 되맞춘다 (IME 를 위한 최소 양보)
+        // 문단 안 타이핑은 브라우저가 하고 input에서 되맞춘다(IME를 위한 최소 양보)
+        // In-paragraph typing is left to the browser and reconciled on `input` (a minimal concession for IME)
+        return;
       }
       syncSelectionForInput(ev);
       pendingChangedHolders = changedHolderIds(nabi.getSelection());
@@ -589,7 +586,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
           } else if (!change.inserted.includes('\n')) {
             nabi.applyCommand('insertText', { text: change.inserted });
           } else {
-            // 드문 길 — 브라우저가 개행째로 넣었다(자동완성 류). 라인 경계로 갈라 순서대로 넣는다.
+            // 드문 길 — 브라우저가 개행째로 넣었다(자동완성 류) — 라인 경계로 갈라 순서대로 넣는다
+            // A rare path where the browser inserted text with embedded newlines (like autofill); split on line boundaries and insert them in order
             const parts = change.inserted.split('\n');
             nabi.group(() => {
               if (change.start !== change.removedEnd) nabi.applyCommand('deleteRange');
@@ -603,19 +601,20 @@ export function mountSurface(options: SurfaceOptions): Surface {
           reconciling = false;
         }
 
-        // 예약이 소비된 타이핑 — 화면(브라우저의 맨 글자)과 트리(마크 입은 글자)가 갈린다.
-        // 그 문단만 트리에서 다시 그린다 (옛 판의 전체 재그리기 없이).
+        // 예약이 소비된 타이핑은 화면(맨 글자)과 트리(마크 입은 글자)가 갈리므로 그 문단만 트리에서 다시 그린다
+        // Typing that consumed a pending mark leaves the screen (plain text) diverging from the tree (marked-up text), so only that paragraph is redrawn from the tree
         if (hadArmed) {
           redrawTopAt(focusPath);
           writeCaret(nabi.getSelection());
           return;
         }
 
-        // 스페이스 직후의 오토포맷 — 변환이 일어나면 신호가 그 문단을 새로 그리고 캐럿도 쓴다.
+        // 스페이스 직후 오토포맷 — 변환이 일어나면 신호가 그 문단을 새로 그리고 캐럿도 쓴다
+        // Autoformat right after a space; if a transform fires, its signal redraws that paragraph and writes the caret too
         if (change.inserted === ' ' && actions.afterSpace()) return;
 
-        // 드롭캡 span은 첫 글자의 실제 DOM이다. 브라우저가 타이핑·IME로 그 글자를 바꾼 뒤에는
-        // 새 첫 글자에 상자를 옮겨야 하므로, 화면의 최종 캐럿을 트리에 받은 다음 이 문단만 다시 그린다.
+        // 드롭캡 span은 첫 글자의 실제 DOM이다 — 타이핑·IME로 그 글자가 바뀌면 상자를 새 첫 글자로 옮겨야 하므로, 화면의 최종 캐럿을 트리에 받은 뒤 이 문단만 다시 그린다
+        // The dropcap span is the real DOM for the first character; once typing/IME changes that character, the box must move to the new one, so the screen's final caret is adopted into the tree and then only this paragraph is redrawn
         const current = nodeAt(doc(), focusPath);
         if (current?.a?.['dc'] === 1) {
           const now = readCaret();
@@ -626,7 +625,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
         }
       }
 
-      // 화면 캐럿을 정본으로 — 브라우저가 옮긴 캐럿을 트리가 따라간다(도로 쓰지 않는다).
+      // 화면 캐럿을 정본으로 삼는다 — 브라우저가 옮긴 캐럿을 트리가 따라가고 되쓰지 않는다
+      // The screen caret is treated as authoritative here; the tree follows wherever the browser moved it, without writing back
       const now = readCaret();
       if (now) {
         syncing = true;
@@ -635,7 +635,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
         } finally {
           syncing = false;
         }
-        // 위의 selectionchange 길과 같은 받침 — 구독자가 고쳐 세운 선택은 화면에도 쓴다.
+        // selectionchange 경로와 같은 안전망 — 구독자가 고쳐 세운 선택은 화면에도 써 준다
+        // Same safety net as the selectionchange path; a selection a subscriber adjusted is also written back to the screen
         const settled = nabi.getSelection();
         if (!sameSelection(settled, now.selection)) writeCaret(settled);
       }
@@ -680,8 +681,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       if (!holder || typeof holder._id !== 'string' || isWrapper(holder, env)) return;
       const el = holderElOf(root, holder._id);
       if (!el || domTextOf(el, isCaretSlot) !== '') return;
-      // Android Chrome 은 compositionstart 전에 조합 대상을 정할 수 있다. 빈 문단의 <br> 와
-      // placeholder 위에서 시작하게 두면 첫 초성·중성이 갈라지므로, 포커스 때부터 이 자리를 둔다.
+      // Android Chrome은 compositionstart 전에 조합 대상을 정할 수 있다 — 빈 문단의 br·placeholder 위에서 시작하면 첫 초성·중성이 갈라지므로, 포커스 때부터 이 텍스트 노드 자리를 마련해 둔다
+      // Android Chrome can decide its composition target before compositionstart fires; starting on an empty paragraph's br or its placeholder splits the first Hangul jamo, so this text-node slot is prepared as early as focus
       const slot = owner.createTextNode(ZERO_WIDTH);
       caretSlot = slot;
       el.replaceChildren(slot);
@@ -690,21 +691,21 @@ export function mountSurface(options: SurfaceOptions): Surface {
       try {
         s.setBaseAndExtent(slot, 1, slot, 1);
       } catch {
-        // 자리만 만들어 둔다 — 선택을 못 옮겨도 조합은 이 노드에서 시작된다.
+        // 자리만 만들어 둔다 — 선택을 못 옮겨도 조합은 이 노드에서 시작된다
+        // Just prepares the slot; even if the selection can't be moved, composition still starts on this node
       }
     }
 
     const onCompositionStart = (): void => {
       if (composing) return;
-      // 먼저 잠근다. 아래 선택 동기화나 범위 삭제가 문단을 다시 그리면, IME 가 막 붙잡은 텍스트
-      // 노드가 사라져 모바일 조합의 첫 자모와 캐럿이 서로 다른 자리로 흩어진다.
+      // 먼저 잠근다 — 아래에서 선택 동기화나 범위 삭제가 문단을 다시 그리면 IME가 막 붙잡은 텍스트 노드가 사라져 모바일 조합의 첫 자모와 캐럿이 흩어진다
+      // Locks first; if selection sync or range deletion below redraws the paragraph, the text node the IME just grabbed disappears, scattering the first jamo and caret of a mobile composition
       composing = true;
       pendingTextInput = null;
       replaySelectAll = false;
       actions.breakDouble();
-      // compositionstart 에서는 트리를 전혀 고치지 않는다. 여기서 선택이나 문서를 바꾸면 조합이
-      // 막 붙잡은 순간에 구독자들이 움직이고, 범위 교체 한 번이 삭제+삽입 두 undo로 갈라진다.
-      // 실제 DOM 경로만 기억했다가 끝에서 원래 트리와 최종 DOM을 한 번에 되맞춘다.
+      // compositionstart에서는 트리를 전혀 안 고친다 — 여기서 바꾸면 구독자가 움직이고 범위 교체 한 번이 삭제+삽입 두 undo로 갈라진다. DOM 경로만 기억해 뒀다가 끝에서 트리와 최종 DOM을 한 번에 되맞춘다
+      // compositionstart never touches the tree; changing it here would move subscribers and split one range replacement into two undo steps (delete + insert). Only the DOM path is remembered, then reconciled with the tree in one shot at the end
       const live = readCaret();
       compositionSelection = live?.selection ?? nabi.getSelection();
       compositionPath = compositionSelection.focus.path;
@@ -805,7 +806,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
         try {
           s.collapse(slot, Math.min(offset, slot.data.length));
         } catch {
-          // selectionchange 가 트리 캐럿으로 따라잡는다.
+          // selectionchange가 트리 캐럿으로 따라잡는다
+          // selectionchange will catch up to the tree caret
         }
       }
     };
@@ -918,15 +920,15 @@ export function mountSurface(options: SurfaceOptions): Surface {
     };
 
     const onBlur = (): void => {
-      // 일부 모바일 IME는 포커스가 먼저 떠나면 compositionend 를 빠뜨린다. 보이는 조합값을
-      // 트리에 확정해 잠금이 다음 포커스까지 영구히 남지 않게 한다.
+      // 일부 모바일 IME는 포커스가 먼저 떠나면 compositionend를 빠뜨린다 — 보이는 조합값을 트리에 확정해 잠금이 다음 포커스까지 영구히 남지 않게 한다
+      // Some mobile IMEs skip compositionend when focus leaves first; the visible composition value is committed to the tree so the lock doesn't persist until the next focus
       finishComposition(null);
       cleanupZeroWidth(true);
     };
 
     // --- 붙여넣기·드롭·클릭 ----------------------------------------------------------------------
-    // 붙여넣기의 판정은 전부 `paste.ts` 에 있다 — 여기서는 **이벤트에서 값을 뜨는 일**만 한다.
-    // `clipboardData` 는 이 함수 밖에서 죽으므로 동기 구간에서 전부 떠 둔다(판이 뜨면 답은 나중에 온다).
+    // 붙여넣기 판정은 전부 paste.ts에 있다 — 여기서는 이벤트에서 값을 뜨는 일만 한다. clipboardData는 이 함수 밖에서 죽으므로 동기 구간에서 전부 떠 둔다(판이 뜨면 답은 나중에 온다)
+    // All paste decision-making lives in paste.ts; this only extracts values from the event, since clipboardData dies outside this synchronous call (any menu it triggers resolves later)
     const onPaste = (ev: ClipboardEvent): void => {
       ev.preventDefault();
       const cd = ev.clipboardData;
@@ -957,10 +959,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       );
     };
 
-    // 복사·잘라내기 — **클립보드를 우리가 채운다** (260823_008).
-    //
-    // 봉해진 첨부는 브라우저가 자동으로 싣지 않으므로 세 형식을 직접 쓴다. custom MIME은
-    // 브라우저가 HTML을 다시 꾸며도 원본 트리 조각을 그대로 보존한다.
+    // 복사·잘라내기는 클립보드를 우리가 직접 채운다(260823_008) — 봉해진 첨부는 브라우저가 자동으로 안 실으므로 세 형식을 직접 쓴다. custom MIME은 브라우저가 HTML을 다시 꾸며도 원본 트리 조각을 보존한다
+    // Copy/cut fill the clipboard ourselves (260823_008), since the browser won't automatically carry a sealed attachment; all three formats are written by hand. The custom MIME preserves the original tree fragment even if the browser reformats the HTML
     const onCopyOrCut = (ev: ClipboardEvent): void => {
       if (!adoptLiveSelection()) {
         if (ev.type === 'cut') ev.preventDefault();
@@ -975,15 +975,15 @@ export function mountSurface(options: SurfaceOptions): Surface {
       const html = clipHtmlOf(range, root, owner);
       const cd = ev.clipboardData;
       if (!cd) return;
-      // 맨 글자는 **선택의 것**이 먼저다 — 블록 사이의 줄바꿈은 `Selection.toString()` 만 안다.
-      // 봉해진 첨부처럼 `user-select: none` 이 걸린 자리에서는 그것이 빈 글자라 범위의 것으로
-      // 받친다(`Range.toString()` 은 CSS 를 안 본다).
+      // 맨 글자는 Selection.toString()이 먼저다(블록 사이 줄바꿈은 그것만 안다) — user-select:none이 걸린 봉해진 첨부에서는 그게 빈 글자라 CSS를 안 보는 Range.toString()으로 받친다
+      // Plain text prefers Selection.toString() (only it knows about newlines between blocks); over a sealed attachment with user-select:none it comes back empty, so Range.toString() (which ignores CSS) backs it up
       const plain = s.toString() || range.toString();
       const body = $toJson(clipboardBodyOf(doc(), nabi.getSelection(), env));
       const written = loadClipboard(cd, body, html, plain);
       if (!written) return;
       if (!cutting) ev.preventDefault();
-      // `preventDefault` 를 했으니 브라우저의 `deleteByCut` 이 안 온다 — 지우는 것도 우리 몫이다.
+      // preventDefault를 했으니 브라우저의 deleteByCut이 안 온다 — 지우는 것도 우리 몫이다
+      // Having called preventDefault, the browser's deleteByCut never fires, so deletion is our responsibility too
       if (cutting) nabi.applyCommand('deleteRange');
     };
 
@@ -1002,8 +1002,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       }
       const supported = ['Files', NABI_CLIPBOARD_MIME, 'text/html', 'text/plain'].some((type) => types.includes(type));
       if (!supported) return;
-      // 인식한 drop은 이후 후보가 거절되더라도 브라우저의 raw HTML 삽입이나 파일 navigation으로
-      // 되살아나면 안 된다. 앱 상태는 그대로 두되 native default는 여기서 먼저 막는다.
+      // 인식한 drop은 이후 후보가 거절되더라도 브라우저의 raw HTML 삽입이나 파일 navigation으로 되살아나면 안 된다 — 앱 상태는 그대로 두되 native default는 여기서 먼저 막는다
+      // A recognized drop must not fall back to the browser's raw HTML insertion or file navigation even if the candidate is later rejected; app state is left alone, but the native default is blocked here first
       ev.preventDefault();
       try {
         files = Array.from(transfer.files);
@@ -1045,19 +1045,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       }
     };
 
-    // 눌린 자리의 물건(래퍼문단) — 없으면 null.
-    //
-    // **찾을 때까지 올라간다.** 키를 단 조상을 만나면 멈추는 것이 아니다: 그림·영상은 자기도
-    // 키를 달고 있어서, 거기서 멈추면 "물건을 눌렀는데 아무 일도 안 나는" 자리가 된다.
-    // 글 홀더(문단·칸)를 만나면 그때 멈춘다 — 거기서부터는 글자를 누른 것이고 캐럿은 브라우저가 놓는다.
-    //
-    // **속이 빈 물건만 고른다.** 표·목록·인용·접기·코드는 속에 글이 있어서, 누르면 통째로 골라 두면
-    // 그 다음 글자 하나가 그것을 통째로 지운다. 실제로 그랬다: 표의 겉옷(`.nabi-scroll`)은 줄 폭을
-    // 다 차지하는데 표는 제 글만큼만 넓어서, **표 오른쪽의 빈 자리**가 전부 "표를 통째로 고르는"
-    // 자리였다. 거기를 누르고 한 글자만 쳐도 표가 사라졌다.
-    //
-    // 그래서 글을 품은 물건은 여기서 null 을 답한다 — 캐럿은 브라우저가 가장 가까운 글자리(칸·항목)에
-    // 놓는다. 통째로 고르는 길은 따로 있다: 첫머리에서 백스페이스를 치면 겨누기(`aimVessel`)가 선다.
+    // 눌린 자리의 물건(래퍼문단)을 찾는다(없으면 null) — data-key 조상을 만날 때마다 멈추지 않고 글 홀더(문단·칸)를 만날 때까지 올라간다(그림도 자기 키를 달고 있어 거기서 멈추면 눌러도 반응이 없다). 속이 빈 물건만 고른다 — 표·목록처럼 속에 글이 있는 그릇을 통째로 고르면 다음 글자 하나가 그것을 통째로 지웠다(표 오른쪽 빈 자리를 누르고 타이핑하면 표가 사라지던 버그). 글 품은 물건은 null을 답해 캐럿을 브라우저가 가장 가까운 글자리에 놓게 하고, 통째 선택은 첫머리 백스페이스(aimVessel)로 따로 연다
+    // Finds the object (wrapper paragraph) under a press, or null; it climbs past every data-key ancestor until it hits a text holder (paragraph/cell), since an image also carries its own key and stopping there would make clicking it do nothing. Only childless objects are selected -- selecting a text-bearing vessel (table/list) whole meant the next keystroke deleted it entirely (clicking the empty space right of a table and typing made the table vanish). Text-bearing objects answer null here, letting the browser place the caret at the nearest text spot; whole-vessel selection has its own door, opened by Backspace at the vessel's start (aimVessel)
     const lumpUnder = (target: Element): readonly number[] | null => {
       let el: Element | null = target.closest('[data-key]');
       while (el && root.contains(el)) {
@@ -1069,19 +1058,16 @@ export function mountSurface(options: SurfaceOptions): Surface {
           const void_ = isElement(lump) && env.voids.has(lump.w);
           return void_ ? path : null;
         }
-        if (holder && isHolder(holder, env)) return null; // 글을 눌렀다
+        // 글을 눌렀다
+        // Text was clicked
+        if (holder && isHolder(holder, env)) return null;
         el = el.parentElement?.closest('[data-key]') ?? null;
       }
       return null;
     };
 
-    // 물건 고르기는 **누르는 순간**이다 (click 이 아니다).
-    //
-    // click 에서 하면 브라우저가 먼저 놓은 캐럿이 우리 선택을 덮는다: mousedown 이 래퍼의 모서리에
-    // 캐럿을 놓고, 그 selectionchange 가 우리 write 뒤에 도착해 트리를 되돌린다. 눌렀는데 그림이
-    // 안 골라지던 자리가 이것이었다. mousedown 을 삼키면 브라우저가 캐럿을 놓을 일 자체가 없다
-    // 대신 포커스는 우리가 직접 준다(삼킨 몸짓은 포커스도 안 옮긴다).
-    // 물건을 고른 몸짓인가 — 그 몸짓의 나머지(mouseup·click)도 우리가 삼킨다.
+    // 물건 고르기는 click이 아니라 누르는 순간(mousedown)에 한다 — click에서 하면 브라우저가 먼저 놓은 캐럿의 selectionchange가 우리 write 뒤에 도착해 트리를 되돌린다(눌러도 그림이 안 골라지던 버그). mousedown을 삼켜 브라우저가 캐럿을 놓을 일 자체를 없애고, 포커스는 우리가 직접 준다. 몸짓의 나머지(mouseup·click)도 함께 삼킨다
+    // Object selection happens on mousedown, not click; doing it on click let the browser's own caret placement fire a selectionchange that arrived after our write and reverted the tree (clicking an image sometimes failed to select it). Swallowing mousedown prevents the browser from placing a caret at all, and focus is given manually instead; the rest of the gesture (mouseup, click) is swallowed too
     let tookLump = false;
 
     const onMouseDown = (ev: MouseEvent): void => {
@@ -1098,8 +1084,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       writeCaret(nabi.getSelection());
     };
 
-    // 누르기를 삼켜도 브라우저는 **떼는 순간** 다시 캐럿을 놓으려 한다 — 한 몸짓의 세 걸음을
-    // 다 삼켜야 우리가 세운 선택이 남는다. 그래서 mouseup·click 도 여기서 끊는다.
+    // 누르기를 삼켜도 브라우저는 떼는 순간 다시 캐럿을 놓으려 한다 — 한 몸짓의 세 걸음을 다 삼켜야 우리가 세운 선택이 남는다
+    // Even with mousedown swallowed, the browser still tries to place a caret on release; all three steps of the gesture must be swallowed for our selection to survive
     const onMouseUp = (ev: MouseEvent): void => {
       if (!tookLump) return;
       ev.preventDefault();
@@ -1115,25 +1101,26 @@ export function mountSurface(options: SurfaceOptions): Surface {
       }
       const target = eventElement(ev.target);
       if (!target) return;
-      // 편집 중 문서는 쓰는 것이지 보는 것이 아니다 — 링크는 이동하지 않는다.
+      // 편집 중 문서는 쓰는 것이지 보는 것이 아니다 — 링크는 이동하지 않는다
+      // A document being edited is for writing, not browsing; links don't navigate
       const anchor = target.closest('a');
       if (anchor && root.contains(anchor)) ev.preventDefault();
     };
 
     // --- 조립 -----------------------------------------------------------------------------------
-    // contenteditable 은 코어가 소유한다 — 호스트 마크업에 적지 않는다 (준비 셋).
+    // contenteditable은 코어가 소유한다 — 호스트 마크업에 적지 않는다(준비 셋)
+    // The core owns the contenteditable attribute; hosts never set it in their markup (prep set 3)
     const attributes = new HostElementLease(root);
     lifecycle.add(() => attributes.dispose());
     attributes.attribute('contenteditable', 'true');
     attributes.className('nabi-editing', true);
     if (options.locale !== undefined) attributes.attribute('dir', localeDirection(options.locale));
-    // 빈 편집기의 안내글 — **말만 준다.** 언제 뜨고 어떻게 생겼나는 시트의 것이고(빈 문단
-    // 하나라는 모양 하나를 겨눈다), 여기서는 그 말을 변수 한 칸에 적어 둘 뿐이다.
-    // 트리에도 DOM 에도 안 들어가므로 저장값·캐럿 셈이 흔들릴 자리가 없다.
-    // 말을 안 받았으면 코어 사전이 낸다 — 로케일은 이 mount 의 것이 먼저고, 없으면 인스턴스의 것이다.
+    // 빈 편집기의 안내글은 말만 여기서 정한다 — 언제·어떻게 뜨는지는 시트의 몫이고(빈 문단 하나라는 모양만 겨눈다), 여기는 CSS 변수 한 칸에 그 말을 적을 뿐이라 트리·DOM에 안 들어가 저장값·캐럿 셈이 흔들릴 일이 없다. 안 받았으면 코어 사전이 로케일대로 낸다
+    // The empty-editor placeholder text is set here only; when/how it appears is the stylesheet's job (targeting the single "one empty paragraph" shape), and this just writes the text into a CSS variable, so it never enters the tree or DOM and can't disturb saved values or caret counting. If none is given, the core dictionary supplies a localized one
     const placeholder = options.placeholder ?? translate('placeholder', options.locale ?? hostOf(nabi).locale());
     if (placeholder !== '') attributes.style('--nabi-placeholder', cssQuoted(placeholder));
-    // hydrate — 서버가 그린 편집기 DOM 이 문서와 맞으면 다시 그리지 않고 입양한다.
+    // hydrate — 서버가 그린 편집기 DOM이 문서와 맞으면 다시 그리지 않고 입양한다
+    // hydrate: adopts the server-rendered editor DOM instead of redrawing it, if it matches the document
     if (!(options.hydrate === true && adopted())) renderAll();
 
     root.addEventListener('keydown', onKeyDown);
@@ -1175,7 +1162,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       owner.removeEventListener('selectionchange', onSelectionChange);
     });
 
-    // 선언형 부속 — wing 이 선언한 표면 훅을 여기서 붙이고, unmount 가 뗀다.
+    // 선언형 부속 — wing이 선언한 표면 훅을 여기서 붙이고, unmount가 뗀다
+    // Declarative extras: wing-declared surface hooks are attached here and detached by unmount
     for (const attach of registry.attaches) {
       const attached = new DisposerStack();
       lifecycle.add(() => attached.dispose());

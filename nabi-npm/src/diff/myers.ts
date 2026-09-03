@@ -1,16 +1,17 @@
-// Myers O(ND) — 의존성 0 규칙 때문에 직접 구현한다 (260825_001 4절 2번).
-// 글자 열에도 블록 열에도 같은 걸음이 돈다 — 토큰 배열 하나와 같음 판정 하나가 입력의 전부다.
+// Myers O(ND) — 외부 의존성 없이 직접 구현한다. 같은 걸음이 글자 열에도 블록 열에도 돈다(토큰 배열 하나와 같음 판정 하나가 입력의 전부).
+// A hand-rolled Myers O(ND) diff with no dependency; the same walk works on both char and block sequences, needing only a token array and an equality check.
 
 export interface EditRun {
   readonly op: 'eq' | 'del' | 'ins';
   // a 쪽 시작(eq·del), b 쪽 시작(eq·ins) — 안 쓰는 쪽은 그 시점의 진행 위치다.
+  // Start index on the a side (eq/del) or b side (eq/ins); the unused side is just the position at that point.
   readonly a: number;
   readonly b: number;
   readonly n: number;
 }
 
-// 경로 길이 상한 — 이 너머는 "거의 다 다른 두 입력"이라 정밀한 경로의 값이 없다.
-// 상한에 걸리면 가운데를 통째 del+ins 로 답한다(공통 앞뒤는 이미 벗겨져 있다).
+// 경로 길이 상한 — 이 너머는 "거의 다 다른 두 입력"이라 정밀한 경로의 값이 없다. 걸리면 가운데를 통째 del+ins 로 답한다.
+// A cap on path length; beyond it the inputs are "mostly different" and an exact path isn't worth computing, so the middle is answered as one big del+ins.
 const MAX_D = 1024;
 
 function runsOf(ops: readonly ('eq' | 'del' | 'ins')[]): EditRun[] {
@@ -38,6 +39,7 @@ export function diffSeq<T>(
   same: (x: T, y: T) => boolean = (x, y) => x === y,
 ): readonly EditRun[] {
   // 공통 앞·뒤를 먼저 벗긴다 — 문서 비교의 흔한 모양(거의 같은 두 판)이 여기서 다 끝난다.
+  // Common head/tail are stripped first, which alone resolves the common case of two nearly identical versions.
   let head = 0;
   while (head < rawA.length && head < rawB.length && same(rawA[head] as T, rawB[head] as T)) head += 1;
   let tail = 0;
@@ -58,6 +60,7 @@ export function diffSeq<T>(
 
   if (n + m > 0) {
     // spread push 는 인자 상한에 걸릴 수 있는 크기다 — 하나씩 잇는다.
+    // A spread push here could hit the argument-count limit at this size, so it's appended one at a time.
     for (const op of middleOps(a, b, same)) ops.push(op);
   }
 
@@ -75,6 +78,7 @@ function middleOps<T>(a: readonly T[], b: readonly T[], same: (x: T, y: T) => bo
   const offset = n + m;
   const v = new Int32Array(2 * (n + m) + 1);
   // 각 d 를 돌기 전의 v 를 남긴다 — 되짚기가 d-1 상태의 v[k±1] 을 본다.
+  // Snapshots v before each d, since backtracking needs to read v[k±1] from the d-1 state.
   const trace: Int32Array[] = [];
   let found = -1;
 

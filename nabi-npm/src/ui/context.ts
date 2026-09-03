@@ -1,11 +1,5 @@
-// 상황 줄 — 캐럿이 든 것들의 손잡이. **컨트롤 종류별로 렌더러가 갈린다**: 옛 판의 230줄짜리
-// refresh 하나가 여기서 "무엇을 그릴지 고르는 순수부(groups.ts)" + "종류마다 15줄짜리 렌더러
-// 넷" 으로 나뉜다. 새 컨트롤 종류가 생겨도 이 파일의 다른 곳은 안 건드린다.
-//
-// 눌림 판정은 툴바와 **같은 한 벌**이다 (`press.ts`). 값 읽는 길도 하나다 — `attr` 이 선언돼
-// 있으면 겨눔 노드의 그 attr, 아니면 그룹이 든 조상 줄기가 합쳐 답한 상태 토큰(`stackValue`).
-// 그리고 상태 토큰은 "같다"가 아니라 "품는가"로 읽는다 (10 판단 — 표의 칸이 'merged th' 를
-// 답하고 표가 'sort' 를 답한다. 둘은 같은 줄의 단추라 한 벌로 읽혀야 한다).
+// 값은 attr가 선언돼 있으면 겨눔 노드의 그 attr, 없으면 조상 줄기가 합쳐 답한 상태 토큰(stackValue)에서 읽는다 — 토큰은 "같다"가 아니라 "품는가"로 판정한다.
+// A control's value comes from the target node's attr when declared, otherwise from the ancestor chain's merged state token (stackValue) — matched by "contains", not "equals".
 import type { ElementNode } from '../schema/index.js';
 import { hostOf, type Nabi } from '../editor/index.js';
 import type { ContextControl, Registry, Wing } from '../wing/index.js';
@@ -35,7 +29,8 @@ export interface ContextToolbarOptions {
 
 export interface ContextToolbar {
   readonly root: HTMLElement;
-  // 공식 API — 힌트가 이 줄을 훑을 때 DOM 구조를 하드코딩하지 않게 (판정 19).
+  // 공식 API — 힌트가 이 줄을 훑을 때 DOM 구조를 하드코딩하지 않게 한다.
+  // Public API, so hints scanning this row don't need to hardcode its DOM structure.
   groups(): readonly ContextGroupView[];
   buttons(): readonly HTMLButtonElement[];
   refresh(): void;
@@ -47,25 +42,27 @@ export interface ContextGroupView {
   readonly el: HTMLElement;
   readonly buttons: readonly HTMLButtonElement[];
   // 이 그룹이 겨누는 노드 — 판이 지금 값을 미리 채울 때 읽는다.
+  // The node this group targets; a panel reads it to prefill the current value.
   readonly node: ElementNode;
 }
 
-// 렌더러 하나가 받는 것 — 그룹의 겨눔과, 밖으로 나가는 문 셋(커맨드·판·크게 보기).
 interface Draw {
   readonly owner: Document;
   readonly wing: Wing;
   readonly node: ElementNode;
-  // 이 그룹의 상태 토큰 — 겨눔 하나가 아니라 소유 조상 줄기가 합쳐 답한 값이다. 그룹마다 한 번만
-  // 읽어 컨트롤 전부가 나눠 쓴다(같은 줄의 단추가 서로 다른 답을 볼 자리가 없다).
+  // 겨눔 하나가 아니라 소유 조상 줄기가 합쳐 답한 값 — 그룹마다 한 번만 읽어 컨트롤 전부가 나눠 쓴다.
+  // The merged value from the ancestor chain, not just the target — read once per group and shared by every control in it.
   readonly value: string | undefined;
   readonly t: Translator;
-  // 그룹이 이미 자기 이름을 세웠는가 — 세웠으면 컨트롤은 자기 이름표를 또 세우지 않는다
-  // (슬라이더 하나짜리 그룹에서 같은 낱말이 두 번 서던 자리).
+  // 그룹이 이미 자기 이름을 세웠는가 — 세웠으면 컨트롤은 이름표를 또 세우지 않는다.
+  // Whether the group already showed its own name — if so, controls skip their own label.
   readonly named: boolean;
   run(command: string, args?: Readonly<Record<string, unknown>>): void;
   // 판을 띄운다 — 열려 있던 판은 먼저 닫힌다(한 번에 하나).
+  // Opens a panel; any panel already open closes first (only one at a time).
   ask(anchor: HTMLElement, control: Extract<ContextControl, { kind: 'prompt' }>): void;
   // 그림 하나를 크게 — 커맨드가 아니다(본다고 문서가 안 바뀐다).
+  // Enlarges an image; not a command, since viewing doesn't change the document.
   view(src: string, alt?: string): void;
 }
 
@@ -80,7 +77,8 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
     const t = options.translator ?? makeTranslator(options.locale);
     const attributes = new HostElementLease(root);
     lifecycle.add(() => attributes.dispose());
-    // 말이 곧 방향이다 (098) — 툴바와 같은 규칙이다.
+    // 말이 곧 방향이다 — 툴바와 같은 규칙이다.
+    // The language dictates direction — same rule as the toolbar.
     if (options.locale !== undefined || options.translator !== undefined)
       attributes.attribute('dir', localeDirection(t.locale));
     const suppliedSettle = options.settle;
@@ -91,6 +89,7 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
     let views: ContextGroupView[] = [];
     let pending = false;
     // 뜬 것 둘 — 판과 라이트박스. 줄이 다시 지어지면 함께 걷힌다(가리키던 노드가 사라졌을 수 있다).
+    // Two things can be open — a panel and a lightbox. Both close when the row rebuilds, since their target node may be gone.
     let panel: Panel | null = null;
     let lightbox: Overlay | null = null;
     let generation = 0;
@@ -100,7 +99,8 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
     });
 
     attributes.className('nabi-context', true);
-    // 한 줄 모드 (260824_000) — 줄 자체가 flex 그릇이라 툴바처럼 감쌀 것 없이 제가 구른다.
+    // 한 줄 모드 — 줄 자체가 flex 그릇이라 툴바처럼 감쌀 것 없이 제가 구른다.
+    // Single-row mode — the row is its own flex container, so it scrolls itself without a wrapper like the toolbar needs.
     const stopNarrow = watchNarrow(root);
     lifecycle.add(stopNarrow);
 
@@ -114,21 +114,8 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
       lightbox = null;
     });
 
-    // 고친 자리를 화면에 들인다 — **상황 줄에서 고치는 자리는 화면 밖에 있을 수 있다.**
-    // 손이 이 줄에 머무는 동안 화면이 굴러가 대상이 밖으로 나가면, 이름을 바꾸고 엔터를 쳐도 무엇이
-    // 바뀌었는지 안 보인다 (주인 신고 2026-08-21).
-    //
-    // **스스로 굴러갈 사람이 없다.** 포커스는 `preventScroll` 로 돌려주고(바로 아래), 선택을 코드로
-    // 쓰는 것은 브라우저를 안 굴린다 — 굴리는 것은 사람이 친 키뿐이다. 그래서 여기서 한 번 부른다.
-    //
-    // 셈은 **띠의 그 산수 그대로**다(`band.ts` — `mountSticky` 가 모바일 키보드에 쓰는 그 한 벌).
-    // `scrollIntoView` 를 안 쓰는 까닭이 여기 있다: 그것은 붙는 크롬의 키를 모르고 시트의 어림값
-    // (`.nabi-content > *` 의 `scroll-margin`, 3.5rem = 툴바 한 줄)만 아는데, **이름을 고치는 동안은
-    // 상황 줄까지 떠 있어 크롬이 두 줄이다.** 그래서 어림값으로 굴리면 고친 자리가 상황 줄 **밑에**
-    // 가려 선다(실제로 그렇게 섰다). 크롬의 아랫변을 그때그때 재면 그 자리가 안 생긴다.
-    //
-    // 띠 안이면 `bandFix` 가 0 을 답한다 — **보이는 것을 굴려서 놀래키지 않는다**(규칙의 절반이 그
-    // 0 이다). 겨누는 것은 겨눔의 사각형이고, 못 재면 캐럿이 든 맨 위 블록으로 갈음한다.
+    // 상황 줄에서 고친 자리가 화면 밖으로 밀려나면 안 보인다 — scrollIntoView는 상황 줄이 뜬 채인 두 줄 크롬을 몰라 그 밑에 가려 세운다. band.ts와 같은 산수로 크롬 아랫변을 그때그때 재서 부른다.
+    // A fix made from the context toolbar can scroll offscreen; scrollIntoView doesn't know about this two-row chrome and lands the target under it. This reuses band.ts's math, remeasuring the chrome's bottom edge each time.
     const targetBox = (): Rect | null => {
       const selection = owner.getSelection?.() ?? owner.defaultView?.getSelection() ?? null;
       if (selection && selection.rangeCount > 0) {
@@ -149,8 +136,8 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
       if (!view || !options.surface) return;
       const box = targetBox();
       if (!box) return;
-      // 띠의 위 변 — 붙는 크롬의 아랫변이다. 그 클래스가 곧 "위에 붙는다"는 계약이라(문서의 그 말),
-      // 안 붙는 호스트에서는 창의 위가 위 변이 된다.
+      // 띠의 위 변은 붙는 크롬의 아랫변이다 — 그 클래스가 "위에 붙는다"는 계약이고, 안 붙는 호스트에서는 창의 위가 위 변이 된다.
+      // The band's top edge is the sticky chrome's bottom; that class is the "pins to top" contract, so a non-sticky host falls back to the window top.
       const chrome = root.closest('.nabi-toolbar');
       const chromeBottom = chrome ? chrome.getBoundingClientRect().bottom : null;
       const visual = view.visualViewport;
@@ -162,6 +149,7 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
     const run = (command: string, args?: Readonly<Record<string, unknown>>): void => {
       if (unmounted) return;
       // 겨눔을 먼저 돌려주고 문을 지난다 — 커맨드는 캐럿이 든 자리를 보고 일한다.
+      // Focus returns before the command runs, since the command acts on wherever the caret is.
       focusQuiet(options.surface);
       nabi.applyCommand(command, args ?? {});
       reveal();
@@ -170,6 +158,7 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
     const ask = (anchor: HTMLElement, control: Extract<ContextControl, { kind: 'prompt' }>): void => {
       if (unmounted) return;
       // 같은 단추를 다시 누르면 닫힌다 — 툴바의 피커와 같은 규칙이다.
+      // Pressing the same button again closes it — same rule as the toolbar's pickers.
       const wasOpen = anchor.getAttribute('aria-expanded') === 'true';
       closeFloating();
       if (wasOpen) return;
@@ -184,9 +173,11 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
           name: field.name,
           label: t.pick(field.label, `field.${wing?.w ?? ''}.${field.name}`),
           // 고치러 온 자리다 — 지금 값이 미리 차 있어야 한다(넣을 때와 다른 점은 이것뿐).
+          // This is an edit, so the current value must be prefilled — the only difference from inserting.
           ...(field.attr && node ? { value: String(node.a?.[field.attr] ?? '') } : {}),
           ...(field.optional ? { optional: true } : {}),
-          // 고치러 여는 판도 **같은 문**이다 — 넣을 때 못 지나던 값이 고칠 때 지나가면 안 된다.
+          // 고치러 여는 판도 같은 문이다 — 넣을 때 못 지나던 값이 고칠 때 지나가면 안 된다.
+          // The edit panel shares the same gate — a value insert would reject must not pass on edit either.
           ...(field.validate ? { validate: field.validate } : {}),
         })),
         onClose: () => {
@@ -247,6 +238,7 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
     const refresh = (): void => {
       if (unmounted) return;
       // 이 줄은 통째로 떴다 사라진다 — 높이가 바뀌므로 몸짓 중에는 미룬다.
+      // This row appears and disappears as a whole, changing height, so a rebuild is deferred during an in-flight gesture.
       if (settle.busy()) {
         invalidate();
         pending = true;
@@ -291,8 +283,8 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
 
 type Doors = Pick<Draw, 'run' | 'ask' | 'view'>;
 
-// 글자를 안 가진 컨트롤(색 견본·슬라이더)만 있는 그룹인가 — 그런 줄은 모양이지 문장이 아니라서
-// 자기 이름을 먼저 말해야 한다. 아이콘·낱말로 된 그룹은 그대로 아무 말도 안 한다(이미 읽힌다).
+// 글자를 안 가진 컨트롤(색 견본·슬라이더)만 있는 그룹인가 — 그런 줄은 모양이지 문장이 아니라서 자기 이름을 먼저 말해야 한다.
+// Whether a group holds only wordless controls (swatches, sliders) — those read as shapes, not sentences, so the group must name itself first.
 function wordless(controls: readonly ContextControl[]): boolean {
   return controls.every(
     (control) =>
@@ -306,6 +298,7 @@ function drawGroup(owner: Document, group: ContextGroup, t: Translator, doors: D
   const el = make(owner, 'div', 'nabi-ctx-group', { 'data-wing': wing.w });
   const buttons: HTMLButtonElement[] = [];
   // `visible` 이 아니라고 답한 컨트롤은 아예 없는 것으로 친다 — 이름표 판정도 남은 것만 본다.
+  // Controls that report `visible: false` are treated as absent, so the label decision only sees what's left.
   const controls = (wing.context?.controls ?? []).filter((control) => control.visible?.(node) !== false);
   const title = wing.context?.title;
   const named = title !== undefined && wordless(controls);
@@ -329,16 +322,14 @@ interface Made {
   readonly buttons: readonly HTMLButtonElement[];
 }
 
-// 컨트롤 하나의 이름 — 선언한 다국어 레코드가 먼저고, 없으면 사전의 `ctx.<wing>.<name>`.
 const nameOf = (draw: Draw, control: ContextControl): string =>
   draw.t.pick(control.label, `ctx.${draw.wing.w}.${control.name}`);
 
-// 낭독·이름표가 읽을 말 — `tip` 이 있으면 그것이다. 보이는 글자가 줄임말(`~70%`)이라는 뜻이고
-// 문장으로 읽히는 쪽은 원말이다.
+// `tip`이 있으면 낭독·이름표는 그것을 읽는다 — 보이는 글자가 줄임말(`~70%`)일 때 문장으로 풀어 주는 쪽이다.
+// When `tip` exists, screen readers and labels use it — the visible text may be an abbreviation (`~70%`) that tip spells out.
 const tipOf = (draw: Draw, control: ContextControl): string =>
   control.tip ? draw.t.pick(control.tip, `ctx.${draw.wing.w}.${control.name}`) : nameOf(draw, control);
 
-// 이름표 하나 — 그룹이 이미 말했으면 안 세운다.
 function tagFor(draw: Draw, text: string): readonly Node[] {
   if (draw.named || text === '') return [];
   const tag = make(draw.owner, 'span', 'nabi-ctx-tag');
@@ -351,6 +342,7 @@ function tagFor(draw: Draw, text: string): readonly Node[] {
 type Renderer<K extends ContextControl['kind']> = (draw: Draw, control: Extract<ContextControl, { kind: K }>) => Made;
 
 // 하는 일 — 눌림이 없다 (행 추가·열 삭제).
+// A one-shot action — no pressed state (e.g. add row, delete column).
 const drawButton: Renderer<'button'> = (draw, control) => {
   const button = iconButton(draw.owner, {
     name: control.name,
@@ -362,6 +354,7 @@ const drawButton: Renderer<'button'> = (draw, control) => {
 };
 
 // 켜짐/꺼짐 — 상태 토큰을 품으면 눌린 것이다.
+// On/off — pressed when the state token contains it.
 const drawToggle: Renderer<'toggle'> = (draw, control) => {
   const button = iconButton(draw.owner, {
     name: control.name,
@@ -374,13 +367,15 @@ const drawToggle: Renderer<'toggle'> = (draw, control) => {
 };
 
 // 값 고르기 — 지금 값과 같은 칸이 눌린다.
+// A value picker — the cell matching the current value is pressed.
 const drawSelect: Renderer<'select'> = (draw, control) => {
   const now = controlValueOf(draw.node, draw.value, control.attr);
   const buttons: HTMLButtonElement[] = [];
   const nodes: Node[] = control.values.length > 1 ? [...tagFor(draw, nameOf(draw, control))] : [];
   for (const choice of control.values) {
     const text = draw.t.pick(choice.label, `value.${draw.wing.w}.${choice.value}`);
-    // 보이는 글자가 줄임말이면 이름표·낭독은 원말을 읽는다 — `H1` 이 아니라 '제목 1'.
+    // 보이는 글자가 줄임말이면 이름표·낭독은 원말을 읽는다 — `H1`이 아니라 '제목 1'.
+    // When the visible text is an abbreviation, labels and screen readers use the spelled-out form — "Heading 1", not "H1".
     const spoken = choice.tip ? draw.t.pick(choice.tip, `value.${draw.wing.w}.${choice.value}`) : text;
     const button = iconButton(draw.owner, {
       name: `${control.name}:${choice.value}`,
@@ -396,9 +391,9 @@ const drawSelect: Renderer<'select'> = (draw, control) => {
   return { nodes, buttons };
 };
 
-// 글 한 줄 — 지금 값으로 채워 두고, 확정하면 커맨드로 간다.
 const drawText: Renderer<'text'> = (draw, control) => {
-  // 지금 값 — 선언한 `initial` 이 먼저다(속성 하나로 못 읽는 값이 그 문으로 온다).
+  // 선언한 `initial`이 먼저다 — 속성 하나로 못 읽는 값이 그 문으로 온다.
+  // `initial` takes priority when declared — it's the door for values that aren't a single attr read.
   const now =
     (control.initial ? control.initial(draw.node) : controlValueOf(draw.node, draw.value, control.attr)) ?? '';
   const label = nameOf(draw, control);
@@ -415,24 +410,26 @@ const drawText: Renderer<'text'> = (draw, control) => {
   }) as HTMLInputElement;
   input.value = now;
 
-  // 확정은 **한 번만** 돈다. 엔터를 치면 `keydown` 이 확정하는데, 그 뒤 칸이 포커스를 잃거나
-  // 상황 줄이 다시 그려지며 떨어져 나갈 때 브라우저가 `change` 를 한 번 더 보낸다. 그때 `now` 는
-  // 아직 옛 값이라 "안 바뀌었다" 검사가 못 막고 같은 커맨드가 두 번 돈다 (주인 신고 2026-08-19).
+  // 확정은 한 번만 돈다 — 엔터로 커밋한 뒤 포커스가 빠지며 change가 한 번 더 오는데, 그때 now는 아직 옛 값이라 "안 바뀌었다" 검사만으론 안 걸러진다.
+  // Commit fires only once — after Enter commits, losing focus fires change again, and since `now` is still stale then, the unchanged-value check alone won't catch the repeat.
   let sent: string | null = null;
   const commit = (): void => {
     const value = input.value.trim();
-    if (value === now || value === sent) return; // 안 바뀌었다 — 빈 되돌리기 지점을 안 남긴다
-    if (control.validate && !control.validate(value)) return; // 못 쓸 값 — 문서를 안 건드린다
+    // 안 바뀐 값은 되돌리기 지점을 만들지 않고, 검증에 걸리는 값은 문서를 건드리지 않는다.
+    // An unchanged value skips the undo checkpoint, and a value that fails validation never touches the document.
+    if (value === now || value === sent) return;
+    if (control.validate && !control.validate(value)) return;
     sent = value;
     draw.run(control.command, { [control.argKey]: value });
   };
   // 키는 편집기로 새면 안 된다 — 여기 있는 동안은 글을 여기에 쓰는 것이다.
+  // Keys must not leak to the editor — while focus is here, typing belongs to this field.
   input.addEventListener('keydown', (event) => {
     event.stopPropagation();
     if (event.key === 'Enter') {
       event.preventDefault();
-      // 조합 중의 엔터는 **글자를 맺는 키**다 — 그것으로 확정하면 반쯤 맺힌 글자가 값이 된다.
-      // 한글·일본어·중국어를 빠르게 치다 엔터를 누르는 자리가 정확히 이것이다.
+      // 조합 중 엔터는 글자를 맺는 키일 뿐이다 — 그걸로 확정하면 반쯤 맺힌 글자가 값이 된다(한글·일본어·중국어 IME에서 실제로 일어난다).
+      // Enter during IME composition just commits the character, not the field — treating it as submit would save a half-composed character (happens with Korean/Japanese/Chinese IMEs).
       if (event.isComposing) return;
       commit();
       return;
@@ -448,12 +445,8 @@ const drawText: Renderer<'text'> = (draw, control) => {
   return { nodes: [row], buttons: [] };
 };
 
-// 눈금 슬라이더 — 단계가 순서대로 서고 손잡이가 지금 단계에 앉는다.
-//
-// 이벤트 둘을 **일부러** 나눈다. `input` 은 끄는 내내 오고 손잡이 옆 글자만 움직인다.
-// `change` 는 손을 뗄 때 한 번 오고, 그 한 번이 편집이다. `input` 마다 커맨드를 돌리면 손잡이가
-// 지나친 단계마다 문서가 바뀌어 끌기 하나가 통째로 되돌리기에 쌓인다 — Ctrl+Z 한 번이 아무도
-// 여럿으로 여기지 않는 몸짓의 한 걸음만 되돌리게 된다.
+// 눈금 슬라이더 — input은 끄는 동안 표시만 갱신하고, change(뗄 때 한 번)만 커맨드를 돈다 — 매 input마다 돌리면 끌기 한 번이 되돌리기 여러 칸으로 쌓인다.
+// A stepped slider — input only updates the readout while dragging; only change (on release) runs the command, or one drag would pile up many undo steps.
 const drawRange: Renderer<'range'> = (draw, control) => {
   const steps = control.values;
   if (steps.length === 0) return { nodes: [], buttons: [] };
@@ -463,6 +456,7 @@ const drawRange: Renderer<'range'> = (draw, control) => {
 
   const now = controlValueOf(draw.node, draw.value, control.attr);
   // 쉬는 자리 — 선언한 값, 없으면 `''` 칸, 그것도 없으면 첫 칸.
+  // The rest position — the declared value, else the `''` step, else the first step.
   const declared = control.rest === undefined ? -1 : steps.findIndex((step) => String(step.value) === control.rest);
   const resting =
     declared >= 0
@@ -498,8 +492,8 @@ const drawRange: Renderer<'range'> = (draw, control) => {
   slider.addEventListener('change', () => {
     const step = steps[Number(slider.value)];
     if (!step) return;
-    // 쉬는 자리로 옮긴 것은 "벗긴다"는 뜻이다. 값 커맨드는 **같은 값이 다시 오면 벗기므로**
-    // 지금 걸린 값을 그대로 되돌려 보내는 것이 곧 벗기기다 — 커맨드에 새 문을 안 낸다.
+    // 쉬는 자리로 옮긴 것은 "벗긴다"는 뜻이다 — 값 커맨드는 같은 값이 다시 오면 벗기므로, 지금 값을 그대로 되돌려 보내는 것이 곧 벗기기다.
+    // Moving to the rest position means "clear" — since the value command toggles off on a repeat, resending the current value is how this clears without a new command.
     if (step.value === '') {
       if (now !== undefined && now !== '') draw.run(control.command, { [control.argKey]: now });
       return;
@@ -507,6 +501,7 @@ const drawRange: Renderer<'range'> = (draw, control) => {
     draw.run(control.command, { [control.argKey]: step.value });
   });
   // 키가 편집기로 새면 안 된다 — 화살표는 여기서 손잡이를 옮기는 것이다.
+  // Keys must not leak to the editor — arrows here move the slider handle.
   slider.addEventListener('keydown', (event) => event.stopPropagation());
 
   nodes.push(slider);
@@ -515,6 +510,7 @@ const drawRange: Renderer<'range'> = (draw, control) => {
 };
 
 // 판을 띄워 고친다 — 넣을 때와 같은 판이고, 다른 것은 칸이 미리 차 있다는 것뿐이다.
+// Opens the same panel used for insert; the only difference is the fields come prefilled.
 const drawPrompt: Renderer<'prompt'> = (draw, control) => {
   const label = tipOf(draw, control);
   const button = iconButton(draw.owner, {
@@ -527,6 +523,7 @@ const drawPrompt: Renderer<'prompt'> = (draw, control) => {
 };
 
 // 크게 보기 — 커맨드를 안 돌린다. 주소가 없으면 컨트롤 자체가 안 선다.
+// Enlarge only — never runs a command. With no src, the control doesn't render at all.
 const drawLightbox: Renderer<'lightbox'> = (draw, control) => {
   const src = draw.node.a?.[control.src];
   if (typeof src !== 'string' || src === '') return { nodes: [], buttons: [] };

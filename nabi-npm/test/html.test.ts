@@ -1,9 +1,5 @@
-// html 그물 — 조립 스냅샷·왕복 멱등·XSS·빈 문단 받침.
-//
-// ** 의 절반은 이 그물이 도는 것 자체다** — 러너는 Node 다. 조립 경로가 DOM 어휘를 하나라도
-// 쓰면 여기서 죽는다(그리고 경계 시험이 소스에서 먼저 잡는다). 들여오기는 DOM 이 필요한 유일한
-// 자리라, 코어(`import.ts`)를 최소 엘리먼트 모양 위에 짜고 그물은 초소형 토크나이저로 그 모양을
-// 지어 왕복을 잰다 — `parse.ts`(DOMParser 어댑터)만 브라우저에서 도는 얇은 껍데기다.
+// html 그물 — 조립 스냅샷·왕복 멱등·XSS·빈 문단 받침을 Node에서 검사한다. 조립 경로가 DOM 어휘를 쓰면 여기서 죽는다.
+// HTML test net for assembly snapshots, roundtrip idempotence, XSS, and empty-paragraph filler — run on Node, so any DOM vocabulary in the assembly path fails here.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { makeEnv } from '../src/schema/env.js';
@@ -109,6 +105,7 @@ const VIEW =
   '<span data-color="green">글자색</span><span data-nabi-size="lg">큰 글자</span>' +
   '<span data-nabi-typeface="serif">세리프</span><a href="https://example.com/">링크</a>' +
   // 첨부에는 `download` 가 붙는다 — 여는 것이 아니라 받는 것이라고 말하는 자리다(값은 없다).
+  // File attachments get a bare `download` attribute — it says "download this", not "open this".
   '<a href="/f/x.png" data-nabi-file="첨부.png" download>첨부</a><br/>둘째 라인</p>' +
   '<div data-nabi-p data-nabi-align="c"><img src="/logo/x.svg" alt data-nabi-width="40"/></div>' +
   '<div data-nabi-p><iframe src="https://www.youtube-nocookie.com/embed/6j-gQmaZ9Zk" title="YouTube"' +
@@ -128,11 +125,8 @@ eq('보기 HTML 은 예시 전체를 고정된 한 모양으로 낸다', view, V
 ok('조립이 Node(러너)에서 실제로 돈다', view.length > 0);
 
 const editor = renderEditorHtml(EXAMPLE, OPT);
-// 편집기가 보기와 갈리는 곳은 **셋뿐이다** — 재그리기의 자리(`data-key`), 첨부의 봉인(101),
-// 드롭캡의 실제 첫 글자 상자다. 마지막 것은 contenteditable의 ::first-letter 캐럿 버그를 피하는
-// 화면 요소라 저장·발행에는 나가지 않는다.
-// 봉인은 편집기에서만 첨부를 캐럿이 안 드는 섬으로 만드는 손이라, 저장·발행값에는 영영 안 나간다.
-// 넷째가 생기면 이 자물쇠가 먼저 운다 — 편집기와 보기가 조용히 갈라지는 것을 막는 자리다.
+// 편집기가 보기와 갈리는 곳은 셋뿐이다 — 재그리기 표식(data-key), 첨부의 봉인, 드롭캡의 첫 글자 상자. 넷째가 생기면 이 자물쇠가 먼저 운다.
+// The editor differs from the view in exactly three ways — the redraw key, the attachment seal, and the dropcap's letter box. A fourth divergence should trip this lock first.
 const SEAL = ' contenteditable="false" draggable="false"';
 const bare = editor
   .replace(/ data-key="[^"]*"/g, '')
@@ -162,8 +156,8 @@ eq(
   renderEditorHtml([{ w: 'p', ch: [], _id: 'k1' }], OPT),
   '<p data-key="k1"><br data-nabi-filler/></p>',
 );
-// 끝의 라인 — 브라우저가 블록 맨 끝의 `<br>` 를 줄바꿈으로 안 그려서, 글 끝의 첫 Shift+Enter 가
-// 화면에서 무시된 것처럼 보였다. 화면에만 받침을 하나 더 세운다. **발행값은 안 변한다.**
+// 끝의 라인 — 브라우저가 블록 맨 끝의 `<br>` 를 줄바꿈으로 안 그려서, 첫 Shift+Enter가 무시된 것처럼 보였다. 화면에만 받침을 하나 더 세운다.
+// A trailing line — browsers don't render a block-final `<br>` as a line break, making the first Shift+Enter look ignored. A filler is added for display only; the published value is unchanged.
 {
   const line: ElementNode = { w: 'br', ch: [] };
   const tail = (ch: NabiNode[]): NabiDoc => [{ w: 'p', ch, _id: 'k1' }];
@@ -179,6 +173,7 @@ eq(
     '<p data-key="k1">abc<br/>def</p>',
   );
   // 홀더는 문단만이 아니다 — 칸·항목·요약·코드가 같은 문(`ctx.filled`)을 지난다.
+  // Holders aren't just paragraphs — table cells, list items, summaries, and code blocks all pass through the same gate (`ctx.filled`).
   const inCell: NabiDoc = [
     { w: 'p', ch: [{ w: 'table', ch: [{ w: 'tr', ch: [{ w: 'td', ch: [{ w: 'p', ch: ['a', line] }] }] }] }] },
   ];
@@ -186,9 +181,8 @@ eq(
   ok('그 받침은 발행값에 없다', !renderHtml(inCell, OPT).includes('filler'));
   ok('칸의 받침은 문단의 것 하나뿐이다 — 이중 받침이 없다', renderEditorHtml(inCell, OPT).split('filler').length === 2);
 
-  // 끝줄이 **마크 속**일 때 — insertLine 은 캐럿의 마크를 이어받아 br 을 마크 안에 넣는다
-  // (`<b>abc<br/></b>`). 옛 판정(endsWith('<br/>'))은 `</b>`·`</span>` 으로 끝나는 이 모양을
-  // 못 봐서, 서체·굵게가 걸린 문단의 첫 Shift+Enter 가 화면에서 무시됐다 (ailog 260825_004).
+  // 끝줄이 마크 속일 때 — insertLine이 br을 마크 안에 넣는다(`<b>abc<br/></b>`). 옛 판정(endsWith('<br/>'))은 이 모양을 못 봐서 마크 걸린 문단의 첫 Shift+Enter가 무시됐다.
+  // A trailing line inside a mark — insertLine puts the br inside the mark (`<b>abc<br/></b>`). The old endsWith('<br/>') check missed this shape, so the first Shift+Enter in a marked paragraph looked ignored.
   eq(
     '마크 속 끝 라인에도 받침이 선다 (굵게)',
     renderEditorHtml(tail([{ w: 'b', ch: ['abc', line] }]), OPT),
@@ -328,8 +322,8 @@ eq(
   }),
   '<p><span data-value="a  b">a&nbsp; b</span></p>',
 );
-// 공격을 나르는 칸은 **글자를 그대로 받는 칸**이어야 한다 — 첨부 표식(`file`)이 그 자리다
-// (그림의 `alt` 는 대체 글을 걷으면서 값을 안 받게 됐다).
+// 공격을 나르는 칸은 글자를 그대로 받는 칸이어야 한다 — 첨부 표식(file)이 그 검증 대상이다.
+// The attribute carrying the attack must be one that accepts arbitrary text verbatim — the file attribute is that target (img's alt no longer accepts a value, since alt text was dropped).
 eq(
   '속성 값의 따옴표 탈출은 막힌다',
   renderHtml([{ w: 'p', ch: [{ w: 'a', a: { href: '/x.png', file: '" onerror="alert(1)' }, ch: ['글'] }] }], OPT),
@@ -340,9 +334,8 @@ eq(
   renderHtml([{ w: 'p', ch: [{ w: 'a', a: { href: '/x.png', file: '"><script>x</script>' }, ch: ['글'] }] }], OPT),
   '<p><a href="/x.png" data-nabi-file="&quot;&gt;&lt;script&gt;x&lt;/script&gt;" download>글</a></p>',
 );
-// 그림의 `alt` 는 **언제나 빈 값**이다 — 대체 글은 걷었지만 속성은 남긴다. `alt` 가 아예 없는
-// 그림을 낭독기는 파일 이름으로 읽어 주소를 소리 내지만, 빈 `alt` 는 "읽을 글이 없다" 는 뜻이라
-// 조용히 지나간다. 없는 것보다 빈 것이 낫다.
+// 그림의 alt는 언제나 빈 값이다 — 없는 alt를 낭독기는 파일명으로 읽지만, 빈 alt는 조용히 지나간다.
+// An image's alt is always empty — a missing alt gets read aloud as the filename by screen readers, while an empty one is silently skipped, which is the better default.
 eq(
   '그림은 언제나 빈 alt 를 단다',
   renderHtml([{ w: 'p', ch: [{ w: 'img', a: { src: '/x.png' }, ch: [] }] }], OPT),
@@ -380,12 +373,13 @@ ok(
   'safeUrl — data:image 는 allowLocal 일 때만 받는다',
   safeUrl('data:image/png;base64,AA', true) !== null && safeUrl('data:image/png;base64,AA') === null,
 );
-// 프로토콜 상대 주소 — 스킴이 없어 상대 경로처럼 보이지만 **호스트가 바뀐다.** 피싱·오픈
-// 리다이렉트이고, 그림이면 문서를 여는 순간 남의 서버로 요청이 나가 IP·Referer 가 샌다.
+// 프로토콜 상대 주소 — 스킴이 없어 상대 경로처럼 보이지만 호스트가 바뀐다. 그림이면 여는 순간 남의 서버로 IP·Referer가 샌다.
+// Protocol-relative URLs — schemeless, so they look relative, but the host actually changes; for an image, just opening the document leaks IP and Referer to another server.
 ok('safeUrl — 프로토콜 상대 주소(//)는 거절한다', safeUrl('//evil.com/x') === null);
 ok('safeUrl — allowLocal 이어도 // 는 거절한다', safeUrl('//evil.com/x', true) === null);
 ok('safeUrl — 앞뒤 공백을 털고도 // 는 거절한다', safeUrl('  //evil.com/x  ') === null);
 // SVG 는 스크립트를 품는 유일한 그림 형식이다 — `data:` 로 실려 오면 그림의 얼굴을 한 문서다.
+// SVG is the only image format that can carry a script — over a `data:` URL it's a document wearing an image's face.
 ok('safeUrl — data:image/svg+xml 은 allowLocal 이어도 거절한다', safeUrl('data:image/svg+xml,<svg/>', true) === null);
 ok(
   'safeUrl — blob: 은 allowLocal 일 때만 받는다',
@@ -410,9 +404,8 @@ eq(
 );
 eq('낯선 속성(onerror)은 들어오지 않는다', json(read('<p onclick="x()">글</p>')), '[{"w":"p","ch":["글"]}]');
 
-// **이사 온 서식** — 서체·글자 크기는 한때 문단 속성이었고 지금은 마크다. 그 시절 문서는 블록에
-// 그 표식을 달고 있는데, 지금 규칙으로 그냥 읽으면 문단 속성 화이트리스트에 없어 조용히 사라진다
-// (nabi-web 의 예문이 그렇게 사라졌다). 속 전체를 덮는 마크 하나로 옮겨 뜻을 지킨다.
+// 이사 온 서식 — 서체·글자 크기는 한때 문단 속성이었고 지금은 마크다. 옛 문서의 그 표식은 지금 규칙으로 읽으면 화이트리스트에 없어 조용히 사라지므로, 속 전체를 덮는 마크 하나로 옮겨 뜻을 지킨다.
+// Migrated formatting — typeface and font size used to be paragraph attributes, now they're marks. Reading an old document's attribute under today's rules would silently drop it (not on the paragraph-attribute whitelist), so it's migrated into a mark wrapping the whole content instead.
 eq(
   '블록의 서체는 속 전체를 덮는 마크가 된다',
   json(read('<p data-nabi-typeface="serif">글</p>')),
@@ -433,8 +426,8 @@ eq(
   json(read('<p data-nabi-typeface="serif">앞 <b>굵게</b> 뒤</p>')),
   '[{"w":"p","ch":[{"w":"tf","a":{"v":"serif"},"ch":["앞 ",{"w":"b","ch":["굵게"]}," 뒤"]}]}]',
 );
-// 값 검사는 이 층의 일이 아니다 — 들여오기는 읽고, 목록 밖 값은 뒤의 repair 가 껍데기째 걷는다
-// (span 으로 온 것과 **같은 길**이다). 편집기를 지나면 사라지는 것이 그 증거다.
+// 값 검사는 이 층의 일이 아니다 — 들여오기는 읽기만 하고, 목록 밖 값은 뒤의 repair가 껍데기째 걷는다.
+// Value validation isn't this layer's job — import just reads, and an out-of-list value gets stripped whole by repair downstream (the same path as an unrecognized span).
 eq(
   '들여오기는 값을 안 가린다 — 마크로 옮기기만 한다',
   json(read('<p data-nabi-typeface="nonsense">글</p>')),
@@ -527,6 +520,7 @@ const index = readFileSync(fileURLToPath(new URL('../src/html/index.ts', import.
 ok('이스케이프 함수는 층 밖으로 안 나간다 (06 규칙)', !/\bescape/i.test(index), [index]);
 
 // 문단 하나만 다시 그리는 문(부분 재그리기·SSR 조각)이 전체 조립과 같은 값을 낸다.
+// The single-paragraph render gate (partial redraw, SSR fragments) produces the same output as a full assembly.
 const first = EXAMPLE[0] as ElementNode;
 eq(
   '문단 하나 조립은 전체 조립의 한 걸음과 같다',

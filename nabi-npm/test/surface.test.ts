@@ -1,5 +1,5 @@
-// surface 그물 — 정책 엔진(키 파이프라인·오토포맷·그릇 탈출·되맞추기 diff·재그리기 계획)을
-// DOM 없이 잡는다. DOM 상호작용 자체(입양·교정·IME 이벤트 순서)는 실제로 띄워 보는 쪽의 몫이다.
+// surface 그물 — 정책 엔진(키 파이프라인·오토포맷·그릇 탈출·되맞추기 diff·재그리기 계획)을 DOM 없이 잡는다. 실제 DOM 상호작용은 실제로 띄워 보는 쪽의 몫이다.
+// Surface test net for the policy engine (key pipeline, autoformat, container escape, reconcile diff, redraw planning) without a DOM — actual DOM interaction is left to real mounting.
 import { createNabiWith, type Wing } from '../src/wing/index.js';
 import { defaultWings } from '../src/wings/index.js';
 import {
@@ -18,6 +18,7 @@ import { hostOf, type Nabi, type NabiChange } from '../src/editor/index.js';
 import { done, eq, ok } from './net.js';
 
 // 조정 가능한 시계 — 이중 엔터의 "빠름"을 그물이 쥔다.
+// A controllable clock — the test net owns what counts as "fast" for a double-Enter.
 let clock = 10_000;
 const tick = (ms: number): void => {
   clock += ms;
@@ -198,8 +199,8 @@ const at = (path: readonly number[], offset: number): Selection => caretAt({ pat
   ]);
   nabi.select(at([0, 0, 1, 0], 0));
   actions.backspace();
-  // §2 (B) — **둘째 이후** 항목의 첫머리는 앞 항목과 합친다. 표식을 벗겨 문단으로
-  // 내보내면 목록이 앞뒤로 쪼개지는데, 그것은 사고로 만들기 쉽고 되돌리기 말고는 붙일 길이 없다.
+  // 둘째 이후 항목의 첫머리는 앞 항목과 합친다 — 표식만 벗겨 문단으로 내보내면 목록이 쪼개져 되돌리기 말고는 붙일 길이 없다.
+  // Backspace at a later item's start merges into the previous item — stripping just the marker would split the list with no way back but undo.
   eq('둘째 항목 첫머리 백스페이스 = 앞 항목과 합치기', nabi.getJson(), [
     { w: 'p', ch: [{ w: 'ul', ch: [{ w: 'li', ch: [{ w: 'p', ch: ['ab'] }] }] }] },
   ]);
@@ -217,8 +218,8 @@ const at = (path: readonly number[], offset: number): Selection => caretAt({ pat
 }
 
 {
-  // **범위 위에서는 아무 일도 안 한다.** 스페이스 넷은 글자를 치는 것과 같은 일이라 잡아 둔 것을
-  // 지우고 그 자리에 넣는다 — 문단 여럿을 잡고 탭을 치면 그 문단들이 통째로 사라졌다.
+  // 범위 위에서는 아무 일도 안 한다 — 스페이스 넷은 잡아 둔 것을 지우고 그 자리에 넣는 일이라, 문단 여럿을 잡고 탭을 치면 통째로 사라졌다.
+  // Tab over a selection does nothing — inserting four spaces means deleting the selection first, which used to wipe out multiple selected paragraphs.
   const three = (): unknown[] => [
     { w: 'p', ch: ['one'] },
     { w: 'p', ch: ['two'] },
@@ -275,7 +276,7 @@ const at = (path: readonly number[], offset: number): Selection => caretAt({ pat
   ]);
 }
 
-// ─── 삭제 — 래퍼문단 방향 규칙 (§2.5) ───────────────────────────────────────────
+// ─── 삭제 — 래퍼문단 방향 규칙 ───────────────────────────────────────────────────
 
 const IMG = { w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] };
 
@@ -304,10 +305,8 @@ const IMG = { w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] };
 }
 
 // ─── 목록 첫 항목의 백스페이스 — 겨누기가 아니라 목록의 제 규칙 ────────────────
-//
-// **wing 이 겨누기보다 앞선다.** 목록의 첫 항목 첫머리에서 백스페이스는 "목록 전체를 고른다" 가
-// 아니라 그 항목의 표식을 벗긴다 — 목록에서 오래된 답이고, 겨누기가 먼저 서면 글이 든 목록이
-// 통째로 골라져 다음 한 번에 사라졌다.
+// wing 이 겨누기보다 앞선다 — 목록 첫 항목 첫머리의 백스페이스는 목록 전체를 고르지 않고 그 항목의 표식만 벗긴다.
+// The wing takes priority over selecting — backspace at a list's first item strips just that item's marker instead of selecting the whole list.
 {
   const ITEM: Readonly<Record<string, string>> = { ul: 'li', ol: 'oli', tl: 'tli' };
   for (const list of ['ul', 'ol', 'tl']) {
@@ -328,8 +327,8 @@ const IMG = { w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] };
 // ─── 그릇 첫머리의 백스페이스 — 지우기 전에 겨눈다 ─────────────────────────────
 
 {
-  // 표·인용·접기·코드 넷 다 같은 규칙이다: 첫 자리의 백스페이스는 그릇 통째를 **고르고**
-  // 그다음 백스페이스가 지운다. 지우기 전에 무엇이 지워질지를 한 번 보여 주는 걸음이다.
+  // 표·인용·접기·코드 넷 다 같은 규칙이다 — 첫 자리 백스페이스는 그릇 통째를 고르고, 다음 백스페이스가 지운다.
+  // Table, quote, details, and code share one rule — backspace at the start selects the whole vessel, the next one deletes it.
   const VESSELS: readonly (readonly [string, unknown, readonly number[]])[] = [
     ['인용', { w: 'quote', ch: [{ w: 'p', ch: ['글'] }] }, [1, 0, 0]],
     [
@@ -361,6 +360,7 @@ const IMG = { w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] };
 
 {
   // 겨누면 안 되는 자리 셋 — 그릇 안이라도 첫 자리가 아니거나, 아예 그릇 밖일 때.
+  // Three positions that must not select the vessel — inside it but not at the start, or outside it entirely.
   const TABLE = {
     w: 'table',
     ch: [
@@ -447,7 +447,7 @@ const IMG = { w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] };
   eq('전체 선택 삭제에 물건도 죽는다 (042 종결)', nabi.getJson(), [{ w: 'p', ch: [] }]);
 }
 
-// ─── 예약 — escapeKeys 음수 방향과 arm 배선 (08 인계) ───────────────────────────
+// ─── 예약 — escapeKeys 음수 방향과 arm 배선 ─────────────────────────────────────
 
 {
   const { nabi, actions } = rig([{ w: 'p', ch: [{ w: 'a', a: { href: 'https://x.com/' }, ch: ['ab'] }] }]);
@@ -466,9 +466,8 @@ const IMG = { w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] };
   ok('예약이 섰다', hostOf(nabi).armed.isArmed('hl'));
   nabi.applyCommand('insertText', { text: 'y' });
   eq('친 글자가 형광펜을 입는다', nabi.getJson(), [{ w: 'p', ch: ['x', { w: 'hl', a: { c: 'yellow' }, ch: ['y'] }] }]);
-  // 캐럿은 이제 그 형광펜 **안**이다 — 여기서 색을 바꾸는 것은 예약이 아니라 **그 마크 전체**를
-  // 바꾸는 일이다(규칙 2026-08-17: 접힌 캐럿은 안 고른 것이 아니라 상황 줄이 보여 주는
-  // 범위 전체를 고른 것이다). 링크가 예전부터 쓰던 규칙과 같다.
+  // 캐럿은 이제 그 형광펜 안이다 — 색을 바꾸는 것은 예약이 아니라 마크 전체를 바꾸는 일이다(접힌 캐럿은 상황 줄이 보여주는 범위 전체를 고른 것으로 본다, 링크와 같은 규칙).
+  // The caret now sits inside that highlight — changing color here isn't arming, it changes the whole mark (a collapsed caret is treated as selecting the range the context bar shows, same rule as links).
   nabi.applyCommand('setHighlight', { c: 'green' });
   eq('마크 안의 접힌 캐럿 = 그 마크 전체가 바뀐다', nabi.getJson(), [
     { w: 'p', ch: ['x', { w: 'hl', a: { c: 'green' }, ch: ['y'] }] },
@@ -481,7 +480,8 @@ const IMG = { w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] };
   ok('목록 밖 값은 예약도 거절', !nabi.applyCommand('setHighlight', { c: 'teal' }));
 }
 
-// 같은 규칙의 나머지 반쪽 — **긁어서 고른 것은 그 범위만** 대상이다.
+// 같은 규칙의 나머지 반쪽 — 긁어서 고른 것은 그 범위만 대상이다.
+// The other half of the same rule — a dragged selection affects only that range.
 {
   const { nabi } = rig([{ w: 'p', ch: [{ w: 'hl', a: { c: 'yellow' }, ch: ['형광펜'] }] }]);
   nabi.select({ anchor: at([0], 0).anchor, focus: at([0], 1).focus });
@@ -497,7 +497,8 @@ const IMG = { w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] };
   ]);
 }
 
-// 접힌 캐럿이 마크 한가운데면 낱말 전체가 바뀌고, **캐럿은 있던 자리에 그대로 남는다**.
+// 접힌 캐럿이 마크 한가운데면 낱말 전체가 바뀌고, 캐럿은 있던 자리에 그대로 남는다.
+// A collapsed caret in the middle of a mark changes the whole mark, and the caret stays right where it was.
 {
   const { nabi } = rig([{ w: 'p', ch: [{ w: 'hl', a: { c: 'yellow' }, ch: ['형광펜'] }] }]);
   nabi.select(at([0], 2)); // '형광' 뒤 — 마크 한가운데
@@ -507,12 +508,12 @@ const IMG = { w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] };
   ok('캐럿은 있던 자리에 남는다', sel.focus.offset === 2 && sel.anchor.offset === 2);
 }
 
-// ─── Esc 두 번 = 서식 지우기 (260823_004) ───────────────────────────────────────
-//
-// 연타는 `Wing.doubleKeys` 선언 → registry 표 → escapeKey 순으로 흐른다. 표면은 wing 이름을
-// 모르고, 시계가 주입이라 진짜 시간을 안 기다린다.
+// ─── Esc 두 번 = 서식 지우기 ─────────────────────────────────────────────────────
+// 연타는 Wing.doubleKeys 선언 → registry 표 → escapeKey 순으로 흐른다 — 표면은 wing 이름을 모르고, 시계가 주입이라 진짜 시간을 안 기다린다.
+// A double-tap flows: Wing.doubleKeys declaration -> registry table -> escapeKey — surface never knows wing names, and the injected clock means it never waits on real time.
 
 // 게이트를 그물이 쥔다 — mount 가 DOM 에서 답하는 그 자리다.
+// The test net owns the gate — the spot mount would normally answer from the DOM.
 function escRig(doc: unknown, plain?: () => boolean, wings: readonly Wing[] = TEST_WINGS): Rig {
   const { nabi, registry } = createNabiWith(wings, { doc });
   const actions = makeSurfaceActions({
@@ -549,8 +550,8 @@ const plainDoc = [{ w: 'p', ch: ['굵게'] }];
   eq('트리가 그대로다', nabi.getJson(), BOLD_DOC);
 }
 
-// 예약이 서 있어도 셈은 돈다 — 첫 Esc 가 예약을 걷고, **둘째가 서식을 지운다**.
-// (소비를 셈의 끝으로 읽던 옛 규칙은 2026-08-23 주인의 재보고로 뒤집혔다.)
+// 예약이 서 있어도 셈은 돈다 — 첫 Esc 가 예약을 걷고, 둘째가 서식을 지운다.
+// Counting continues even with an active arm — the first Esc disarms, the second strips formatting.
 {
   const { nabi, actions } = escRig([{ w: 'p', a: { h: 2 }, ch: ['가나'] }]);
   nabi.select(range([0], 0, 2));
@@ -562,8 +563,8 @@ const plainDoc = [{ w: 'p', ch: ['굵게'] }];
   eq('예약을 걷은 뒤에도 둘째에 발동한다', nabi.getJson(), [{ w: 'p', ch: ['가나'] }]);
 }
 
-// **접힌 캐럿에서도 발동한다** — 단추를 그 자리에서 누른 것과 똑같은 일이다.
-// 벗길 마크가 없으면 커맨드가 문단 속성을 한 켜로 걷는다(clearAtCaret).
+// 접힌 캐럿에서도 발동한다 — 단추를 그 자리에서 누른 것과 같다. 벗길 마크가 없으면 문단 속성을 한 켜씩 걷는다(clearAtCaret).
+// Fires even on a collapsed caret — same as pressing the button right there. With no mark to strip, it peels one layer of paragraph attrs instead (clearAtCaret).
 {
   const CARET_DOC = [{ w: 'p', a: { h: 2 }, ch: ['굵게'] }];
   const { nabi, actions } = escRig(CARET_DOC);
@@ -574,8 +575,8 @@ const plainDoc = [{ w: 'p', ch: ['굵게'] }];
   eq('벗길 마크가 없으면 문단 속성이 걷힌다', nabi.getJson(), plainDoc);
 }
 
-// **형광펜 위의 캐럿** — 주인이 짚은 그 자리다. 마크 안이라 Esc 마다 "마크 탈출"(선언된
-// escapeKeys) 이 먼저 키를 가져가는데, 그래도 셈은 돌아서 둘째에 형광펜이 벗겨진다.
+// 형광펜 위의 캐럿 — 마크 안이라 Esc 마다 선언된 마크 탈출(escapeKeys)이 먼저 키를 가져가지만, 셈은 계속 돌아 둘째에 형광펜이 벗겨진다.
+// A caret inside a highlight — being inside a mark means declared escapeKeys grab each Esc first, but the count still advances and the second Esc strips it.
 {
   const { nabi, actions } = escRig([{ w: 'p', ch: [{ w: 'hl', a: { c: 'yellow' }, ch: ['형광펜'] }] }]);
   nabi.select(at([0], 2)); // 마크 한가운데
@@ -586,7 +587,8 @@ const plainDoc = [{ w: 'p', ch: ['굵게'] }];
   eq('형광펜이 통째로 벗겨진다', nabi.getJson(), [{ w: 'p', ch: ['형광펜'] }]);
 }
 
-// 누르고 있는 것은 연타가 아니다 — 반복 이벤트는 세지도 않고 셈을 끊는다.
+// 누르고 있는 것은 연타가 아니다 — 반복 이벤트는 세지 않을 뿐 아니라 셈 자체를 끊는다.
+// A held key isn't a double-tap — a repeat event isn't counted, and it breaks the streak too.
 {
   const { nabi, actions } = escRig(BOLD_DOC);
   nabi.select(range([0], 0, 2));
@@ -598,7 +600,8 @@ const plainDoc = [{ w: 'p', ch: ['굵게'] }];
   eq('눌러 둔 Esc 로는 안 지워진다', nabi.getJson(), BOLD_DOC);
 }
 
-// IME — 조합이 지나면 셈이 끊긴다(mount 가 조합 중의 키마다 부르는 그 문).
+// IME — 조합이 지나면 셈이 끊긴다(mount 가 조합 중마다 부르는 그 문).
+// IME — once a composition passes through, the streak breaks (the same call mount makes on every keystroke during composition).
 {
   const { nabi, actions } = escRig(BOLD_DOC);
   nabi.select(range([0], 0, 2));
@@ -610,6 +613,7 @@ const plainDoc = [{ w: 'p', ch: ['굵게'] }];
 }
 
 // 사이에 다른 키가 오면 끊긴다 — 글자를 치는 손은 연타가 아니다.
+// A different key in between breaks it — a hand that's typing isn't double-tapping.
 {
   const { nabi, actions } = escRig(BOLD_DOC);
   nabi.select(range([0], 0, 2));
@@ -620,7 +624,8 @@ const plainDoc = [{ w: 'p', ch: ['굵게'] }];
   eq('그때도 트리가 그대로다', nabi.getJson(), BOLD_DOC);
 }
 
-// Esc 네 번은 두 번이 아니라 **한 번**이다 — 발동은 딱 둘째 두드림이고 셋째부터는 흘러간다.
+// Esc 네 번은 두 번이 아니라 한 번이다 — 발동은 딱 둘째 두드림이고 셋째부터는 흘러간다.
+// Four Escs aren't two double-taps — only the second tap fires, everything from the third on just passes through.
 {
   const { nabi, actions } = escRig(BOLD_DOC);
   nabi.select(range([0], 0, 2));
@@ -628,7 +633,8 @@ const plainDoc = [{ w: 'p', ch: ['굵게'] }];
   tick(10);
   ok('둘째에 발동', actions.escapeKey('Escape'));
   eq('한 번 걷혔다', nabi.getJson(), plainDoc);
-  // 지울 것을 다시 만든다 — 두 번째 발동이 있으면 이것이 걷힌다.
+  // 지울 것을 다시 만든다 — 두 번째 발동이 있었다면 이것이 걷혔을 것이다.
+  // Re-create something to strip — if a second trigger fired, this would be the thing removed.
   ok('다시 굵게', nabi.applyCommand('toggleMark', { mark: { w: 'b', ch: [] } }));
   tick(10);
   ok('셋째는 아무 일 없다', !actions.escapeKey('Escape'));
@@ -637,8 +643,8 @@ const plainDoc = [{ w: 'p', ch: ['굵게'] }];
   eq('두 번째 발동은 없다', nabi.getJson(), [{ w: 'p', ch: [{ w: 'b', ch: ['굵게'] }] }]);
 }
 
-// 게이트 — 위에 뭔가 떠 있으면 세지도 발동하지도 않는다. 셈이 끊기는 것이 요점이다:
-// 전체화면의 첫 Esc 가 화면을 나가고 둘째가 서식을 지우는 길이 그래서 막힌다.
+// 게이트 — 위에 뭔가 떠 있으면 세지도 발동하지도 않는다. 전체화면의 첫 Esc 가 화면을 나가고 둘째가 서식을 지우는 길을 막는 게 요점이다.
+// A gate — while something covers the surface, Esc neither counts nor fires. The point is blocking the path where a fullscreen's first Esc exits and a second strips formatting.
 {
   let up = true;
   const { nabi, actions } = escRig(BOLD_DOC, () => !up);
@@ -654,6 +660,7 @@ const plainDoc = [{ w: 'p', ch: ['굵게'] }];
 }
 
 // 업로드 잠금 — 게이트를 안 줘도 인스턴스의 `$lock` 이 문을 닫는다.
+// Upload lock — even without a gate, the instance's $lock closes the door.
 {
   const { nabi, actions } = escRig(BOLD_DOC);
   const unlock = hostOf(nabi).lock('upload');
@@ -667,7 +674,8 @@ const plainDoc = [{ w: 'p', ch: ['굵게'] }];
   eq('잠금 중에는 트리가 그대로다', nabi.getJson(), BOLD_DOC);
 }
 
-// 서식 지우기 wing 을 **안 끼운** 편집기 — 표가 비어 있어 연타가 아무 일도 안 한다.
+// 서식 지우기 wing 을 안 끼운 편집기 — 표가 비어 있어 연타가 아무 일도 안 한다.
+// An editor without the clear-format wing — the table is empty, so a double-tap does nothing.
 {
   const bare = TEST_WINGS.filter((wing) => wing.w !== 'clearFormat');
   const { nabi, actions } = escRig(BOLD_DOC, undefined, bare);
@@ -678,7 +686,7 @@ const plainDoc = [{ w: 'p', ch: ['굵게'] }];
   eq('안 끼운 편집기의 트리는 그대로다', nabi.getJson(), BOLD_DOC);
 }
 
-// ─── 오토포맷 (옛 011 규격표) ───────────────────────────────────────────────────
+// ─── 오토포맷 ─────────────────────────────────────────────────────────────────
 
 function typed(actions: SurfaceActions, nabi: Nabi, text: string): boolean {
   for (const ch of text) nabi.applyCommand('insertText', { text: ch });
@@ -765,6 +773,7 @@ function typed(actions: SurfaceActions, nabi: Nabi, text: string): boolean {
   ]);
   eq('캐럿은 제자리(스페이스 뒤)', nabi.getSelection().focus, { path: [0], offset: 18 });
   // 이미 링크가 된 글자 위의 엔터 — 규칙이 다시 안 뜨고 분할로 떨어진다.
+  // Enter on text that's already a link — the rule doesn't refire, it just falls through to a split.
   nabi.select(at([0], 17));
   tick(2_000);
   actions.enter();
@@ -846,8 +855,8 @@ function typed(actions: SurfaceActions, nabi: Nabi, text: string): boolean {
   eq('빈 문단이 사라진다', nabi.getJson(), [{ w: 'p', ch: ['X'] }]);
 }
 
-// 260823_008 — **문단 하나짜리 인라인 조각은 안 가른다.** 문단의 중간을 복사해 문단 가운데에
-// 붙이면 문단 하나가 셋이 되던 자리다. 잃어버렸던 옛 규칙("문단만 글자로 풀어 잇는다")이다.
+// 문단 하나짜리 인라인 조각은 안 가른다 — 문단 중간에 붙이면 문단 하나가 셋이 되던 버그였다(문단만 글자로 풀어 잇는 옛 규칙).
+// A single-paragraph inline fragment doesn't split — pasting into the middle of a paragraph used to turn one paragraph into three (splice in as plain text when it's just one paragraph).
 
 {
   const { nabi } = rig([{ w: 'p', ch: ['abcd'] }]);
@@ -874,7 +883,8 @@ function typed(actions: SurfaceActions, nabi: Nabi, text: string): boolean {
 }
 
 {
-  // 블록의 뜻을 든 문단(제목·정렬·드롭캡)은 글줄로 누르면 그 말이 사라진다 — 가르기로 간다.
+  // 블록의 뜻을 든 문단(제목·정렬·드롭캡)은 글줄로 누르면 그 뜻이 사라져 가르기로 간다.
+  // A paragraph carrying block meaning (heading, alignment, dropcap) would lose it if flattened into a line, so it splits instead.
   const { nabi } = rig([{ w: 'p', ch: ['abcd'] }]);
   nabi.select(at([0], 2));
   const frag: ElementNode[] = [{ w: 'p', a: { h: 1 }, ch: ['XY'] }];
@@ -896,9 +906,8 @@ function typed(actions: SurfaceActions, nabi: Nabi, text: string): boolean {
   eq('캐럿은 물건 뒤(래퍼.1)', nabi.getSelection().focus, { path: [0], offset: 1 });
 }
 
-// 260823_010 — **래퍼문단의 속성이 물건과 함께 붙는다.** 가운데 세운 그림만 골라 복사해
-// 붙이면 왼쪽으로 돌아오던 자리다: 복사한 html 에는 `data-nabi-align="c"` 가 실렸고 조각에도
-// `a:{a:'c'}` 로 도착했는데, 물건만 뽑아 새 껍데기를 입히느라 그 말이 버려졌다.
+// 래퍼문단의 속성이 물건과 함께 붙는다 — 가운데 세운 그림만 복사해 붙이면 왼쪽으로 돌아오던 버그였다(정렬 정보가 조각엔 도착했지만 새 껍데기를 입히며 버려졌다).
+// A wrapper paragraph's attrs travel with the object — copy-pasting just a centered image used to snap it back to the left (the alignment data arrived in the fragment but was discarded when re-wrapped).
 
 {
   const { nabi } = rig();
@@ -931,6 +940,7 @@ function typed(actions: SurfaceActions, nabi: Nabi, text: string): boolean {
 
 {
   // 속성 없는 래퍼는 지금까지와 똑같다 — 빈 문단이 든 속성을 빼앗지 않는다.
+  // A wrapper with no attrs behaves as before — it doesn't strip the attrs the empty paragraph already had.
   const { nabi } = rig([{ w: 'p', a: { a: 'c' }, ch: [] }]);
   nabi.select(at([0], 0));
   const wrapper: ElementNode = { w: 'p', ch: [{ w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] }] };
@@ -941,8 +951,8 @@ function typed(actions: SurfaceActions, nabi: Nabi, text: string): boolean {
 }
 
 {
-  // 첨부 조각(문단 + 빈 문단)은 문단 둘이라 글줄로 안 눌린다 — 제 줄에 서고 빈 줄이 뒤따른다.
-  // 이것이 "파일링크끼리 엉켜 하나의 긴 것처럼 되는" 자리를 막는 몸이다 (260823_010).
+  // 첨부 조각(문단+빈 문단)은 문단 둘이라 글줄로 안 눌린다 — 제 줄에 서고 빈 줄이 뒤따른다.
+  // An attachment fragment (paragraph + empty paragraph) has two paragraphs, so it doesn't flatten into a line — it stands on its own line with a blank line after.
   const { nabi } = rig([{ w: 'p', ch: ['앞', { w: 'a', a: { href: 'https://x/f.txt', file: 'txt' }, ch: ['첨부'] }] }]);
   nabi.select(at([0], 3));
   const frag: ElementNode[] = [
@@ -978,12 +988,13 @@ function typed(actions: SurfaceActions, nabi: Nabi, text: string): boolean {
 // ─── 안내글의 말이 시트로 건너가는 길 ────────────────────────────────────────────
 
 {
-  // 줄바꿈은 CSS 의 16진 escape 다 — 자바스크립트의 '\n' 을 그대로 흘리면 CSS 는 "n" 한 글자로
-  // 읽는다(역슬래시+글자 = 그 글자). 뒤의 공백 하나는 escape 를 끝내는 표시라 글자가 아니다.
+  // 줄바꿈은 CSS 의 16진 escape 다 — JS 의 '\n' 을 그대로 흘리면 CSS 는 그냥 글자 "n"으로 읽는다.
+  // A line break becomes a CSS hex escape — letting JS's '\n' through as-is would make CSS read it as the literal letter 'n'.
   eq('안내글: 줄바꿈은 \\A 로 건너간다', cssQuoted('첫 줄\n둘째 줄'), '"첫 줄\\A 둘째 줄"');
   eq('안내글: 윈도우 줄바꿈도 한 줄로 센다', cssQuoted('a\r\nb'), '"a\\A b"');
   eq('안내글: 줄바꿈 다음의 공백은 살아남는다', cssQuoted('a\n b'), '"a\\A  b"');
-  // 따옴표·역슬래시가 새면 그 자리에서 규칙 하나가 통째로 깨진다(선언이 끝나 버린다).
+  // 따옴표·역슬래시가 새면 그 자리에서 규칙 하나가 통째로 깨진다 — 선언이 조기 종료된다.
+  // A leaked quote or backslash breaks the whole declaration right there — it terminates early.
   eq('안내글: 따옴표와 역슬래시는 막는다', cssQuoted('a"b\\c'), '"a\\"b\\\\c"');
   eq('안내글: 여느 말은 그대로 따옴표만 두른다', cssQuoted('여기에 글을 쓰세요'), '"여기에 글을 쓰세요"');
 }

@@ -1,4 +1,5 @@
 // 0.9 상태 회귀망 - API 경계의 값 객체, keyed 순서, 비동기 입력의 revision을 따로 고정한다.
+// 0.9 state regression net — separately pins down value objects at the API boundary, keyed ordering, and revisions for async input.
 import { JSDOM } from 'jsdom';
 import type { Selection } from '../src/caret/index.js';
 import type { IoFilter, PasteData } from '../src/io/index.js';
@@ -51,6 +52,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
     (offered.focus as { offset: number }).offset = 0;
   } catch {
     // 동결된 값이면 외부 쓰기가 거절되는 것이 계약이다.
+    // A frozen value is contractually expected to reject external writes.
   }
   eq(
     'selection snapshot - select에 넘긴 객체의 뒤늦은 변이가 내부 상태를 못 바꾼다',
@@ -79,6 +81,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
     (exposed.anchor as { offset: number }).offset = 1;
   } catch {
     // 동결된 snapshot이면 이 쓰기가 거절된다.
+    // A frozen snapshot rejects this write.
   }
   eq('selection snapshot - getSelection 반환값의 변이가 내부 상태를 못 바꾼다', nabi.getSelection().anchor.offset, 0);
 }

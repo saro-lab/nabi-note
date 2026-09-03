@@ -12,8 +12,8 @@ import { fileURLToPath } from 'node:url';
 // Freezing (HTML to tree) stands up one editor, so this imports the core entry where setHtml lives.
 import { defaultWings, makeTranslator } from 'nabi-note';
 import { $createNabiWith } from '../../nabi-npm/src/wing/index.ts';
-// 그리는 쪽은 서버 진입점이면 충분하다 — 편집 표면·화면 도구를 한 파일도 안 딛는다(095).
-// Rendering needs only the server entry — it touches no edit surface or view tool files (095).
+// 그리는 쪽은 서버 진입점이면 충분하다 — 편집 표면·화면 도구를 한 파일도 안 딛는다.
+// Rendering needs only the server entry — it touches no edit surface or view tool files.
 import { makeRegistry, renderStoredEditorHtml, renderToolbarHtml, renderViewToolsHtml } from 'nabi-note/ssr';
 import { tinyHtml } from '../../nabi-npm/test/tiny-html.ts';
 import { messages } from '../docs/.vitepress/locales/index.ts';
@@ -23,8 +23,8 @@ import { trees as koTrees } from '../docs/.vitepress/trees/ko.ts';
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, '../docs/.vitepress/trees');
 
-// --check는 쓰지 않고 견준다 — 없으면 패키지를 올려도 여기를 안 돌려 굳힌 값이 조용히 낡는다(096 §4ⓓ).
-// --check compares without writing; without it, a package bump can leave the frozen output silently stale (096 §4d).
+// --check는 쓰지 않고 견준다 — 없으면 패키지를 올려도 여기를 안 돌려 굳힌 값이 조용히 낡는다.
+// --check compares without writing; without it, a package bump can leave the frozen output silently stale.
 const checking = process.argv.includes('--check');
 const stale: string[] = [];
 
@@ -117,8 +117,8 @@ for (const [code, sheet] of Object.entries(messages)) {
     freeze(`${code}.ts`, lines.join('\n'));
   }
 
-  // 홈 예문을 미리 그려 둔다(095ⓐ) — 안 그러면 서버가 보내는 데모 자리가 빈 채로 있다 코어 도착 후 갑자기 채워진다.
-  // Pre-renders the home sample (095a); otherwise the server ships an empty box that fills suddenly once the core lands.
+  // 홈 예문을 미리 그려 둔다 — 안 그러면 서버가 보내는 데모 자리가 빈 채로 있다 코어 도착 후 갑자기 채워진다.
+  // Pre-renders the home sample; otherwise the server ships an empty box that fills suddenly once the core lands.
   // 홈만 뽑는다 — wing 문서의 예문은 한두 문단이라 밀림이 안 보이고, 다 심으면 페이지마다 HTML을 또 싣는다.
   // Only the home page: wing samples are short enough that the shift is invisible, and pre-rendering all would bloat every page.
   if (mainTree === null) throw new Error(`${code} 에 홈 예문(main)이 없다`);

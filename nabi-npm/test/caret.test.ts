@@ -1,5 +1,5 @@
-// caret 그물 — 경계 정규화(경계 예시 4벌)·걸음 나열(래퍼 0/1 출입·라인·칸)·물건 범위(042)
-// 예약 상태 전이 표. 좌표는 (문단, 오프셋) 하나라는 것이 이 층의 전부다.
+// caret 그물 — 경계 정규화·걸음 나열·물건 범위·예약 상태 전이를 검사한다. 좌표는 (문단, 오프셋) 하나뿐이다.
+// Caret test net covering boundary normalization, position stepping, object ranges, and armed-mark transitions — coordinates are just (paragraph, offset).
 import { makeEnv, type ElementNode, type NabiDoc, type NabiNode } from '../src/schema/index.js';
 import { deleteRange, positionExists, type EditEnv, type Position } from '../src/doc/index.js';
 import {
@@ -79,6 +79,7 @@ const markNames = (marks: readonly ElementNode[]): string[] => marks.map((m) => 
 
 // --- 걸음 나열 -------------------------------------------------------------------------------
 // 앞으로 끝까지 걸으며 자리를 모은다 — 나열 자체가 캐럿 자리의 전수다.
+// Walks forward to the end, collecting positions — the walk itself is the exhaustive set of caret spots.
 function walkAll(doc: NabiDoc): Position[] {
   const seen: Position[] = [];
   let pos = docStart(doc, ENV);

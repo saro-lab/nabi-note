@@ -1,18 +1,9 @@
-// 코드 토크나이저 — 순수부다. 글자열 하나가 토막 목록이 되고, **토막을 이어 붙이면 원본과
-// 정확히 같아야 한다**(규칙은 이 하나다 — 어기면 화면에서 글자가 사라지거나 뒤바뀐다).
-//
-// 토큰은 트리에 절대 안 산다 — 화면의 span 에만 얹힌다. 그래서 다시 칠해도 `onChange` 가 안
-// 울리고, 하이라이터를 갈아 끼워도 문서는 한 글자도 안 변한다 (old 의 교훈 번역).
-// 얹는 손은 이웃한 `apply.ts` 다 — 여기는 DOM 을 모른다.
-//
-// **왜 `code/` 라는 제 층에 사는가** (088): 이 지식을 무는 이가 둘로 갈렸다 — 아래의
-// `wings/code`(편집 화면의 색칠)와 맨 위의 `viewer`(발행된 HTML 의 색칠)다. 한쪽에 두면 다른
-// 쪽이 층을 거슬러 문다. 그래서 `locale` 옆, 아무것도 안 부르는 맨 아래에 둔다 — 층 차례
-// (test/boundaries.test.ts 의 ORDER)에서 둘 모두의 아래다.
-//
-// 문법 사전을 싣지 않는다(런타임 의존성 0). 대신 언어군 셋(C 계열·마크업·설정값)의 규격만
-// 번역해 왔고, 모르는 언어는 글자열·수·주석만 아는 공통 규칙으로 떨어진다. 더 나은 색칠을
-// 원하는 호스트는 `CodeHighlighter` 훅으로 자기 하이라이터를 꽂는다.
+// 코드 토크나이저 — 순수부다. 토막을 이어 붙이면 반드시 원본과 같아야 한다(어기면 화면 글자가 사라지거나 뒤바뀐다).
+// The pure tokenizer half: joined tokens must exactly equal the source, or characters vanish or shuffle on screen.
+// 토큰은 트리에 안 산다 — DOM의 span 에만 얹혀, 다시 칠해도 onChange 가 안 울린다.
+// Tokens never live in the tree, only on DOM spans, so repainting never fires onChange.
+// 문법 사전 없이 언어군 셋만 흉내 내고, 모르는 언어는 공통 규칙으로 떨어진다. 더 나은 색칠은 CodeHighlighter 훅으로 꽂는다.
+// No grammar dictionary is bundled; it approximates three language families and falls back to common rules for the rest — hosts can plug a better highlighter via CodeHighlighter.
 
 export interface CodeToken {
   readonly text: string;
@@ -20,9 +11,11 @@ export interface CodeToken {
 }
 
 // 호스트 훅 — null·undefined 를 답하면 우리 토크나이저가 대신 답한다.
+// A host hook; answering null or undefined falls back to our own tokenizer.
 export type CodeHighlighter = (code: string, language: string | null) => readonly CodeToken[] | null | undefined;
 
 // 화면과 저장 HTML 이 함께 쓰는 이름 하나 — 쓰는 이가 둘이면 어긋난다.
+// One shared attribute name for both the live DOM and stored HTML; two separate names would drift apart.
 export const CODE_TOKEN_ATTR = 'data-nabi-token';
 
 export const CODE_TOKEN_TYPES: readonly string[] = [
@@ -42,7 +35,7 @@ export const CODE_TOKEN_TYPES: readonly string[] = [
   'meta',
 ];
 
-// --- 언어군 (old 의 언어 목록에서 이름만 번역) --------------------------------------------------
+// --- 언어군 ---------------------------------------------------------------------------------
 
 const C_LIKE = new Set([
   'js',
@@ -222,6 +215,7 @@ const KEYWORDS: Readonly<Record<string, readonly string[]>> = {
 const LITERALS = new Set(['true', 'false', 'null', 'undefined', 'None', 'True', 'False', 'nil', 'NULL']);
 
 // 언어 → 규칙 갈래. 모르는 이름은 공통 규칙이다.
+// Maps a language name to its rule dialect; an unknown name falls back to the common rules.
 export type CodeDialect = 'clike' | 'python' | 'json' | 'css' | 'markup' | 'sql' | 'bash' | 'plain';
 
 export function dialectOf(language: string | null): CodeDialect {
@@ -245,6 +239,7 @@ interface Rules {
   readonly quotes: readonly string[];
   readonly keywords: ReadonlySet<string>;
   // 이름 뒤에 여는 괄호가 오면 함수로 본다 (C 계열·파이썬).
+  // A name followed by an opening paren is treated as a function call (C-like, Python).
   readonly callIsFunction: boolean;
 }
 
@@ -311,6 +306,7 @@ const PUNCTUATION = /[{}[\]();,.:]/;
 const OPERATOR = /[+\-*/%=<>!&|^~?@#]/;
 
 // 마크업은 태그 안팎이 다른 세상이라 따로 걷는다 — 태그 이름·속성 이름·값만 고르고 나머지는 글이다.
+// Markup walks separately since inside and outside a tag are different worlds; only tag/attribute names and values get typed, the rest is plain text.
 function tokenizeMarkup(code: string): CodeToken[] {
   const out: CodeToken[] = [];
   const push = (text: string, type?: string): void => {
@@ -333,6 +329,7 @@ function tokenizeMarkup(code: string): CodeToken[] {
       const stop = end === -1 ? code.length : end + 1;
       const tag = code.slice(i, stop);
       // `<name` 과 닫는 `>` 는 태그, 그 사이의 `name=` 은 속성, 따옴표 안은 값이다.
+      // `<name` and the closing `>` are tag tokens; `name=` between them is an attribute, and quoted text is its value.
       const opening = /^<\/?[A-Za-z][\w:-]*/.exec(tag);
       if (opening) {
         push(opening[0], 'tag');
@@ -366,6 +363,7 @@ function tokenizeMarkup(code: string): CodeToken[] {
 }
 
 // 공통 걸음 — 주석·글자열·수·이름·기호를 가른다. 언어별 차이는 Rules 하나에 접혀 있다.
+// The common walk splits comments, strings, numbers, names, and symbols; per-language differences fold into a single Rules object.
 export function tokenize(code: string, language: string | null = null): CodeToken[] {
   if (code === '') return [];
   const dialect = dialectOf(language);
@@ -383,7 +381,6 @@ export function tokenize(code: string, language: string | null = null): CodeToke
   while (i < code.length) {
     const ch = code[i] as string;
 
-    // 주석 — 줄 끝까지, 또는 닫는 표시까지.
     const line = rules.lineComment.find((mark) => code.startsWith(mark, i));
     if (line !== undefined) {
       const end = code.indexOf('\n', i);
@@ -401,6 +398,7 @@ export function tokenize(code: string, language: string | null = null): CodeToke
     }
 
     // 글자열 — 닫히지 않은 채 끝나도 남은 전부를 글자열로 삼킨다(짓다 만 줄도 글자가 안 사라진다).
+    // A string: even if it never closes, the rest of the input is swallowed as a string, so an unfinished line never loses characters.
     if (rules.quotes.includes(ch)) {
       let j = i + 1;
       while (j < code.length) {
@@ -427,11 +425,11 @@ export function tokenize(code: string, language: string | null = null): CodeToke
       continue;
     }
 
-    // 수 — 16진·소수·지수까지 한 토막으로.
     if (DIGIT.test(ch) || (ch === '.' && DIGIT.test(code[i + 1] ?? ''))) {
       let j = i;
       while (j < code.length && /[0-9a-fA-FxXoObB._+-]/.test(code[j] as string)) {
         // `1-2` 의 빼기가 수에 붙지 않게 — 부호는 지수 뒤에서만 수의 일부다.
+        // Keeps the minus in `1-2` from sticking to the number; a sign is only part of it right after an exponent marker.
         const c = code[j] as string;
         if ((c === '+' || c === '-') && !/[eE]/.test(code[j - 1] ?? '')) break;
         if (c === '.' && !DIGIT.test(code[j + 1] ?? '')) break;
@@ -452,6 +450,7 @@ export function tokenize(code: string, language: string | null = null): CodeToke
       else if (/^[A-Z]/.test(word)) type = 'class';
       else if (rules.callIsFunction && /^\s*\(/.test(code.slice(j))) type = 'function';
       // json 은 이름이 곧 값의 이름이라 변수 색을 안 준다 — 맨 글자로 둔다.
+      // json names are just key names, not variables, so they get no color and stay plain text.
       push(word, dialect === 'json' && type === 'variable' ? undefined : type);
       i = j;
       continue;
@@ -475,11 +474,10 @@ export function tokenize(code: string, language: string | null = null): CodeToke
   return out;
 }
 
-// 색칠하는 쪽이 **한 줄로 쓰는 문** — 호스트 하이라이터에게 먼저 묻고, 답이 없거나 못 쓸
-// 답이면 우리 토크나이저가 답한다. 이 한 줄을 쓰는 이가 둘이라(편집 화면의 `wings/code/paint`,
-// 보는 쪽의 `viewer/code-paint`) 여기 한 벌만 둔다 — 두 벌이면 언젠가 갈린다.
-//
-// 하이라이터가 던지면 **색칠만** 포기한다 — 편집도 읽기도 계속돼야 한다.
+// 색칠 쪽이 쓰는 한 줄 문 — 호스트 하이라이터에게 먼저 묻고, 답이 없거나 못 쓰면 우리 토크나이저가 답한다.
+// The single entry point highlighting callers use: asks the host highlighter first, falling back to our tokenizer if it gives no usable answer.
+// 하이라이터가 던지면 색칠만 포기한다 — 편집도 읽기도 계속돼야 한다.
+// If the highlighter throws, only highlighting is given up; editing and reading must keep working.
 export function tokensFor(source: string, language: string | null, highlight?: CodeHighlighter): CodeToken[] {
   let answer: readonly CodeToken[] | null | undefined;
   try {
@@ -491,6 +489,7 @@ export function tokensFor(source: string, language: string | null, highlight?: C
 }
 
 // 답이 쓸 만한가 — 이어 붙인 것이 원본과 다르면 글자가 사라지거나 뒤바뀐다. 그때는 평문 한 덩이다.
+// Checks whether an answer is usable; if the joined text doesn't match the source, characters would vanish or shuffle, so it falls back to one plain-text token.
 export function usableTokens(answer: readonly CodeToken[] | null | undefined, source: string): CodeToken[] {
   if (!answer || answer.length === 0) return [{ text: source }];
   const joined = answer.reduce((sum, token) => sum + token.text, '');

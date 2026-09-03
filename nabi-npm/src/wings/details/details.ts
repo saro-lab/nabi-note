@@ -13,7 +13,6 @@ import { attachDetailsOpen } from './attach.js';
 
 const SUMMARY = 'summary';
 
-// 이름들 — old 사전 이식(14 로케일).
 const DETAILS_NAME: LocaleText = {
   ko: '접기',
   en: 'Details',

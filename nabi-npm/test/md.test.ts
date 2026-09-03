@@ -1,6 +1,5 @@
-// md 그물 — 부분집합 파서·조립기·스니핑. 문법마다 어떤 노드가 서는지, **등록된 wing 만
-// 선다**는 규칙, 그리고 조립과 파서가 **왕복으로 닫힌다**는 것이 여기서 증명된다.
-// DOM 도 편집기도 안 쓴다(io 층은 순수 함수뿐이다).
+// md 그물 — 부분집합 파서·조립기·스니핑을 검사한다. 등록된 wing만 서는 규칙과 파서·조립의 왕복 닫힘을 증명한다. DOM·편집기 없이, 순수 함수만으로.
+// Markdown test net for the subset parser, renderer, and sniffing — proves that only registered wings fire and that parse/render form a closed roundtrip, using pure functions only (no DOM, no editor).
 import { parseMarkdown, renderMarkdown, smellsMarkdown, type MdEnv, type MdOptions } from '../src/io/index.js';
 import { cocoon, type ElementNode, type NabiDoc } from '../src/schema/index.js';
 import { makeRegistry } from '../src/wing/index.js';
@@ -186,6 +185,7 @@ const br = { w: 'br', ch: [] };
 
 // --- cocoon 과 맞물린다 -------------------------------------------------------------------------
 // 파서는 래퍼문단을 안 씌운다 — 물건을 감싸고 쪼개는 마지막 한 걸음은 cocoon 의 몫이다.
+// The parser doesn't wrap bare objects in paragraphs — that final wrapping/splitting step belongs to cocoon.
 {
   const env = makeRegistry(defaultWings).env;
   const doc = cocoon([...md('- 하나\n\n---')], env);
@@ -208,8 +208,8 @@ const mdOptions: MdOptions = {
   html: { env: registry.env, builders: registry.builders },
 };
 
-// 등록된 어휘를 그대로 본 파서 환경 — 붙여넣기 판이 쓸 그 판정이다. 값 마크는 wing 자신의
-// `currentValue` 에게 물어본다(목록 밖 값은 그 wing 에게 없는 값이다).
+// 등록된 어휘를 그대로 본 파서 환경 — 붙여넣기 판이 실제로 쓰는 판정이다. 값 마크는 wing의 currentValue에게 직접 물어본다.
+// A parser environment mirroring what's actually registered — the same check the paste picker uses. Value marks are checked against the wing's own currentValue.
 const wingEnv: MdEnv = {
   has: (w) => registry.wingOf(w) !== null || registry.ownerOf(w) !== null,
   hasValue: (w, value) => registry.wingOf(w)?.currentValue?.({ w, a: { v: value }, ch: [] }) === value,

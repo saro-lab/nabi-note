@@ -1,9 +1,7 @@
-// --- diff wing 의 배선 — 대조 스냅샷 + 전체화면 판 ----------------------------------------------
-//
-// 대조 상태는 **문서를 실은 순간**(setJson·setHtml — 신호의 `loaded`)마다 그 문서로 갈린다.
-// 타자·붙여넣기·undo 는 대조 상태를 안 건드린다 — 붙여넣기는 setHtml 을 안 타므로(표면의
-// 붙여넣기는 커맨드다), 판이 답하는 물음은 "실은 뒤 무엇이 달라졌나" 다.
-// 툴바의 diff 단추(`diffWing`, action: host)를 받은 호스트가 `open()` 을 부른다.
+// diff wing 의 배선 — 대조 스냅샷 + 전체화면 판.
+// Wiring for the diff wing: the compare snapshot plus the fullscreen pane.
+// 대조 상태는 문서를 실은 순간(setJson·setHtml)마다 갈린다 — 타자·붙여넣기·undo 는 안 건드려, 판은 "실은 뒤 무엇이 달라졌나"만 답한다.
+// The compare snapshot resets only when a doc is loaded (setJson/setHtml); typing, paste, and undo leave it alone, so the pane always answers "what changed since load."
 import type { Nabi } from '../editor/index.js';
 import type { Registry } from '../wing/index.js';
 import { localeDirection, translate } from '../locale/index.js';
@@ -170,8 +168,8 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
         return;
       }
       inner = mounted;
-      // 닫기(X)는 제 줄을 안 만들고 diff 줄의 오른쪽 끝에 얹는다 — 한 줄을 아낀다
-      // (주인 지시 2026-08-25). 줄은 방금 mountDiff 가 세웠으니 반드시 있다.
+      // 닫기(X)는 제 줄을 안 만들고 diff 줄의 오른쪽 끝에 얹는다 — 줄은 방금 mountDiff 가 세웠으니 반드시 있다.
+      // The close (X) doesn't get its own row; it's appended to the diff toolbar's right end, which mountDiff just built so it's guaranteed to exist.
       closeButton = diffButton(doc, t('close'), 'M4.5 4.5l7 7M11.5 4.5l-7 7');
       const onCloseButton = (): void => {
         if (screen === opening) close();

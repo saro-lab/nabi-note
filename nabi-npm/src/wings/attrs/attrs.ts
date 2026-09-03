@@ -163,7 +163,6 @@ function attrCommand(key: string, parse: (raw: unknown) => AttrValue | null): Co
   };
 }
 
-// --- 버튼 선언 (12) ------------------------------------------------------------------------------
 // 셋이 시트 하나를 나눠 쓴다 — 옛 판은 wing마다 시트를 셌지만 이제 글자가 키라 한 번만 싣는다.
 // The three wings share one stylesheet now, keyed by tag instead of once per wing as before.
 const PARAGRAPH_CSS = `
@@ -175,22 +174,23 @@ const PARAGRAPH_CSS = `
 .nabi-content h6 { font-size:.95em; color: var(--nabi-muted); }
 .nabi-content h1,.nabi-content h2,.nabi-content h3,
 .nabi-content h4,.nabi-content h5,.nabi-content h6 { font-weight: 650; line-height: 1.3; margin-block: 0; padding-block: 0 .4em; }
-/* 제목 위의 숨은 **앞 블록이 든다** — 제목에 붙이면(padding-block-start) 그 띠가 제목의 몸이
-   되고, 브라우저는 첫 줄 **위**의 점을 줄의 처음으로 셈한다(실측). 그러면 오른쪽을 눌렀는데
-   캐럿이 왼쪽에 서는 그 일이 그대로 남는다. 앞 블록의 아래에 붙이면 마지막 줄 **아래**가 되어
-   x 까지 풀린다 — 오른쪽을 누르면 앞 줄의 끝이다.
-   값은 제목의 크기에서 나온다 (옛 .8em × 제목 font-size). 앞이 본문이면 본문 크기 = 상자
-   크기라 옛 간격과 한 픽셀도 안 다르다.
-   :has 가 없는 판에서는 이 줄만 안 걸린다 — 제목 위가 본문 사이만큼 좁아질 뿐 깨지지 않는다. */
+/* 제목 앞 간격은 제목이 아니라 앞 블록의 padding-block-end로 준다 — 제목 쪽에 주면 그 띠가 제목의
+   몸이 되어, 브라우저가 줄 시작을 그 위의 점으로 세는 바람에 오른쪽을 눌러도 캐럿이 왼쪽에 선다.
+   :has 미지원 브라우저에서는 이 줄만 안 걸려 간격이 좁아질 뿐 깨지지는 않는다. */
+/* The gap before a heading is the preceding block's padding-block-end, not the heading's own —
+   putting it on the heading itself would make that band part of the heading's line box, and the
+   browser would count the line as starting above it, landing the caret on the left on a right click.
+   Browsers without :has just skip this rule; the gap shrinks but nothing breaks. */
 .nabi-content > :has(+ h1) { padding-block-end: 1.52em; }
 .nabi-content > :has(+ h2) { padding-block-end: 1.28em; }
 .nabi-content > :has(+ h3) { padding-block-end: 1.08em; }
 .nabi-content > :has(+ h4) { padding-block-end: .944em; }
 .nabi-content > :has(+ h5) { padding-block-end: .84em; }
 .nabi-content > :has(+ h6) { padding-block-end: .76em; }
-/* 앞이 제목이면 **제 크기**로 잰다 — 위 여섯은 본문 크기를 재는 값이라, 큰 제목 뒤에 놓이면
-   그만큼 부풀어 과해진다. 제목이 잇달아 오는 자리는 흔치 않고, 위 제목이 클수록 아래가 넓은
-   것이 읽기에도 맞다. */
+/* 앞이 제목이면 그 제목 자신의 크기로 잰다 — 본문 크기 기준인 위 여섯 줄을 그대로 쓰면 큰 제목
+   뒤에서 간격이 과하게 부풀기 때문이다. */
+/* When the preceding block is itself a heading, the gap scales to that heading's own size — reusing
+   the body-text values above would overinflate the gap after a large heading. */
 .nabi-content > :is(h1,h2,h3,h4,h5,h6):has(+ :is(h1,h2,h3,h4,h5,h6)) { padding-block-end: .8em; }
 `;
 
@@ -234,14 +234,12 @@ export const headingWing: Wing = {
     group: 'heading',
     svg: HEADING_ICON,
     label: HEADING_NAME,
-    // **판을 안 띄운다** — 단계 고르기는 상황 줄의 일이다(값 마크 넷과 같은 규율).
-    // 누르면 제목 1 이 되고, 그때부터 상황 줄에 H1~H6 여섯 칸이 서서 거기서 옮긴다. 다시 누르면
-    // 문단으로 내려온다(커맨드의 토글 규칙). 여기서 차림표를 열면 단계를 고르는 자리가 둘이 된다.
+    // 판을 안 띄운다 — 누르면 곧장 제목 1이 되고, 단계 고르기는 그 뒤 상황 줄의 일이다.
+    // No popup — pressing goes straight to Heading 1; picking a level from there is the context bar's job.
     action: { kind: 'command', command: 'setHeading', args: { value: 1 } },
   },
-  // 상황 줄 — 제목이 걸린 문단에서 여섯 칸이 뜬다. 지금 단계가 눌려 보이고, 한 번 눌러 옮긴다.
-  // 자기 단계를 다시 누르면 문단으로 내려온다(커맨드의 토글 규칙 그대로다).
-  // 칸의 글자는 `H1`…`H6` 이라 낱말이 아니다 — 그래서 원말은 `tip` 이 든다.
+  // 상황 줄 — 제목 문단에서 여섯 칸이 뜨고, 칸 글자는 `H1`…`H6`이라 원말은 `tip`이 대신 든다.
+  // Context bar — six slots appear on a heading paragraph; since the labels are just `H1`-`H6`, the full name lives in `tip`.
   context: {
     title: HEADING_NAME,
     controls: [
@@ -263,31 +261,23 @@ export const headingWing: Wing = {
   styles: PARAGRAPH_CSS,
 };
 
-// --- 정렬 (래퍼문단에도 허용되는 유일한 문단 속성) ---------------------------------
-
-// **정렬은 최상위 문단의 것이다.** 다른 문단 속성(제목·드롭캡)과 여기서 갈린다: 캐럿이 표의 칸
-// 속이면 겨눔은 그 칸의 문단이 아니라 **표를 감싼 래퍼문단**이다. 안 그러면 "표를 가운데로" 가
-// 칸 안의 글자만 가운데로 보내고, 표는 왼쪽에 그대로 남는다.
-//
-// 글 문단에서는 최상위가 곧 자기 자신이라 규칙이 하나로 끝난다 — 두 갈래를 안 만든다.
-//
-// **물건은 정렬을 마다할 수 있다** (`Wing.noAlign` — 코드 상자). 그 판정은 여기서 이름을
-// 알아보는 것이 아니라 `takesAlign` 한 문이 답한다: 정렬 wing 은 어떤 물건이 마다했는지 모른다.
+// 정렬은 최상위 문단의 것이다 — 캐럿이 표 칸 속이면 겨눔은 그 칸이 아니라 표를 감싼 래퍼문단이다.
+// 물건이 정렬을 마다하는 판정(`Wing.noAlign`)은 `takesAlign` 한 문이 답한다; 여기서 이름으로 안 가른다.
+// Alignment targets the top-level paragraph — if the caret sits in a table cell, the target is the table's wrapper paragraph, not the cell itself. Whether an object opts out (`Wing.noAlign`) is answered by the single `takesAlign` gate, not by name-checking here.
 const setAlign: Command = (doc, sel, args, env) => {
   const raw = args['value'];
   const value = raw === 'l' || raw === 'c' || raw === 'r' ? raw : null;
   if (raw !== null && value === null) return null;
 
-  // 겨눔은 선택이 걸친 **최상위 블록 전부**다. 여러 문단을 잡고 누르면 그 전부가 맞춰지고
-  // 표 칸 속의 캐럿 하나는 그 표를 감싼 래퍼문단 하나가 된다(경로의 첫 칸이 곧 최상위다).
+  // 겨눔은 선택이 걸친 최상위 블록 전부다 — 표 칸 속 캐럿 하나는 그 표의 래퍼문단 하나로 접힌다.
+  // The target is every top-level block the selection spans; a single caret in a table cell collapses to that table's one wrapper paragraph.
   const [start, end] = ordered(sel);
   const from = start.path[0];
   const to = end.path[0];
   if (from === undefined || to === undefined) return null;
 
-  // 정렬을 마다한 물건의 래퍼문단은 겨눔에서 아예 빠진다 — 토글 셈에도 안 든다. 그 자리가
-  // 셈에 들면 코드 상자 하나를 잡고 누를 때 "전부 그 값이 아니다" 가 되어 걸 것도 없이
-  // 참을 답하고, 여럿을 잡았을 때는 옆 문단의 토글 방향까지 흔든다.
+  // 정렬을 마다한 물건의 래퍼문단은 겨눔에서 아예 빠진다 — 안 그러면 그 자리가 토글 셈을 흔든다.
+  // A wrapper paragraph whose object opted out of alignment is excluded from the target entirely, or it would skew the toggle count.
   const tops: { index: number; node: ElementNode }[] = [];
   for (let index = Math.min(from, to); index <= Math.max(from, to); index += 1) {
     const node = doc[index];
@@ -336,8 +326,8 @@ export const alignWing: Wing = {
     return a === 'l' || a === 'c' || a === 'r' ? a : undefined;
   },
   commands: { setAlign },
-  // **셋이 줄에 나란히 선다 — 차림표로 접지 않는다.** 접으면 자리는 둘 아끼는 대신 지금 어느
-  // 쪽으로 맞춰져 있는지가 줄에서 사라진다. 정렬은 자주 쓰고 **상태가 곧 답**이라 펼쳐 둔다.
+  // 셋이 줄에 나란히 선다 — 차림표로 접으면 지금 어느 쪽인지가 줄에서 안 보이게 된다.
+  // All three sit in the row rather than collapsing into a menu, which would hide the current state.
   buttons: ALIGNS.map((value, at) => ({
     group: 'align',
     name: String(value),
@@ -346,13 +336,9 @@ export const alignWing: Wing = {
     label: ALIGN_LABELS[at] as LocaleText,
     action: { kind: 'command' as const, command: 'setAlign', args: { value } },
   })),
-  // **정렬에는 상황 줄이 없다 — 툴바가 정렬의 유일한 문이다** (plan 의 결정, old 와 일부러 다름).
-  //
-  // 까닭: 정렬은 물건(표·그림·영상)에도 걸리는데 그 겨눔은 **래퍼문단**이다. 물건마다 자기 상황
-  // 줄에 정렬 셋을 또 두면, 같은 일을 하는 자리가 넷(툴바 + 표 + 그림 + 영상)이 되고 넷이 조금씩
-  // 어긋나기 시작한다. 툴바의 정렬 셋이 캐럿의 최상위 문단을 겨누므로(`setAlign`), 글이든 물건이든
-  // **한 자리에서 한 규칙으로** 맞춰진다 — 상황 줄은 그 물건 고유의 것만 든다(폭·주소·대체 글).
-  // 정렬의 생김새는 코어 시트가 이미 안다(`[data-nabi-align]`) — 문단 가족 시트를 그대로 나눠 쓴다.
+  // 정렬에는 상황 줄이 없다 — 툴바가 유일한 문이다. 물건마다 상황 줄에 정렬 셋을 또 두면 같은 일을
+  // 하는 자리가 여럿이 되어 서로 어긋나기 시작하므로, 하나의 규칙(`setAlign`)으로만 맞춘다.
+  // Alignment has no context bar — the toolbar is its only door. Duplicating the align buttons into every object's own context bar would create several places doing the same job, drifting apart over time; routing everything through one command (`setAlign`) keeps it consistent.
   styles: PARAGRAPH_CSS,
 };
 
@@ -376,9 +362,8 @@ export const dropCapWing: Wing = {
     label: DROPCAP_NAME,
     action: { kind: 'command', command: 'toggleDropCap' },
   },
-  // **드롭캡도 상황 줄이 없다** — 정렬과 같은 까닭이다(위 참고). 툴바 단추 하나가 이미 토글이고
-  // 상황 줄에 또 두면 같은 일을 하는 자리가 둘이 된다. 걸린 문단에서 늘 눌린 칸 하나가 서는 것은
-  // "끄기" 를 한 번 더 말하는 것일 뿐이다.
+  // 드롭캡도 상황 줄이 없다 — 툴바 단추 하나가 이미 토글이라 또 두면 같은 일을 하는 자리가 둘이 된다.
+  // Drop cap also has no context bar — the toolbar button already toggles it, so a duplicate there would just be a second way to say the same thing.
   styles: PARAGRAPH_CSS,
 };
 

@@ -129,7 +129,6 @@ const renameLink: Command = (doc, sel, args, env: EditEnv) => {
   };
 };
 
-// 이름 셋 — old 사전 이식(14 로케일).
 const LINK_NAME: LocaleText = {
   ko: '링크',
   en: 'Link',
@@ -195,16 +194,16 @@ const LINK_CSS = `
 .nabi-content a[data-nabi-file]:not([data-nabi-file=""])::after {
   content: attr(data-nabi-file); font-size: .75em; color: var(--nabi-muted); text-transform: uppercase;
 }
-/* 첨부는 글이 아니라 물건이라 손가락 커서를 쓴다 — 글자 커서는 "속을 고칠 수 있다"는 거짓말이 된다(081 §1). */
-/* An attachment is an object, not text, so it gets a pointer cursor — a text cursor would falsely promise editable content (081 §1). */
+/* 첨부는 글이 아니라 물건이라 손가락 커서를 쓴다 — 글자 커서는 "속을 고칠 수 있다"는 거짓말이 된다. */
+/* An attachment is an object, not text, so it gets a pointer cursor — a text cursor would falsely promise editable content. */
 .nabi-content.nabi-editing a[data-nabi-file] { cursor: pointer; }
 /* iOS Safari는 <a> 탭을 preventDefault와 무관하게 네이티브로 이동시킨다 — mount의 click 가로채기만으론 못 막아 포인터 자체를 죽인다. */
 /* iOS Safari navigates a tapped <a> natively regardless of preventDefault — click interception alone can't stop it, so pointer events are killed outright. */
 @media (hover: none) {
   .nabi-content.nabi-editing a:not([data-nabi-file]) { pointer-events: none; }
 }
-/* 봉해진 첨부는 편집기 안에서 고를 수도 없다(101) — contenteditable="false"는 못 고친다는 말이지 못 고른다는 말이 아니라서, 이 줄이 그 나머지를 막는다. */
-/* A sealed attachment can't even be selected inside the editor (101) — contenteditable="false" blocks editing, not selection, so this rule covers the gap. */
+/* 봉해진 첨부는 편집기 안에서 고를 수도 없다 — contenteditable="false"는 못 고친다는 말이지 못 고른다는 말이 아니라서, 이 줄이 그 나머지를 막는다. */
+/* A sealed attachment can't even be selected inside the editor — contenteditable="false" blocks editing, not selection, so this rule covers the gap. */
 .nabi-content.nabi-editing a[data-nabi-file][contenteditable="false"] {
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }

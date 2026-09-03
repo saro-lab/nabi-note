@@ -256,7 +256,8 @@ export function callbackSelection(selection: Selection): Selection {
   return frozenSelection(selection);
 }
 
-// 인스턴스의 이름 — 유닉스 시각 + nonce. 정렬되는 이름표이지 비밀이 아니다 (옛 동작 보존).
+// 인스턴스의 이름 — 유닉스 시각 + nonce. 정렬되는 이름표이지 비밀이 아니다.
+// The instance's name: Unix time + a nonce. A sortable label, not a secret.
 export function makeSessionId(): string {
   const random = globalThis.crypto?.getRandomValues?.(new Uint32Array(1))?.[0];
   const nonce = (random ?? Math.floor(Math.random() * 0xffffffff)).toString(36);

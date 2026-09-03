@@ -1,9 +1,5 @@
-// wings 1차 그물 — 글 계열 기본 wing 전부.
-// wing 마다 왕복(트리 → HTML → 트리) — 조립과 들여오기가 같은 값을 말하는가
-// 리스트 표: backspace(첫·가운데·유일 항목, 3종 공통)· tab/shiftTab· 엔터(분할·탈출)
-// 값 마크: 목록 밖 값 거절(커맨드·들여오기)· 같은 값 토글· 다른 값 교체
-// 문단 속성: 제목 currentValue· 정렬은 래퍼문단에도· 드롭캡은 분할 때 첫 글자 쪽
-// 오토포맷 규칙 매칭 표(패턴만 — 디스패처는 09)· registry fail-fast
+// wings 1차 그물 — 글 계열 기본 wing 전부를 검사한다: 왕복(트리↔HTML), 리스트 키 표, 값 마크(거절·토글·교체), 문단 속성, 오토포맷 패턴, registry fail-fast.
+// First-round wings test net, covering every text-family built-in wing — tree/HTML roundtrip, the list key table, value marks (rejection, toggling, replacement), paragraph attributes, autoformat patterns, and registry fail-fast.
 import { cocoon, type ElementNode, type NabiDoc, type NabiNode } from '../src/schema/index.js';
 import { positionExists, type Position } from '../src/doc/index.js';
 import { caretAt, type Selection } from '../src/caret/index.js';
@@ -147,6 +143,7 @@ const FAMILIES: readonly Family[] = [
 ];
 
 // [0]=앞 문단, [1]=래퍼문단(리스트) — 항목 i 의 문단은 [1,0,i,0] 이다.
+// [0]=leading paragraph, [1]=wrapper(list) — item i's paragraph sits at [1,0,i,0].
 const listDoc = (fam: Family, count: number): NabiDoc =>
   cocoon(
     [
@@ -178,7 +175,6 @@ for (const fam of FAMILIES) {
     );
   }
   {
-    // §2 (B) — 가운데 항목은 **앞 항목과 합쳐진다**. 목록은 쪼개지지 않는다.
     const r = press('backspace', listDoc(fam, 3), caretAt(at([1, 0, 1, 0], 0)));
     eq(`${fam.list} — 가운데 항목은 앞 항목과 합쳐진다 (목록이 안 쪼개진다)`, r ? r.doc.length : 0, 2);
     const list = r ? ((r.doc[1] as ElementNode).ch[0] as ElementNode) : null;
@@ -195,7 +191,8 @@ for (const fam of FAMILIES) {
     );
   }
   {
-    // §6 (B) — Delete 는 그 거울이다: 항목 끝에서 **뒤 항목을 끌어올린다**.
+    // Delete 는 백스페이스의 거울이다 — 항목 끝에서 뒤 항목을 끌어올린다.
+    // Delete mirrors backspace — at an item's end, it pulls the next item up.
     const doc = listDoc(fam, 3);
     const r = press('delete', doc, caretAt(at([1, 0, 0, 0], 3)));
     ok(`${fam.list} — 항목 끝의 Delete 를 리스트 wing 이 받는다`, r !== null);
@@ -208,7 +205,8 @@ for (const fam of FAMILIES) {
     );
   }
   {
-    // §4 (B) — 첫 항목의 탭은 **아무 일도 안 하되 삼킨다**(코어의 스페이스 넷 금지).
+    // 첫 항목의 탭은 아무 일도 안 하되 삼킨다(코어의 스페이스 넷 금지).
+    // Tab on the first item does nothing but is still swallowed (blocks the core's four-space insert).
     const r = press('tab', listDoc(fam, 2), caretAt(at([1, 0, 0, 0], 1)));
     ok(`${fam.list} — 첫 항목의 탭도 리스트가 삼킨다 (pass 가 아니다)`, r !== null);
     eq(`${fam.list} — 첫 항목의 탭은 문서를 안 바꾼다`, r ? r.doc : null, listDoc(fam, 2));
@@ -225,7 +223,8 @@ for (const fam of FAMILIES) {
 }
 
 {
-  // tab — 앞 항목 속으로 들어간다 (중첩).
+  // tab — 앞 항목 속으로 들어간다(중첩).
+  // tab — nests into the previous item.
   const doc = listDoc(FAMILIES[0] as Family, 2);
   const r = press('tab', doc, caretAt(at([1, 0, 1, 0], 0)));
   ok('tab — 리스트 wing 이 받는다', r !== null);
@@ -236,12 +235,12 @@ for (const fam of FAMILIES) {
   eq('tab — 캐럿은 옮겨간 항목 안', r ? r.selection.focus.path : null, [1, 0, 0, 1, 0, 0, 0]);
   ok('tab — 반환 자리 실재', r !== null && positionExists(cocoon(r.doc, env), r.selection.focus, env));
 
-  // §4 — 첫 항목의 탭은 pass 가 아니다. 리스트가 삼키되 아무 일도 안 한다(코어의 스페이스 넷 금지).
   const first = press('tab', doc, caretAt(at([1, 0, 0, 0], 0)));
   ok('tab — 첫 항목의 탭도 리스트가 삼킨다', first !== null);
   eq('tab — 첫 항목의 탭은 문서를 안 바꾼다', first ? first.doc : null, doc);
 
-  // shiftTab — 다시 한 겹 나온다 (들여쓰기의 역).
+  // shiftTab — 다시 한 겹 나온다(들여쓰기의 역).
+  // shiftTab — comes back out one level (the inverse of indenting).
   const back = r ? press('shiftTab', cocoon(r.doc, env), caretAt(at([1, 0, 0, 1, 0, 0, 0], 0))) : null;
   const outer = back ? ((back.doc[1] as ElementNode).ch[0] as ElementNode) : null;
   eq('shiftTab — 항목이 바깥 리스트로 돌아온다', outer ? outer.ch.length : 0, 2);
@@ -250,9 +249,8 @@ for (const fam of FAMILIES) {
 }
 
 {
-  // **여러 항목을 한 번에** — 목록에서 가장 흔한 몸짓이다. 예전에는 범위 탭이 리스트를 그냥
-  // 지나쳐 코어의 "아무도 안 가져간 탭 = 스페이스 넷" 으로 떨어졌고, 그것이 잡은 글을 스페이스로
-  // 갈아 버렸다. 갈래 셋이 같은 손을 쓴다.
+  // 여러 항목을 한 번에 — 목록에서 가장 흔한 몸짓이다. 예전에는 범위 탭이 리스트를 지나쳐 코어의 스페이스 넷으로 떨어져 잡은 글을 갈아 버렸다.
+  // Multiple items at once — the most common gesture. A range tab used to slip past the list into the core's four-space insert, wiping out the selected text.
   const depthOf = (doc: NabiDoc, list: string): number => {
     let deep = 0;
     const walk = (node: NabiNode, at: number): void => {
@@ -282,6 +280,7 @@ for (const fam of FAMILIES) {
     );
 
     // 도로 내어쓰면 처음 트리다 — 들여쓰기와 내어쓰기가 서로의 역이라는 것이 이 한 줄이다.
+    // Outdenting back returns the original tree — proof that indent and outdent are exact inverses.
     const back = inned ? press('shiftTab', cocoon(inned.doc, env), inned.selection) : null;
     eq(`${family.list} — 도로 내어쓰면 처음과 같다`, back ? back.doc : null, doc);
   }
@@ -289,12 +288,12 @@ for (const fam of FAMILIES) {
 
 {
   // shiftTab 맨 층 — 나갈 겹이 없으면 리스트 밖 문단이다(백스페이스와 같은 문).
+  // shiftTab at the top level — with no level left to exit, it becomes a paragraph outside the list (same path as backspace).
   const r = press('shiftTab', listDoc(FAMILIES[1] as Family, 2), caretAt(at([1, 0, 0, 0], 0)));
   eq('shiftTab — 맨 층에서는 항목이 문단으로 나온다', r ? (r.doc[1] as ElementNode).ch[0] : null, '항목1');
 }
 
 {
-  // 엔터 — 항목 분할.
   const r = press('enter', listDoc(FAMILIES[0] as Family, 1), caretAt(at([1, 0, 0, 0], 2)));
   const list = r ? ((r.doc[1] as ElementNode).ch[0] as ElementNode) : null;
   eq('엔터 — 항목이 둘로 갈라진다', list ? list.ch.length : 0, 2);
@@ -306,6 +305,7 @@ for (const fam of FAMILIES) {
 
 {
   // 엔터 — 빈 마지막 항목이면 리스트 밖으로 나간다(탈출).
+  // Enter — on an empty last item, it escapes out of the list.
   const doc = cocoon([p(['앞']), el('ul', [el('li', [p(['항목1'])]), el('li', [p([])])])], env);
   const r = press('enter', doc, caretAt(at([1, 0, 1, 0], 0)));
   eq('엔터 — 빈 항목은 리스트 밖 문단이 된다', r ? r.doc.length : 0, 3);
@@ -316,6 +316,7 @@ for (const fam of FAMILIES) {
 
 {
   // 체크 항목의 ck 는 항목 선언의 불리언이다 — 분할된 새 항목은 물려받지 않는다.
+  // A checklist item's ck is per-item boolean state — a new item from a split doesn't inherit it.
   const doc = cocoon([el('tl', [el('tli', [p(['한 일'])], { ck: 1 })])], env);
   const r = press('enter', doc, caretAt(at([0, 0, 0, 0], 2)));
   const list = r ? ((r.doc[0] as ElementNode).ch[0] as ElementNode) : null;
@@ -352,6 +353,7 @@ for (const fam of FAMILIES) {
 }
 {
   // 가족 갈아입기 — 항목째로 갈린다(항목 속이 한 겹 더 들어가지 않는다).
+  // Switching list family — converts item by item (no extra nesting inside the item).
   const n = make([el('ul', [el('li', [p(['하나'])])])]);
   n.select(caretAt(at([0, 0, 0, 0], 0)));
   ok('toggleOrderedList 가 돈다', n.applyCommand('toggleOrderedList'));
@@ -436,7 +438,8 @@ for (const fam of FAMILIES) {
   eq('선택 범위는 버튼 기본색으로 바뀐다', selected.getJson(), [p([el('tc', ['호박'], { c: 'green' })])]);
 }
 {
-  // 값 마크의 부른 손 (084 ⑨) — `result.arm` 을 답하는 커맨드도 문 앞에서 같은 규칙을 받는다.
+  // 값 마크의 부른 손 — result.arm 을 답하는 커맨드도 문 앞에서 같은 규칙을 받는다.
+  // The value mark's calling hand — commands that respond with result.arm face the same gate rule.
   const said: string[] = [];
   const n = createNabiWith(defaultWings, {
     doc: [p(['가나']), p([])],
@@ -444,6 +447,7 @@ for (const fam of FAMILIES) {
   }).nabi;
 
   // 포인터 · 접힘 · 마크 밖 = 예약이 설 자리 — 거절 + toast.
+  // Pointer + collapsed + outside a mark = nowhere to arm — rejected, with a toast.
   n.select(caretAt(at([0], 2)));
   ok('포인터 접힘 값 마크 — 거절', n.applyCommand('setHighlight', { c: 'yellow' }, 'pointer') === false);
   ok('포인터 접힘 값 마크 — 예약 없음', hostOf(n).armed.isEmpty());
@@ -452,13 +456,15 @@ for (const fam of FAMILIES) {
   eq('이어 친 글자는 맨몸이다', n.getJson()[0], { w: 'p', ch: ['가나X'] });
   n.undo();
 
-  // 포인터라도 **대상이 있으면** 돈다 — 접힌 캐럿의 문단 겨눔(fs)은 예약이 아니라 적용이다.
+  // 포인터라도 대상이 있으면 돈다 — 접힌 캐럿의 문단 겨눔(fs)은 예약이 아니라 적용이다.
+  // A pointer still goes through if there's a target — a collapsed caret's paragraph-level mark (fs) applies immediately instead of arming.
   n.select(caretAt(at([0], 1)));
   ok('포인터 접힘 크기 — 문단이 대상이라 돈다', n.applyCommand('setFontSize', { v: 'lg' }, 'pointer'));
   eq('문단 전체가 커졌다', n.getJson()[0], { w: 'p', ch: [{ w: 'fs', a: { v: 'lg' }, ch: ['가나'] }] });
   n.undo();
 
   // 빈 문단의 크기는 걸 글자가 없다 — 키보드는 예약, 포인터는 거절.
+  // An empty paragraph has no text to size — keyboard arms, pointer rejects.
   n.select(caretAt(at([1], 0)));
   ok('키보드 빈 문단 크기 — 예약', n.applyCommand('setFontSize', { v: 'lg' }, 'keyboard'));
   ok('예약이 섰다', hostOf(n).armed.isArmed('fs'));
@@ -469,6 +475,7 @@ for (const fam of FAMILIES) {
   eq('toast 는 두 번 — 포인터 거절만 말한다', said, ['info', 'info']);
 
   // 포인터 · 범위 = 키보드 범위와 동일 동작.
+  // Pointer + range behaves the same as keyboard + range.
   n.select(range(at([0], 0), at([0], 2)));
   ok('포인터 범위 형광펜 — 돈다', n.applyCommand('setHighlight', { c: 'yellow' }, 'pointer'));
   eq('범위가 칠해졌다', n.getJson()[0], { w: 'p', ch: [{ w: 'hl', a: { c: 'yellow' }, ch: ['가나'] }] });
@@ -477,6 +484,7 @@ for (const fam of FAMILIES) {
 
 {
   // 들여오기도 같은 목록을 지킨다 — 목록 밖 값을 단 태그는 껍데기를 벗는다.
+  // Importing enforces the same value list — a tag carrying an out-of-list value gets unwrapped.
   const n = make([]);
   n.setHtml('<p><mark data-color="teal">글</mark></p>');
   eq('목록 밖 형광펜은 들여올 때 벗겨진다', n.getJson(), [{ w: 'p', ch: ['글'] }]);
@@ -487,9 +495,8 @@ for (const fam of FAMILIES) {
 }
 
 // --- 값 마크 — 경계에서의 몸짓 (색 전이 금지) ---------------------------------------------------
-// 두 색이 이어 붙은 자리에 캐럿을 접고 색을 바꾸는 몸짓. 캐럿은 앞 조각의 것으로 읽히므로(경계
-// 정규화) 바뀌는 것은 앞 조각이고, 새 색이 뒤 조각과 같아지면 저장값에서는 하나로 붙는 것이
-// 옳다 — 다만 그 다음 몸짓이 붙은 덩어리 전체를 겨누면 사람이 바꾼 적 없는 이웃이 물든다.
+// 두 색이 이어붙은 자리에서 캐럿을 접고 색을 바꾸면 캐럿이 앞 조각으로 읽혀 앞 조각이 바뀐다 — 새 색이 뒤 조각과 같아지면 저장값에서 하나로 붙는다.
+// Changing color with a collapsed caret at a boundary changes the leading fragment (the caret reads as belonging to it) — if the new color matches the trailing fragment, they merge into one in storage.
 
 {
   const two = (): unknown[] => [p([el('tc', ['초록초록'], { c: 'green' }), el('tc', ['코랄코랄'], { c: 'coral' })])];
@@ -499,8 +506,8 @@ for (const fam of FAMILIES) {
   eq('같은 색은 저장값에서 하나로 붙는다', n.getJson(), [
     { w: 'p', ch: [{ w: 'tc', a: { c: 'coral' }, ch: ['초록초록코랄코랄'] }] },
   ]);
-  // 붙는 순간 문서에서 옛 경계가 사라지므로, 겨눴던 조각이 범위로 남는다 — 다음 몸짓의 겨눔이
-  // 덩어리 전체로 넓어지지 않는 유일한 기억이다.
+  // 붙는 순간 옛 경계가 사라지므로, 겨눴던 조각이 범위로 남는다 — 다음 몸짓이 덩어리 전체로 안 번지는 유일한 기억이다.
+  // Once merged, the old boundary is gone, so the selection remembers the fragment just changed — the only thing stopping the next gesture from spreading to the whole merged run.
   eq('붙은 뒤에는 바꾼 조각이 범위로 남는다', [n.getSelection().anchor.offset, n.getSelection().focus.offset], [0, 4]);
   ok('이어서 다른 색을 고른다', n.applyCommand('setTextColor', { c: 'blue' }, 'pointer'));
   eq('이웃은 안 물든다 — 바꾼 그 조각만 갈아입는다', n.getJson(), [
@@ -513,6 +520,7 @@ for (const fam of FAMILIES) {
     },
   ]);
   // 되돌리기 — 한 번 누른 것이 한 번에 돌아온다.
+  // Undo — each press comes back in one step.
   ok('되돌리기 한 걸음 ①', n.undo());
   eq('첫 걸음 — 붙었던 코랄로', n.getJson(), [
     { w: 'p', ch: [{ w: 'tc', a: { c: 'coral' }, ch: ['초록초록코랄코랄'] }] },
@@ -522,6 +530,7 @@ for (const fam of FAMILIES) {
 }
 {
   // 형광펜도 같은 규칙이다 — 조각 가운데 캐럿이어도 붙으면 조각의 기억이 남는다.
+  // Highlight follows the same rule — even a caret mid-fragment leaves a remembered fragment once merged.
   const n = make([p([el('hl', ['노랑노랑'], { c: 'yellow' }), el('hl', ['분홍분홍'], { c: 'pink' })])]);
   n.select(caretAt(at([0], 2)));
   ok('형광펜 — 앞 조각을 뒤 조각의 색으로', n.applyCommand('setHighlight', { c: 'pink' }, 'pointer'));
@@ -538,6 +547,7 @@ for (const fam of FAMILIES) {
 }
 {
   // 안 붙는 보통 몸짓은 캐럿 그대로다 — 한 번 바꿨다고 조각이 통째로 긁힌 것처럼 보이면 안 된다.
+  // An ordinary gesture that doesn't merge leaves the caret untouched — one change shouldn't look like the whole fragment got selected.
   const n = make([p([el('tc', ['초록초록'], { c: 'green' }), el('tc', ['코랄코랄'], { c: 'coral' })])]);
   n.select(caretAt(at([0], 2)));
   ok('가운데 캐럿 — 이웃과 다른 색으로', n.applyCommand('setTextColor', { c: 'blue' }, 'pointer'));
@@ -558,6 +568,7 @@ for (const fam of FAMILIES) {
 }
 {
   // 겨눔은 이어진 런까지다 — 같은 색이 끊겨 서 있으면 사이에 낀 남의 글은 겨눔에 안 든다.
+  // Selection extends only through a contiguous run — if the same color is interrupted, the text in between isn't included.
   const n = make([
     p([el('tc', ['초록'], { c: 'green' }), el('tc', ['코랄'], { c: 'coral' }), el('tc', ['초록'], { c: 'green' })]),
   ]);
@@ -576,11 +587,12 @@ for (const fam of FAMILIES) {
 }
 {
   // 넓히기의 본뜻은 산다 — 굵게가 중간에 낀 형광펜은 런이 셋이어도 한 몸으로 바뀐다.
+  // The intent of "extend" survives — a highlight interrupted by bold changes as one unit even though it's three runs.
   const n = make([p([el('hl', ['형', el('b', ['광']), '펜'], { c: 'yellow' })])]);
   n.select(caretAt(at([0], 2)));
   ok('굵게 낀 형광펜 — 가운데 캐럿에서 색을 바꾼다', n.applyCommand('setHighlight', { c: 'pink' }, 'pointer'));
-  // 중첩 모양은 setMark 의 마크 차례 규칙(갈아입는 마크가 뒤로 선다)의 것이다 — 여기서 못박는
-  // 것은 겨눔이다: 세 런 전부가 분홍을 입고, 마크 밖으로는 아무것도 안 샌다.
+  // 중첩 모양은 setMark 의 마크 차례 규칙(갈아입는 마크가 뒤로 선다)의 것이다 — 여기서 못박는 것은 겨눔이다: 세 런 전부가 분홍을 입는다.
+  // The nesting shape belongs to setMark's mark-ordering rule (the changed mark goes outermost) — what's pinned down here is the selection: all three runs take the new color.
   eq('마크가 덮은 글 전체가 갈아입는다', n.getJson(), [
     {
       w: 'p',
@@ -608,8 +620,8 @@ for (const fam of FAMILIES) {
   eq('링크는 Escape 로 예약의 음수 방향을 연다', linkWing.escapeKeys, ['Escape']);
 }
 
-// 표시 이름 고치기 — 상황 줄의 이름 칸이 부르는 명령. 캐럿이 안에 있을 때도, 마크 전체를 꼭
-// 맞게 덮은 범위(첨부를 클릭해 통째로 고른 겨눔이 그 모양이다)로도 이름을 바꿀 수 있어야 한다.
+// 표시 이름 고치기 — 상황 줄의 이름 칸이 부르는 명령. 캐럿이 안에 있을 때도, 마크를 꼭 맞게 덮은 범위로도 이름을 바꿀 수 있어야 한다.
+// Renaming the display text — the command the context bar's name field calls. Must work both with a caret inside and a range that exactly covers the mark.
 {
   const n = make([p([el('a', ['가나다'], { href: '/f/x.png', file: 'x.png' })])]);
   n.select(caretAt(at([0], 1)));
@@ -619,6 +631,7 @@ for (const fam of FAMILIES) {
   ]);
 
   // 마크를 꼭 맞게 덮은 범위 — attachFileLink 가 첨부를 클릭했을 때 만드는 그 겨눔([from, to)).
+  // A range that exactly covers the mark — the selection attachFileLink makes when a click selects the attachment ([from, to)).
   n.select(range(at([0], 0), at([0], 3)));
   ok(
     '범위가 마크를 꼭 맞게 덮어도(첨부를 통째로 고른 모양) 표시 이름을 바꾼다',
@@ -630,9 +643,12 @@ for (const fam of FAMILIES) {
 }
 
 // 첨부는 한 덩어리다 — 닿으면 통째로 골라지고, 붙어 있는 지우기는 먼저 겨눈다.
+// An attachment is one unit — touching it selects it whole, and an adjacent delete selects it first.
 // attach 는 DOM 을 받지만 하는 일은 트리뿐이라, 리스너만 받아 주는 껍데기 하나로 그물에 잡힌다.
+// attach takes a DOM root but only ever touches the tree, so the test net fakes it with a shell that just accepts a listener.
 {
   // 앞(1) + 첨부 "첨부파일"(4) + 뒤(1) — 첨부가 덮은 자리는 [1, 5) 다.
+  // Leading(1) + attachment "첨부파일"(4) + trailing(1) — the attachment covers [1, 5).
   const n = make([{ w: 'p', ch: ['앞', { w: 'a', a: { href: '/f/x.txt', file: 'txt' }, ch: ['첨부파일'] }, '뒤'] }]);
   let onKey: ((event: KeyboardEvent) => void) | null = null;
   const root = {
@@ -665,6 +681,7 @@ for (const fam of FAMILIES) {
   eq('스치기만 한 범위도 첨부 끝까지 넓어진다', span(), [0, 5]);
 
   // 붙어 있는 지우기 — 첫 번은 겨눈다(코어가 한 글자를 갉지 못하게 preventDefault 한다).
+  // A delete right next to it — the first press only selects (preventDefault stops the core from nibbling one character).
   let stopped = 0;
   const press = (key: string): void =>
     onKey?.({ key, preventDefault: () => (stopped += 1) } as unknown as KeyboardEvent);
@@ -678,6 +695,7 @@ for (const fam of FAMILIES) {
   eq('두 번 다 코어의 한 글자 지우기를 막았다', stopped, 2);
 
   // 겨눠진 채로 지우면 코어의 범위 삭제가 통째로 걷는다 — 반쪽 링크가 안 남는다.
+  // Deleting while already selected lets the core's range-delete take the whole thing — no half-link survives.
   press('Backspace');
   eq('이미 골라져 있으면 그 키는 코어의 것이다 (막지 않는다)', stopped, 2);
   n.applyCommand('deleteBackward');
@@ -721,7 +739,8 @@ for (const fam of FAMILIES) {
     { w: 'p', ch: [{ w: 'hr', ch: [] }] },
   ]);
 }
-// 여러 문단을 잡고 누르면 **그 전부**가 겨눔이다 — 문단 규칙 셋이 다 같은 규율을 쓴다.
+// 여러 문단을 잡고 누르면 그 전부가 겨눔이다 — 문단 규칙 셋이 다 같은 규율을 쓴다.
+// Applying with multiple paragraphs selected targets all of them — all three paragraph-level rules share this discipline.
 {
   const three = (): unknown[] => [p(['첫째']), p(['둘째']), p(['셋째'])];
   const span = { anchor: { path: [0], offset: 0 }, focus: { path: [2], offset: 2 } };
@@ -740,13 +759,14 @@ for (const fam of FAMILIES) {
       { w: 'p', a: { [key]: value }, ch: ['셋째'] },
     ]);
     // 전부 그 값이면 그때 해제다 — 한 번 더 누르면 셋이 함께 풀린다.
+    // Only when all of them already have that value does it toggle off — pressing again clears all three together.
     n.select(span);
     ok(`${name} — 전부 같은 값이면 다시 눌러 해제`, n.applyCommand(cmd, args));
     eq(`${name} — 셋이 함께 걷힌다`, n.getJson(), three());
   }
 
-  // **섞인 선택은 거는 쪽이다** — 시작 문단 하나만 보면 여기서 답이 뒤집힌다(첫 줄이 이미
-  // 그 값이라고 셋 다 풀어 버린다). 사람이 바란 것은 셋 다 걸리는 것이다.
+  // 섞인 선택은 거는 쪽이다 — 시작 문단 하나만 보면 답이 뒤집힌다(이미 그 값이라고 셋 다 풀어 버린다). 사람이 바란 것은 셋 다 거는 것이다.
+  // A mixed selection always applies, never clears — looking only at the first paragraph would flip the answer. What people want is all three set.
   const mixed = make([{ w: 'p', a: { a: 'c' }, ch: ['이미'] }, p(['맨글']), p(['맨글'])]);
   mixed.select(span);
   ok('섞인 선택 — 거는 쪽으로 답한다 (실행)', mixed.applyCommand('setAlign', { value: 'c' }));
@@ -757,6 +777,7 @@ for (const fam of FAMILIES) {
   ]);
 
   // 물건이 섞인 선택 — 정렬은 래퍼문단에도 걸리고, 제목·드롭캡은 그 자리만 건너뛴다.
+  // A selection mixed with objects — alignment applies to the wrapper paragraph too, while heading and dropcap just skip that spot.
   const withObject = (): unknown[] => [p(['글']), p([el('hr')]), p(['뒤'])];
   const overObject = { anchor: { path: [0], offset: 0 }, focus: { path: [2], offset: 1 } };
 
@@ -844,6 +865,7 @@ for (const fam of FAMILIES) {
 }
 {
   // repair — 제목이 없으면 세우고, 둘이면 뒤엣것은 문단으로 내려온다.
+  // repair — creates a title if missing; if there are two, the second demotes to a paragraph.
   const n = make([el('details', [p(['속 글'])])]);
   eq('접기 repair — 제목이 없으면 빈 제목이 선다', n.getJson(), [
     {
@@ -891,6 +913,7 @@ for (const fam of FAMILIES) {
 }
 {
   // repair — 코드 속에는 마크가 못 산다. 언어는 모양이 아니면 안 실린다.
+  // repair — marks can't survive inside code, and the language attr is dropped unless it's a valid shape.
   const n = make([el('code', [el('b', ['굵은 코드']), '와 평문'], { lang: '깨진 값' })]);
   eq('코드 repair — 마크는 벗겨지고 글자만 남는다', n.getJson(), [
     { w: 'p', ch: [{ w: 'code', ch: ['굵은 코드와 평문'] }] },
@@ -899,8 +922,8 @@ for (const fam of FAMILIES) {
 }
 
 // --- onKey — 위/아래 방향키로 그릇 밖으로 (표와 같은 자리: 래퍼문단 앞/뒤) ----------------------
-// 문서 전체가 이 그릇 하나뿐이어도 탈출 자리는 항상 실재한다(래퍼문단의 offset 0/1) —
-// 이웃 문단이 미리 있어야 하는 게 아니다.
+// 문서 전체가 이 그릇 하나뿐이어도 탈출 자리는 항상 실재한다(래퍼문단의 offset 0/1) — 이웃 문단이 미리 있어야 하는 게 아니다.
+// The escape position always exists even when the vessel is the entire document (the wrapper paragraph's offset 0/1) — it doesn't require a neighboring paragraph to already be there.
 
 {
   const n = make([el('quote', [p(['하나']), p(['둘'])])]);
@@ -934,9 +957,8 @@ for (const fam of FAMILIES) {
   eq('제목 안쪽의 ↑ 는 pass', arrow('up', caretAt(at([0, 0, 0], 1))), null);
 }
 {
-  // 코드는 문단 배열이 아니라 한 홀더 속 BR 인코딩 줄이라, 판정은 "몇 번째 자식"이 아니라
-  // "몇 번째 줄"이다 — 그래서 화면 자동 줄바꿈처럼 줄 **안** 어디에 있어도(꼭 offset 0/끝이
-  // 아니어도) 첫/마지막 줄이면 탈출한다(표가 칸 속 자동 줄바꿈을 무시하는 것과 같은 타협).
+  // 코드는 문단 배열이 아니라 한 홀더 속 BR 인코딩 줄이라, 판정은 몇 번째 자식이 아니라 몇 번째 줄이다 — 줄 안 어디에 있어도 첫/마지막 줄이면 탈출한다.
+  // Code isn't an array of paragraphs but BR-encoded lines inside one holder, so the check is by line number, not child index — being anywhere in the first/last line still escapes.
   const n = make([el('code', ['ab', el('br'), 'cd', el('br'), 'ef'], { lang: 'ts' })]);
   const doc = hostOf(n).doc();
   const arrow = (dir: 'up' | 'down', sel: Selection) => routeKey({ key: 'arrow', dir }, doc, sel, env, registry);
@@ -964,16 +986,17 @@ for (const fam of FAMILIES) {
 }
 
 // --- 코드 상자는 정렬을 안 받는다 (`Wing.noAlign` 선언) ----------------------------------------
-//
-// 다른 물건에게 정렬은 "줄의 어디에 서는가" 인데 코드 상자는 제 폭이 곧 줄의 폭이고, 정렬은
-// `text-align` 으로 나가 `pre` 가 물려받는다 — 옮기는 것이 아니라 코드 줄을 밀어 망가뜨린다.
-// 선언 하나가 세 자리에서 함께 선다: 노출(ui)· 커맨드(doc·정렬 wing)· 고치(cocoon).
+// 다른 물건에게 정렬은 줄의 어디에 서는가 인데 코드 상자는 제 폭이 곧 줄의 폭이라, 정렬이 text-align 으로 나가 pre 가 물려받으면 코드 줄이 밀려 망가진다.
+// For other objects, alignment means where it sits on the line, but a code box's width is already the line's width — alignment would leak out as text-align, which pre inherits and shoves code lines out of shape.
+// 선언 하나가 세 자리에서 함께 선다: 노출(ui)·커맨드(doc·정렬 wing)·고치(cocoon).
+// One declaration governs three places together: exposure (ui), commands (doc, align wing), and repair (cocoon).
 {
   eq('noAlign 접힘 — 코드 상자 하나', [...(env.noAlign ?? [])], ['code']);
   eq('다른 물건은 안 든다 — 표는 여전히 정렬을 받는다', env.noAlign?.has('table') ?? false, false);
 }
 {
-  // 물건이 **골라진 상태** — 래퍼문단의 0~1 범위가 곧 "이것을 골랐다" 다 (ui/picked 와 같은 잣대).
+  // 물건이 골라진 상태 — 래퍼문단의 0~1 범위가 곧 이것을 골랐다는 뜻이다(ui/picked 와 같은 잣대).
+  // An object in the "selected" state — the wrapper paragraph's 0-to-1 range is what counts as "this is selected" (the same yardstick as ui/picked).
   const n = make([p(['글']), el('code', ['const x = 1'], { lang: 'ts' })]);
   n.select(range(at([1], 0), at([1], 1)));
   ok('코드 상자를 골라도 정렬은 안 선다 (무변화 침묵)', n.applyCommand('setAlign', { value: 'c' }) === false);
@@ -982,17 +1005,20 @@ for (const fam of FAMILIES) {
     { w: 'p', ch: [{ w: 'code', a: { lang: 'ts' }, ch: ['const x = 1'] }] },
   ]);
 
-  // 상자 **속**의 캐럿도 같은 답이다 — 겨눔은 어차피 같은 래퍼문단이라 두 자리가 함께 닫힌다.
+  // 상자 속의 캐럿도 같은 답이다 — 겨눔은 어차피 같은 래퍼문단이라 두 자리가 함께 닫힌다.
+  // A caret inside the box gets the same answer — the selection resolves to the same wrapper paragraph, so both spots are closed together.
   n.select(caretAt(at([1, 0], 3)));
   ok('코드 속 캐럿에서도 정렬이 안 선다', n.applyCommand('setAlign', { value: 'r' }) === false);
 
   // 다른 물건은 그대로다 — 막은 것은 마다한 물건 하나뿐이다.
+  // Other objects are unaffected — only the one object that opted out is blocked.
   const d = make([el('hr')]);
   d.select(range(at([0], 0), at([0], 1)));
   ok('구분선 래퍼는 여전히 정렬을 받는다', d.applyCommand('setAlign', { value: 'c' }));
 }
 {
   // 여러 문단을 잡으면 코드 래퍼만 건너뛴다 — 옆 문단의 정렬은 그대로 걸린다.
+  // Selecting multiple paragraphs skips only the code wrapper — the neighboring paragraphs still get aligned.
   const mixed = make([p(['앞']), el('code', ['x'], { lang: 'ts' }), p(['뒤'])]);
   mixed.select(range(at([0], 0), at([2], 1)));
   ok('코드가 섞인 선택 — 정렬은 그대로 돈다', mixed.applyCommand('setAlign', { value: 'c' }));
@@ -1003,13 +1029,14 @@ for (const fam of FAMILIES) {
   ]);
 }
 {
-  // 이미 정렬이 박힌 옛 저장본 — 고치를 지나며 걷힌다. 막기만 하고 남겨 두면 사람은 그 정렬을
-  // 벗길 단추가 없는 문서를 만난다(단추가 숨었으니).
+  // 이미 정렬이 박힌 옛 저장본은 고치를 지나며 걷힌다 — 막기만 하고 남겨 두면 정렬을 벗길 단추가 숨어 사라진 문서를 만난다.
+  // A legacy saved doc with alignment already baked in gets stripped by repair — just blocking new writes would leave people stuck with alignment they have no button to remove.
   const old = make([{ w: 'p', a: { a: 'c' }, ch: [el('code', ['x'])] }]);
   eq('옛 저장본의 코드 정렬은 고치가 걷는다', old.getJson(), [{ w: 'p', ch: [{ w: 'code', ch: ['x'] }] }]);
   const kept = make([{ w: 'p', a: { a: 'c' }, ch: [el('hr')] }]);
   eq('구분선 래퍼의 정렬은 그대로 남는다', kept.getJson(), [{ w: 'p', a: { a: 'c' }, ch: [{ w: 'hr', ch: [] }] }]);
   // 글과 코드가 섞인 문단이 쪼개질 때도 같다 — 글 조각은 정렬을 물려받고 코드 래퍼는 안 받는다.
+  // Same when a paragraph mixing text and code splits — the text fragment inherits alignment, the code wrapper doesn't.
   const split = make([{ w: 'p', a: { a: 'c' }, ch: ['앞', el('code', ['x']), '뒤'] }]);
   eq('쪼개진 자리에서도 코드 래퍼만 정렬을 안 받는다', split.getJson(), [
     { w: 'p', a: { a: 'c' }, ch: ['앞'] },
@@ -1019,6 +1046,7 @@ for (const fam of FAMILIES) {
 }
 {
   // 노출 — 눌러도 안 되는 단추를 보여 주지 않는다. 커맨드와 노출이 같은 문(`takesAlign`)을 쓴다.
+  // Exposure — don't show a button that wouldn't do anything. Commands and exposure share the same gate (takesAlign).
   const doc = cocoon([p(['글']), el('code', ['x']), p([el('hr')])], env);
   const reach = (path: readonly number[], offset: number) => reachAt(doc, { path, offset }, registry, env);
   ok('노출: 코드 상자를 고른 자리에서 정렬이 숨는다', !visibleAt(reach([1], 1), alignWing));
@@ -1044,6 +1072,7 @@ throws(
 
 {
   // 인라인 홀더 선언(holds: 'inline')의 결과 — 코드와 접기 제목 속의 엔터는 분할이 아니라 라인이다.
+  // A consequence of the inline-holder declaration (holds: 'inline') — Enter inside code or a details title inserts a line, not a split.
   const n = make([el('code', ['ab'], { lang: 'ts' })]);
   n.select(caretAt(at([0, 0], 1)));
   ok('코드 속 엔터가 돈다', n.applyCommand('splitParagraph'));
@@ -1071,7 +1100,8 @@ throws(
 }
 
 {
-  // repair 는 고칠 것이 없으면 원래 참조를 돌려줘야 한다 — 아니면 매 커맨드가 "바뀌었다"고 말한다.
+  // repair 는 고칠 것이 없으면 원래 참조를 돌려줘야 한다 — 아니면 매 커맨드가 바뀌었다고 말한다.
+  // repair must return the original reference when there's nothing to fix — otherwise every command would report a change.
   const settled = cocoon(
     [
       el('details', [el('summary', ['제목']), p(['속 글'])], { o: 1 }),
@@ -1087,7 +1117,7 @@ throws(
   ok('무변화 커맨드는 침묵한다 (무변화면 침묵)', n.applyCommand('setHeading', { value: 2 }) === false);
 }
 
-// --- 오토포맷 규칙 매칭 표 (패턴만 — 디스패처는 09) --------------------------------------------
+// --- 오토포맷 규칙 매칭 표 (패턴만) -------------------------------------------------------------
 
 function hits(text: string, trigger: 'space' | 'enter'): string[] {
   return registry.inputRules

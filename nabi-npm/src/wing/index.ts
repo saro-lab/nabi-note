@@ -1,4 +1,5 @@
 // wing 층의 문 — 계약·registry·팩토리·키 소유 판정·공용 부품이 여기서 나간다.
+// The wing layer's door — contract, registry, factories, key-ownership resolution, and shared ops all export from here.
 export { erectsNode } from './contract.js';
 export type { Attach, AttachHost } from './contract.js';
 export type {

@@ -9,8 +9,8 @@ import { computed } from 'vue'
 
 declare module 'vue' {
   interface ComponentCustomProperties {
-    // Global so templates can call it without importing anything
-    // 템플릿에서 바로 쓰는 번역 함수
+    // 전역에 달아 둬서 템플릿에서 따로 들여오지 않고 바로 부를 수 있다.
+    // Global, so templates can call it without importing anything.
     $t: (key: string) => string
   }
 }

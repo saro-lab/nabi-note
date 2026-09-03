@@ -454,8 +454,8 @@ const clampDim = (raw: unknown, fallback: number): number => {
 };
 
 const commands: Readonly<Record<string, Command>> = {
-  // 표 하나를 캐럿 자리에 세운다(빈 문단이면 교체) — 새 표의 첫 행은 예외 없이 제목 행이다(084 ③, 생성 길에만 선다).
-  // Stands up a table at the caret (replacing an empty paragraph) — the first row is always a header row (084 ③), and only on creation, never on import.
+  // 표 하나를 캐럿 자리에 세운다(빈 문단이면 교체) — 새 표의 첫 행은 예외 없이 제목 행이다(생성 길에만 선다, 들여오기는 아니다).
+  // Stands up a table at the caret (replacing an empty paragraph) — the first row is always a header row, but only on creation, never on import.
   insertTable(doc, sel, args, env) {
     const rows = clampDim(args['rows'], 3);
     const cols = clampDim(args['cols'], 3);
@@ -982,8 +982,8 @@ const TABLE_CSS = `
 /* 정렬된 열만 강조색이다 — 농도는 아이콘이 말하고 색은 "이 열" 을 말한다. */
 .nabi-content table .nabi-sort[data-nabi-sort-active] { color: var(--nabi-accent); }
 
-/* 편집 화면의 정렬 표식(084 ⑦) — 정렬 동작 자체는 보는 쪽 런타임의 것이라 편집기에는 표식만 선다(행이 저 혼자 움직이면 캐럿을 잃는다). */
-/* The editor shows only a sort indicator (084 ⑦), never actual sorting — real sorting belongs to the viewer runtime, since a row moving on its own would lose the caret. */
+/* 편집 화면의 정렬 표식 — 정렬 동작 자체는 보는 쪽 런타임의 것이라 편집기에는 표식만 선다(행이 저 혼자 움직이면 캐럿을 잃는다). */
+/* The editor shows only a sort indicator, never actual sorting — real sorting belongs to the viewer runtime, since a row moving on its own would lose the caret. */
 /* 첫 행에만, 병합 없는 표에만 선다 — attachTableSort가 붙는 자리와 정확히 같아야 화면이 거짓말을 안 한다. */
 /* Shown only on the first row of a merge-free table — must match exactly where attachTableSort attaches, or the screen would lie. */
 .nabi-content.nabi-editing table[data-nabi-sortable]:not(:has([colspan], [rowspan])) tr:first-child > :is(th, td) {
@@ -1001,8 +1001,8 @@ const TABLE_CSS = `
   mask: var(--nabi-sort-mark) center / contain no-repeat;
 }
 
-/* 표 만들기 격자는 작은 화면에서 5×5로 줄고 칸은 손가락 크기로 커진다(084 ②) — 몇 칸이 서는지는 button.action의 max가 정한다. */
-/* The table-creation grid shrinks to 5x5 on small screens with finger-sized cells (084 ②) — the cell count comes from button.action's max. */
+/* 표 만들기 격자는 작은 화면에서 5×5로 줄고 칸은 손가락 크기로 커진다 — 몇 칸이 서는지는 button.action의 max가 정한다. */
+/* The table-creation grid shrinks to 5x5 on small screens with finger-sized cells — the cell count comes from button.action's max. */
 /* 40rem 기준은 코어 시트(ui/css.ts)의 판 규칙과 같은 값이어야 한다 — 어긋나면 격자와 판이 서로 다른 화면 폭에서 바뀐다. */
 /* The 40rem breakpoint must match the core sheet's (ui/css.ts) panel rule exactly, or the grid and panel would flip at different widths. */
 @media (max-width: ${NARROW_REM}rem) {
@@ -1043,10 +1043,8 @@ export const tableWing: Wing = {
   partRepair: { td: repairCell },
   onKey,
   commands,
-  // 이 wing은 여러 급(표·행·칸)을 소유하고 상태도 급마다 나뉜다 — 칸은 merged/th, 표는 sort.
-  // 상황 줄은 조상 줄기 전부의 토큰을 합쳐 읽으므로(ui/press의 stackValue), 칸 안 단추가 표의 상태(sort)를 그대로 보여줄 수 있다.
-  // This wing owns several levels (table/row/cell), each with its own state — cell: merged/th, table: sort.
-  // The context toolbar reads tokens up the whole ancestor chain (ui/press's stackValue), so a button inside a cell can still reflect the table's own state.
+  // 이 wing은 여러 급(표·행·칸)을 소유하고 상태도 급마다 나뉜다(칸: merged/th, 표: sort) — 상황 줄이 조상 줄기 전부의 토큰을 합쳐 읽어 칸 안 단추가 표의 상태를 보여줄 수 있다.
+  // This wing owns several levels (table/row/cell), each with its own state (cell: merged/th, table: sort) — the context bar reads tokens up the whole ancestor chain, so a button inside a cell can still reflect the table's own state.
   currentValue: (node) => {
     if (node.w === 'table') return node.a?.[SORTABLE] === 1 ? SORTABLE : undefined;
     if (node.w !== 'td') return undefined;
@@ -1060,12 +1058,12 @@ export const tableWing: Wing = {
     shortcut: 'T',
     svg: TABLE_ICONS.grid,
     label: TABLE_NAME,
-    // 격자 하나로 행·열을 함께 고른다 — 두 번 묻지 않는다.
-    // 8 은 데스크톱의 수다. 작은 화면에서는 시트가 앞 5×5 만 남기고 칸을 키운다 — 이 수를
-    // 고치면 시트의 nth-child(8n + …) 도 같이 고쳐야 한다 (둘이 한 몸이다).
+    // 격자 하나로 행·열을 함께 고른다 — 8은 데스크톱 수, 시트의 nth-child(8n+…)와 한 몸이라 같이 고쳐야 한다.
+    // One grid picks rows and columns together; 8 is the desktop count, tied to the stylesheet's nth-child(8n+...) rule — change one, change both.
     action: { kind: 'grid', command: 'insertTable', rowsKey: 'rows', colsKey: 'cols', max: 8 },
   },
-  // 상황 줄 — 칸 하나에 걸린 손잡이 전부. 병합·제목은 **상태 토큰**으로 눌림을 읽는다 (10 판단).
+  // 상황 줄 — 칸 하나에 걸린 손잡이 전부. 병합·제목은 상태 토큰으로 눌림을 읽는다.
+  // Context bar — every handle attached to one cell; merge/header read their pressed state from a state token.
   context: {
     title: TABLE_NAME,
     controls: [
@@ -1135,9 +1133,8 @@ export const tableWing: Wing = {
         svg: TABLE_ICONS.headerColumn,
         label: TABLE_TEXT.headerColumn,
       },
-      // 정렬도 **토글**이다 — 표에 상태가 둘(켜짐·꺼짐)뿐이라 켜 놓은 것이 화면에 보여야 한다.
-      // 이 토큰('sort')은 칸이 아니라 **표**가 답한다. 상황 줄이 조상 줄기의 토큰을 합쳐 읽으므로
-      // (ui/press 의 `stackValue`) 칸 안에 선 단추가 표의 상태로 눌린다.
+      // 정렬도 토글이다 — 이 토큰('sort')은 칸이 아니라 표가 답하고, 상황 줄이 조상 줄기의 토큰을 합쳐 읽으므로 칸 안 단추가 표의 상태로 눌린다.
+      // Sorting is a toggle too — the 'sort' token comes from the table, not the cell, and since the context bar reads tokens up the ancestor chain, a button inside a cell can still show the table's own pressed state.
       {
         kind: 'toggle',
         name: 'sortable',
@@ -1146,9 +1143,10 @@ export const tableWing: Wing = {
         svg: TABLE_ICONS.sortable,
         label: TABLE_TEXT.sortable,
       },
-      // **표 삭제 단추는 여기 없다** (084 ④). 줄 맨 끝에 두어도 손이 미끄러져 닿는 자리였고,
-      // 표를 통째로 지우는 길은 이미 블록 선택 + 삭제로 나 있다 — 같은 일을 하는 문이 둘일
-      // 필요가 없다. 커맨드(`deleteTable`) 는 남는다: 호스트가 제 화면에서 부를 길이다.
+      // 표 삭제 단추는 여기 없다 — 표를 통째로 지우는 길은 이미 블록 선택 + 삭제로 나 있어 같은 일을 하는 문이 둘일 필요가 없다.
+      // No delete-table button here — whole-table deletion already works via block-select + delete, so a second door for the same job is unnecessary.
+      // 커맨드(`deleteTable`)는 남는다 — 호스트가 제 화면에서 부를 길이다.
+      // The `deleteTable` command still exists, for hosts to call from their own UI.
     ],
   },
   styles: TABLE_CSS,

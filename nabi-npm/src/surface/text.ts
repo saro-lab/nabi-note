@@ -1,5 +1,5 @@
-// 문단 글의 평문 뷰 — 되맞추기(diff)·오토포맷이 같은 자로 잰다. 단말(라인·물건)은 '\n' 한 칸이다.
-// '\n' 은 글자로 못 들어오는 값이라(브라우저 텍스트 노드의 개행은 되맞추기 전에 정리된다) 충돌이 없다.
+// 문단 글의 평문 뷰 — reconcile(diff)·오토포맷이 같은 자로 잰다. 단말(라인·물건)은 '\n' 한 칸이며, 브라우저 텍스트 노드의 개행은 reconcile 전에 정리되므로 실제 글자와 안 겹친다
+// A plain-text view of a paragraph, used as the common ruler by reconcile (diff) and autoformat; each terminal (line/object) counts as one '\n', which never collides with real text since browser text-node newlines are normalized before reconcile
 import { runsOf, type ElementNode, type Terminal } from '../schema/index.js';
 
 export function holderTextOf(holder: ElementNode, terminal: Terminal): string {
@@ -8,14 +8,16 @@ export function holderTextOf(holder: ElementNode, terminal: Terminal): string {
   return out;
 }
 
-// 브라우저가 고친 글과 트리 글의 차이 한 구간 — 같으면 null.
+// 브라우저가 고친 글과 트리 글의 차이 한 구간 — 같으면 null
+// The single differing span between browser-edited text and tree text; null if they're equal
 export interface TextChange {
   readonly start: number;
   readonly removedEnd: number;
   readonly inserted: string;
 }
 
-// 앞뒤 공통을 걷어낸 나머지가 곧 편집이다 — 타이핑·IME 확정은 언제나 이 모양(한 구간)이다.
+// 앞뒤 공통 부분을 걷어낸 나머지가 곧 편집이다 — 타이핑·IME 확정은 언제나 이 모양(한 구간)이다
+// What remains after stripping the common prefix/suffix is the edit itself; typing and IME commits always take this shape (a single span)
 export function diffPlain(before: string, after: string): TextChange | null {
   if (before === after) return null;
   const max = Math.min(before.length, after.length);

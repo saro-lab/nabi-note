@@ -1,6 +1,6 @@
 # Built-in wings
 
-The official catalog has 30 wings in a stable order. `defaultWings` and `wings().all()` contain all of them.
+The official catalog lists wings in a stable order. `defaultWings` and `wings().all()` contain all of them.
 
 ## Marks
 

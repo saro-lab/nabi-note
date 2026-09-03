@@ -1,9 +1,5 @@
-// ui 층의 문 — 화면 도구가 여기서 나간다. 아래층(surface·wing·editor)은 이 층을 모른다.
-//
-// 나가는 것 셋으로 갈린다:
-//   1. 순수 판정 — 눌림·노출·상황 줄 그룹·띠 산수·시트 접기. DOM 이 없어 그물에 그대로 잡힌다
-//   2. 공통 부품 — 아이콘 버튼·settle·판·물어보기·덮개·바깥클릭. **각각 한 벌뿐이다**
-//   3. mount 문 — 툴바·상황 줄·힌트·미리보기·스티키
+// 이 파일의 export는 순수 판정 / 공통 부품 / mount 문, 세 갈래로 묶여 있다 — 아래층(surface·wing·editor)은 이 파일을 모른다.
+// Exports here are grouped in three bands — pure logic, shared parts, mount functions; lower layers (surface, wing, editor) never import this file.
 export {
   aimNode,
   controlValueOf,

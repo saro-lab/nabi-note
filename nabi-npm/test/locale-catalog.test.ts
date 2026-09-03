@@ -156,6 +156,7 @@ for (const [path, text] of found) {
   }
 }
 
+// 팩토리는 선택지를 지연 생성할 수 있다 — 이 자리는 그 타입 선언을 스코프 안에 붙잡아 둔다.
 // Factories can create choices lazily; this guard keeps their typed declarations in scope.
 const wingSource = readdirSync(join(process.cwd(), 'src/wings'), { recursive: true, encoding: 'utf8' }).filter((name) =>
   name.endsWith('.ts'),

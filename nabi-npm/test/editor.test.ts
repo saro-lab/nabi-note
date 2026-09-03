@@ -1,5 +1,5 @@
-// editor 그물 — 커맨드의 유일한 문(매 커맨드 cocoon)·undo 표(뭉침·group·redo)· 침묵
-// 단일 신호(바뀐 문단 목록)·$ 와 사용자 API 의 `_` 벗김 차이·예약 상태 배선·isChanged.
+// editor 그물 — 커맨드 문(매 커맨드 cocoon)·undo 표·변경 신호·예약 상태 배선·isChanged를 검사한다.
+// Editor test net covering the per-command cocoon gate, the undo table, change signals, armed-mark wiring, and isChanged.
 import { makeEnv, runsOf, type ElementNode, type NabiDoc, type NabiNode } from '../src/schema/index.js';
 import { insertText as docInsertText, type EditEnv, type Position } from '../src/doc/index.js';
 import { caretAt, type Selection } from '../src/caret/index.js';
@@ -144,6 +144,7 @@ function watch(nabi: Nabi): NabiChange[] {
 }
 {
   // 음수 예약(escape) — 마크 끝에서 다음 글자가 마크 밖에 선다.
+  // A negative reservation (escape) — at a mark's end, the next typed character lands outside the mark.
   const nabi = createNabi({ env: ENV, doc: [p([b(['ab'])])] });
   nabi.select(caretAt(at([0], 2)));
   nabi.applyCommand('setMark', { w: 'b', a: null });
@@ -151,7 +152,8 @@ function watch(nabi: Nabi): NabiChange[] {
   eq('escape — 마크 밖', nabi.getJson(), [{ w: 'p', ch: [{ w: 'b', ch: ['ab'] }, 'X'] }]);
 }
 {
-  // 부른 손 (084 ⑨) — 예약은 키보드의 것이다. 세 몸짓을 문 앞에서 못박는다.
+  // 예약은 키보드의 것이다 — 어느 손(by)이 불렀는지 세 갈래를 여기서 못박는다.
+  // Reservation belongs to the keyboard — this pins down the three calling-hand (by) cases at the gate.
   const said: string[] = [];
   const nabi = createNabi({
     env: ENV,
@@ -163,11 +165,13 @@ function watch(nabi: Nabi): NabiChange[] {
   const seen = watch(nabi);
 
   // ① 키보드 · 접힘 = 지금 그대로 예약이다 (`by` 를 안 밝히면 키보드다 — 위 그물들이 그 증거다).
+  // 1. Keyboard + collapsed = reserved as before (omitting `by` defaults to keyboard, per the tests above).
   ok('키보드 접힘 toggleMark — 예약', nabi.applyCommand('toggleMark', { mark: { w: 'b', ch: [] } }, 'keyboard'));
   ok('키보드 접힘 — 예약이 섰다', hostOf(nabi).armed.isArmed('b'));
   nabi.applyCommand('toggleMark', { mark: { w: 'b', ch: [] } }); // 재예약 토글로 걷는다
 
   // ② 포인터 · 접힘 = 예약 없음 · 아무 효과 없음 · toast 로 "적용할 대상이 없다".
+  // 2. Pointer + collapsed = no reservation, no effect, toast says "nothing to apply to".
   const before = seen.length;
   ok(
     '포인터 접힘 toggleMark — 거절',
@@ -177,9 +181,8 @@ function watch(nabi: Nabi): NabiChange[] {
   eq('포인터 접힘 — 신호도 없다', seen.length, before);
   eq('포인터 접힘 — toast 가 로케일로 말한다', said, [`info:${translate('noTarget', 'ko')}`]);
 
-  // 로케일을 **화면이 건다** — 옵션에 안 적어도 ui 가 제 값을 걸면 코어가 그 말로 말한다.
-  // 이 자리가 어긋났던 적이 있다: 호스트가 mount 에만 로케일을 주고 코어에는 안 줘서, 화면은
-  // 한국어인데 문만 영어로 말했다(주인 신고). 건 값이 옵션을 이기고, 떼면 옵션으로 돌아온다.
+  // 화면이 로케일을 걸면 코어가 그 말로 말한다 — 건 값이 옵션을 이기고, 떼면 옵션으로 돌아온다.
+  // The UI can bind a locale onto the core, which then speaks in it — a bound value overrides the option and reverts when unbound. (Once broke: mount got a locale but the core didn't, so the UI showed Korean while toasts stayed English.)
   {
     const plain = createNabi({ env: ENV, doc: [p(['글'])] });
     eq('로케일: 아무도 안 걸면 en', hostOf(plain).locale(), 'en');
@@ -199,6 +202,7 @@ function watch(nabi: Nabi): NabiChange[] {
   eq('포인터 접힘 setMark — toast 한 번 더', said.length, 2);
 
   // ③ 포인터 · 범위 = 키보드 범위와 동일 동작 — 손은 예약 갈래에서만 갈린다.
+  // 3. Pointer + range = same behavior as keyboard range — the calling hand only matters for the reservation branch.
   nabi.select(sel(at([0], 0), at([0], 2)));
   ok(
     '포인터 범위 toggleMark — 문서에 닿는다',
@@ -257,6 +261,7 @@ function watch(nabi: Nabi): NabiChange[] {
 }
 {
   // group — 여러 커맨드가 undo 한 걸음, 캐럿은 묶음 시작 자리.
+  // group — several commands collapse into one undo step, with the caret restored to where the group started.
   const nabi = createNabi({ env: ENV, doc: [p(['ab'])] });
   const start = caretAt(at([0], 2));
   nabi.select(start);
@@ -307,6 +312,7 @@ function watch(nabi: Nabi): NabiChange[] {
 // --- 매 커맨드 cocoon ----------------------------------------------------------------
 {
   // 맨몸 물건을 남긴 커맨드 — 문이 cocoon 으로 래퍼문단을 입힌다.
+  // A command that leaves a bare object — the gate wraps it in a paragraph via cocoon.
   const nabi = createNabi({ env: ENV, doc: [p(['ab'])] });
   ok(
     '$applyRaw — true',
@@ -322,6 +328,7 @@ function watch(nabi: Nabi): NabiChange[] {
 }
 {
   // 결과 문서에 안 서는 캐럿은 결과 전체를 거절한다.
+  // A resulting caret that doesn't exist in the resulting document rejects the whole result.
   const errors: unknown[] = [];
   const nabi = createNabi({ env: ENV, doc: [p(['ab'])], onError: (error) => errors.push(error) });
   ok(
@@ -336,7 +343,6 @@ function watch(nabi: Nabi): NabiChange[] {
   ok('cocoon 문 - 잘못된 결과를 onError로 보고', errors.length === 1);
 }
 {
-  // $applyRaw 무변화 =.
   const nabi = createNabi({ env: ENV });
   const seen = watch(nabi);
   ok('$applyRaw 무변화 — false', !hostOf(nabi).applyRaw((doc, s) => ({ doc, selection: s })));
@@ -344,6 +350,7 @@ function watch(nabi: Nabi): NabiChange[] {
 }
 {
   // $registerCommand — 등록한 커맨드가 같은 문을 탄다.
+  // $registerCommand — a registered command goes through the same gate as built-ins.
   const nabi = createNabi({ env: ENV });
   hostOf(nabi).registerCommand('shout', (doc, s, _args, env) => {
     const r = docInsertText(doc, s.focus, '!', env);
@@ -369,6 +376,7 @@ function watch(nabi: Nabi): NabiChange[] {
 }
 {
   // 빈 값은 형식 오류가 아니라 빈 문서다 — 비우려는 손은 늘 성공한다.
+  // An empty value isn't a format error, it's an empty document — an intentional clear always succeeds.
   const empty = [{ w: 'p', ch: [] }];
   for (const value of [null, undefined, '', '   ', []]) {
     const nabi = createNabi({ env: ENV, doc: [p(['ab'])] });
@@ -380,6 +388,7 @@ function watch(nabi: Nabi): NabiChange[] {
     eq('undo — 쓰던 글', nabi.getJson(), [{ w: 'p', ch: ['ab'] }]);
   }
   // 빈 것과 틀린 것은 다르다 — 모양이 틀린 값은 여전히 거절이다.
+  // Empty and malformed are different — a wrong-shaped value is still rejected.
   const strict = createNabi({ env: ENV, doc: [p(['ab'])] });
   ok('setJson {} — 여전히 false', !strict.setJson({}));
   ok('setJson 0 — 여전히 false', !strict.setJson(0));
@@ -387,6 +396,7 @@ function watch(nabi: Nabi): NabiChange[] {
 }
 {
   // raw tree accessor는 읽지 않고 거절한다. host parser가 던진 예외만 guard가 보고한다.
+  // A throwing raw-tree accessor is rejected without being read; only an exception thrown by the host parser gets reported by the guard.
   const caught: unknown[] = [];
   let getterCalls = 0;
   const real = console.error;
@@ -417,6 +427,7 @@ function watch(nabi: Nabi): NabiChange[] {
     ok('그 에디터도 계속 산다', thrower.setJson([p(['살았다'])]));
 
     // doc 옵션이 던지면 인스턴스가 못 서는 것이 최악이다 — 빈 문서로 선다.
+    // The worst outcome for a throwing doc option is an instance that fails to start — it starts empty instead.
     const seeded = createNabi({ env: ENV, doc: poison });
     eq('doc 옵션 accessor도 거절해 빈 문서로 선다', seeded.getJson(), [{ w: 'p', ch: [] }]);
 
@@ -451,6 +462,7 @@ function watch(nabi: Nabi): NabiChange[] {
   const bare = createNabi({ env: ENV });
   ok('setHtml — 파서 없으면 false', !bare.setHtml('<p>hi</p>'));
   // 빈 값에는 읽을 것이 없다 — 파서를 안 꽂은 호스트도 비우기는 된다.
+  // An empty value has nothing to parse — even a host with no parser wired up can still clear the document.
   ok('setHtml 빈 값 — 파서 없이도 true', bare.setHtml(''));
   eq('setHtml 빈 값 — 빈 문서', bare.getJson(), [{ w: 'p', ch: [] }]);
 }
@@ -544,7 +556,8 @@ function watch(nabi: Nabi): NabiChange[] {
   ok('getHtml — data-key 없음', !nabi.getHtml().includes('data-key'));
 }
 
-// --- loaded 깃발 — 문서 교체(setJson·setHtml)의 신호에만 실린다 (260825_005, diff 스냅샷) ------
+// --- loaded 깃발 — 문서 교체(setJson·setHtml)의 신호에만 실린다 ------
+// The loaded flag rides only on document-replacement signals (setJson/setHtml), never on typing or undo.
 {
   const nabi = createNabi({ env: ENV, parseHtml: tinyHtml, doc: [p(['처음'])] });
   const seen = watch(nabi);

@@ -1,4 +1,5 @@
 // IME 조합 시작의 실제 DOM 선택과 트리 선택이 어긋나는 모바일 타이밍을 jsdom으로 고정한다.
+// Pins down, via jsdom, the mobile timing where the real DOM selection and the tree selection diverge at IME composition start.
 import { JSDOM } from 'jsdom';
 import { createNabiWith, type Wing } from '../src/wing/index.js';
 import { defaultWings } from '../src/wings/index.js';
@@ -285,6 +286,7 @@ function close(stood: Stood): void {
     startedChanges += 1;
   });
   // selectionchange가 늦어 트리에는 옛 범위가 남았지만, IME는 실제 끝 캐럿에서 다음 조합을 연다.
+  // selectionchange lags, so the tree still holds the old range, but the IME opens the next composition at the real, current caret.
   selectDom(stood.dom.window.document, stood.text, 3);
   start(stood);
   start(stood);
@@ -317,6 +319,7 @@ function close(stood: Stood): void {
 {
   const stood = stand('가나다');
   // 반대 어긋남: 트리는 접힌 캐럿이지만 실제 DOM은 첫 글자를 고른 채 교체 조합을 시작한다.
+  // The opposite mismatch: the tree has a collapsed caret, but the real DOM starts a replacement composition with the first character selected.
   selectDom(stood.dom.window.document, stood.text, 0, 1);
   start(stood);
 
@@ -638,6 +641,7 @@ function close(stood: Stood): void {
     focus: { path: [0], offset: 5 },
   });
   // iOS의 늦은 selectionchange와 같은 상태: 트리는 마침표 뒤, 화면은 공백 뒤에 서 있다.
+  // Mirrors iOS's delayed selectionchange — the tree sits after the period, the screen after the following space.
   selectAt(stood, 6);
   stood.root.dispatchEvent(
     new stood.dom.window.KeyboardEvent('keydown', {

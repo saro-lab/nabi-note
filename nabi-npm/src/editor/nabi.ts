@@ -1,5 +1,7 @@
 // 상태 엔진 — 문서 + 캐럿 + undo 를 드는 인스턴스. 커맨드의 유일한 문 하나, 신호 하나.
+// The state engine: an instance holding doc + caret + undo, with one door for commands and one signal.
 // 모듈 전역 가변 상태 없음 — 전부 이 팩토리의 클로저 안에 산다.
+// No module-level mutable state; everything lives inside this factory's closure.
 import { $fromJson, $guarded, $toJson, cocoon, type ElementNode, type NabiDoc } from '../schema/index.js';
 import { $callbackTree } from '../schema/json.js';
 import type { EditEnv } from '../doc/index.js';
@@ -41,35 +43,36 @@ import {
   type CommandResultSnapshot,
 } from './nabi-internals.js';
 
-// 부른 손 — 이 커맨드를 누가 눌렀는가 (084 ⑨). 문(door)은 이것으로 접힌 캐럿의 마크 몸짓을
-// 가른다: 'keyboard' 는 예약을 만들고(Shift 연타 힌트·가속키·호스트의 프로그램 호출이 다
-// 이쪽이다 — 안 밝힌 손은 키보드로 친다), 'pointer'(직접 클릭·탭)는 예약을 안 만든다 —
-// 걸 글자가 없으면 아무 일도 않고 toast 로 "적용할 대상이 없다"고 말한다.
-// 터치 사용자가 예약을 잃는 것은 주인이 감수한 값이다(084 ask ⑦ — "그러려면 선택을 해야 한다").
+// 부른 손 — 이 커맨드를 누가 눌렀는가. 문(door)은 이것으로 접힌 캐럿의 마크 몸짓을 가른다: 'keyboard'는 예약을 만들고, 'pointer'(직접 클릭·탭)는 예약 대신 거절+toast다.
+// Which hand invoked this command; the door uses it to branch a collapsed caret's mark gesture: 'keyboard' arms a reservation, 'pointer' (a direct click/tap) gets a rejection + toast instead.
 export type CommandHand = 'keyboard' | 'pointer';
 
 export interface NabiOptions {
   // 시작 문서 — 사용자 JSON. 안 주면 빈 문서(빈 문단 하나)다.
+  // The starting document as user JSON; an empty doc (one blank paragraph) if omitted.
   readonly doc?: unknown;
   readonly allowLocalUrls?: boolean;
-  // 묻는 길 — 끼운 칸만 이긴다(부분이라 그렇다). 안 끼운 `message` 는 core toast(info) 로
-  // 흐르고, 안 끼운 `confirm` 은 "아니오" 다 — 브라우저 confirm 만 끼우고 말은 toast 에
-  // 맡기는 호스트가 있어서 통짜가 아니라 부분이다.
+  // 묻는 길 — 끼운 칸만 이긴다(부분이라 그렇다). 안 끼운 message는 core toast(info)로 흐르고, 안 끼운 confirm은 "아니오"다.
+  // A way to ask the person; only the fields supplied take effect (it's partial) — an unset message falls through to core's toast(info), and an unset confirm answers "no".
   readonly ask?: Partial<Ask>;
-  // 알리는 길 — 끼우면 표시가 통째로 그쪽으로 간다(core 기본 toast 는 한 번도 안 불린다).
+  // 알리는 길 — 끼우면 표시가 통째로 그쪽으로 간다(core 기본 toast는 한 번도 안 불린다).
+  // A way to surface notifications; supplying it takes over display entirely, so core's default toast is never invoked.
   readonly toast?: Toast;
-  // 기본 toast 의 결 둘 — 살아 있는 시간(ms)과 동시에 서는 상한. **기본 그릇의 것**이다:
-  // 콜백을 끼운 호스트는 제 그릇의 결을 제가 정하므로 이 둘이 안 걸린다.
+  // 기본 toast의 결 둘 — 살아 있는 시간(ms)과 동시에 서는 상한. 콜백을 끼운 호스트는 제 그릇의 결을 제가 정하므로 이 둘이 안 걸린다.
+  // Two knobs for the default toast: its lifetime (ms) and how many can stack; a host supplying its own toast callback sets its own timing instead, so these have no effect there.
   readonly toastMs?: number;
   readonly toastMax?: number;
   // Command/repair/cocoon and listener failures are isolated and reported here.
+  // 커맨드·repair·cocoon·리스너의 실패는 여기로 격리되어 보고된다.
   readonly onError?: (error: unknown) => void;
   // Maximum local undo snapshots. The default is 200 and values must be positive integers.
+  // 로컬 undo 스냅샷 상한 — 기본 200, 양의 정수여야 한다.
   readonly undoLimit?: number;
   // Consecutive typing merge window in milliseconds. The default is 1000; 0 disables merging.
+  // 연속 타이핑을 한 스냅샷으로 묶는 시간(ms) — 기본 1000, 0이면 병합을 끈다.
   readonly typingMergeMs?: number;
-  // 문이 제 이름으로 말할 때의 로케일 (084 ⑨ — 포인터 손의 "적용할 대상이 없다").
-  // ui 층의 locale 옵션과 같은 값을 주면 된다. 안 주면 en 이다(사전 폴백 규칙 그대로).
+  // 문이 제 이름으로 말할 때의 로케일 — ui 층의 locale 옵션과 같은 값을 주면 된다. 안 주면 en이다.
+  // The locale the door speaks in on its own (e.g. the pointer-hand rejection toast); pass the same value as the ui layer's locale option — defaults to en.
   readonly locale?: string;
 }
 
@@ -85,21 +88,23 @@ export interface Nabi {
   // --- 사용자(호스트)용 ---------------------------------------------------------------------
   readonly sessionId: string;
   getJson(): unknown[];
-  // **빈 값은 빈 문서다** — `null`·`undefined`·공백뿐인 글자열·빈 배열은 거절이 아니라
-  // 빈 화면으로 앉는다(비우려는 손은 늘 성공한다). 모양이 틀린 값은 그대로 거절(false)이다.
+  // 빈 값은 빈 문서다 — null·undefined·공백뿐인 글자열·빈 배열은 거절이 아니라 빈 화면으로 앉는다. 모양이 틀린 값은 그대로 거절(false)이다.
+  // An empty value means an empty document — null, undefined, a blank string, or an empty array all land as a blank doc rather than a rejection; only a malformed value is rejected (false).
   setJson(value: unknown): boolean;
   getHtml(): string;
   getEditorHtml(): string;
-  // 빈 값의 규칙은 `setJson` 과 같고, 그 한 가지는 `parseHtml` 어댑터 없이도 된다.
+  // 빈 값의 규칙은 setJson과 같고, 그 한 가지는 parseHtml 어댑터 없이도 된다.
+  // Follows setJson's empty-value rule; that one case works even without a parseHtml adapter.
   setHtml(html: string): boolean;
-  // `by` 는 부른 손이다 — 안 주면 'keyboard'. 갈리는 자리는 접힌 캐럿의 마크 몸짓 하나뿐이다:
-  // 키보드는 예약이 되고, 포인터는 거절(false) + toast 다. 나머지 커맨드는 손을 안 본다.
+  // by는 부른 손이다 — 안 주면 'keyboard'. 갈리는 자리는 접힌 캐럿의 마크 몸짓 하나뿐이다: 키보드는 예약이 되고, 포인터는 거절(false)+toast다.
+  // `by` is which hand called this, defaulting to 'keyboard'; the only place it branches is a collapsed caret's mark gesture — keyboard arms it, pointer gets rejected (false) + a toast.
   applyCommand(name: string, args?: CommandArgs, by?: CommandHand): boolean;
   select(sel: Selection): boolean;
   getSelection(): Selection;
   undo(): boolean;
   redo(): boolean;
   // 여러 커맨드를 undo 한 걸음으로 — 오토포맷 같은 "사용자에게 한 동작"이 쓴다.
+  // Groups several commands into one undo step; used by things like autoformat that read as a single user action.
   group(fn: () => void): void;
   onChange(fn: (change: NabiChange) => void): () => void;
   isChanged(): boolean;
@@ -132,8 +137,8 @@ export function createNabi(options: NabiCoreOptions): Nabi {
   >();
 
   // --- 상태 (전부 인스턴스 소유) -------------------------------------------------------------
-  // 시작 문서도 문이다 — 깨진 값이 조립 중에 던지면 인스턴스가 아예 못 서서 호스트의 마운트가
-  // 통째로 죽는다. 거절하고 빈 문서로 선다(모양이 틀린 값이 null 로 거절되는 것과 같은 자리).
+  // 시작 문서도 문이다 — 깨진 값이 조립 중에 던지면 인스턴스가 못 서서 호스트의 마운트이 통째로 죽는다. 거절하고 빈 문서로 선다.
+  // The starting doc goes through the door too — a broken value throwing during assembly would kill the instance and the host's whole mount with it, so it's rejected and falls back to an empty doc instead.
   const initial = options.doc !== undefined ? $guarded('doc option', null, () => $fromJson(options.doc, env)) : null;
   let doc: NabiDoc = initial ?? cocoon([], env);
   let cleanDoc: NabiDoc = doc;
@@ -151,14 +156,15 @@ export function createNabi(options: NabiCoreOptions): Nabi {
     stack.push(snapshot);
     if (stack.length > undoLimit) stack.splice(0, stack.length - undoLimit);
   };
-  // 진행 중 잠금 — 잡힌 까닭들. 하나라도 있으면 문서를 바꾸는 길이 전부 막힌다.
-  // 손잡이는 값이 아니라 객체다 — 같은 까닭으로 둘이 잠가도 서로의 것을 안 푼다.
+  // 진행 중 잠금 — 잡힌 까닭들. 하나라도 있으면 문서를 바꾸는 길이 전부 막힌다. 손잡이는 값이 아니라 객체다 — 같은 까닭으로 둘이 잠가도 서로의 것을 안 푼다.
+  // In-progress locks, one entry per reason held; any entry blocks every doc-changing path. The handle is an object, not a value, so two locks with the same reason string don't release each other.
   const locks: { readonly reason: string }[] = [];
   // 문 안에서 난 예약 변화는 문이 한 신호로 묶는다 — 밖(직접 $armed)에서는 즉시 낸다.
+  // An armed-state change from inside the door is folded into that one signal; from outside (armed called directly) it fires immediately.
   let inDoor = false;
   let armedDirty = false;
-  // 화면이 건 그릇들 — 나중에 선 화면이 이기고, 그 화면을 먼저 떼면 아직 산 바로 아래 화면이 다시 드러난다.
-  // 등록 값이 같아도 해제는 entry 자기 것만 걷는다.
+  // 화면이 건 그릇들 — 나중에 선 화면이 이기고, 그 화면을 먼저 떼면 아직 산 바로 아래 화면이 다시 드러난다. 등록 값이 같아도 해제는 entry 자기 것만 걷는다.
+  // Sinks stacked by screens — the most recently mounted wins, and removing it first reveals whatever screen is still under it; unbinding always removes just its own entry, even if the value matches another.
   const localeSinks: { readonly value: string }[] = [];
   const toastSinks: { readonly value: Toast }[] = [];
   const chooseSinks: { readonly value: Choose }[] = [];
@@ -174,13 +180,14 @@ export function createNabi(options: NabiCoreOptions): Nabi {
     };
   };
   const localeNow = (): string => localeSinks.at(-1)?.value ?? options.locale ?? 'en';
-  // 알리는 문 — 호스트 콜백이 먼저다. 그릇도 콜백도 없으면(머리 없는 환경) 말은 조용히 사라진다:
-  // 알림은 잃어도 되는 말이라 침묵이 맞다(잃으면 안 되는 물음은 `Ask.confirm` 의 길이다).
+  // 알리는 문 — 호스트 콜백이 먼저다. 그릇도 콜백도 없으면(머리 없는 환경) 말은 조용히 사라진다 — 알림은 잃어도 되는 말이라 침묵이 맞다.
+  // The notification path prefers the host callback; with neither a callback nor a sink (headless), the message quietly vanishes — a notification is fine to lose, unlike an Ask.confirm question.
   const report = (error: unknown): void => {
     if (options.onError) {
       try {
         options.onError(error);
       } catch {
+        // 에러 보고 자체가 새 편집기 오류가 되면 안 된다.
         // Error reporting must not become another editor failure.
       }
       return;
@@ -238,14 +245,15 @@ export function createNabi(options: NabiCoreOptions): Nabi {
   });
 
   // 문 안 예약 변화 깃발을 걷어 온다 — 신호에 실을 몫이다.
+  // Collects the in-door armed-change flag, to be carried on the outgoing signal.
   const takeArmedFlag = (): boolean => {
     const flag = armedDirty;
     armedDirty = false;
     return flag;
   };
 
-  // 포인터 손의 빈손 — 예약이 설 자리였지만 안 세운다 (084 ⑨). 침묵이 아니라 말로 거절한다:
-  // 여기서 조용하면 "이 단추 고장났나?" 가 되고, 그 침묵이 바로 이 라운드가 걷은 혼란이다.
+  // 포인터 손의 빈손 — 예약이 설 자리였지만 안 세운다. 침묵이 아니라 말로 거절한다 — 조용하면 "이 단추 고장났나?"가 된다.
+  // A pointer hand's empty-handed case: a reservation would have been armed but isn't. Rejected out loud, not silently — silence here just reads as "is this button broken?"
   const refuseArm = (): false => {
     toast('info', translate('noTarget', localeNow()));
     return false;
@@ -265,6 +273,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
   // --- 커맨드의 유일한 문 --------------------------------------------------------------------
   const door = (name: string, command: Command, rawArgs: CommandArgs, by: CommandHand = 'keyboard'): boolean => {
     // 진행 중 잠금 — 업로드·색칠이 도는 동안 문서는 아무도 못 바꾼다. 예약도 안 선다.
+    // An in-progress lock: while an upload or paint is running, no one can change the doc, and arming is blocked too.
     if (locks.length > 0) return false;
     let args: CommandArgs;
     try {
@@ -276,8 +285,8 @@ export function createNabi(options: NabiCoreOptions): Nabi {
       return false;
     }
 
-    // 접힌 캐럿의 마크 버튼 = 예약 (①) — 문서를 안 바꾸고 상태만 만든다. **키보드 손만이다**:
-    // 포인터 손은 빈손으로 돌려보낸다 (084 ⑨ — 음수 예약(escape)도 예약이라 같이 거절한다).
+    // 접힌 캐럿의 마크 버튼 = 예약 — 문서를 안 바꾸고 상태만 만든다. 키보드 손만이다: 포인터 손은 빈손으로 돌려보낸다(음수 예약도 예약이라 같이 거절한다).
+    // A mark button on a collapsed caret means arming — it changes only state, never the doc. Keyboard hand only: a pointer hand is sent away empty-handed, and a negative reservation (escape) is rejected the same way since it's still a reservation.
     if (isCollapsed(selection)) {
       if (name === 'toggleMark') {
         const mark = markArg(args);
@@ -304,7 +313,8 @@ export function createNabi(options: NabiCoreOptions): Nabi {
     try {
       let commandArgs = args;
       let consumeArmed = false;
-      // 입력 순간 — 경계 정규화의 답에 예약을 적용해 소비한다 (③).
+      // 입력 순간 — 경계 정규화의 답에 예약을 적용해 소비한다.
+      // At insert time, apply and consume the armed reservation onto boundary normalization's answer.
       if (name === 'insertText' && commandArgs['marks'] === undefined) {
         const text = commandArgs['text'];
         if (typeof text !== 'string' || text === '') return false;
@@ -345,9 +355,8 @@ export function createNabi(options: NabiCoreOptions): Nabi {
         return invalidCommand(name, 'invalid result');
       }
 
-      // 예약 답은 현재 문서와 캐럿을 그대로 둔다는 계약이므로 cocoon 전에 끝낸다. 복잡한 문서의
-      // repair가 같은 내용을 새 객체로 다시 만들 수 있는데, 예약은 문서를 적용하지 않으므로 그
-      // 재조립을 상태 변화로 오해할 이유가 없다. 받은 답 자체가 현 상태를 그대로 가리키는지만 본다.
+      // 예약 답은 현재 문서와 캐럿을 그대로 둔다는 계약이므로 cocoon 전에 끝낸다 — 받은 답 자체가 현 상태를 그대로 가리키는지만 본다.
+      // An armed result is contracted to leave the current doc and caret untouched, so this resolves before cocoon runs — it just checks the returned answer still points at the current state as-is.
       if (result.arm && isCollapsed(selection)) {
         if (result.doc !== doc || !sameSelection(result.selection, selection))
           return invalidCommand(name, 'armed result changed editor state');
@@ -358,6 +367,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
       }
 
       // 매 커맨드 cocoon — 어떤 커맨드도 불변식을 깬 문서를 남길 수 없다.
+      // cocoon runs after every command; no command may leave a doc that breaks an invariant.
       let cocooned: NabiDoc;
       try {
         cocooned = cocoon(result.doc, env);
@@ -379,6 +389,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
 
       if (treeChanged) {
         // 이어 친 글자는 스냅샷을 안 쌓는다 — undo 한 번에 방금 친 말이 통째로 걷힌다.
+        // Consecutive typed characters skip pushing a snapshot, so one undo clears the whole run just typed.
         const now = Date.now();
         const coalesce =
           name === 'insertText' &&
@@ -389,6 +400,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
         const grouped = groupDepth > 0;
         if (!coalesce && !(grouped && groupPushed)) {
           // 묶음의 스냅샷은 묶음이 시작될 때의 캐럿을 담는다 — 되돌리기가 그 자리에 선다.
+          // A group's snapshot carries the caret from when the group started, so undo lands there.
           pushSnapshot(past, { doc, selection: grouped && groupSelection ? groupSelection : selection });
           future = [];
           if (grouped) groupPushed = true;
@@ -397,7 +409,8 @@ export function createNabi(options: NabiCoreOptions): Nabi {
       }
       typingAt = name === 'insertText' && treeChanged ? nextSel : null;
       if (consumeArmed && treeChanged) armed.clear();
-      // 입력 밖의 몸짓은 예약을 푼다 (②).
+      // 입력 밖의 몸짓은 예약을 푼다.
+      // Any gesture other than insertion clears the armed reservation.
       if (name !== 'insertText' && (treeChanged || selChanged)) armed.clear();
 
       const before = doc;
@@ -418,19 +431,15 @@ export function createNabi(options: NabiCoreOptions): Nabi {
     }
   };
 
-  // 들어온 값이 **비었는가** — 비었으면 형식 오류가 아니라 빈 문서다 (setJson·setHtml).
-  //
-  // 비우는 것은 흔한 걸음이다: 새 글을 시작하고, 초안을 버리고, 서버가 아직 아무것도 안 준
-  // 자리를 그대로 싣는다. 그때 거절(false)로 답하면 호스트는 "형식이 틀렸다"는 말을 듣고
-  // **쓰던 글이 그대로 남는다** — 비우려던 손이 아무 일도 못 한 채로. 빈 화면이 맞는 답이다.
-  //
-  // 무엇이 비었나: 값이 없거나(null·undefined), 공백뿐인 글자열(`''`·`'  '`·빈 HTML), 빈 배열.
-  // 여기 안 걸리는 값은 여전히 제 문을 지난다 — 모양이 틀린 값은 그대로 거절이다(빈 것과
-  // 틀린 것은 다르다).
+  // 들어온 값이 비었는가 — 비었으면 형식 오류가 아니라 빈 문서다(setJson·setHtml). 거절(false)로 답하면 비우려던 손이 아무 일도 못 한 채 쓰던 글만 남으므로, 빈 화면이 맞는 답이다.
+  // Whether the incoming value is empty — if so it's a blank doc, not a format error (setJson/setHtml); rejecting (false) would leave the old content behind with nothing accomplished, so an empty screen is the correct answer.
+  // 무엇이 비었나: 값이 없거나(null·undefined), 공백뿐인 글자열, 빈 배열. 여기 안 걸리는 값은 제 문을 지난다 — 모양이 틀린 값은 그대로 거절이다.
+  // What counts as empty: no value (null/undefined), or a whitespace-only string; anything else still goes through normal validation, so a malformed value is still rejected.
   const blank = (value: unknown): boolean =>
     value === null || value === undefined || (typeof value === 'string' && value.trim() === '');
 
   // 문서 교체 (setJson·setHtml) — undo 한 점을 남기고, 이 문서가 새 기준선(cleanDoc)이 된다.
+  // Replacing the document (setJson/setHtml): leaves one undo point, and this doc becomes the new baseline (cleanDoc).
   const load = (next: NabiDoc): void => {
     inDoor = true;
     try {
@@ -458,6 +467,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
   };
 
   // 시간 여행 (undo·redo) — 캐럿 이동은 역사의 새 갈래가 아니므로 redo 는 select 에 안 죽는다.
+  // Time travel (undo/redo); a caret move isn't a new branch of history, so redo survives a select.
   const travel = (from: Snapshot[], to: Snapshot[]): boolean => {
     if (locks.length > 0) return false; // 잠긴 동안은 시간 여행도 편집이다
     const snap = from.pop();
@@ -495,12 +505,12 @@ export function createNabi(options: NabiCoreOptions): Nabi {
     },
     setJson(value) {
       if (locks.length > 0) return false;
-      // 빈 값은 형식 오류가 아니다 — **빈 문서**다 (아래 blank 의 그 규칙).
       if (blank(value)) {
         load(cocoon([], env));
         return true;
       }
-      // 조립 중에 던지는 값도 거절(false)이다 — 예외가 문 밖으로 못 나간다 ($guarded).
+      // 조립 중에 던지는 값도 거절(false)이다 — 예외가 문 밖으로 못 나간다.
+      // A value that throws during assembly is rejected (false) too; exceptions never escape this door.
       const parsed = $guarded('setJson', null, () => $fromJson(value, env));
       if (!parsed) return false;
       load(parsed);
@@ -514,8 +524,8 @@ export function createNabi(options: NabiCoreOptions): Nabi {
     },
     setHtml(html) {
       if (locks.length > 0) return false;
-      // 빈 값은 파서 없이도 답이 있다 — 읽을 것이 없으니 빈 문서다. `parseHtml` 을 안 꽂은
-      // 호스트도 "비우기"만은 할 수 있다.
+      // 빈 값은 파서 없이도 답이 있다 — 읽을 것이 없으니 빈 문서다. parseHtml을 안 꽂은 호스트도 "비우기"만은 할 수 있다.
+      // An empty value has an answer even without a parser — nothing to read means an empty doc, so a host without parseHtml wired up can still clear.
       if (blank(html)) {
         load(cocoon([], env));
         return true;
@@ -523,6 +533,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
       const parse = options.parseHtml;
       if (!parse) return false;
       // 파싱·들여오기·cocoon 까지가 바깥 데이터의 걸음이다 — 던지면 거절(false)로 바뀐다.
+      // Parsing, importing, and cocoon are all one step for outside data; any throw becomes a rejection (false).
       const next = $guarded('setHtml', null, () => {
         const nodes = parse(html);
         return $importDoc(nodes, {
@@ -607,9 +618,8 @@ export function createNabi(options: NabiCoreOptions): Nabi {
     doc: () => doc,
     env,
     armed,
-    // 기본은 "message 는 toast(info)·confirm 은 아니오"(toastAsk) 다 — 호스트는 끼운 칸만
-    // 이긴다. 스프레드로 안 섞는 까닭 둘: 호스트 상자의 `this` 가 끊기면 안 되고(메서드 호출로
-    // 부른다), 값이 undefined 인 칸이 기본을 밀어내면 안 된다.
+    // 기본은 toastAsk("message는 toast(info)·confirm은 아니오")다 — 호스트는 끼운 칸만 이긴다. 스프레드로 안 섞는 까닭: 호스트 상자의 this가 끊기면 안 되고, undefined인 칸이 기본을 밀어내면 안 된다.
+    // Defaults to toastAsk ("message goes to toast(info), confirm answers no") — only fields the host actually supplies take effect. Not merged via spread, since that would break the host object's `this` binding and let an undefined field shadow the default.
     ask: {
       message: (text) => {
         try {
@@ -628,7 +638,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
         }
       },
       // 3단이다 — 호스트가 끼운 상자, 화면이 건 판, 그리고 아무도 없으면 첫째(0).
-      // 취소(-1)를 기본으로 두지 않는 까닭은 silentAsk 의 주석에 있다.
+      // Three tiers: the host's own callback, a screen-mounted panel, or (with neither) the first option (0).
       choose: (question, choices) => {
         try {
           const answer = options.ask?.choose
@@ -689,6 +699,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
       const token = { reason };
       locks.push(token);
       // 두 번 불러도 한 번만 푼다 — 실패 갈래와 성공 갈래가 같은 손잡이를 쥐고 있기 때문이다.
+      // Calling this twice only unlocks once, since both the failure and success paths hold the same handle.
       return () => {
         const at = locks.indexOf(token);
         if (at !== -1) locks.splice(at, 1);

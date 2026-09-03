@@ -1,6 +1,6 @@
-// registry — wing 목록을 받아 계약을 검사(fail-fast)하고, 아래층들이 먹는 산출물로 접는다:
-// SchemaEnv/EditEnv(갈래 지식)· HtmlBuilders(조립 맵)· 커맨드 맵· claim(들여오기 역방향)
-// repair 맵· escapeKeys 색인· inputRules 목록. 하나라도 어기면 등록 자체가 죽는다.
+// registry — wing 목록을 받아 계약을 검사(fail-fast)하고, 아래층들이 먹는 산출물(EditEnv·builders·
+// commands·claim·repair 맵 등)로 접는다. 하나라도 계약을 어기면 등록 자체가 죽는다.
+// Takes a wing list, checks the contract fail-fast, and folds it into what lower layers consume (EditEnv, builders, commands, claim, repair map, etc). Any contract violation kills registration itself.
 import { $fromJson, $guarded, BR, P, RESERVED, isElement, type ElementNode, type NabiNode } from '../schema/index.js';
 import type { EditEnv } from '../doc/index.js';
 import { parseNodes, renderEditorHtml, renderHtml } from '../html/index.js';
@@ -18,8 +18,10 @@ import { $builtinAttrTypes, $closeBuiltinAttrs, $closeKnownTypes, $isBuiltinWing
 import { erectsNode, type Attach, type InputRule, type StructureDecl, type Wing } from './contract.js';
 
 // 커맨드 이름 규칙 — 동사+목적어 카멜. 낱말 하나(`merge`)나 대문자 시작은 죽는다.
+// Command naming rule: verb+object camelCase; a single word (`merge`) or a capitalized start fails.
 const COMMAND_NAME = /^[a-z][a-z0-9]*([A-Z][A-Za-z0-9]*)+$/;
 // 힌트 단축키 — 라틴 대문자·숫자 한 글자. 가속키 — mod+소문자 하나.
+// Hint shortcut: one Latin letter/digit. Accelerator: mod+ one lowercase letter.
 const SHORTCUT = /^(?:[A-Z0-9]|↑|↓)$/;
 const ACCELERATOR = /^mod\+[a-z]$/;
 const EXTENSION_NAME = /^ex[A-Z0-9][A-Za-z0-9]*$/;
@@ -65,23 +67,29 @@ export interface RegisteredRule extends InputRule {
 export interface Registry {
   readonly wings: readonly Wing[];
   // 갈래 지식 — createNabi·cocoon·doc 연산이 먹는 환경. repair(allows 필터 포함)가 접혀 있다.
+  // The environment createNabi, cocoon, and doc operations consume; repair (including the allows filter) is folded in.
   readonly env: EditEnv;
   readonly builders: HtmlBuilders;
   readonly commands: Readonly<Record<string, Command>>;
   readonly claim: ImportOptions['claim'] | undefined;
   readonly inputRules: readonly RegisteredRule[];
-  // 선언형 표면 부속 — mount(surface)가 붙이고 뗀다 (, 10 표의 칸 드래그 칠 류).
+  // 선언형 표면 부속 — mount(surface)가 붙이고 뗀다(표의 칸 드래그 칠 류).
+  // Declarative surface attachments; mount (surface) attaches and detaches them (e.g. a table's cell drag-paint).
   readonly attaches: readonly Attach[];
-  // escape 키 → 그 키를 선언한 마크 wing 의 `w` 목록 (surface 09 가 예약 음수 방향에 쓴다).
+  // escape 키 → 그 키를 선언한 마크 wing의 `w` 목록(surface가 예약 방향에 쓴다).
+  // Escape key -> the `w` list of mark wings declaring it; used by the surface for its reservation direction.
   readonly escapes: ReadonlyMap<string, readonly string[]>;
-  // 연타 키 → 돌릴 커맨드 이름 (`Wing.doubleKeys`). 표면은 이 표만 보고 wing 이름을 모른다.
+  // 연타 키 → 돌릴 커맨드 이름(`Wing.doubleKeys`). 표면은 이 표만 보고 wing 이름을 모른다.
+  // Double-tap key -> command name to run (`Wing.doubleKeys`); the surface only reads this map and never learns wing names.
   readonly doubles: ReadonlyMap<string, string>;
-  // IO 필터 목록 — **호스트가 끼운 것이 앞, wing 이 든 것이 뒤**다. 내장 셋(html·md·nabi)은
-  // 이 뒤에 붙는다(붙이는 자리는 표면이다). id 는 등록 검사에서 유일함이 보장된다.
+  // IO 필터 목록 — 호스트가 끼운 것이 앞, wing이 든 것이 뒤다. 내장 셋(html·md·nabi)은 이 뒤에 붙는다.
+  // IO filters — host-supplied ones come first, wing-declared ones after; the built-in set (html, md, nabi) is appended last (by the surface).
   readonly ioFilters: readonly IoFilter[];
-  // md 조립 맵 — 조립 맵(builders)과 같은 무늬다. 없는 타입은 md 저장에서 html 로 떨어진다.
+  // md 조립 맵 — builders와 같은 무늬다. 없는 타입은 md 저장에서 html로 떨어진다.
+  // Markdown builder map, shaped like `builders`; a type without one falls back to raw HTML in md output.
   readonly mdBuilders: MdBuilders;
-  // 이 타입(부품 포함)을 소유한 wing — 키 소유 판정·ui 가 쓴다.
+  // 이 타입(부품 포함)을 소유한 wing — 키 소유 판정·ui가 쓴다.
+  // The wing owning this type (including parts); used by key-ownership resolution and the UI.
   ownerOf(typeW: string): Wing | null;
   wingOf(w: string): Wing | null;
 }
@@ -90,8 +98,8 @@ function fail(message: string): never {
   throw new Error(`wing 등록 실패 — ${message}`);
 }
 
-// allows 제한을 repair 로 접는다 — 벗어난 엘리먼트 자식은 껍데기를 벗고 속이 올라온다(삭제가
-// 아니다 — 글은 남아야 한다). 올라온 것이 또 벗어나면 다시 벗긴다. 떠도는 인라인은 문단으로 모은다.
+// allows 제한을 repair로 접는다 — 벗어난 엘리먼트 자식은 삭제가 아니라 껍데기만 벗고 속이 올라온다.
+// Folds the `allows` restriction into a repair — a child outside the whitelist isn't deleted, just unwrapped so its contents rise up (recursively, and loose inline nodes are gathered into a paragraph).
 function allowsRepair(allowed: ReadonlySet<string>): (node: ElementNode) => ElementNode {
   const admit = (nodes: readonly NabiNode[]): NabiNode[] => {
     const out: NabiNode[] = [];
@@ -112,6 +120,7 @@ function allowsRepair(allowed: ReadonlySet<string>): (node: ElementNode) => Elem
         continue;
       }
       // 벗어난 자식 — 껍데기를 벗고 속을 같은 자리에서 다시 심사한다.
+      // A child outside the whitelist: unwrap it and re-admit its contents in the same slot.
       for (const inner of admit(node.ch)) {
         if (isElement(inner) && allowed.has(inner.w)) {
           flush();
@@ -133,17 +142,18 @@ function allowsRepair(allowed: ReadonlySet<string>): (node: ElementNode) => Elem
 }
 
 export interface RegistryExtra {
-  // 호스트가 끼우는 IO 필터 — wing 이 든 것보다 **앞**에 선다(제 형식이 내장보다 먼저 답한다).
+  // 호스트가 끼우는 IO 필터 — wing이 든 것보다 앞에 선다(제 형식이 내장보다 먼저 답한다).
+  // Host-supplied IO filters, placed before wing-declared ones so a host's own format answers before the built-ins.
   readonly ioFilters?: readonly IoFilter[];
 }
 
 export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Registry {
   const byType = new Map<string, Wing>(); // 노드 타입(w·부품) → 소유 wing
-  const byW = new Map<string, Wing>(); // wing 의 w → wing (tool·attr 포함)
+  const byW = new Map<string, Wing>(); // wing의 w → wing(tool·attr 포함)
   const shortcuts = new Map<string, string>();
   const accelerators = new Map<string, string>();
-  // IO 필터 id → 주장한 이가 누구인가. 호스트의 것도 함께 담는다 — 같은 id 가 둘이면 어느 쪽이
-  // 답하는지가 등록 순서에 숨는다.
+  // IO 필터 id → 주장한 이 — 같은 id가 둘이면 어느 쪽이 답하는지가 등록 순서에 숨어버리기 때문에 검사한다.
+  // Filter id -> claimant; checked because if two filters share an id, which one answers would silently depend on registration order.
   const filterIds = new Map<string, string>();
 
   for (const filter of extra?.ioFilters ?? []) {
@@ -153,7 +163,6 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     filterIds.set(filter.id, '호스트');
   }
 
-  // --- 1차 — 이름·모양 검사와 색인 ----------------------------------------------------------
   for (const wing of wings) {
     if (!wing.w) fail('wing 에 w(이름)가 없다');
     const custom = !OFFICIAL_WINGS.has(wing.w);
@@ -205,7 +214,8 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     }
     if (wing.place === 'container' && !wing.holds) fail(`"${wing.w}" 컨테이너에 holds 선언이 없다`);
     if (wing.place !== 'container' && wing.parts) fail(`"${wing.w}" — parts 는 컨테이너만 가진다`);
-    // 정렬은 **래퍼문단**의 것이라, 마다하겠다는 말도 래퍼문단을 입는 물건만 할 수 있다.
+    // 정렬은 래퍼문단의 것이라, 마다하겠다는 말도 래퍼문단을 입는 물건만 할 수 있다.
+    // Alignment belongs to the wrapper paragraph, so only objects that get one (void, container) can opt out via noAlign.
     if (wing.noAlign && wing.place !== 'void' && wing.place !== 'container') {
       fail(`"${wing.w}" — noAlign 은 물건(void·container)만 든다`);
     }
@@ -254,7 +264,8 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
 
     if (wing.place === 'attr') {
       if (!wing.attrKey) fail(`"${wing.w}" 는 문단 속성 wing 인데 attrKey 가 없다`);
-      // cocoon 의 문단 화이트리스트(h·a·dc)가 곧 이 계약의 한계다 — 밖의 키는 어차피 걷힌다.
+      // cocoon의 문단 화이트리스트(h·a·dc)가 곧 이 계약의 한계다 — 밖의 키는 어차피 걷힌다.
+      // cocoon's paragraph attribute whitelist (h, a, dc) is this contract's actual limit; a key outside it gets stripped anyway.
       if (!['h', 'a', 'dc'].includes(wing.attrKey)) {
         fail(`"${wing.w}" 의 attrKey "${wing.attrKey}" 는 문단 속성 화이트리스트(h·a·dc) 밖이다`);
       }
@@ -292,7 +303,6 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     }
   }
 
-  // --- 2차 — 서로를 보는 검사 (등록 순서를 안 탄다) -----------------------------------------
   for (const wing of wings) {
     if (wing.requiresAnyOf && !wing.requiresAnyOf.some((w) => byW.has(w))) {
       fail(`"${wing.w}" 는 [${wing.requiresAnyOf.join(', ')}] 중 하나가 함께 등록돼야 한다`);
@@ -304,7 +314,6 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     }
   }
 
-  // --- 접기 — 아래층 산출물 -----------------------------------------------------------------
   const lumps: string[] = [];
   const voids: string[] = [];
   const blockHolders: string[] = [];
@@ -330,7 +339,8 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
   const addRepair = (w: string, fns: ((node: ElementNode) => ElementNode | null)[]): void => {
     const chain = fns.filter((fn) => fn !== undefined);
     if (chain.length === 0) return;
-    // 한 번 null 이면 끝까지 null 이다 — 벗기기로 정해진 껍데기를 뒤의 손이 되살리지 않는다.
+    // 한 번 null이면 끝까지 null이다 — 벗기기로 정해진 껍데기를 뒤의 손이 되살리지 않는다.
+    // Once null, always null in the chain — a later step can't resurrect a shell already decided to be stripped.
     repair[w] = (node) => chain.reduce<ElementNode | null>((acc, fn) => (acc === null ? null : fn(acc)), node);
   };
 
@@ -371,11 +381,12 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     if (wing.noAlign) noAlign.push(wing.w);
 
     // repair 사슬 — allows 필터가 먼저, wing 자신의 복구가 그 위에 선다.
+    // The repair chain: the allows filter runs first, then the wing's own repair on top.
     const own: ((node: ElementNode) => ElementNode | null)[] = [];
     if (wing.allows) own.push(allowsRepair(new Set(wing.allows)));
     if (wing.repair) own.push(wing.repair);
-    // 노드를 세우는 갈래는 물론이고 **마크도** repair 를 단다 — JSON 으로 들어온 마크의 값도
-    // 검사를 지나야 한다(: 같은 공격이 HTML 로 오면 지워지고 JSON 으로 오면 남았다).
+    // 노드를 세우는 갈래뿐 아니라 마크도 repair를 단다 — JSON으로 들어온 값도 같은 검사를 지나야 한다.
+    // Marks get a repair too, not just node-erecting kinds — a value arriving via JSON must pass the same check an HTML import would.
     if (erectsNode(wing.place) || wing.place === 'mark') addRepair(wing.w, own);
     for (const [part, fn] of Object.entries(wing.partRepair ?? {})) addRepair(part, [fn]);
 
@@ -397,7 +408,8 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
       list.push(wing.w);
       escapes.set(key, list);
     }
-    // 연타 키는 **하나에 하나**다 — 커맨드처럼 둘이 같이 주장하면 등록이 죽는다(고를 근거가 없다).
+    // 연타 키는 하나에 하나다 — 커맨드처럼 둘이 같이 주장하면 등록이 죽는다(고를 근거가 없다).
+    // A double-tap key maps to exactly one command; two wings claiming it fails registration, same as commands (there's no basis to pick one).
     for (const [key, name] of Object.entries(wing.doubleKeys ?? {})) {
       if (doubles.has(key)) fail(`연타 키 "${key}" 를 wing 둘이 같이 주장한다`);
       doubles.set(key, name);
@@ -405,7 +417,7 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
   }
 
   // 연타가 가리키는 커맨드는 실재해야 한다 — 없는 이름을 두면 그 몸짓만 조용히 죽는다.
-  // (커맨드 맵이 다 찬 뒤에 본다 — 선언한 wing 이 먼저 서는 순서를 요구하지 않는다.)
+  // A double-tap must point to a real command; a nonexistent name would make just that gesture silently do nothing.
   for (const [key, name] of doubles) {
     if (!commands[name] && !CORE_COMMAND_NAMES.has(name)) fail(`연타 키 "${key}" 가 없는 커맨드 "${name}" 를 가리킨다`);
   }
@@ -444,7 +456,8 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
   $closeKnownTypes(env, [P, BR, ...byType.keys()]);
   $closeBuiltinAttrs(env, closedAttrs);
 
-  // 들여오기 역방향 — 주장한 wing 들에게 차례로 묻고, 첫 답이 이긴다. 아무도 안 잡으면 기본 대응.
+  // 들여오기 역방향 — 주장한 wing들에게 차례로 묻고, 첫 답이 이긴다. 아무도 안 잡으면 기본 대응.
+  // Import claiming, in reverse — asks each claiming wing in turn, first hit wins; falls back to the default if none claim it.
   const claimers = wings.filter((wing) => wing.claim);
   const claim: ImportOptions['claim'] | undefined =
     claimers.length === 0
@@ -474,7 +487,8 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
   };
 }
 
-// registry 산출물을 createNabi 옵션으로 편다 — editor 는 wing 층을 모른 채 그대로 받는다.
+// registry 산출물을 createNabi 옵션으로 편다 — editor는 wing 층을 모른 채 그대로 받는다.
+// Unfolds registry output into createNabi options; the editor receives it as-is, with no knowledge of the wing layer.
 export function nabiOptionsOf(
   registry: Registry,
   extra?: NabiOptions & Pick<NabiCoreOptions, 'parseHtml'>,
@@ -489,17 +503,17 @@ export function nabiOptionsOf(
   };
 }
 
-// wing 목록으로 바로 에디터 하나 — 호스트 조립의 기본 문. 배열과 함께 **wing 고르기 빌더**
-// (087, wings 층의 `wings()`)도 그대로 받는다 — `.build()` 는 잊기 좋은 한 걸음이라 아예
-// 없앴다. 이 층은 빌더가 사는 wings 층을 못 보므로 이름이 아니라 모양(build)만 본다.
+// wing 목록으로 바로 에디터 하나 — 호스트 조립의 기본 문. 배열과 wing 고르기 빌더 둘 다 받는다
+// (`.build()` 호출은 잊기 좋은 걸음이라 없앴다 — 빌더는 이름이 아니라 모양(.build)으로 알아본다).
+// Builds an editor directly from a wing list — the host's main entry point. Accepts either a plain array or a wing-picking builder (its `.build()` call was error-prone to forget, so this layer detects a builder by shape, not by name, since it can't see the wings layer where builders live).
 type InternalNabiOptions = NabiOptions & RegistryExtra & Pick<NabiCoreOptions, 'parseHtml'>;
 
 function createNabiFromWings(
   wings: readonly Wing[] | { build(): readonly Wing[] },
   extra?: InternalNabiOptions,
 ): { readonly nabi: Nabi; readonly registry: Registry } {
-  // `ioFilters` 는 편집기의 옵션이 아니라 **레지스트리의 문**이다 — 필터는 wing 지식이라
-  // 어휘를 접는 그 자리에서 순서가 정해져야 한다(호스트가 앞, wing 이 뒤).
+  // `ioFilters` 는 편집기 옵션이 아니라 레지스트리의 몫이다 — 필터 순서(호스트 앞, wing 뒤)는 어휘를 접는 자리에서 정해져야 한다.
+  // `ioFilters` belongs to the registry, not the editor's options — filter order (host first, wings after) must be decided where the vocabulary is folded.
   const { ioFilters, ...rest } = extra ?? {};
   const registry = makeRegistry('build' in wings ? wings.build() : wings, ioFilters ? { ioFilters } : undefined);
   return { nabi: createNabi(nabiOptionsOf(registry, rest)), registry };
@@ -532,9 +546,8 @@ export function $createNabiWith(
   return createNabiFromWings(wings, extra);
 }
 
-// --- 저장본 → HTML — 에디터 없이, DOM 없이 (090) ---------------------------------------------
-// 보기만 하는 자리(댓글 목록·SSR)에 상태 엔진·표면을 세우는 것은 낭비가 아니라 모양의 잘못이다:
-// 저장본을 그리는 데 필요한 것은 registry(어휘)뿐이다. 이 문이 그 한 벌이다.
+// 저장본 → HTML, 에디터 없이 DOM 없이 — 보기만 하는 자리(댓글 목록·SSR)에 필요한 건 registry(어휘)뿐이다.
+// Stored doc to HTML, with no editor and no DOM — a view-only spot (a comment list, SSR) only needs the registry's vocabulary, not a full state engine.
 
 export interface StoredHtmlOptions {
   readonly allowLocalUrls?: boolean;
@@ -546,11 +559,12 @@ const storedJob = (registry: Registry, options?: StoredHtmlOptions): HtmlOptions
   ...(options?.allowLocalUrls ? { allowLocalUrls: true } : {}),
 });
 
-// 저장본(나비트리 JSON) → 보기 HTML. 거절은 setJson 과 같은 규칙이다 — 나비트리가 아니면 null.
-// 통과한 값은 cocoon(불변식·wing repair)을 지나 같은 조립으로 나가므로, 나온 HTML 은 편집기의
-// getHtml 과 같은 신뢰 경계 안이다.
+// 저장본(나비트리 JSON) → 보기 HTML. 거절은 setJson과 같은 규칙(나비트리가 아니면 null)이고,
+// 통과한 값은 cocoon을 지나 같은 조립으로 나가므로 편집기의 getHtml과 같은 신뢰 경계 안이다.
+// Stored NABI TREE JSON to view HTML. Rejection follows the same rule as setJson (null if not a valid tree); a passing value goes through cocoon and the same builder, landing in the same trust boundary as the editor's getHtml.
 export function renderStoredHtml(json: unknown, registry: Registry, options?: StoredHtmlOptions): string | null {
   // 조립 중에 던지는 값도 같은 답(null)이다 — 읽기 쪽 문이라 더더욱 예외가 밖으로 못 나간다.
+  // A throw during building gets the same answer (null) — this is a read-only door, so exceptions must not escape it.
   return $guarded('renderStoredHtml', null, () => {
     const doc = $fromJson(json, registry.env);
     if (!doc) return null;
@@ -558,9 +572,9 @@ export function renderStoredHtml(json: unknown, registry: Registry, options?: St
   });
 }
 
-// 같은 문의 편집기 HTML — data-key 와 봉인·실제 드롭캡 글자 같은 화면 부속을 더한다.
-// cocoon 의 _id 가 결정적이라(같은 JSON 은 같은 키) 서버가 이것으로 그린 DOM 을 클라이언트의
-// mountSurface({hydrate: true})가 입양한다.
+// 같은 문의 편집기 HTML — data-key 등 화면 부속을 더한다. cocoon의 _id가 결정적이라(같은 JSON은
+// 같은 키) 서버가 그린 DOM을 클라이언트의 mountSurface({hydrate: true})가 그대로 입양할 수 있다.
+// The editor-flavored HTML from the same door, adding screen fixtures like data-key. cocoon's _id is deterministic (same JSON -> same keys), so the client's mountSurface({hydrate: true}) can adopt DOM the server rendered.
 export function renderStoredEditorHtml(json: unknown, registry: Registry, options?: StoredHtmlOptions): string | null {
   return $guarded('renderStoredEditorHtml', null, () => {
     const doc = $fromJson(json, registry.env);

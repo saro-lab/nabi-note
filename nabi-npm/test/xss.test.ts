@@ -1,12 +1,5 @@
-// 신뢰 경계 그물 — 밖에서 온 값이 문서에 박히기까지의 두 줄을 잡는다.
-//
-//   ① 들어올 때 한 번 — HTML 입구(`setHtml`)와 JSON 입구(`setJson`)가 **같은 답**을 내야 한다.
-//      한쪽만 엄격하면 출력은 안 터져도 **저장값이 오염된다**: 그 JSON 을 읽는 다른 것(모바일 앱의
-//      자체 렌더러, 검색 인덱서, 메일 템플릿)에서 터진다. 실제로 그랬고, 그 재발을 여기서 막는다.
-//   ② 나갈 때 한 번 — 어떤 입력을 넣어도 출력 HTML 에 실행되는 것이 없어야 한다.
-//
-// 이 그물의 요점은 **경로 대칭**이다. 개별 방어를 하나씩 세는 것이 아니라, "같은 공격 문자열을
-// 두 문에 넣으면 트리가 같다" 는 한 문장을 공격 목록 전체에 대해 확인한다.
+// 신뢰 경계 그물 — 들어올 때(HTML·JSON 입구가 같은 답)와 나갈 때(어떤 입력도 출력에서 안 터짐) 두 번 잡는다. 요점은 경로 대칭이다: 같은 공격 문자열을 두 문에 넣으면 트리가 같아야 한다.
+// Trust-boundary net — checked twice, on the way in (HTML and JSON entry points must agree) and on the way out (no input should produce executable output). The core idea is path symmetry: the same attack string through either gate must yield the same tree.
 import {
   $createNabiWith,
   createNabiWith,
@@ -51,8 +44,8 @@ const PAIRS: readonly (readonly [string, string, unknown[]])[] = [
     [{ w: 'p', ch: [{ w: 'a', a: { href: '//evil.com/x' }, ch: ['클릭'] }] }],
   ],
   [
-    // 빈 칸 교정(repairCell, ailog 102)과 독 거르기가 **같은 걸음**에 있다 — 교정하는 길이
-    // 열렸다고 거르기가 느슨해지면 안 된다. 독 링크는 평문이 되고 빈 칸은 문단 하나로 선다.
+    // 빈 칸 교정(repairCell)과 독 거르기가 같은 걸음에 있다 — 교정한다고 거르기가 느슨해지면 안 된다.
+    // Cell repair and poison filtering happen in the same step — repairing malformed cells must never loosen the filtering.
     '표칸 교정 속의 javascript: 링크 (빈 칸 동반)',
     '<table><tr><td><a href="javascript:alert(1)">클릭</a></td><td></td></tr></table>',
     [
@@ -112,8 +105,8 @@ for (const [name, html, json] of PAIRS) {
 
 // --- 2. 저장값 불변식 — 어떤 입력을 넣어도 트리에 독이 안 남는다 ---------------------------------
 
-// 트리 전체를 훑어 attr 값 하나하나를 본다. 출력만 보는 시험은 ★1 을 못 잡았다 — 출력은
-// 처음부터 안전했고, 새는 곳이 **저장값**이었다.
+// 트리 전체를 훑어 attr 값 하나하나를 본다 — 출력만 보는 시험은 예전에 이 구멍을 못 잡았다. 출력은 처음부터 안전했고, 새는 곳은 저장값이었다.
+// Walks the whole tree checking every attribute value — an output-only test previously missed this hole, since the output was safe all along and the leak was in the stored value.
 const POISON = /javascript:|vbscript:|data:text\/html|onerror=|onmouseover=|^\/\//i;
 
 function poisonedAttrs(value: unknown): string[] {
@@ -167,6 +160,7 @@ for (const attack of ATTACKS) {
   const out = nabi.getHtml();
   ok(`출력 — 실행되는 것이 없다: ${attack.slice(0, 34)}`, !RUNS.test(out), [out]);
   // 편집기 화면도 같은 조립을 탄다 — 한쪽만 안전한 일이 없어야 한다.
+  // The editor's own display goes through the same assembly — only one side being safe is not acceptable.
   const seen = nabi.getEditorHtml();
   ok(`편집기 출력 — 실행되는 것이 없다: ${attack.slice(0, 34)}`, !RUNS.test(seen), [seen]);
 }
@@ -174,9 +168,8 @@ for (const attack of ATTACKS) {
 // --- 4. 자리별 문 — 가는 자리와 가져오는 자리 -----------------------------------------------------
 
 {
-  // `allowLocalUrls` 는 **가져오는 자리에만** 산다. 호스트가 업로드 미리보기 하나를 켜려고 연
-  // 것이 링크에까지 열리면, `data:image/svg+xml` 을 문 `a` 가 문서에 박힌다 — SVG 는 스크립트를
-  // 품는 유일한 그림 형식이다.
+  // `allowLocalUrls` 는 가져오는 자리에만 산다 — 업로드 미리보기용으로 연 것이 링크에까지 열리면 `data:image/svg+xml`을 문 `a`가 문서에 박힌다.
+  // `allowLocalUrls` applies only to the import side — if opening it for upload previews also opened it for links, an `a` tag could carry `data:image/svg+xml` into the document.
   const local = stand(true);
   local.setHtml('<p><a href="data:image/svg+xml,&lt;svg onload=x&gt;">클릭</a></p>');
   eq('allowLocal 이어도 링크는 data: 를 안 받는다', local.getJson(), [{ w: 'p', ch: ['클릭'] }]);
@@ -185,8 +178,8 @@ for (const attack of ATTACKS) {
   blobLink.setHtml('<p><a href="blob:https://x/1">클릭</a></p>');
   eq('allowLocal 이어도 링크는 blob: 을 안 받는다', blobLink.getJson(), [{ w: 'p', ch: ['클릭'] }]);
 
-  // 그림 자리에서는 산다 — 업로드 미리보기가 이 길로 그려진다. **짝이라 한쪽만 켜면 안 된다**:
-  // 문서의 `allowLocalUrls` 와 그림 wing 의 `allowLocalUrls` 가 함께 열려야 그 주소가 산다.
+  // 그림 자리에서는 산다 — 업로드 미리보기가 이 길로 그려진다. 짝이라 한쪽만 켜면 안 된다: 문서와 그림 wing의 `allowLocalUrls`가 함께 열려야 그 주소가 산다.
+  // For images it does apply — upload previews render through this path. It's a pair, so opening only one side isn't enough: both the document's and the image wing's `allowLocalUrls` must be open together for the URL to work.
   const localImage = (): ReturnType<typeof stand> =>
     $createNabiWith([...defaultWings.filter((wing) => wing.w !== 'img'), makeImageWing({ allowLocalUrls: true })], {
       allowLocalUrls: true,
@@ -198,6 +191,7 @@ for (const attack of ATTACKS) {
   ok('짝을 맞춰 열면 그림은 data:image 를 받는다', preview.getHtml().includes('data:image/png'));
 
   // svg 만은 짝을 맞춰 열어도 안 받는다 — 스크립트를 품는 유일한 그림 형식이다.
+  // SVG alone is rejected even with both sides open — it's the only image format that can carry a script.
   const svg = localImage();
   svg.setHtml('<p><img src="data:image/svg+xml,&lt;svg onload=x&gt;"/></p>');
   ok('짝을 맞춰 열어도 그림은 data:image/svg+xml 을 안 받는다', !svg.getHtml().includes('svg+xml'));
@@ -206,8 +200,8 @@ for (const attack of ATTACKS) {
 // --- 5. 저장본 문 — 에디터 없이 그려도 같은 신뢰 경계다 (090) -----------------------------------
 
 {
-  // renderStoredHtml 은 setJson→getHtml 과 **같은 걸음**($fromJson→cocoon→조립)이어야 한다.
-  // 두 길이 갈리면 댓글 목록·SSR 만 덜 씻긴 HTML 을 받는다 — 대칭이 곧 방어다.
+  // renderStoredHtml은 setJson→getHtml과 같은 걸음이어야 한다 — 갈리면 댓글 목록·SSR만 덜 씻긴 HTML을 받는다.
+  // renderStoredHtml must take the same steps as setJson→getHtml — if the paths diverge, comment feeds and SSR alone would get under-sanitized HTML.
   const registry = makeRegistry(defaultWings);
   for (const [name, , json] of PAIRS) {
     const seen = stand();

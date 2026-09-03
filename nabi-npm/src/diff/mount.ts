@@ -30,9 +30,11 @@ export interface DiffMount {
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // 접기 모드에서 바뀐 덩어리 앞뒤로 남기는 맥락 블록 수.
+// The number of context blocks kept before/after a changed chunk in fold mode.
 const FOLD_CONTEXT = 1;
 
 // 아이콘 단추 하나 — 판(mountDiff)과 전체화면(mountDiffWing)이 같은 모양을 나눠 쓴다.
+// One icon button shape shared by the pane (mountDiff) and the fullscreen view (mountDiffWing).
 export function diffButton(doc: Document, title: string, path: string): HTMLButtonElement {
   const button = doc.createElement('button');
   button.type = 'button';
@@ -79,12 +81,12 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
     const nextButton = iconButton(t('diff.next'), 'M3.5 6 8 10.5 12.5 6');
     const count = el('nabi-diff-count', 'span');
     const spacer = el('nabi-diff-spacer', 'span');
-    // "바뀐 부분만" 은 글자가 아니라 상하 세모 화살표다(주인 지시 2026-08-25) — 서로를 향해
-    // 접히는 모양이 곧 "안 바뀐 구간을 접는다" 다. 말은 title/aria 로 남는다.
+    // "바뀐 부분만" 은 글자가 아니라 서로를 향해 접히는 상하 세모 화살표다. 말은 title/aria 로 남는다.
+    // "Only changes" is a pair of triangles folding toward each other, not text; the label lives in title/aria instead.
     const toggleButton = iconButton(t('diff.onlyChanges'), 'M4.5 2.5 8 6l3.5-3.5M4.5 13.5 8 10l3.5 3.5');
     toggleButton.setAttribute('aria-pressed', 'false');
-    // 숫자(0 / 0)와 접기는 왼쪽 무리(이전/다음 곁)다 — 오른쪽 끝은 전체화면(mountDiffWing)이
-    // 얹는 닫기(X) 하나만의 자리다(주인 지시 2026-08-25).
+    // 숫자와 접기는 왼쪽 무리다 — 오른쪽 끝은 전체화면(mountDiffWing)이 얹는 닫기(X) 하나만의 자리다.
+    // The count and fold toggle group on the left; the far right is reserved solely for the close (X) that mountDiffWing adds.
     bar.append(prevButton, nextButton, count, toggleButton, spacer);
 
     const body = el('nabi-diff-body');
@@ -213,9 +215,8 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
         const blockEl = index === null ? undefined : els[index];
         if (visible(blockEl)) return blockEl.offsetTop;
       }
-      // 다음 블록이 없다 — 문서 **끝**에 붙은 짝이다. "있었을 자리"는 마지막 블록의 아랫변이지
-      // 패인 바닥이 아니다: scrollHeight 는 빈 여백까지의 높이라, 짧은 문서에서 선이 글을 지나
-      // 허공 바닥으로 떨어졌다(주인 신고 2026-08-25).
+      // 다음 블록이 없으면 문서 끝에 붙은 짝이다 — "있었을 자리"는 마지막 블록의 아랫변이지 패인 바닥(scrollHeight)이 아니다.
+      // With no next block, this pair sits at the doc's end — its spot is the last block's bottom edge, not the pane's scrollHeight.
       for (let k = els.length - 1; k >= 0; k -= 1) {
         const blockEl = els[k];
         if (visible(blockEl)) return blockEl.offsetTop + blockEl.offsetHeight;
@@ -223,10 +224,10 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
       return 0;
     };
 
-    // changed 짝의 선 색 — 왼쪽(before)은 빨강, 오른쪽(after)은 초록으로 흐르는 그라디언트다.
-    // `userSpaceOnUse` 가 요점: 어느 선이든 **같은 x 에서 같은 색**이라, changed 선끼리 겹쳐도
-    // 겹친 자리가 딴 색으로 안 드러난다(아래 시트의 불투명 규칙과 짝이다). id 는 마운트마다 다르게
-    // 짓는다 — 한 페이지에 diff 가 둘이면 defs 의 id 가 부딪힌다.
+    // changed 짝의 선은 왼쪽 빨강에서 오른쪽 초록으로 흐르는 그라디언트다. userSpaceOnUse라 겹친 changed 선끼리도 같은 x에서 같은 색을 낸다.
+    // Changed pairs get a gradient from red (left) to green (right); userSpaceOnUse keeps overlapping changed lines the same color at the same x.
+    // id는 마운트마다 새로 짓는다 — 한 페이지에 diff가 둘이면 defs의 id가 부딪힌다.
+    // A fresh id per mount; two diffs on one page would otherwise collide on the same defs id.
     const gradId = `nabi-diff-grad-${Math.random().toString(36).slice(2, 8)}`;
     const gradientDefs = (w: number): SVGElement => {
       const defs = doc.createElementNS(SVG_NS, 'defs');
@@ -250,10 +251,10 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
       return defs;
     };
 
-    // 반대쪽 패인의 "있었을 자리" 한 줄 — 추가는 왼쪽(before)에 초록, 지움은 오른쪽(after)에
-    // 빨강(주인 지시 2026-08-25: 오른쪽에만 초록이 보이고 왼쪽에는 아무 표시가 없었다).
-    // 거터의 이음선이 점으로 모이는 그 y 에, 같은 색으로 이어지는 선이다. 패인 안에 살아서
-    // 스크롤과 함께 구른다 — 스크롤마다 다시 놓을 것이 없고, 레이아웃이 바뀔 때만 다시 놓는다.
+    // 반대쪽 패인의 "있었을 자리" 한 줄 — 추가는 왼쪽(before)에 초록, 지움은 오른쪽(after)에 빨강, 거터 이음선과 같은 색으로 이어진다.
+    // The "would-have-been" line on the opposite pane: green on the before side for additions, red on the after side for removals, colored to match the gutter connector.
+    // 패인 안에 살아서 스크롤과 함께 구른다 — 레이아웃이 바뀔 때만 다시 놓는다.
+    // It lives inside the pane and scrolls with it, so it's only repositioned when layout changes.
     let marks: HTMLElement[] = [];
     const placeMarks = (): void => {
       for (const mark of marks) mark.remove();
