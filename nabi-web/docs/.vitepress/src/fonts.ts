@@ -83,6 +83,11 @@ function loadFontGroup(group: FontGroup): void {
   link.id = id
   link.rel = 'stylesheet'
   link.href = editorFontHref(group)
+  link.media = 'print'
+  link.onload = () => {
+    link.media = 'all'
+    link.onload = null
+  }
   document.head.append(link)
 }
 

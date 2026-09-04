@@ -1039,9 +1039,6 @@ onMounted(async () => {
   // Measure first: measureViewport() below converts the width into rem using this number.
   readZoomBasePx()
   measureViewport()
-  // 서체 wing이 고를 실제 글꼴 — 펜글씨는 로케일 공통, 본문 보조 글꼴은 이 페이지 문자권만 부른다(src/fonts.ts).
-  // The actual typeface fonts — handwriting is shared across locales; body fallbacks load only for this page's script.
-  loadEditorFonts(locale.value)
   window.addEventListener('resize', measureViewport)
   // 셋을 함께 부른다 — 차례로 await하면 왕복이 셋이 되어 그동안 데모 자리가 빈 상자로 남는다.
   // Fetched together, not sequentially, or the demo would sit empty across three round-trips.
@@ -1076,6 +1073,9 @@ onMounted(async () => {
   }
 
   build()
+  // 데모가 먼저 선 뒤 실제 글꼴을 받는다 — 큰 글꼴 CSS가 편집기 코어와 첫 화면을 놓고 다투지 않는다.
+  // Fetch the actual fonts after the demo stands, so their large CSS does not compete with the editor core or first paint.
+  loadEditorFonts(locale.value)
 })
 
 // 체크가 바뀌면 다시 만든다 — 껐을 때 값이 어떻게 떨어지는지가 데모의 요점이다.
