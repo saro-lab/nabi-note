@@ -14,7 +14,7 @@ export interface NabiFileBody {
 // package.json 버전의 앞 둘만 쓴다(1.2.3 -> 1.2, 패치 자리는 파일 모양과 무관) — 읽을 때는 검사하지 않는다(2026-08-17),
 // 판이 갈리기 전까지는 모양만 맞으면 읽는다. package.json을 코어가 직접 못 읽어 손으로 맞춘다(scripts/sync-version.mjs).
 // Only the first two segments of the package version (1.2.3 -> 1.2, patch doesn't affect file shape); unchecked on read as of 2026-08-17, any file whose shape matches loads until versions actually diverge. Hand-kept because the core can't read package.json itself (scripts/sync-version.mjs keeps it in sync).
-export const NABI_VERSION = '1.0.0';
+export const NABI_VERSION = '1.1.0';
 export const NABI_FILE_VERSION = NABI_VERSION.split('.').slice(0, 2).join('.');
 
 export function writeNabiFile(body: unknown): string {
