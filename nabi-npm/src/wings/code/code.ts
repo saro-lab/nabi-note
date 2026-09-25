@@ -62,9 +62,7 @@ const LANGUAGE_CLEAR: LocaleText = {
   id: 'Tanpa bahasa',
 };
 
-const CODE_ICON =
-  '<g transform="translate(8 8) scale(1.2273) translate(-8 -8)" stroke-width="1.141">' +
-  '<path d="M5.75 5.25 2.5 8l3.25 2.75M10.25 5.25 13.5 8l-3.25 2.75"/></g>';
+const CODE_ICON = 'code-code';
 
 // 상황 줄 단추로 서는 언어들 — 이름은 하이라이터에 넘어가는 값이라 번역하지 않는다.
 // Languages shown as context-toolbar buttons — the names are values passed to the highlighter, never translated.
@@ -401,7 +399,7 @@ export const codeWing: Wing = {
         kind: 'prompt',
         name: 'lang',
         command: 'setCodeLanguage',
-        svg: CODE_ICON,
+        icon: CODE_ICON,
         label: LANGUAGE_NAME,
         fields: [{ name: 'lang', label: LANGUAGE_NAME, attr: 'lang', optional: true }],
       },
@@ -433,7 +431,7 @@ export const codeWing: Wing = {
   ],
   button: {
     group: 'container',
-    svg: CODE_ICON,
+    icon: CODE_ICON,
     label: CODE_NAME,
     action: { kind: 'command', command: 'toggleCode' },
   },

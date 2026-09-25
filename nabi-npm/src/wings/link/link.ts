@@ -179,10 +179,7 @@ const TEXT_NAME: LocaleText = {
 };
 const ADDRESS_HINT: LocaleText = { ko: 'https://…', en: 'https://…' };
 
-const LINK_ICON =
-  '<g transform="translate(8 8) scale(1.1) translate(-8 -8)" stroke-width="1.273">' +
-  '<path d="M6.5 9.5 9.5 6.5"/>' +
-  '<path d="M6.75 4.25 8 3a2.8 2.8 0 0 1 4 4l-1.25 1.25M9.25 11.75 8 13a2.8 2.8 0 0 1-4-4l1.25-1.25"/></g>';
+const LINK_ICON = 'link-link';
 
 const LINK_CSS = `
 .nabi-content a { color: var(--nabi-accent); text-underline-offset: 2px; }
@@ -217,7 +214,7 @@ export const linkWing: Wing = {
     button: {
       group: 'link',
       accelerator: 'mod+k',
-      svg: LINK_ICON,
+      icon: LINK_ICON,
       label: LINK_NAME,
       action: {
         kind: 'prompt',

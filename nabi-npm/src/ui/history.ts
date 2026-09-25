@@ -1,16 +1,14 @@
+import { Translations } from './parts/translation.js';
+import type { LocaleInput } from '../locale/index.js';
+import { iconHtml } from '../style/icon.js';
 // 저장소가 막힌 곳(file://·사생활 보호 모드)에서는 판 대신 toast로 이유를 알린다 — 반환값이 null일 수 있다는 뜻이다.
 // Where storage is blocked (file://, private browsing) this shows a toast instead of a panel — meaning the return value can be null.
 import type { HistoryMount } from '../surface/index.js';
 import { exactTime, historyView, showsCreated, type HistoryRecord } from '../wings/local-history/local-history.js';
-import { localeDirection, makeTranslator, type Translator } from '../locale/index.js';
+import { localeDirection, localeValue, makeTranslator, type Translator } from '../locale/index.js';
 import { make } from './parts/dom.js';
 import { openScrim, type Scrim } from './parts/scrim.js';
 import type { Overlay } from './overlay.js';
-
-const CLOSE_ICON = '✕';
-const WIPE_ICON = '<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5"/>';
-const VIEW_ICON =
-  '<g stroke-width="1.4"><path d="M1.8 8s2.4-4 6.2-4 6.2 4 6.2 4-2.4 4-6.2 4-6.2-4-6.2-4z"/><circle cx="8" cy="8" r="1.6"/></g>';
 
 export interface HistoryPanelOptions {
   readonly history: HistoryMount;
@@ -19,7 +17,7 @@ export interface HistoryPanelOptions {
   readonly surface: HTMLElement;
   // 말과 날짜 차림을 함께 정한다 — 사전은 언어만 보지만 시각은 지역까지 본다(en-GB는 18/08/2026, en-US는 08/18/2026). 그래서 깎지 않은 값을 받는다.
   // Drives both language and date formatting — the dict resolves language only, while the date format needs the full region (en-GB writes 18/08/2026, en-US 08/18/2026), so this takes the raw, unresolved value.
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   readonly translator?: Translator;
   // 한 줄의 미리보기를 그릴 때 쓰는 조립 — 기록의 JSON을 보기 HTML로 바꾼다.
   // Renders a one-row preview — turns a record's JSON into display HTML.
@@ -50,7 +48,9 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
   const t = options.translator ?? makeTranslator(options.locale);
   // 날짜 표기는 t.locale이 아니라 호스트가 준 지역을 그대로 따른다.
   // Date formatting follows the host's raw locale, not the dict's resolved t.locale.
-  const stamp = options.locale ?? t.locale;
+  const stamp = (): string => (options.locale === undefined ? t.locale : localeValue(options.locale));
+  const copy = new Translations(t);
+  const rowsCopy = new Translations(t);
   const now = Date.now();
 
   // 저장소가 막힌 것은 사람이 단추를 누른 이 순간에만 말한다 — 백단(자동 스냅샷)은 조용히 넘긴다. 글 치는 내내 반복되는 알림은 알림이 아니라 방해다.
@@ -76,6 +76,7 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
   let disposed = false;
   let scrim: Scrim | null = null;
   let preview: Scrim | null = null;
+  let previewBody: HTMLElement | null = null;
   let previewGeneration = 0;
   const close = (): void => scrim?.close();
   const closePreview = (): void => {
@@ -91,13 +92,13 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
     'aria-label': t.t('history.clear'),
     'data-nabi-tip': t.t('history.clear'),
   }) as HTMLButtonElement;
-  wipe.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${WIPE_ICON}</svg>`;
+  wipe.innerHTML = iconHtml('panel-history-clear', 'delete');
   const shut = make(owner, 'button', 'nabi-btn', {
     type: 'button',
     'aria-label': t.t('close'),
     'data-nabi-tip': t.t('close'),
   }) as HTMLButtonElement;
-  shut.textContent = CLOSE_ICON;
+  shut.innerHTML = iconHtml('panel-history-close', 'close');
   corner.append(wipe, shut);
   card.append(corner);
   shut.addEventListener('click', close);
@@ -127,13 +128,14 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
 
   const draw = (): void => {
     if (disposed) return;
+    rowsCopy.clear();
     list.replaceChildren();
     const drawn = options.history.list();
     // 저장소가 살아 있음은 판이 서기 전에 이미 확인됐다(막힌 자리는 위에서 되돌아갔다) — 그래서 여기서는 빈 목록/찬 목록 둘만 가른다. 빈 상자를 그대로 두면 "고장났나"로 읽힌다.
     // Storage's aliveness was already checked before this panel opened (blocked storage returned above), so this only distinguishes empty from populated. Leaving an empty box blank would read as broken.
     if (historyView(true, drawn) === 'empty') {
       const empty = make(owner, 'div', 'nabi-history-empty');
-      empty.textContent = t.t('history.empty');
+      rowsCopy.text(empty, () => t.t('history.empty'));
       list.append(empty);
       return;
     }
@@ -151,22 +153,24 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
       // The visible time is just the human unit ("20 minutes ago"); the exact timestamp lives in the tooltip — a list reads "how long ago," not seconds.
       const when = make(owner, 'div', 'nabi-history-when');
       const time = make(owner, 'div', 'nabi-history-time', {
-        'data-nabi-tip': exactTime(record.savedAt, stamp),
+        'data-nabi-tip': exactTime(record.savedAt, stamp()),
       });
-      time.textContent = ago(t, record.savedAt, now);
+      rowsCopy.text(time, () => ago(t, record.savedAt, now));
+      rowsCopy.attribute(time, 'data-nabi-tip', () => exactTime(record.savedAt, stamp()));
       when.append(time);
       // 만든 때 — 고친 때와 벌어졌을 때만 따로 선다(갓 선 줄은 둘이 같은 순간이다).
       // "Created" only shows when it differs from "saved" — a brand-new record has both at the same instant.
       if (showsCreated(record)) {
         const born = make(owner, 'div', 'nabi-history-made', {
-          'data-nabi-tip': exactTime(record.createdAt, stamp),
+          'data-nabi-tip': exactTime(record.createdAt, stamp()),
         });
-        born.textContent = t.t('history.created', { when: ago(t, record.createdAt, now) });
+        rowsCopy.text(born, () => t.t('history.created', { when: ago(t, record.createdAt, now) }));
+        rowsCopy.attribute(born, 'data-nabi-tip', () => exactTime(record.createdAt, stamp()));
         when.append(born);
       }
       if (mine) {
         const here = make(owner, 'div', 'nabi-history-here');
-        here.textContent = t.t('history.current');
+        rowsCopy.text(here, () => t.t('history.current'));
         when.append(here);
       }
       open.append(summary, when);
@@ -184,7 +188,8 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
         'aria-label': t.t('preview'),
         'data-nabi-tip': t.t('preview'),
       }) as HTMLButtonElement;
-      view.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${VIEW_ICON}</svg>`;
+      view.innerHTML = iconHtml('panel-history-preview', 'history-preview');
+      rowsCopy.button(view, () => t.t('preview'));
       view.addEventListener('click', () => {
         if (disposed) return;
         const generation = ++previewGeneration;
@@ -194,6 +199,7 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
           dir: localeDirection(t.locale),
         });
         body.innerHTML = options.render(record);
+        previewBody = body;
         if (disposed || generation !== previewGeneration || !scrim?.root.isConnected) return;
         // 이 판보다 위에 선다 — 어느 줄의 미리보기든 목록을 덮는다.
         // Stacks above this panel — any row's preview covers the list.
@@ -202,7 +208,10 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
           card: body,
           restore: card,
           onClose: () => {
-            if (preview === opened) preview = null;
+            if (preview === opened) {
+              preview = null;
+              previewBody = null;
+            }
           },
         });
         if (disposed || generation !== previewGeneration || !scrim?.root.isConnected) {
@@ -217,7 +226,8 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
         'aria-label': t.t('history.remove'),
         'data-nabi-tip': t.t('history.remove'),
       }) as HTMLButtonElement;
-      drop.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${WIPE_ICON}</svg>`;
+      drop.innerHTML = iconHtml('panel-history-delete', 'delete');
+      rowsCopy.button(drop, () => t.t('history.remove'));
       drop.addEventListener('click', () => {
         if (disposed) return;
         void wipeIf('history.removeAsk', () => options.history.remove(record.sessionId));
@@ -233,13 +243,24 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
     void wipeIf('history.clearAsk', () => options.history.clear());
   });
 
-  draw();
   try {
+    copy.attribute(card, 'dir', () => localeDirection(t.locale));
+    copy.attribute(card, 'aria-label', () => t.t('history.title'));
+    copy.text(title, () => t.t('history.title'));
+    copy.button(wipe, () => t.t('history.clear'));
+    copy.button(shut, () => t.t('close'));
+    copy.add(() => {
+      previewBody?.setAttribute('aria-label', t.t('preview'));
+      previewBody?.setAttribute('dir', localeDirection(t.locale));
+    });
+    draw();
     scrim = openScrim(owner, {
       card,
       restore: options.surface,
       onClose: () => {
         disposed = true;
+        copy.dispose();
+        rowsCopy.dispose();
         previewGeneration += 1;
         try {
           closePreview();
@@ -250,6 +271,8 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
     card.focus();
     return { card, close };
   } catch (error) {
+    copy.dispose();
+    rowsCopy.dispose();
     disposed = true;
     try {
       scrim?.close();

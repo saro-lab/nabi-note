@@ -1,3 +1,4 @@
+import { ICON_CSS } from '../style/icon-css.js';
 // --- 시트 --------------------------------------------------------------------------------------
 import { acquireStyleSheet } from '../lifecycle.js';
 import { MOTION_PRESS_MS, Z_DIFF_FULLSCREEN } from '../style/tokens.js';
@@ -8,7 +9,8 @@ export function ensureCss(doc: Document): () => void {
 
 // `--nabi-*` 토큰을 대체값과 함께 부른다 — 편집기 시트(`nabi.css`) 없이 홀로 설 때도 옷이 있다.
 // References `--nabi-*` tokens with fallbacks, so this looks styled even standing alone without the editor stylesheet.
-export const DIFF_CSS = `
+export const DIFF_CSS = `${ICON_CSS}
+
 .nabi-diff {
   --nabi-motion-press: ${MOTION_PRESS_MS}ms;
   --nabi-z-diff-fullscreen: ${Z_DIFF_FULLSCREEN};

@@ -95,6 +95,7 @@ export interface WingChoice {
   // The full form when the visible text is an abbreviation (`H1` -> 'Heading 1'); read by screen readers and tooltips.
   readonly tip?: LocaleText;
   readonly svg?: string;
+  readonly icon?: string;
   // 색 견본 — 있으면 ui가 이 색으로 칠한 네모를 그린다(글자·아이콘 대신).
   // A color swatch; when present, the UI paints a colored square instead of text or an icon.
   readonly swatch?: string;
@@ -161,6 +162,7 @@ export interface WingButton {
   // ui가 innerHTML로 꽂으므로 코드이지 데이터가 아니다 — 사용자 입력이 여기로 오면 XSS 구멍이 된다.
   // ui injects this via innerHTML, so it's code, not data — user input reaching here would be an XSS hole.
   readonly svg?: string;
+  readonly icon?: string;
   // 다국어 이름 — aria-label과 툴팁이 된다. 없으면 ui가 사전의 `wing.<w>` 를 본다.
   // Localized name, becomes aria-label and tooltip; falls back to the dict's `wing.<w>` if absent.
   readonly label?: LocaleText;
@@ -195,6 +197,7 @@ interface ContextBase {
   // 아이콘 조각 — `WingButton.svg` 와 같다. 코드이지 데이터가 아니다.
   // An icon fragment, same rule as `WingButton.svg` — it's code, not data.
   readonly svg?: string;
+  readonly icon?: string;
   // 보이는 글자가 줄임말일 때의 원말(`~70%` → '가로 70%') — 있으면 이름표·낭독이 이것을 쓴다.
   // The full form when the visible text is an abbreviation (`~70%` -> 'Width 70%'); used by tooltips and screen readers.
   readonly tip?: LocaleText;

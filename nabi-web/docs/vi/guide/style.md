@@ -54,6 +54,7 @@ import 'nabi-note/nabi.css'
 | Bề mặt soạn thảo | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | Thanh công cụ dính và bản xem trước | `--nabi-sticky-top`, `--nabi-preview-width` |
 | Điều khiển cảm ứng | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| Chiều rộng chuyển sang chế độ di động | `--nabi-mobile-breakpoint` |
 
 Token tô sáng và màu văn bản dùng `--nabi-hl-<name>` và `--nabi-tc-<name>`. Ví dụ, đổi `--nabi-hl-yellow` sẽ đổi màu hiển thị của phần tô sáng `yellow` đã lưu mà không thay đổi dữ liệu tài liệu.
 
@@ -63,6 +64,20 @@ Token tô sáng và màu văn bản dùng `--nabi-hl-<name>` và `--nabi-tc-<nam
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## Ngưỡng chế độ di động
+
+Chế độ di động bật khi chiều rộng thanh công cụ, hàng ngữ cảnh hoặc vùng nhìn nhỏ hơn `36rem`. Ở đúng `36rem`, bố cục thông thường được giữ nguyên. Trong chế độ di động, thanh công cụ và hàng ngữ cảnh cuộn ngang, các bảng nằm giữa và lưới chọn bảng giảm còn 5×5 ô phù hợp với thao tác chạm.
+
+Đặt `--nabi-mobile-breakpoint` trên `:root`, phần tử tổ tiên hoặc từng `.nabi`. Dùng độ dài CSS không âm như `rem`, `px` hoặc `calc()`. Thay đổi giá trị CSS, cỡ chữ gốc, chiều rộng vùng chứa hoặc vùng nhìn cũng tự động cập nhật các bảng đang mở. Bảng nhập liệu được chuyển xuống dưới `body` vẫn dùng ngưỡng của trình soạn thảo ban đầu.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+Thiết bị cảm ứng vẫn giữ các điều khiển lớn hơn khi vượt ngưỡng này.
 
 ## Chế độ tối
 

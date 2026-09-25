@@ -1,3 +1,4 @@
+import type { LocaleInput } from '../locale/index.js';
 // 상태 엔진 — 문서 + 캐럿 + undo 를 드는 인스턴스. 커맨드의 유일한 문 하나, 신호 하나.
 // The state engine: an instance holding doc + caret + undo, with one door for commands and one signal.
 // 모듈 전역 가변 상태 없음 — 전부 이 팩토리의 클로저 안에 산다.
@@ -29,7 +30,7 @@ import { attrsArg, coreCommands, markArg, type Command, type CommandArgs, type C
 import { diffParagraphs, type NabiChange } from './signal.js';
 import { toastAsk, type Ask, type Choose } from './ask.js';
 import { TOAST_MAX, TOAST_MS, type Toast } from './toast.js';
-import { translate } from '../locale/index.js';
+import { localeValue, translate } from '../locale/index.js';
 import { bindHost, type NabiHost } from './host.js';
 import {
   callbackEnv,
@@ -73,7 +74,7 @@ export interface NabiOptions {
   readonly typingMergeMs?: number;
   // 문이 제 이름으로 말할 때의 로케일 — ui 층의 locale 옵션과 같은 값을 주면 된다. 안 주면 en이다.
   // The locale the door speaks in on its own (e.g. the pointer-hand rejection toast); pass the same value as the ui layer's locale option — defaults to en.
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
 }
 
 export interface NabiCoreOptions extends NabiOptions {
@@ -165,7 +166,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
   let armedDirty = false;
   // 화면이 건 그릇들 — 나중에 선 화면이 이기고, 그 화면을 먼저 떼면 아직 산 바로 아래 화면이 다시 드러난다. 등록 값이 같아도 해제는 entry 자기 것만 걷는다.
   // Sinks stacked by screens — the most recently mounted wins, and removing it first reveals whatever screen is still under it; unbinding always removes just its own entry, even if the value matches another.
-  const localeSinks: { readonly value: string }[] = [];
+  const localeSinks: { readonly value: LocaleInput }[] = [];
   const toastSinks: { readonly value: Toast }[] = [];
   const chooseSinks: { readonly value: Choose }[] = [];
   const bindSink = <T>(sinks: { readonly value: T }[], value: T): (() => void) => {
@@ -179,7 +180,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
       if (at !== -1) sinks.splice(at, 1);
     };
   };
-  const localeNow = (): string => localeSinks.at(-1)?.value ?? options.locale ?? 'en';
+  const localeNow = (): string => localeValue(localeSinks.at(-1)?.value ?? options.locale);
   // 알리는 문 — 호스트 콜백이 먼저다. 그릇도 콜백도 없으면(머리 없는 환경) 말은 조용히 사라진다 — 알림은 잃어도 되는 말이라 침묵이 맞다.
   // The notification path prefers the host callback; with neither a callback nor a sink (headless), the message quietly vanishes — a notification is fine to lose, unlike an Ask.confirm question.
   const report = (error: unknown): void => {

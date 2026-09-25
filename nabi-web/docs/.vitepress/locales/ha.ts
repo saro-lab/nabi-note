@@ -3,6 +3,7 @@ import { withLocaleTypefaceSample } from './typeface-lines.ts'
 export const ha = {
   label: 'Hausa', lang: 'ha', link: '/ha/', description: 'NABI NOTE — editan WYSIWYG na buɗaɗɗen tushe.',
   menu_start: 'Jagora', menu_getting_started: 'Amfani na farko', menu_cdn: 'Amfani da CDN', menu_features: 'Fuka-fukai', menu_style_guide: 'Jigogin CSS', menu_rendering: 'Saitin SSR', menu_extend_guide: 'Fikafikai na musamman', 
+  menu_icon_theme: "Jigogin gumaka",
   menu_docs: 'Takardu', menu_intro_vibe_coding: 'AI Vibe Coding',
 menu_projects: 'Ayyuka',
   menu_inline: 'Cikin layi', menu_inline_bold: 'Mai kauri', menu_inline_italic: 'Karkace', menu_inline_underline: 'Ƙarƙashin layi', menu_inline_strikethrough: 'Layin gogewa', menu_inline_superscript: 'Rubutu na sama', menu_inline_subscript: 'Rubutu na ƙasa', menu_inline_link: 'Mahaɗi', menu_inline_highlight: 'Alamar haske', menu_inline_text_color: 'Launin rubutu',

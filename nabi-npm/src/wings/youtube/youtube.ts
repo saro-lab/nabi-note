@@ -62,9 +62,7 @@ const ADDRESS_NAME: LocaleText = {
   id: 'Alamat',
 };
 
-const YOUTUBE_ICON =
-  '<g transform="translate(8 8) scale(1.2857) translate(-8 -7.995)" stroke-width="1.089">' +
-  '<rect x="2.75" y="4.3" width="10.5" height="7.39" rx="1.95"/><path d="M7.03 6.64 9.95 8l-2.92 1.36z"/></g>';
+const YOUTUBE_ICON = 'youtube-youtube';
 
 // iframe은 클릭을 제 안에서 다 삼켜 영상을 고를 길이 없어지므로, 편집기 안에선 방패 element가 대신 첫 클릭을 받는다.
 // An iframe swallows every click, leaving no way to select the video, so an overlay shield intercepts the first click in the editor instead.
@@ -164,7 +162,7 @@ export const youtubeWing: Wing = {
     requires: ['v'],
     button: {
       group: 'media',
-      svg: YOUTUBE_ICON,
+      icon: YOUTUBE_ICON,
       label: YOUTUBE_NAME,
       action: {
         kind: 'prompt',

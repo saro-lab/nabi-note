@@ -47,6 +47,10 @@ export default defineConfig([
     entry: { 'nabi-note.min': 'src/index.ts' },
     outDir: 'dist/browser',
     format: ['iife'],
+    define: { 'import.meta.url': '__nabiModuleUrl' },
+    banner: {
+      js: 'var __nabiModuleUrl = (() => { const src = typeof document !== "undefined" ? document.currentScript?.src || document.baseURI : "file:///"; return new URL(/\\/browser\\//.test(src) ? "../" : "./", src).href; })();',
+    },
     globalName: 'NabiNote',
     platform: 'browser',
     target: 'es2022',

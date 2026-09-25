@@ -7,6 +7,7 @@ export const pt = {
   description: 'NABI NOTE — um editor WYSIWYG de código aberto.',
 
   menu_docs: 'Documentação',
+  menu_icon_theme: "Temas de ícones",
   menu_intro_vibe_coding: 'Vibe coding com IA',
 
 

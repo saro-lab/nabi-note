@@ -6,6 +6,7 @@ export const vi = {
   label: 'Tiếng Việt', lang: 'vi', link: '/vi/',
   description: 'NABI NOTE — trình soạn thảo WYSIWYG mã nguồn mở.',
   menu_docs: 'Tài liệu', menu_start: 'Hướng dẫn', menu_getting_started: 'Cách dùng cơ bản', menu_cdn: 'Dùng CDN', menu_features: 'Wings', menu_style_guide: 'Chủ đề CSS', menu_rendering: 'Thiết lập SSR', menu_extend_guide: 'Wing tùy chỉnh', menu_intro_vibe_coding: 'Lập trình vibe với AI',
+  menu_icon_theme: "Giao diện biểu tượng",
 menu_projects: 'Dự án',
   menu_inline: 'Nội tuyến', menu_inline_bold: 'Đậm', menu_inline_italic: 'Nghiêng', menu_inline_underline: 'Gạch chân', menu_inline_strikethrough: 'Gạch ngang', menu_inline_superscript: 'Chỉ số trên', menu_inline_subscript: 'Chỉ số dưới', menu_inline_link: 'Liên kết', menu_inline_highlight: 'Đánh dấu', menu_inline_text_color: 'Màu chữ',
   menu_block: 'Khối', menu_block_heading: 'Tiêu đề', menu_block_bullet_list: 'Danh sách đầu dòng', menu_block_ordered_list: 'Danh sách đánh số', menu_block_task_list: 'Danh sách kiểm tra', menu_block_table: 'Bảng', menu_block_image: 'Hình ảnh', menu_block_youtube: 'YouTube', menu_block_code: 'Mã', menu_block_details: 'Chi tiết', menu_block_quote: 'Trích dẫn', menu_block_divider: 'Đường phân cách',

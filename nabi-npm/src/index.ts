@@ -157,6 +157,16 @@ export {
   localeDirection,
   localeOf,
   makeTranslator,
+  createLocale,
   translate,
 } from './locale/index.js';
-export type { Dictionary, LocaleText, Translator } from './locale/index.js';
+export type {
+  Dictionary,
+  LocaleText,
+  Translator,
+  LocaleController,
+  LocaleInput,
+  LocaleSource,
+} from './locale/index.js';
+
+export type { ViewToolsVisibility, ViewToolsHtmlOptions } from './wing/toolbar-html.js';

@@ -1,3 +1,4 @@
+import type { LocaleInput } from '../../locale/index.js';
 // 업로드의 표면 절반 — 파일을 받아 호스트 훅에 넘기고 끝나면 한 번에 커밋한다. 호스트 배선(전송 훅·한도)이 인스턴스 것이라 wing 선언만으론 안 되는 것만 이 층에 산다. 업로드 중엔 editor의 $lock으로 커맨드 자체를 막고 contenteditable도 같은 순간에 끈다(안 그러면 화면과 트리가 갈린다). 오류는 전부 toast 한 문으로 말한다(084 ⑦, 예전엔 거절·전송 실패·중도 이탈이 셋으로 흩어져 있었다) — 취소·깨진 그림·미리보기 실패처럼 화면이 이미 뜻을 보여주는 자리는 말을 안 보탠다(같은 말을 두 번 하면 둘 다 안 읽는다)
 // The screen half of upload: takes files, hands them to a host hook, and commits once at the end. Only things that need instance-level wiring (transfer hook, limits) live here; declaration-only extras (checklist clicks, code highlighting, broken-image watching) live as a wing's `attach`. During upload, the editor's $lock blocks commands outright (even undo/document-swap), and contenteditable is disabled at the same moment, or the browser could write to the tree while it's locked and the screen and tree would diverge. All errors funnel through one toast door (084 7; previously scattered across an inline rejection note, a silent catch{}, and a silent early return) since only here does the code know the whole batch and what fraction failed. Some outcomes deliberately stay silent because the screen already shows them: user-cancelled, a broken-image marker (wings/img/watch.ts), or a preview-less box (ui/upload.ts) turning into an attachment; saying the same thing twice means neither gets read
 import { hostOf, type Nabi } from '../../editor/index.js';
@@ -62,7 +63,7 @@ export interface UploadOptions extends UploadLimits {
   readonly onReject?: (problem: UploadReject) => void;
   // 첨부 링크의 글자 — 없으면 사전의 upload.attachment("첨부파일")다. 문서에 남는 말인데 커맨드는 화면도 로케일도 모르는 계약이라, 로케일을 아는 가장 안쪽 자리인 이 mount에서 골라 커맨드에 넘긴다
   // The attachment link's label; falls back to the dictionary's upload.attachment ("attached file"). Since this text ends up in the document but commands know neither the screen nor the locale by contract, this mount -- the innermost place that knows the locale -- picks the label and passes it to the command
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   readonly translator?: Translator;
 }
 
@@ -84,7 +85,6 @@ const UPLOAD_TOAST_MS = 5000;
 export function mountUpload(options: UploadOptions): UploadMount {
   const { nabi, uploader } = options;
   const t = options.translator ?? makeTranslator(options.locale);
-  const attachmentLabel = t.t('upload.attachment');
   const lifetime = new AsyncMountScope();
   let running = false;
   let counter = 0;
@@ -240,7 +240,7 @@ export function mountUpload(options: UploadOptions): UploadMount {
         // 배치 전체가 undo 한 점이다
         // The whole batch is one undo step
         nabi.group(() => {
-          nabi.applyCommand('commitUpload', { items, label: attachmentLabel });
+          nabi.applyCommand('commitUpload', { items, label: t.t('upload.attachment') });
         });
       }
       // 못 올라간 것은 커밋 뒤에 말한다 — 그래야 "무엇이 섰고 무엇이 빠졌나"가 화면과 같은 순간을 가리킨다. 취소된 배치는 말 안 한다 — 끊긴 파일이 전부 실패로 잡혀도 그건 사람이 시킨 일이라 오류가 아니다

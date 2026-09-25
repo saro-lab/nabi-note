@@ -1,9 +1,10 @@
+import type { LocaleInput } from '../locale/index.js';
 // contenteditable 표면 — 정책(actions·autoformat·vessel·redraw)은 순수부에 있고 이 파일은 브라우저 이벤트 배선만 한다(EditContext가 서는 날 포트 뒤에서 교체될 파일). 원칙: 트리가 정본, 화면 캐럿은 파생이라 어긋나면 트리로 교정한다. 예외는 IME 조합 중뿐 — 그동안은 DOM이 정답이고 끝나는 순간 한 번에 따라잡는다
 // The contenteditable surface; policy (actions/autoformat/vessel/redraw) lives in the pure layer, this file only wires it to browser events (and is what a future EditContext implementation would replace, behind the port). Principle: the tree is authoritative, the screen caret is derived and gets corrected back to it when they diverge -- except during IME composition, when the DOM is authoritative and gets reconciled back in one shot at the end
 import { $toJson, isElement, isWrapper, type NabiDoc } from '../schema/index.js';
 import { comparePositions, holderLength, holders, isHolder, nodeAt, terminalOf } from '../doc/index.js';
 import { caretAt, isCollapsed, ordered, sameSelection, selectObject, type Selection } from '../caret/index.js';
-import { localeDirection, translate } from '../locale/index.js';
+import { localeDirection, localeValue, makeTranslator } from '../locale/index.js';
 import { hostOf, type Nabi, type NabiChange } from '../editor/index.js';
 import type { Registry } from '../wing/index.js';
 import { FILLER_ATTR, renderEditorHtml, renderParagraphHtml, type HtmlOptions } from '../html/index.js';
@@ -37,7 +38,7 @@ export interface SurfaceOptions {
   readonly allowLocalUrls?: boolean;
   // 글의 언어가 쓰기 방향을 정한다(098) — 주면 dir을 적어 아랍어·우르두는 페이지의 <html dir>과 무관하게 오른쪽에서 왼쪽으로 쓴다. 안 주면 안 건드린다(방향을 직접 쥔 호스트를 덮지 않는다)
   // The text's language decides writing direction (098); when given, `dir` is set so Arabic/Urdu write right-to-left regardless of the page's own <html dir>. When omitted, it's left untouched, so a host managing direction itself isn't overridden
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   // 빈 편집기의 안내글 — 안 주면 코어 사전의 로케일 말이 선다. 빈 글자열을 주면 안내글이 꺼진다. 줄바꿈은 그대로 여러 줄 안내글이 된다
   // The empty-editor placeholder; omitted, it falls back to the core dictionary's localized text. An empty string turns it off. Newlines are preserved, producing a multi-line placeholder
   readonly placeholder?: string;
@@ -100,7 +101,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
         ...(options.ioFilters ? { extra: options.ioFilters } : {}),
         ...(options.allowLocalUrls ? { allowLocalUrls: true } : {}),
       }),
-      locale: () => options.locale ?? hostOf(nabi).locale(),
+      locale: () => (options.locale === undefined ? hostOf(nabi).locale() : localeValue(options.locale)),
       ...(options.fileSink ? { fileSink: options.fileSink } : {}),
     });
 
@@ -1114,11 +1115,16 @@ export function mountSurface(options: SurfaceOptions): Surface {
     lifecycle.add(() => attributes.dispose());
     attributes.attribute('contenteditable', 'true');
     attributes.className('nabi-editing', true);
-    if (options.locale !== undefined) attributes.attribute('dir', localeDirection(options.locale));
     // 빈 편집기의 안내글은 말만 여기서 정한다 — 언제·어떻게 뜨는지는 시트의 몫이고(빈 문단 하나라는 모양만 겨눈다), 여기는 CSS 변수 한 칸에 그 말을 적을 뿐이라 트리·DOM에 안 들어가 저장값·캐럿 셈이 흔들릴 일이 없다. 안 받았으면 코어 사전이 로케일대로 낸다
     // The empty-editor placeholder text is set here only; when/how it appears is the stylesheet's job (targeting the single "one empty paragraph" shape), and this just writes the text into a CSS variable, so it never enters the tree or DOM and can't disturb saved values or caret counting. If none is given, the core dictionary supplies a localized one
-    const placeholder = options.placeholder ?? translate('placeholder', options.locale ?? hostOf(nabi).locale());
-    if (placeholder !== '') attributes.style('--nabi-placeholder', cssQuoted(placeholder));
+    const translator = makeTranslator(options.locale ?? hostOf(nabi).locale());
+    const localize = (): void => {
+      if (options.locale !== undefined) attributes.attribute('dir', localeDirection(translator.locale));
+      const placeholder = options.placeholder ?? translator.t('placeholder');
+      if (placeholder !== '') attributes.style('--nabi-placeholder', cssQuoted(placeholder));
+    };
+    localize();
+    if (translator.onChange) lifecycle.add(translator.onChange(localize));
     // hydrate — 서버가 그린 편집기 DOM이 문서와 맞으면 다시 그리지 않고 입양한다
     // hydrate: adopts the server-rendered editor DOM instead of redrawing it, if it matches the document
     if (!(options.hydrate === true && adopted())) renderAll();

@@ -24,6 +24,7 @@
             type="button"
             class="chip"
             :class="{ 'chip-on': locale === code }"
+            @mousedown.prevent
             @click="setLocale(code)"
           >
             {{ name }}
@@ -285,7 +286,7 @@ import CodeBox from './CodeBox.vue'
 // 타입만 가져온다 — 런타임에는 지워지므로 Shiki가 SSR·첫 번들에 끌려 들어가지 않는다.
 // Type-only import, erased at runtime, so Shiki never reaches SSR or the first bundle.
 import type { CodeHighlighting } from '../src/highlight.ts'
-import type { CodeHighlighter, Wing } from 'nabi-note'
+import type { CodeHighlighter, Wing, LocaleInput, LocaleController } from 'nabi-note'
 
 // wings는 처음 상태만 정한다 — 칩으로 껐다 켜는 것은 그대로고, 안 주면 전부 켜진다.
 // wings only sets the initial state; the chips still toggle everything, and omitting it starts all on.
@@ -490,8 +491,9 @@ const highlightCode: CodeHighlighter = (source, language) => {
 
 // 미리보기가 실제로 겪을 것(열 정렬·코드 색칠)을 얹는다 — attachViewer 하나를 부르고 하이라이터만 넘긴다.
 // What the reader's published page actually gets (sortable columns, code color): one door, one highlighter handed over.
-function attachPreviewRuntime(body: HTMLElement, locale: string): () => void {
-  return viewerModule ? viewerModule.attachViewer(body, { locale, highlight: highlightCode }) : () => {}
+function attachPreviewRuntime(body: HTMLElement, locale: LocaleInput): () => void {
+  const viewer = viewerModule?.attachViewer(body, { locale, highlight: highlightCode })
+  return () => viewer?.unmount()
 }
 
 function ensureHighlighting(): void {
@@ -537,6 +539,7 @@ let diffMount: (Unmountable & { open(): void }) | null = null
 // 첫 조립인가 — 서버가 그린 DOM을 이어받을 수 있는 것은 이때뿐이다.
 // Whether this is the first build — only then can the server-rendered DOM be adopted.
 let firstBuild = true
+let editorLocale: LocaleController | null = null
 let nabi: ReturnType<NabiModule['createNabiWith']>['nabi'] | null = null
 let registry: ReturnType<NabiModule['createNabiWith']>['registry'] | null = null
 let stopChange: (() => void) | null = null
@@ -606,21 +609,19 @@ function build(): void {
   unmountAll()
 
   const wings = pickedWings()
-  const here = locale.value
+  const here = (editorLocale ??= mod.createLocale(locale.value))
 
   // 1. 에디터 하나 — wing 목록이 갈래 지식·커맨드·조립기를 함께 짓는다.
   // One editor: the wing list builds the schema, the commands and the assembler together.
   // 코어는 아무것도 안 묻고 "아니오"로 답한다(헤드리스에서도 돌아야 하니) — 호스트가 여기서 대화상자를 끼운다.
   // The core asks nobody and answers "no" (it must run headless too) — the host plugs the dialog in here.
   const made = mod.createNabiWith(wings, {
+    locale: here,
     ask: {
       message: (text: string) => window.alert(text),
       confirm: (text: string) => window.confirm(text),
     },
     allowLocalUrls: true,
-    parseHtml: mod.parseNodes,
-    // 예문은 나비트리로 굳혀 두고 그대로 넣는다 — parseHtml은 붙여넣기와 아래 setHtml을 위해 남긴다.
-    // The sample goes in as a frozen tree; parseHtml still rides along for paste and setHtml below.
     ...(value === '' && doc ? { doc } : {}),
   })
   nabi = made.nabi
@@ -664,7 +665,6 @@ function build(): void {
       name: () => 'nabi-note',
       // 붙여넣기와 같은 파서다 — .html 파일을 여는 길도 그것으로 열린다.
       // The same parser paste uses; it is also what opens a plain .html file.
-      parse: mod.parseNodes,
       allowLocalUrls: true,
       locale: here,
     }) as never
@@ -849,7 +849,7 @@ const code = computed(() => {
   const ids = catalog.value.map((item) => item.id).filter(on)
   const all = ids.length === catalog.value.length && catalog.value.length > 0
 
-  const imports = ['createNabiWith', 'mountSurface', 'mountToolbar', 'mountContextToolbar', 'mountHints', 'watchSettle']
+  const imports = ['createLocale', 'createNabiWith', 'mountSurface', 'mountToolbar', 'mountContextToolbar', 'mountHints', 'watchSettle']
   const wingLines: string[] = []
 
   if (all) {
@@ -870,9 +870,9 @@ const code = computed(() => {
   if (on('upload')) {
     imports.push('mountUpload', 'mountUploadView')
     wired.push(
-      'const view = mountUploadView({ nabi, surface: content })',
+      'const view = mountUploadView({ nabi, surface: content, locale })',
       'const upload = mountUpload({',
-      '  nabi, root: content,',
+      '  nabi, root: content, locale,',
       ko
         ? '  // 여기에 서버로 올리는 코드 — 진행률은 task.onProgress(0~100)'
         : '  // your upload goes here — report progress with task.onProgress(0–100)',
@@ -888,9 +888,9 @@ const code = computed(() => {
     )
   }
   if (on('save') || on('open')) {
-    imports.push('browserFileStore', 'mountFile', 'parseNodes')
+    imports.push('browserFileStore', 'mountFile')
     wired.push(
-      `const file = mountFile({ nabi, registry, store: browserFileStore(document), parse: parseNodes, locale: '${locale.value}', name: () => 'note' })`,
+      `const file = mountFile({ nabi, registry, store: browserFileStore(document), locale, name: () => 'note' })`,
     )
   }
   imports.push('mountViewTools')
@@ -898,7 +898,7 @@ const code = computed(() => {
     imports.push('browserHistoryStorage', 'mountLocalHistory', 'openHistoryPanel')
     wired.push('const history = mountLocalHistory({ nabi, storage: browserHistoryStorage(window) })')
   }
-  if (on('diff')) wired.push(`const diff = mountDiffWing({ nabi, registry, surface: content, locale: '${locale.value}' })`)
+  if (on('diff')) wired.push(`const diff = mountDiffWing({ nabi, registry, surface: content, locale })`)
   const codeNote = on('code')
     ? [
         '',
@@ -931,9 +931,10 @@ const code = computed(() => {
     'const selected = [',
     ...wingLines,
     ']',
+    `const locale = createLocale('${locale.value}')`,
     asks
-      ? 'const { nabi, registry } = createNabiWith(selected, { ask })'
-      : 'const { nabi, registry } = createNabiWith(selected)',
+      ? 'const { nabi, registry } = createNabiWith(selected, { ask, locale })'
+      : 'const { nabi, registry } = createNabiWith(selected, { locale })',
     ...codeNote,
     '',
     "const root = document.querySelector('.nabi')!",
@@ -943,10 +944,10 @@ const code = computed(() => {
     ko
       ? '// locale 이 글의 방향도 정한다 — 아랍어·우르두면 오른쪽에서 왼쪽으로 선다'
       : '// The locale also sets the direction — Arabic and Urdu run right to left',
-    `mountSurface({ nabi, registry, root: content, locale: '${locale.value}'${on('upload') ? ', fileSink: upload.take' : ''} })`,
+    `mountSurface({ nabi, registry, root: content, locale${on('upload') ? ', fileSink: upload.take' : ''} })`,
     '',
     'const settle = watchSettle(document, { surface: content })',
-    `const shared = { nabi, registry, surface: content, settle, locale: '${locale.value}' }`,
+    `const shared = { nabi, registry, surface: content, settle, locale }`,
     ...(on('localHistory') || on('diff')
       ? [
           ko
@@ -962,7 +963,7 @@ const code = computed(() => {
             ? [
                 "    if (w !== 'localHistory') return",
                 '    openHistoryPanel({',
-                `      history, surface: content, locale: '${locale.value}', sessionId: history.sessionId,`,
+                `      history, surface: content, locale, sessionId: history.sessionId,`,
                 '      render: (record) => createNabiWith(selected, { doc: JSON.parse(record.body) }).nabi.getHtml(),',
                 '    })',
               ]
@@ -984,6 +985,9 @@ const code = computed(() => {
     // The sample must run as pasted — this callback doesn't exist, so it stays commented out instead of throwing.
     ko ? '// 값이 바뀔 때마다 — 여기에 당신의 코드를 건다' : '// on every change — hook up your own code here',
     '// nabi.onChange(() => user_callback(nabi.getHtml()))',
+    '',
+    ko ? '// 언어 선택 이벤트에서 호출한다. 내용과 편집 이력은 유지된다.' : '// Call from your language selector. Content and editing history stay intact.',
+    "// locale.setLocale('ko')",
   ]
 
   return lines.join('\n')
@@ -1014,14 +1018,12 @@ function setAll(on: boolean): void {
   for (const item of catalog.value) picked[item.id] = on
 }
 
-// 말은 세울 때 한 번 건네진다 — 바꾸려면 조각들을 다시 세워야 하지만, 문서 값은 그대로 물려간다.
-// The locale is handed over at mount time, so switching it re-stands the pieces; the document rides along.
 function setLocale(code: string): void {
   if (locale.value === code) return
   locale.value = code
+  editorLocale?.setLocale(code)
   loadEditorFonts(code)
   catalog.value = catalog.value.map((item) => ({ ...item, label: labelOf(item.id, code) }))
-  build()
 }
 
 function labelOf(id: string, code: string): string {

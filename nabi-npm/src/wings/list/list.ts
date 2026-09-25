@@ -639,17 +639,9 @@ const LIST_CSS = `
 }
 `;
 
-const BULLET_ICON =
-  '<path d="M5.5 4h8M5.5 8h8M5.5 12h8"/>' +
-  '<circle cx="2.75" cy="4" r="1" fill="currentColor" stroke="none"/>' +
-  '<circle cx="2.75" cy="8" r="1" fill="currentColor" stroke="none"/>' +
-  '<circle cx="2.75" cy="12" r="1" fill="currentColor" stroke="none"/>';
-const ORDERED_ICON =
-  '<path d="M6.24 4.47h6.62M6.24 8h6.62M6.24 11.53h6.62M2.71 3.37h.88v2.21M2.62 5.57h1.5"/>' +
-  '<path d="M2.62 7.47c0-.35.35-.62.79-.62s.79.26.79.62l-1.58 1.59h1.68"/>' +
-  '<path d="M2.71 10.56h1.41L3.15 11.7c.53 0 1.06.18 1.06.71s-.44.79-.97.79c-.35 0-.71-.09-.88-.35"/>';
-const TASK_ICON =
-  '<path d="M6.25 4.5h6.56M6.25 11.06h6.56M2.31 4.15l1.05 1.05 1.75-1.93M2.31 10.71l1.05 1.05 1.75-1.93"/>';
+const BULLET_ICON = 'list-bullet';
+const ORDERED_ICON = 'list-ordered';
+const TASK_ICON = 'list-task';
 
 const BULLET_NAME: LocaleText = {
   ko: '글머리 목록',
@@ -754,7 +746,7 @@ function listWing(
       inputRules: rules,
       button: {
         group: 'list',
-        svg: icon,
+        icon: icon,
         label,
         action: { kind: 'command', command },
       },

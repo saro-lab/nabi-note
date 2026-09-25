@@ -1,6 +1,7 @@
 // 미리보기·라이트박스·(호스트의) 패널이 전부 이 위에 선다 — Escape로 닫기·바깥 클릭으로 닫기·닫을 때 포커스 복원, 셋을 한 곳에서 맡는다.
 // Preview, lightbox, and host panels all sit on this — closing via Escape, closing via an outside click, and restoring focus on close are all handled in one place.
 import { focusQuiet, make } from './dom.js';
+import { followIconTheme } from '../../icon-theme.js';
 import { inertDocumentBackground, pushDocumentLayer, topLayerFocus, type DocumentLayer } from '../../layer.js';
 
 export interface ScrimOptions {
@@ -53,6 +54,7 @@ export function openScrim(owner: Document, options: ScrimOptions): Scrim {
   }
   root.append(options.card);
 
+  let stopTheme = () => {};
   let closed = false;
   let layer: DocumentLayer | null = null;
   let releaseInert: (() => void) | null = null;
@@ -62,6 +64,7 @@ export function openScrim(owner: Document, options: ScrimOptions): Scrim {
     // Closing twice only closes once — a scrim click and Escape can arrive in the same instant.
     if (closed) return;
     closed = true;
+    stopTheme();
     try {
       owner.removeEventListener('keydown', onKey, true);
     } catch {}
@@ -135,12 +138,14 @@ export function openScrim(owner: Document, options: ScrimOptions): Scrim {
     owner.addEventListener('keydown', onKey, true);
     owner.addEventListener('pointerdown', onDown, true);
     owner.body.append(root);
+    stopTheme = followIconTheme(options.restore, root);
     const scrim = { root, close };
     layer = pushDocumentLayer(owner, options.card);
     releaseInert = inertDocumentBackground(owner, root);
     if (options.initialFocus !== false) (focusables(options.card)[0] ?? options.card).focus({ preventScroll: true });
     return scrim;
   } catch (error) {
+    stopTheme();
     try {
       owner.removeEventListener('keydown', onKey, true);
     } catch {}

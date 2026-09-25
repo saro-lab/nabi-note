@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 // Freezing (HTML to tree) stands up one editor, so this imports the core entry where setHtml lives.
 import { defaultWings, makeTranslator } from 'nabi-note';
 import { $createNabiWith } from '../../nabi-npm/src/wing/index.ts';
+import { defaultWings as sourceWings } from '../../nabi-npm/src/wings/index.ts';
 // 그리는 쪽은 서버 진입점이면 충분하다 — 편집 표면·화면 도구를 한 파일도 안 딛는다.
 // Rendering needs only the server entry — it touches no edit surface or view tool files.
 import { makeRegistry, renderStoredEditorHtml, renderToolbarHtml, renderViewToolsHtml } from 'nabi-note/ssr';
@@ -57,19 +58,19 @@ const registry = makeRegistry(defaultWings);
 const directTrees: Readonly<Partial<Record<string, SampleTrees>>> = { ko: koTrees };
 
 function treeOf(html: string): unknown[] {
-  const { nabi } = $createNabiWith(defaultWings, { ...open, parseHtml: tinyHtml });
+  const { nabi } = $createNabiWith(sourceWings, { ...open, parseHtml: tinyHtml });
   if (!nabi.setHtml(html)) throw new Error('setHtml 이 거절했다');
   const tree = nabi.getJson();
 
   // 굳힌 트리가 원고와 같은 문서인가 — 트리로 세운 편집기의 HTML이 원고를 들여온 것과 한 글자도 달라선 안 된다.
   // Confirms the frozen tree matches the source: the HTML from the tree must equal the HTML from importing it.
-  const seen = $createNabiWith(defaultWings, { ...open, doc: tree });
+  const seen = $createNabiWith(sourceWings, { ...open, doc: tree });
   if (seen.nabi.getHtml() !== nabi.getHtml()) throw new Error('트리 왕복이 원고와 어긋난다');
   return tree;
 }
 
 function checkedTree(tree: SampleTree, code: string, key: string): unknown[] {
-  const { nabi } = $createNabiWith(defaultWings, { ...open, doc: tree });
+  const { nabi } = $createNabiWith(sourceWings, { ...open, doc: tree });
   const normalized = nabi.getJson();
   if (JSON.stringify(normalized) !== JSON.stringify(tree)) {
     throw new Error(`${code} ${key} NABI TREE가 정규형이 아니다`);

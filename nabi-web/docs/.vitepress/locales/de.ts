@@ -12,6 +12,7 @@ export const de = {
   menu_cdn: 'CDN nutzen',
   menu_features: 'Wings',
   menu_style_guide: 'CSS-Stile',
+  menu_icon_theme: "Icon-Themes",
   menu_rendering: 'SSR-Einrichtung',
   menu_extend_guide: 'Eigene Wings',
   menu_intro_vibe_coding: 'KI-Vibe-Coding',

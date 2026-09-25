@@ -1,4 +1,4 @@
-export const NARROW_REM = 40;
+export const NARROW_REM = 36;
 
 export const MOTION_PRESS_MS = 60;
 export const MOTION_FAST_MS = 100;

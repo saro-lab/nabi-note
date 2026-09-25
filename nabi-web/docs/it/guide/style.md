@@ -54,6 +54,7 @@ Metti i token condivisi su un genitore comune, così l'editor e la relativa vist
 | Superficie di modifica | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | Barra fissa e anteprima | `--nabi-sticky-top`, `--nabi-preview-width` |
 | Controlli tattili | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| Larghezza di attivazione della modalità mobile | `--nabi-mobile-breakpoint` |
 
 I token per evidenziazione e colore del testo usano `--nabi-hl-<name>` e `--nabi-tc-<name>`. Per esempio, modificare `--nabi-hl-yellow` cambia il colore di visualizzazione delle evidenziazioni `yellow` archiviate senza modificare i dati del documento.
 
@@ -63,6 +64,20 @@ I token per evidenziazione e colore del testo usano `--nabi-hl-<name>` e `--nabi
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## Soglia della modalità mobile
+
+La modalità mobile si attiva quando la larghezza della barra degli strumenti, della barra contestuale o della finestra è inferiore a `36rem`. A esattamente `36rem` resta il layout normale. In modalità mobile, le due barre scorrono orizzontalmente, i pannelli sono centrati e il selettore di tabelle si riduce a 5×5 celle adatte al tocco.
+
+Imposta `--nabi-mobile-breakpoint` su `:root`, un antenato o una singola `.nabi`. Usa una lunghezza CSS non negativa, come `rem`, `px` o `calc()`. Le modifiche al valore CSS, alla dimensione del carattere radice, alla larghezza del contenitore o della finestra aggiornano automaticamente anche i pannelli aperti. I pannelli di input spostati sotto `body` mantengono la soglia dell’editor originale.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+I dispositivi touch mantengono controlli più grandi anche oltre questa soglia.
 
 ## Modalità scura
 

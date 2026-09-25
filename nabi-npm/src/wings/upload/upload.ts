@@ -171,9 +171,7 @@ const UPLOAD_NAME: LocaleText = {
   id: 'Unggah berkas',
 };
 
-const UPLOAD_ICON =
-  '<g transform="translate(8 8) scale(1) translate(-8 -8)" stroke-width="1.4">' +
-  '<path d="M8 10.5V2.5M5 5.5 8 2.5l3 3M2.75 10v2.5a1 1 0 0 0 1 1h8.5a1 1 0 0 0 1-1V10"/></g>';
+const UPLOAD_ICON = 'upload-upload';
 
 export function makeUploadWing(options: CommitOptions = {}): Wing {
   const allowLocal = options.allowLocalUrls === true;
@@ -221,7 +219,7 @@ export function makeUploadWing(options: CommitOptions = {}): Wing {
     commands: { commitUpload },
     button: {
       group: 'media',
-      svg: UPLOAD_ICON,
+      icon: UPLOAD_ICON,
       label: UPLOAD_NAME,
       // 파일 상자를 여는 건 ui, 고른 파일이 갈 곳은 호스트의 배선(mountUpload)이다.
       // The file picker is ui's job; where a chosen file goes is up to the host's own wiring (mountUpload).

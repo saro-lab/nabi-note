@@ -12,6 +12,7 @@ export const ja = {
   menu_cdn: 'CDN の使い方',
   menu_features: 'wing',
   menu_style_guide: 'CSS テーマ',
+  menu_icon_theme: "アイコンテーマ",
   menu_rendering: 'SSR 設定',
   menu_extend_guide: 'カスタム wing',
   menu_intro_vibe_coding: 'AIバイブコーディング',

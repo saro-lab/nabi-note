@@ -84,3 +84,14 @@ When the CDN does not honor package export maps, use the concrete `dist` paths s
 - Pin the exact package version; unpinned URLs can change application behavior.
 
 For complete assembly and IO examples, read `quickstart-npm.md`.
+
+## 1.1.0 icon assets
+
+For 1.1.0 builds, keep the same package version for JS, CSS, and `dist/icons/`. Manual hosting must copy the icons directory beside `nabi.css`; the local CDN demo already includes it. Keep `dist/browser/` relative to `dist/icons/` when using runtime CSS injection with the IIFE. The pinned 1.0.0 examples above describe the published baseline; use your 1.1.0 build for the new icon themes and individual `showPreview`/`showFullscreen` options. See `icons.md`.
+
+## Live language changes
+
+Use `var locale = NabiNote.createLocale('en')` and pass that object as `locale`
+to the editor and all mounts that should follow it. Call `locale.setLocale('ko')`
+from the language selector. Keep the existing editor and surface mounted; do not
+reload their document. See `quickstart-npm.md` for the state-preservation contract.

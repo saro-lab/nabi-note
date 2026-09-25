@@ -950,10 +950,14 @@ for (const fam of FAMILIES) {
     path: [0],
     offset: 0,
   });
-  eq('접기 속 마지막 문단 맨 끝에서 ↓ 는 래퍼문단 뒤에 선다', arrow('down', caretAt(at([0, 0, 1], 2)))?.selection.focus, {
-    path: [0],
-    offset: 1,
-  });
+  eq(
+    '접기 속 마지막 문단 맨 끝에서 ↓ 는 래퍼문단 뒤에 선다',
+    arrow('down', caretAt(at([0, 0, 1], 2)))?.selection.focus,
+    {
+      path: [0],
+      offset: 1,
+    },
+  );
   eq('제목 안쪽의 ↑ 는 pass', arrow('up', caretAt(at([0, 0, 0], 1))), null);
 }
 {
@@ -979,10 +983,11 @@ for (const fam of FAMILIES) {
     path: [0],
     offset: 1,
   });
-  eq('가운데 줄에서는 ↑/↓ 둘 다 pass — 코어의 글자 걸음', [
-    arrow('up', caretAt(at([0, 0], 4))),
-    arrow('down', caretAt(at([0, 0], 4))),
-  ], [null, null]);
+  eq(
+    '가운데 줄에서는 ↑/↓ 둘 다 pass — 코어의 글자 걸음',
+    [arrow('up', caretAt(at([0, 0], 4))), arrow('down', caretAt(at([0, 0], 4)))],
+    [null, null],
+  );
 }
 
 // --- 코드 상자는 정렬을 안 받는다 (`Wing.noAlign` 선언) ----------------------------------------

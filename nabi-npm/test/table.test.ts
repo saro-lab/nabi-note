@@ -428,10 +428,8 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
 // --- 표 만들기 격자 — 작은 화면에서는 5×5 -------------------------------------------------------
 
 {
-  // 폭 판정은 CSS 몫이다(리사이즈에 따라간다) — 테스트에서 보이는 건 wing 이 실어 나르는 시트뿐이다.
-  // Width decisions belong to CSS (it tracks resize) — tests can only see the sheet the wing carries.
   const css = tableWing.styles ?? '';
-  ok('작은 화면 분기가 표 시트에 있다', css.includes('@media (max-width: 40rem)'));
+  ok('작은 화면 분기가 표 시트에 있다', css.includes('.nabi-narrow .nabi-grid'));
   ok('작은 화면 격자는 5열이다', css.includes('grid-template-columns: repeat(5, var(--nabi-grid-cell)) !important'));
   ok(
     '작은 화면 칸은 공개 touch 크기 토큰을 쓴다',

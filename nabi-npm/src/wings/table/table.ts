@@ -14,7 +14,6 @@ import type { KeyIntent, OnKey, Wing } from '../../wing/index.js';
 import { insertLump } from '../../wing/index.js';
 import { exitWrapper } from '../../wing/ops.js';
 import type { LocaleText } from '../../locale/index.js';
-import { NARROW_REM } from '../../style/tokens.js';
 import {
   $columnGapWidths,
   SPAN_COL,
@@ -742,24 +741,17 @@ function claim(el: ParseElement, inner: (block: boolean) => NabiNode[]): NabiNod
 // 눌림은 currentValue가 답하는 상태 토큰('merged'·'th')으로 읽는다.
 // A pressed state is read from the token currentValue returns ('merged', 'th').
 const TABLE_ICONS = {
-  // 위아래 화살표 — 열 정렬의 표식. viewer의 단추와 같은 뜻이다.
-  sortable: '<path d="M5 6.5 8 3.5l3 3M5 9.5l3 3 3-3"/>',
-  grid: '<rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.5"/><path d="M1.75 6.5h12.5M6 6.5v6.75"/>',
-  rowAbove: '<rect x="1.75" y="8" width="12.5" height="5.5" rx="1.2"/><path d="M8 2v4M6 4h4"/>',
-  rowBelow: '<rect x="1.75" y="2.5" width="12.5" height="5.5" rx="1.2"/><path d="M8 10v4M6 12h4"/>',
-  rowDelete: '<rect x="1.75" y="5.25" width="12.5" height="5.5" rx="1.2"/><path d="M5.5 8h5"/>',
-  colLeft: '<rect x="8" y="1.75" width="5.5" height="12.5" rx="1.2"/><path d="M4 8h-2M3 6v4"/>',
-  colRight: '<rect x="2.5" y="1.75" width="5.5" height="12.5" rx="1.2"/><path d="M12 8h2M13 6v4"/>',
-  colDelete: '<rect x="5.25" y="1.75" width="5.5" height="12.5" rx="1.2"/><path d="M8 5.5v5"/>',
-  headerRow:
-    '<rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.5"/><path d="M1.75 6.5h12.5"/>' +
-    '<path d="M1.75 3.5h12.5" stroke-width="2.5"/>',
-  headerColumn:
-    '<rect x="2.75" y="1.75" width="10.5" height="12.5" rx="1.5"/><path d="M6.5 1.75v12.5"/>' +
-    '<path d="M3.5 1.75v12.5" stroke-width="2.5"/>',
-  merge:
-    '<rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.5"/>' +
-    '<path d="M6.5 8H3.75M6.5 8 5.25 6.75M6.5 8 5.25 9.25M9.5 8h2.75M9.5 8l1.25-1.25M9.5 8l1.25 1.25"/>',
+  sortable: 'table-sortable',
+  grid: 'table-grid',
+  rowAbove: 'table-row-above',
+  rowBelow: 'table-row-below',
+  rowDelete: 'table-row-delete',
+  colLeft: 'table-col-left',
+  colRight: 'table-col-right',
+  colDelete: 'table-col-delete',
+  headerRow: 'table-header-row',
+  headerColumn: 'table-header-column',
+  merge: 'table-merge',
 } as const;
 
 const TABLE_NAME: LocaleText = {
@@ -976,11 +968,9 @@ const TABLE_CSS = `
   inline-size: 1.25em; block-size: 1.25em; padding:.18em; border: 0;
   border-radius: var(--nabi-radius); background: transparent; color: inherit; cursor: pointer;
 }
-/* 인라인 svg 에 width/height 속성이 없다 — 이 규칙이 없으면 기본값 300×150 으로 떨어진다. */
-.nabi-content table .nabi-sort svg { inline-size: 100%; block-size: 100%; }
+.nabi-content table .nabi-sort .nabi-icon { inline-size: 100%; block-size: 100%; }
 .nabi-content table .nabi-sort:hover { background: var(--nabi-soft); }
-/* 정렬된 열만 강조색이다 — 농도는 아이콘이 말하고 색은 "이 열" 을 말한다. */
-.nabi-content table .nabi-sort[data-nabi-sort-active] { color: var(--nabi-accent); }
+.nabi-content table .nabi-sort[data-nabi-sort-active] { background: var(--nabi-soft); outline: 1px solid var(--nabi-accent); }
 
 /* 편집 화면의 정렬 표식 — 정렬 동작 자체는 보는 쪽 런타임의 것이라 편집기에는 표식만 선다(행이 저 혼자 움직이면 캐럿을 잃는다). */
 /* The editor shows only a sort indicator, never actual sorting — real sorting belongs to the viewer runtime, since a row moving on its own would lose the caret. */
@@ -990,38 +980,26 @@ const TABLE_CSS = `
   position: relative; padding-inline-end: 1.75em;
 }
 .nabi-content.nabi-editing table[data-nabi-sortable]:not(:has([colspan], [rowspan])) tr:first-child > :is(th, td)::after {
-  --nabi-sort-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 2.9 12 7.4H4Z'/%3E%3Cpath d='M8 13.1 4 8.6h8Z'/%3E%3C/svg%3E");
   content: ""; position: absolute; inset-inline-end:.25em; inset-block-start: 50%;
   transform: translateY(-50%); pointer-events: none;
   inline-size: 1.25em; block-size: 1.25em; opacity:.38;
-  /* 색은 글자색을 따른다 — 마스크로 뚫어야 다크 모드에서도 글과 같은 색으로 산다. */
-  /* Color follows currentColor via a mask, not a baked-in fill — otherwise it'd vanish in one theme or the other. */
-  background: currentColor;
-  -webkit-mask: var(--nabi-sort-mark) center / contain no-repeat;
-  mask: var(--nabi-sort-mark) center / contain no-repeat;
+  background: var(--nabi-icon-viewer-sort-original, var(--nabi-default-icon-sort-original)) center / contain no-repeat;
 }
 
 /* 표 만들기 격자는 작은 화면에서 5×5로 줄고 칸은 손가락 크기로 커진다 — 몇 칸이 서는지는 button.action의 max가 정한다. */
 /* The table-creation grid shrinks to 5x5 on small screens with finger-sized cells — the cell count comes from button.action's max. */
-/* 40rem 기준은 코어 시트(ui/css.ts)의 판 규칙과 같은 값이어야 한다 — 어긋나면 격자와 판이 서로 다른 화면 폭에서 바뀐다. */
-/* The 40rem breakpoint must match the core sheet's (ui/css.ts) panel rule exactly, or the grid and panel would flip at different widths. */
-@media (max-width: ${NARROW_REM}rem) {
-  .nabi-grid {
-    /* 칸 크기 토큰을 격자 자신에게 다시 매긴다 — 코어 시트를 안 건드리고도 칸이 상속으로 커진다. */
-    /* Redefines the cell-size token on the grid itself — cells inherit it, growing without touching the core sheet's rule. */
-    --nabi-grid-cell: var(--nabi-touch-control-size, 2.75rem);
-    gap: .25rem;
-    /* !important는 툴바가 열 수를 인라인 style로 박기 때문 — 안 이기면 남는 칸들이 여덟 열로 흘러 5×5가 깨진다. */
-    /* !important because the toolbar sets column count via inline style — without it, the remaining cells would flow into 8 columns, breaking the 5x5 layout. */
-    grid-template-columns: repeat(5, var(--nabi-grid-cell)) !important;
-  }
-  /* 여섯째 열·줄부터 걷는다 — 여기 적힌 8은 button.action의 max와 함께 움직인다. */
-  /* Hides everything from the 6th column/row on — the 8 here must move in lockstep with button.action's max. */
-  .nabi-grid > .nabi-cell:nth-child(8n + 6),
-  .nabi-grid > .nabi-cell:nth-child(8n + 7),
-  .nabi-grid > .nabi-cell:nth-child(8n + 8),
-  .nabi-grid > .nabi-cell:nth-child(n + 41) { display: none; }
+.nabi-narrow .nabi-grid {
+  --nabi-grid-cell: var(--nabi-touch-control-size, 2.75rem);
+  gap: .25rem;
+  grid-template-columns: repeat(5, var(--nabi-grid-cell)) !important;
 }
+/* 여섯째 열·줄부터 걷는다 — 여기 적힌 8은 button.action의 max와 함께 움직인다. */
+/* Hides everything from the 6th column/row on — the 8 here must move in lockstep with button.action's max. */
+.nabi-narrow .nabi-grid > .nabi-cell:nth-child(8n + 6),
+.nabi-narrow .nabi-grid > .nabi-cell:nth-child(8n + 7),
+.nabi-narrow .nabi-grid > .nabi-cell:nth-child(8n + 8),
+.nabi-narrow .nabi-grid > .nabi-cell:nth-child(n + 41) { display: none; }
+
 `;
 
 export const tableWing: Wing = {
@@ -1056,7 +1034,7 @@ export const tableWing: Wing = {
   button: {
     group: 'structure',
     shortcut: 'T',
-    svg: TABLE_ICONS.grid,
+    icon: TABLE_ICONS.grid,
     label: TABLE_NAME,
     // 격자 하나로 행·열을 함께 고른다 — 8은 데스크톱 수, 시트의 nth-child(8n+…)와 한 몸이라 같이 고쳐야 한다.
     // One grid picks rows and columns together; 8 is the desktop count, tied to the stylesheet's nth-child(8n+...) rule — change one, change both.
@@ -1071,42 +1049,42 @@ export const tableWing: Wing = {
         kind: 'button',
         name: 'rowAbove',
         command: 'addRowAbove',
-        svg: TABLE_ICONS.rowAbove,
+        icon: TABLE_ICONS.rowAbove,
         label: TABLE_TEXT.rowAbove,
       },
       {
         kind: 'button',
         name: 'rowBelow',
         command: 'addRowBelow',
-        svg: TABLE_ICONS.rowBelow,
+        icon: TABLE_ICONS.rowBelow,
         label: TABLE_TEXT.rowBelow,
       },
       {
         kind: 'button',
         name: 'rowDelete',
         command: 'deleteRow',
-        svg: TABLE_ICONS.rowDelete,
+        icon: TABLE_ICONS.rowDelete,
         label: TABLE_TEXT.rowDelete,
       },
       {
         kind: 'button',
         name: 'colLeft',
         command: 'addColumnLeft',
-        svg: TABLE_ICONS.colLeft,
+        icon: TABLE_ICONS.colLeft,
         label: TABLE_TEXT.colLeft,
       },
       {
         kind: 'button',
         name: 'colRight',
         command: 'addColumnRight',
-        svg: TABLE_ICONS.colRight,
+        icon: TABLE_ICONS.colRight,
         label: TABLE_TEXT.colRight,
       },
       {
         kind: 'button',
         name: 'colDelete',
         command: 'deleteColumn',
-        svg: TABLE_ICONS.colDelete,
+        icon: TABLE_ICONS.colDelete,
         label: TABLE_TEXT.colDelete,
       },
       {
@@ -1114,7 +1092,7 @@ export const tableWing: Wing = {
         name: 'merge',
         command: 'mergeCells',
         token: 'merged',
-        svg: TABLE_ICONS.merge,
+        icon: TABLE_ICONS.merge,
         label: TABLE_TEXT.merge,
       },
       {
@@ -1122,7 +1100,7 @@ export const tableWing: Wing = {
         name: 'headerRow',
         command: 'toggleHeaderRow',
         token: 'th',
-        svg: TABLE_ICONS.headerRow,
+        icon: TABLE_ICONS.headerRow,
         label: TABLE_TEXT.headerRow,
       },
       {
@@ -1130,7 +1108,7 @@ export const tableWing: Wing = {
         name: 'headerColumn',
         command: 'toggleHeaderColumn',
         token: 'th',
-        svg: TABLE_ICONS.headerColumn,
+        icon: TABLE_ICONS.headerColumn,
         label: TABLE_TEXT.headerColumn,
       },
       // 정렬도 토글이다 — 이 토큰('sort')은 칸이 아니라 표가 답하고, 상황 줄이 조상 줄기의 토큰을 합쳐 읽으므로 칸 안 단추가 표의 상태로 눌린다.
@@ -1140,7 +1118,7 @@ export const tableWing: Wing = {
         name: 'sortable',
         command: 'toggleSortable',
         token: SORTABLE,
-        svg: TABLE_ICONS.sortable,
+        icon: TABLE_ICONS.sortable,
         label: TABLE_TEXT.sortable,
       },
       // 표 삭제 단추는 여기 없다 — 표를 통째로 지우는 길은 이미 블록 선택 + 삭제로 나 있어 같은 일을 하는 문이 둘일 필요가 없다.

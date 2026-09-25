@@ -1,3 +1,5 @@
+import type { LocaleInput } from '../locale/index.js';
+import { Translations } from './parts/translation.js';
 // 값은 attr가 선언돼 있으면 겨눔 노드의 그 attr, 없으면 조상 줄기가 합쳐 답한 상태 토큰(stackValue)에서 읽는다 — 토큰은 "같다"가 아니라 "품는가"로 판정한다.
 // A control's value comes from the target node's attr when declared, otherwise from the ancestor chain's merged state token (stackValue) — matched by "contains", not "equals".
 import type { ElementNode } from '../schema/index.js';
@@ -22,7 +24,7 @@ export interface ContextToolbarOptions {
   readonly registry: Registry;
   readonly root: HTMLElement;
   readonly surface?: HTMLElement;
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   readonly translator?: Translator;
   readonly settle?: Settle;
 }
@@ -54,6 +56,7 @@ interface Draw {
   // The merged value from the ancestor chain, not just the target — read once per group and shared by every control in it.
   readonly value: string | undefined;
   readonly t: Translator;
+  readonly copy: Translations;
   // 그룹이 이미 자기 이름을 세웠는가 — 세웠으면 컨트롤은 이름표를 또 세우지 않는다.
   // Whether the group already showed its own name — if so, controls skip their own label.
   readonly named: boolean;
@@ -75,12 +78,16 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
   try {
     const owner = root.ownerDocument;
     const t = options.translator ?? makeTranslator(options.locale);
+    const copy = new Translations(t);
+    const controlsCopy = new Translations(t);
+    lifecycle.add(() => copy.dispose());
+    lifecycle.add(() => controlsCopy.dispose());
     const attributes = new HostElementLease(root);
     lifecycle.add(() => attributes.dispose());
     // 말이 곧 방향이다 — 툴바와 같은 규칙이다.
     // The language dictates direction — same rule as the toolbar.
     if (options.locale !== undefined || options.translator !== undefined)
-      attributes.attribute('dir', localeDirection(t.locale));
+      copy.add(() => attributes.attribute('dir', localeDirection(t.locale)));
     const suppliedSettle = options.settle;
     const settle = suppliedSettle ?? watchSettle(owner, options.surface ? { surface: options.surface } : {});
     const ownSettle = suppliedSettle === undefined;
@@ -168,10 +175,15 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
       panel = openPrompt(owner, {
         anchor,
         restore: options.surface ?? null,
-        okLabel: t.t('ok'),
+        translator: t,
+        get okLabel() {
+          return t.t('ok');
+        },
         fields: control.fields.map((field) => ({
           name: field.name,
-          label: t.pick(field.label, `field.${wing?.w ?? ''}.${field.name}`),
+          get label() {
+            return t.pick(field.label, `field.${wing?.w ?? ''}.${field.name}`);
+          },
           // 고치러 온 자리다 — 지금 값이 미리 차 있어야 한다(넣을 때와 다른 점은 이것뿐).
           // This is an edit, so the current value must be prefilled — the only difference from inserting.
           ...(field.attr && node ? { value: String(node.a?.[field.attr] ?? '') } : {}),
@@ -210,6 +222,7 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
     const build = (): void => {
       if (unmounted) return;
       invalidate();
+      controlsCopy.clear();
       for (const view of views) view.el.remove();
       views = [];
       const doc = hostOf(nabi).doc();
@@ -217,7 +230,7 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
       const current = generation;
       const alive = (): boolean => !unmounted && current === generation;
       for (const group of contextGroupsAt(doc, sel, registry, hostOf(nabi).env)) {
-        const drawn = drawGroup(owner, group, t, {
+        const drawn = drawGroup(owner, group, t, controlsCopy, {
           run: (command, args) => {
             if (alive()) run(command, args);
           },
@@ -293,7 +306,13 @@ function wordless(controls: readonly ContextControl[]): boolean {
   );
 }
 
-function drawGroup(owner: Document, group: ContextGroup, t: Translator, doors: Doors): ContextGroupView {
+function drawGroup(
+  owner: Document,
+  group: ContextGroup,
+  t: Translator,
+  copy: Translations,
+  doors: Doors,
+): ContextGroupView {
   const { wing, node } = group;
   const el = make(owner, 'div', 'nabi-ctx-group', { 'data-wing': wing.w });
   const buttons: HTMLButtonElement[] = [];
@@ -304,11 +323,11 @@ function drawGroup(owner: Document, group: ContextGroup, t: Translator, doors: D
   const named = title !== undefined && wordless(controls);
   if (named && title) {
     const tag = make(owner, 'span', 'nabi-ctx-tag');
-    tag.textContent = t.pick(title, `wing.${wing.w}`);
+    copy.text(tag, () => t.pick(title, `wing.${wing.w}`));
     el.append(tag);
   }
 
-  const draw: Draw = { owner, wing, node, value: stackValue(group.nodes, wing), t, named, ...doors };
+  const draw: Draw = { owner, wing, node, value: stackValue(group.nodes, wing), t, copy, named, ...doors };
   for (const control of controls) {
     const made = RENDERERS[control.kind](draw, control as never);
     el.append(...made.nodes);
@@ -330,10 +349,10 @@ const nameOf = (draw: Draw, control: ContextControl): string =>
 const tipOf = (draw: Draw, control: ContextControl): string =>
   control.tip ? draw.t.pick(control.tip, `ctx.${draw.wing.w}.${control.name}`) : nameOf(draw, control);
 
-function tagFor(draw: Draw, text: string): readonly Node[] {
-  if (draw.named || text === '') return [];
+function tagFor(draw: Draw, text: () => string): readonly Node[] {
+  if (draw.named || text() === '') return [];
   const tag = make(draw.owner, 'span', 'nabi-ctx-tag');
-  tag.textContent = text;
+  draw.copy.text(tag, text);
   return [tag];
 }
 
@@ -347,9 +366,15 @@ const drawButton: Renderer<'button'> = (draw, control) => {
   const button = iconButton(draw.owner, {
     name: control.name,
     label: tipOf(draw, control),
-    ...(control.svg ? { svg: control.svg } : { text: nameOf(draw, control) }),
+    iconKey: `context-${draw.wing.w}-${control.name}`,
+    ...(control.icon ? { icon: control.icon } : control.svg ? { svg: control.svg } : { text: nameOf(draw, control) }),
     press: () => draw.run(control.command, control.args),
   });
+  draw.copy.button(
+    button,
+    () => tipOf(draw, control),
+    control.icon || control.svg ? undefined : () => nameOf(draw, control),
+  );
   return { nodes: [button], buttons: [button] };
 };
 
@@ -359,10 +384,16 @@ const drawToggle: Renderer<'toggle'> = (draw, control) => {
   const button = iconButton(draw.owner, {
     name: control.name,
     label: tipOf(draw, control),
-    ...(control.svg ? { svg: control.svg } : { text: nameOf(draw, control) }),
+    iconKey: `context-${draw.wing.w}-${control.name}`,
+    ...(control.icon ? { icon: control.icon } : control.svg ? { svg: control.svg } : { text: nameOf(draw, control) }),
     press: () => draw.run(control.command, control.args),
   });
   setPressed(button, hasToken(draw.value, control.token));
+  draw.copy.button(
+    button,
+    () => tipOf(draw, control),
+    control.icon || control.svg ? undefined : () => nameOf(draw, control),
+  );
   return { nodes: [button], buttons: [button] };
 };
 
@@ -371,7 +402,7 @@ const drawToggle: Renderer<'toggle'> = (draw, control) => {
 const drawSelect: Renderer<'select'> = (draw, control) => {
   const now = controlValueOf(draw.node, draw.value, control.attr);
   const buttons: HTMLButtonElement[] = [];
-  const nodes: Node[] = control.values.length > 1 ? [...tagFor(draw, nameOf(draw, control))] : [];
+  const nodes: Node[] = control.values.length > 1 ? [...tagFor(draw, () => nameOf(draw, control))] : [];
   for (const choice of control.values) {
     const text = draw.t.pick(choice.label, `value.${draw.wing.w}.${choice.value}`);
     // 보이는 글자가 줄임말이면 이름표·낭독은 원말을 읽는다 — `H1`이 아니라 '제목 1'.
@@ -380,9 +411,22 @@ const drawSelect: Renderer<'select'> = (draw, control) => {
     const button = iconButton(draw.owner, {
       name: `${control.name}:${choice.value}`,
       label: spoken,
-      ...(choice.swatch ? { swatch: choice.swatch } : choice.svg ? { svg: choice.svg } : { text }),
+      iconKey: `context-${draw.wing.w}-${control.name}-${choice.value}`,
+      ...(choice.swatch
+        ? { swatch: choice.swatch }
+        : choice.icon
+          ? { icon: choice.icon }
+          : choice.svg
+            ? { svg: choice.svg }
+            : { text }),
       press: () => draw.run(control.command, { [control.argKey]: choice.value }),
     });
+    const label = (): string => draw.t.pick(choice.label, `value.${draw.wing.w}.${choice.value}`);
+    draw.copy.button(
+      button,
+      () => (choice.tip ? draw.t.pick(choice.tip, `value.${draw.wing.w}.${choice.value}`) : label()),
+      choice.swatch || choice.icon || choice.svg ? undefined : label,
+    );
     button.setAttribute('data-value', String(choice.value));
     setPressed(button, hasToken(now, String(choice.value)));
     buttons.push(button);
@@ -409,6 +453,12 @@ const drawText: Renderer<'text'> = (draw, control) => {
       : undefined,
   }) as HTMLInputElement;
   input.value = now;
+  draw.copy.text(tag, () => nameOf(draw, control));
+  draw.copy.attribute(input, 'aria-label', () => nameOf(draw, control));
+  if (control.placeholder)
+    draw.copy.attribute(input, 'placeholder', () =>
+      draw.t.pick(control.placeholder, `ctx.${draw.wing.w}.${control.name}`),
+    );
 
   // 확정은 한 번만 돈다 — 엔터로 커밋한 뒤 포커스가 빠지며 change가 한 번 더 오는데, 그때 now는 아직 옛 값이라 "안 바뀌었다" 검사만으론 안 걸러진다.
   // Commit fires only once — after Enter commits, losing focus fires change again, and since `now` is still stale then, the unchanged-value check alone won't catch the repeat.
@@ -451,8 +501,7 @@ const drawRange: Renderer<'range'> = (draw, control) => {
   const steps = control.values;
   if (steps.length === 0) return { nodes: [], buttons: [] };
 
-  const label = nameOf(draw, control);
-  const nodes: Node[] = [...tagFor(draw, label)];
+  const nodes: Node[] = [...tagFor(draw, () => nameOf(draw, control))];
 
   const now = controlValueOf(draw.node, draw.value, control.attr);
   // 쉬는 자리 — 선언한 값, 없으면 `''` 칸, 그것도 없으면 첫 칸.
@@ -486,7 +535,8 @@ const drawRange: Renderer<'range'> = (draw, control) => {
     slider.setAttribute('aria-valuetext', text);
     if (readout) readout.textContent = text;
   };
-  describe(Number(slider.value));
+  draw.copy.attribute(slider, 'aria-label', () => tipOf(draw, control));
+  draw.copy.add(() => describe(Number(slider.value)));
 
   slider.addEventListener('input', () => describe(Number(slider.value)));
   slider.addEventListener('change', () => {
@@ -516,9 +566,15 @@ const drawPrompt: Renderer<'prompt'> = (draw, control) => {
   const button = iconButton(draw.owner, {
     name: control.name,
     label,
-    ...(control.svg ? { svg: control.svg } : { text: nameOf(draw, control) }),
+    iconKey: `context-${draw.wing.w}-${control.name}`,
+    ...(control.icon ? { icon: control.icon } : control.svg ? { svg: control.svg } : { text: nameOf(draw, control) }),
     press: () => draw.ask(button, control),
   });
+  draw.copy.button(
+    button,
+    () => tipOf(draw, control),
+    control.icon || control.svg ? undefined : () => nameOf(draw, control),
+  );
   return { nodes: [button], buttons: [button] };
 };
 
@@ -531,9 +587,15 @@ const drawLightbox: Renderer<'lightbox'> = (draw, control) => {
   const button = iconButton(draw.owner, {
     name: control.name,
     label: tipOf(draw, control),
-    ...(control.svg ? { svg: control.svg } : { text: nameOf(draw, control) }),
+    iconKey: `context-${draw.wing.w}-${control.name}`,
+    ...(control.icon ? { icon: control.icon } : control.svg ? { svg: control.svg } : { text: nameOf(draw, control) }),
     press: () => draw.view(src, typeof alt === 'string' ? alt : undefined),
   });
+  draw.copy.button(
+    button,
+    () => tipOf(draw, control),
+    control.icon || control.svg ? undefined : () => nameOf(draw, control),
+  );
   return { nodes: [button], buttons: [button] };
 };
 

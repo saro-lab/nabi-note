@@ -54,6 +54,7 @@ Weka tokens zinazoshirikiwa kwenye parent ya pamoja ili kihariri na mwonekano wa
 | Eneo la kuhariri | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | Toolbar inayobaki na preview | `--nabi-sticky-top`, `--nabi-preview-width` |
 | Controls za touch | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| Upana wa kuingia hali ya simu | `--nabi-mobile-breakpoint` |
 
 Tokens za highlight na text color hutumia `--nabi-hl-<name>` na `--nabi-tc-<name>`. Kubadili `--nabi-hl-yellow`, kwa mfano, hubadili rangi ya kuonyesha highlight za `yellow` zilizohifadhiwa bila kubadili data ya hati.
 
@@ -63,6 +64,20 @@ Tokens za highlight na text color hutumia `--nabi-hl-<name>` na `--nabi-tc-<name
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## Kizingiti cha hali ya simu
+
+Hali ya simu huanza upana wa upau wa zana, mstari wa muktadha au eneo la kuonyesha unapokuwa chini ya `36rem`. Upana wa `36rem` hasa hubaki na mpangilio wa kawaida. Katika hali ya simu, upau wa zana na mstari wa muktadha husogezwa mlalo, paneli huwekwa katikati, na kichagua jedwali hupunguzwa hadi visanduku 5×5 vinavyofaa kuguswa.
+
+Weka `--nabi-mobile-breakpoint` kwenye `:root`, kipengele cha juu au `.nabi` moja. Tumia urefu wa CSS usio hasi kama `rem`, `px` au `calc()`. Mabadiliko ya thamani ya CSS, ukubwa wa fonti ya mzizi, upana wa kontena au eneo la kuonyesha husasisha pia paneli zilizo wazi kiotomatiki. Paneli za kuingiza data zilizohamishwa chini ya `body` huendelea kutumia kizingiti cha kihariri cha asili.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+Vifaa vya kugusa hubakiza vidhibiti vikubwa hata juu ya kizingiti hiki.
 
 ## Dark mode
 

@@ -40,14 +40,8 @@ const OPEN_NAME: LocaleText = {
   id: 'Buka',
 };
 
-const SAVE_ICON =
-  '<g transform="translate(8 8) scale(0.9565) translate(-8 -8.5)" stroke-width="1.464">' +
-  '<path d="M2.75 2.75h8.1L13.25 5.15v8.1a1 1 0 0 1-1 1h-8.5a1 1 0 0 1-1-1v-9.5a1 1 0 0 1 1-1Z"/>' +
-  '<path d="M5 2.75v3.5h5v-3.5M5 14.25v-4.5h6v4.5"/></g>';
-const OPEN_ICON =
-  '<g transform="translate(8 8) scale(1.0385) translate(-8.25 -8.15)" stroke-width="1.348">' +
-  '<path d="M1.75 12.5v-8.4a.9.9 0 0 1 .9-.9h3.6l1.5 1.8h4.7a.9.9 0 0 1 .9.9v1.1"/>' +
-  '<path d="m1.75 12.5 2-5.1h11l-2 5.1a.9.9 0 0 1-.85.6H2.6a.85.85 0 0 1-.85-.6Z"/></g>';
+const SAVE_ICON = 'file-save';
+const OPEN_ICON = 'file-open';
 
 // `.nabi` 원형은 io 층으로 내려갔다 — 내장 필터(nabi/html/md)가 한 자리에 모여야 형식 순서가 한 곳에서 정해진다.
 // The `.nabi` format itself lives in the io layer, so all built-in filters (nabi/html/md) share one ordering source.
@@ -66,7 +60,7 @@ export const saveFileWing: Wing = {
     // 이 wing을 등록한 편집기에만 있는 키다 — 안 든 편집기에서는 단추도 키도 없어 브라우저의 저장이 그대로 뜬다.
     // Only editors registering this wing get the key; without it, no button means the key falls through to the browser's own save.
     accelerator: 'mod+s',
-    svg: SAVE_ICON,
+    icon: SAVE_ICON,
     label: SAVE_NAME,
     // 가속키는 이제 단추를 그냥 누른다(형식이 여럿이 된 뒤 "지금 그대로 저장"이 뜻을 잃었다) — 판이 실제로 열릴 때만 키를 삼킨다.
     // The accelerator just clicks the button now (multiple formats made "save as-is" meaningless) — it only swallows the key when a panel is actually mounted.
@@ -81,7 +75,7 @@ export const openFileWing: Wing = {
   button: {
     group: 'file',
     accelerator: 'mod+o',
-    svg: OPEN_ICON,
+    icon: OPEN_ICON,
     label: OPEN_NAME,
     action: { kind: 'command', command: 'openFile' },
   },

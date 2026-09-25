@@ -1,9 +1,9 @@
+import { ICON_CSS } from './icon-css.js';
 import {
   MOTION_FAST_MS,
   MOTION_PRESS_MS,
   MOTION_PROGRESS_MS,
   MOTION_TOAST_MS,
-  NARROW_REM,
   Z_DIALOG,
   Z_OVERLAY,
   Z_STICKY,
@@ -41,7 +41,8 @@ export function collectSheets(source: SheetSource, core: string = CORE_CSS): rea
 
 // --- 코어 시트: 문단·래퍼·nabi-scroll·에디터 크롬. wing 생김새는 각 wing 시트가 맡는다. ---
 // Core sheet: paragraph/wrapper/nabi-scroll/editor chrome; each wing's own look is its own sheet.
-export const CORE_CSS = `
+export const CORE_CSS = `${ICON_CSS}
+
 /* 덮개(미리보기·라이트박스)는 body 의 자식이라 .nabi 상속이 안 닿아 토큰을 여기서도 선언한다
    Overlays (preview/lightbox) are children of body, not .nabi, so tokens are declared here too */
 :is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *))) {
@@ -224,9 +225,10 @@ export const CORE_CSS = `
     100% { transform: translateY(0); }
   }
 }
-/* 눌린 단추는 배경을 안 칠하고 아이콘·글자 색만으로 켜진 상태를 말한다
-   An active button shows its "on" state only through icon/text color, never a filled background */
-.nabi-btn.on, .nabi-btn.on:hover { color: var(--nabi-accent); }
+.nabi-btn.on, .nabi-btn.on:hover {
+  color: var(--nabi-accent); background: var(--nabi-soft);
+  box-shadow: inset 0 -2px var(--nabi-accent);
+}
 .nabi-btn[hidden] { display: none; }
 /* display:inline-flex가 UA의 [hidden] 규칙을 이기므로 직접 꺼야 한다
    display:inline-flex overrides the UA [hidden] rule, so it must be turned off explicitly here too */
@@ -330,36 +332,7 @@ export const CORE_CSS = `
 .nabi-field { display: flex; align-items: center; gap: 6px; }
 .nabi-field > span { font-size: 11px; color: var(--nabi-muted); min-inline-size: 44px; }
 
-/* --- 좁은 화면의 판은 버튼 옆이 아니라 화면 가운데 90%로 뜬다(084 ②) — 접힌 툴바에서는 붙는 자리마다 화면 밖으로 나가거나 툴바를 덮는다. 40rem 문턱은 표 격자(wings/table/table.ts)와 같은 값이어야 한다 ---
-   Narrow screens center the panel at 90% of viewport instead of anchoring to a button (084 ②), since a folded toolbar leaves no anchor that doesn't overflow or cover it; the 40rem breakpoint must match the table grid's (wings/table/table.ts) */
-@media (max-width: ${NARROW_REM}rem) {
-  .nabi-panel {
-    /* parts/panel.ts가 인라인 style로 위치를 박으므로 !important 없이는 못 이긴다
-       parts/panel.ts sets position inline, so only !important can override it here */
-    position: fixed !important;
-    inset-inline: 5vw !important;
-    /* --nabi-panel-mid는 panel.ts가 재는 보이는 뷰포트 가운데, 없으면 50%가 대신한다
-       --nabi-panel-mid is the visible viewport center measured by panel.ts, falling back to 50% */
-    inset-block-start: var(--nabi-panel-mid, 50%) !important;
-    transform: translateY(-50%);
-    inline-size: auto; max-inline-size: none;
-    max-block-size: 90vh;
-    max-block-size: var(--nabi-panel-room, 90dvh);
-    overflow: auto;
-    /* 요소가 아니라 그림자로 뒤를 덮는다 — 진짜 막을 깔면 바깥 클릭이 안 먹혀 outside.ts의 닫기가 죽는다
-       Dims the background with a shadow, not a real scrim element, or it would swallow outside clicks that parts/outside.ts relies on to close the panel */
-    box-shadow: var(--nabi-shadow), 0 0 0 100vmax var(--nabi-scrim);
-  }
-  .nabi-menu { max-inline-size: 100%; }
-  /* 격자를 든 판만 제 크기로 선다 — 90%를 그대로 두면 격자가 판 한쪽에 쏠려 보인다(2026-08-19)
-     Only grid panels size to content; leaving them at 90% left the grid looking off-center inside the panel (2026-08-19) */
-  .nabi-panel:has(> .nabi-grid) { inline-size: fit-content !important; margin-inline: auto; }
-  .nabi-prompt { flex-wrap: wrap; }
-  .nabi-prompt .nabi-input { inline-size: auto; flex: 1 1 8rem; }
-}
-/* .nabi-narrow도 같은 중앙 패널을 쓴다 — 그릇이 좁으면 뷰포트가 넓어도 버튼 옆 자리는 그 줄에 잘린다. 다만 폭 상한은 30rem을 유지한다(90vw는 화면 전체처럼 보인다)
-   .nabi-narrow uses the same centered panel, since a narrow container clips a button-anchored panel even on a wide viewport; it keeps the 30rem cap (90vw here would read as the whole screen) */
-.nabi-narrow .nabi-panel {
+.nabi-panel.nabi-narrow, .nabi-narrow .nabi-panel {
   position: fixed !important;
   inset-inline: 5vw !important;
   inset-block-start: var(--nabi-panel-mid, 50%) !important;
@@ -370,10 +343,10 @@ export const CORE_CSS = `
   overflow: auto;
   box-shadow: var(--nabi-shadow), 0 0 0 100vmax var(--nabi-scrim);
 }
-.nabi-narrow .nabi-menu { max-inline-size: 100%; }
-.nabi-narrow .nabi-panel:has(> .nabi-grid) { inline-size: fit-content !important; margin-inline: auto; }
-.nabi-narrow .nabi-prompt { flex-wrap: wrap; }
-.nabi-narrow .nabi-prompt .nabi-input { inline-size: auto; flex: 1 1 8rem; }
+.nabi-menu.nabi-narrow, .nabi-narrow .nabi-menu { max-inline-size: 100%; }
+.nabi-panel.nabi-narrow:has(> .nabi-grid), .nabi-narrow .nabi-panel:has(> .nabi-grid) { inline-size: fit-content !important; margin-inline: auto; }
+.nabi-prompt.nabi-narrow, .nabi-narrow .nabi-prompt { flex-wrap: wrap; }
+.nabi-prompt.nabi-narrow .nabi-input, .nabi-narrow .nabi-prompt .nabi-input { inline-size: auto; flex: 1 1 8rem; }
 /* 칸과 확인 단추는 같은 높이로 나란히 선다 — 한 줄로 읽히려면 키가 같아야 한다
    The field and confirm button share the same height, so they read as one row */
 .nabi-input {
@@ -410,9 +383,7 @@ export const CORE_CSS = `
    Context-row controls are one size smaller than toolbar buttons, to keep this extra row visually lighter */
 .nabi-context .nabi-btn { block-size: 1.625rem; min-inline-size: 1.625rem; }
 
-/* --- 손가락 환경의 상황 줄은 표적을 키운다(084 ⑥) — 그룹이 접혀 위아래로 쌓이면 26px 단추 두 줄이 손가락에겐 한 표적이 된다. pointer:coarse로 판정한다(태블릿처럼 화면은 넓어도 손가락인 경우가 있다); 폭 40rem은 판·표 격자와 같은 문턱 ---
-   Touch context rows enlarge targets (084 ⑥): stacked wrapped groups of 26px buttons become one merged target for a finger. Detected via pointer:coarse, not just width (a wide tablet is still touch); the 40rem breakpoint matches the panel/table grid */
-@media (pointer: coarse), (max-width: ${NARROW_REM}rem) {
+@media (pointer: coarse) {
   .nabi-context { gap: .25rem .75rem; }
   /* 그룹 안에서도 줄바꿈이 일어나므로 그룹의 세로 gap이 접힌 줄 사이도 함께 벌린다(단추 40 + 틈 4 = 44)
      Groups wrap internally too, so the group's vertical gap also spaces wrapped rows (40px button + 4px gap = the 44px touch target) */
@@ -424,8 +395,12 @@ export const CORE_CSS = `
   .nabi-input { font-size: var(--nabi-touch-font-size, 16px); }
 }
 
-/* --- 한 줄 모드(260824_000): 그릇 폭이 40rem 아래면(뷰포트가 아니라 그릇 자체) 툴바·상황 줄이 접히지 않고 가로로 구른다 — ui/narrow.ts가 재서 .nabi-narrow를 단다(컨테이너 쿼리는 안 쓴다, containment가 fixed 판을 가둔다) ---
-   One-line mode (260824_000): when the container itself (not the viewport) is under 40rem, the toolbar/context rows scroll horizontally instead of wrapping; ui/narrow.ts measures it and sets .nabi-narrow (no container query, since containment would trap fixed panels) */
+.nabi-context.nabi-narrow { gap: .25rem .75rem; }
+.nabi-narrow .nabi-ctx-group { min-block-size: var(--nabi-touch-control-size); gap: .25rem .1875rem; }
+.nabi-context.nabi-narrow .nabi-btn { block-size: 2.5rem; min-inline-size: 2.5rem; }
+.nabi-context.nabi-narrow .nabi-range { block-size: 2.5rem; }
+.nabi-narrow .nabi-input { font-size: var(--nabi-touch-font-size, 16px); }
+
 .nabi-toolbar-row.nabi-narrow .nabi-strip {
   display: flex; flex-wrap: nowrap; align-items: center;
   overflow-x: auto; scrollbar-width: none;

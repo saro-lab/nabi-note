@@ -11,6 +11,7 @@ NABI NOTE separates the stored document, pure editing commands, DOM input handli
 | `nabi-note/viewer` | Browser, read-only | Table sorting and code painting on published HTML |
 | `nabi-note/diff` | Browser for UI; pure JSON comparison is otherwise DOM-free | Stored-document comparison and two-pane diff UI |
 | `nabi-note/nabi.css` | CSS | Core CSS plus all built-in wing styles |
+| `nabi-note/icons/*` | Image files | Default light/dark SVG icons; see `icons.md` |
 
 `nabi-note/viewer` deliberately does not import editor, surface, UI, or schema code. `nabi-note/ssr` deliberately excludes surface and UI code.
 

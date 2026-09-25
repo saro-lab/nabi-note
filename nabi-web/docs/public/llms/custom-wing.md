@@ -185,3 +185,7 @@ Set `basic: true` only when the official wing runs without host wiring. `allBasi
 Registration throws for reserved/duplicate names, missing builders, invalid container/part declarations, invalid paragraph attributes, dependency failures, unknown `allows` types, duplicate command/shortcut/accelerator/filter/double-key claims, and double keys pointing to missing commands.
 
 Failing at registration is intentional. Do not catch and continue with a partial registry.
+
+## Icon declarations
+
+`WingButton`, `WingChoice`, and icon-capable context controls support `icon?: string` for a packaged default asset ID (for example `marks-b`). File URLs belong in CSS variables, not this field. Existing trusted `svg` declarations are retained; a CSS theme override takes precedence. The renderer derives stable CSS keys from slot, wing, control, and choice identifiers. See `icons.md` for the naming and escaping rules. Text choices and swatches keep their existing rendering.

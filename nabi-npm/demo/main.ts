@@ -6,14 +6,13 @@
 import { demoWings, standEditor, type EditorHosts, type StoodEditor } from './editor.js';
 // 시작 문서는 CDN 예문과 나눠 쓰는 한 벌이라 제 파일에 산다 (sample.ts 머리말).
 import { SAMPLE } from './sample.js';
-import type { Wing } from '../src/index.js';
+import { createLocale, type Wing } from '../src/index.js';
 
 const el = <T extends HTMLElement>(id: string): T => {
   const found = document.getElementById(id);
   if (!found) throw new Error(`demo: #${id} is missing`);
   return found as T;
 };
-
 
 // --- 언어 -------------------------------------------------------------------------------------
 // 패키지는 "무슨 언어를 아는가" 를 안 내보낸다 — 사전이 wing 마다 흩어져 있어서다. 그래서 쓸 말은
@@ -96,6 +95,7 @@ const redoButton = el<HTMLButtonElement>('redo');
 
 // 데모의 시작 언어 — 문서가 영어라 툴바도 영어로 연다. 칩으로 열넷을 다 볼 수 있다.
 let locale = 'en';
+const editorLocale = createLocale(locale);
 // 키는 wing 이름이고, 없으면 켜짐이다 — 기본값이 곧 전체라서 목록을 여기 또 적지 않는다.
 const picked = new Map<string, boolean>();
 let editor: StoodEditor | null = null;
@@ -110,7 +110,7 @@ function textOf(nodes: readonly unknown[]): string {
   let out = '';
   for (const node of nodes) {
     if (typeof node === 'string') out += node;
-    else if (node && typeof node === 'object') out += textOf(((node as { ch?: unknown[] }).ch ?? []));
+    else if (node && typeof node === 'object') out += textOf((node as { ch?: unknown[] }).ch ?? []);
   }
   return out;
 }
@@ -152,7 +152,7 @@ function stand(doc: unknown, html?: string): void {
   document.documentElement.lang = locale;
   editor = standEditor(hosts, {
     doc,
-    locale,
+    locale: editorLocale,
     wings: pickedWings(),
     ...(stickyKeyboard.checked ? {} : { keyboardInset: false }),
   });
@@ -173,7 +173,7 @@ function standSandbox(): void {
   const kept = sandbox ? sandbox.nabi.getHtml() : '';
   sandbox?.unmount();
   sandboxHosts.content.innerHTML = '';
-  sandbox = standEditor(sandboxHosts, { locale, wings: pickedWings(), bare: true });
+  sandbox = standEditor(sandboxHosts, { locale: editorLocale, wings: pickedWings(), bare: true });
   if (kept !== '') sandbox.nabi.setHtml(kept);
 }
 
@@ -194,10 +194,14 @@ function renderLocales(): void {
     chip.lang = value;
     chip.title = value;
     chip.setAttribute('aria-pressed', String(value === locale));
+    chip.addEventListener('mousedown', (event) => event.preventDefault());
     chip.addEventListener('click', () => {
       locale = value;
+      editorLocale.setLocale(value);
+      document.documentElement.lang = value;
       renderLocales();
-      remount();
+      renderWings();
+      refresh();
     });
     chips.append(chip);
   }

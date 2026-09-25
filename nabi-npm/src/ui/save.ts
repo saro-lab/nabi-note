@@ -1,3 +1,5 @@
+import { Translations } from './parts/translation.js';
+import type { LocaleInput } from '../locale/index.js';
 // 저장 단추와 ⌘S가 같은 이 판을 연다 — 형식 칸을 고르는 것 자체가 저장이라 확인 단추가 없다. 붙여넣기 판과 격자 부품을 나눠 쓰되(parts/grid.ts), 이름 칸이 함께 서 있어 방향키 대신 Tab/Shift+Tab으로 형식을 옮긴다.
 // The save button and Cmd+S open this same panel — picking a format cell is itself the save, so there's no separate confirm button. It shares its grid with the paste-choice panel (parts/grid.ts), but since a name field lives here too, Tab/Shift+Tab moves the highlight instead of arrow keys.
 import { localeDirection, makeTranslator, type Translator } from '../locale/index.js';
@@ -13,7 +15,7 @@ export interface SavePanelOptions {
   // 닫히면 포커스가 여기로 돌아가고, 판이 속할 문서도 여기서 얻는다.
   // Focus returns here on close, and this is also where the panel's owner document comes from.
   readonly surface: HTMLElement;
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   readonly translator?: Translator;
 }
 
@@ -47,6 +49,7 @@ export function openSavePanel(options: SavePanelOptions): Overlay {
   const owner = options.surface.ownerDocument;
   const t = options.translator ?? makeTranslator(options.locale);
   const formats = options.file.formats();
+  const copy = new Translations(t);
   const direction = localeDirection(t.locale);
 
   const card = make(owner, 'div', 'nabi-card nabi-save', {
@@ -93,9 +96,17 @@ export function openSavePanel(options: SavePanelOptions): Overlay {
   };
 
   try {
+    copy.attribute(card, 'dir', () => localeDirection(t.locale));
+    copy.attribute(card, 'aria-label', () => t.t('save.title'));
+    copy.text(title, () => t.t('save.title'));
+    copy.attribute(input, 'aria-label', () => t.t('save.name'));
+    copy.attribute(input, 'placeholder', () => t.t('save.name'));
     const grid = makeGrid(owner, {
       prefix: 'nabi-save',
-      rtl: direction === 'rtl',
+      get rtl() {
+        return localeDirection(t.locale) === 'rtl';
+      },
+      translations: copy,
       aimBy: 'tab',
       cells: formats.map((format) => ({
         label: formatName(format),
@@ -104,8 +115,16 @@ export function openSavePanel(options: SavePanelOptions): Overlay {
         ...(saveMark(format.extension) !== '' ? { icon: saveMark(format.extension) } : {}),
         // 되돌아오지 못하는 형식에만 한 마디가 붙는다 — 누르는 것을 막지는 않는다.
         // Only lossy formats get this note — it doesn't stop the press.
-        ...(format.lossy ? { note: t.t('save.lossy') } : {}),
-        ariaLabel: t.t('save.as', { ext: formatName(format) }),
+        ...(format.lossy
+          ? {
+              get note() {
+                return t.t('save.lossy');
+              },
+            }
+          : {}),
+        get ariaLabel() {
+          return t.t('save.as', { ext: formatName(format) });
+        },
       })),
       onAim: paintExt,
       onPick: put,
@@ -138,11 +157,13 @@ export function openSavePanel(options: SavePanelOptions): Overlay {
       restore: options.surface,
       onClose: () => {
         active = false;
+        copy.dispose();
       },
     });
     card.focus({ preventScroll: true });
     return { card, close: () => scrim?.close() };
   } catch (error) {
+    copy.dispose();
     active = false;
     if (scrim) {
       try {

@@ -1,7 +1,9 @@
+import type { Translations } from './translation.js';
 // 붙여넣기 판과 저장 판이 나눠 쓰는 격자다 — 갈리는 것은 클래스 앞머리·칸 내용·겨눔 키(aimBy)뿐, 산수와 DOM은 하나뿐이다. 겨눔은 aria-selected만으로 말한다(진짜 포커스를 옮기면 저장 판의 이름 입력이 끊긴다).
 // Shared by the paste-choice panel and the save panel — only the class prefix, cell content, and aim key (aimBy) differ; the math and DOM-building are one function. The highlighted cell is marked via aria-selected only, since moving real focus there would interrupt typing in the save panel's name field.
-import { MARK_STROKE } from '../../io/index.js';
-import { iconSvg, make } from './dom.js';
+import { MARK_STROKE, HTML_ICON, MARKDOWN_ICON, TEXT_ICON, NABI_MARK } from '../../io/index.js';
+import { iconHtml } from '../../style/icon.js';
+import { make } from './dom.js';
 
 // 한 줄에 셋까지, 넷째부터는 아랫줄. 시트의 열 수와 걸음의 열 수는 같은 하나여야 한다 — 갈리면 방향키가 눈에 보이는 격자와 다른 곳으로 간다.
 // Up to three per row, wrapping after that. The stylesheet's column count and the step math's must be the same one value, or arrow keys would move somewhere other than what's visible.
@@ -44,6 +46,7 @@ export interface GridCell {
 }
 
 export interface GridOptions {
+  readonly translations?: Translations;
   readonly cells: readonly GridCell[];
   // 클래스 앞머리 — `nabi-choose` · `nabi-save`. 시트가 둘을 한 규칙으로 묶어 든다.
   // Class prefix — `nabi-choose` or `nabi-save`; one stylesheet rule covers both.
@@ -92,15 +95,30 @@ export function makeGrid(owner: Document, options: GridOptions): Grid {
       const mark = make(owner, 'span', `${prefix}-icon`);
       // 굵기는 한 값(MARK_STROKE)뿐이다 — 나란히 선 그림들의 선이 갈리면 하나만 흐려 보인다.
       // A single stroke width (MARK_STROKE) — mismatched line weights among neighboring icons would make one look faint.
-      mark.innerHTML = iconSvg(cell.icon, MARK_STROKE);
+      const builtin = new Map([
+        [HTML_ICON, 'format-html'],
+        [MARKDOWN_ICON, 'format-markdown'],
+        [TEXT_ICON, 'format-text'],
+        [NABI_MARK, 'format-nabi'],
+      ]).get(cell.icon);
+      mark.innerHTML = iconHtml(
+        `${prefix.replace('nabi-', 'panel-')}-${builtin ?? `choice-${at}`}`,
+        builtin,
+        builtin ? undefined : cell.icon,
+        MARK_STROKE,
+      );
       row.append(mark);
     }
     const label = make(owner, 'span', `${prefix}-label`);
     label.textContent = cell.label;
+    options.translations?.text(label, () => cell.label);
+    if (cell.ariaLabel !== undefined)
+      options.translations?.attribute(row, 'aria-label', () => cell.ariaLabel ?? cell.label);
     row.append(label);
     if (cell.note !== undefined && cell.note !== '') {
       const note = make(owner, 'small', `${prefix}-note`);
       note.textContent = cell.note;
+      options.translations?.text(note, () => cell.note ?? '');
       row.append(note);
     }
     row.addEventListener('click', () => options.onPick(at));

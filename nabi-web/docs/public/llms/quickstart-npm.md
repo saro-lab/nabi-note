@@ -57,6 +57,34 @@ The browser factory wires its internal `DOMParser` adapter automatically, so `se
 
 `undoLimit` defaults to 200 and accepts integers of 1 or greater. `typingMergeMs` defaults to 1000 milliseconds; set it to 0 to keep every insertion as a separate undo step. Invalid values throw during editor creation. `onError` receives isolated command, repair, normalization, listener, and host callback failures.
 
+## Change the UI language without resetting editing state
+
+```ts
+import { createLocale, createNabiWith, mountSurface, mountToolbar, wings } from 'nabi-note';
+
+const locale = createLocale('en');
+const { nabi, registry } = createNabiWith(wings().allBasic(), { locale });
+const surface = mountSurface({ nabi, registry, root: content, locale });
+const toolbar = mountToolbar({ nabi, registry, root: toolbarRoot, surface: content, locale });
+
+// Call from the host's language selector:
+locale.setLocale('ko');
+```
+
+Share this same `locale` with context/view toolbars, file/upload mounts, upload
+views, history/save/preview panels, diff mounts and viewer attachments that
+should follow the switch. A string locale stays fixed. For dictionary overrides,
+use `makeTranslator(locale, extraDictionary)` and pass it as `translator` to UI
+mounts. Make one controller per independently localized editor, or deliberately
+share one between editors.
+
+Do not unmount, recreate the editor, call `setHtml`/`setJson`, or redraw the
+surface for a locale change. Content, undo/redo, selection, dirty state, session,
+local history, diff baseline and in-flight work stay intact. UI labels and explicit
+locale-derived direction update in place. If the document direction must remain
+independent of UI language, leave the surface's `locale` unset and manage its
+`dir` yourself; give the controller to the UI mounts instead.
+
 ## Choosing wings
 
 ```ts
@@ -205,3 +233,7 @@ Unmount in reverse ownership order. Every observer, UI mount, surface, upload, f
 - Exact signatures: `api-reference.md`
 - IO and URL rules: `io-security.md`
 - SSR and hydration: `ssr.md`
+
+## Icon files and optional view controls
+
+Keep `dist/icons/` with the package CSS when hosting static files yourself; a bundler must emit the referenced image assets. SVG, WebP, and PNG overrides use `--nabi-icon-<key>` CSS variables. `mountViewTools({ ...options, showPreview: false })` omits only preview, and `showFullscreen: false` omits only fullscreen. Both default to true. See `icons.md` for SSR, keys, and theme examples.

@@ -4,3 +4,5 @@ export { DICTIONARY, LOCALES, RTL_LOCALES, localeDirection } from './dict.js';
 export type { Dictionary, LocaleText } from './dict.js';
 export { FALLBACK, localeOf, makeTranslator, translate } from './translate.js';
 export type { Translator } from './translate.js';
+export { createLocale, localeValue } from './state.js';
+export type { LocaleController, LocaleInput, LocaleSource } from './state.js';

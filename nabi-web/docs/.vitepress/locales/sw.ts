@@ -3,6 +3,7 @@ import { withLocaleTypefaceLines, withLocaleTypefaceSample } from './typeface-li
 export const sw = {
   label: 'Kiswahili', lang: 'sw', link: '/sw/', description: 'NABI NOTE — kihariri huria cha WYSIWYG.',
   menu_docs: 'Nyaraka', menu_start: 'Mwongozo', menu_getting_started: 'Matumizi ya msingi', menu_cdn: 'Kutumia CDN', menu_features: 'Mabawa', menu_style_guide: 'Mandhari ya CSS', menu_rendering: 'Usanidi wa SSR', menu_extend_guide: 'Mabawa maalum', menu_intro_vibe_coding: 'Uandishi wa vibe kwa AI',
+  menu_icon_theme: "Mandhari ya aikoni",
 menu_projects: 'Miradi',
   menu_inline: 'Ndani ya mstari', menu_inline_bold: 'Herufi nzito', menu_inline_italic: 'Mlalo', menu_inline_underline: 'Mstari wa chini', menu_inline_strikethrough: 'Mstari wa kufuta', menu_inline_superscript: 'Kiambishi cha juu', menu_inline_subscript: 'Kiambishi cha chini', menu_inline_link: 'Kiungo', menu_inline_highlight: 'Rangi ya kuangazia', menu_inline_text_color: 'Rangi ya maandishi',
   menu_block: 'Bloku', menu_block_heading: 'Kichwa', menu_block_bullet_list: 'Orodha yenye vitone', menu_block_ordered_list: 'Orodha ya namba', menu_block_task_list: 'Orodha ya kazi', menu_block_table: 'Jedwali', menu_block_image: 'Picha', menu_block_youtube: 'YouTube', menu_block_code: 'Msimbo', menu_block_details: 'Maelezo', menu_block_quote: 'Nukuu', menu_block_divider: 'Kitenganishi',

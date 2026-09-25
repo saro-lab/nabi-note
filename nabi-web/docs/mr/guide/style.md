@@ -54,6 +54,7 @@ import 'nabi-note/nabi.css'
 | संपादन surface | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | Sticky toolbar आणि preview | `--nabi-sticky-top`, `--nabi-preview-width` |
 | Touch controls | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| मोबाइल मोडमध्ये बदलण्याची रुंदी | `--nabi-mobile-breakpoint` |
 
 Highlight आणि text-color tokens `--nabi-hl-<name>` आणि `--nabi-tc-<name>` वापरतात. उदाहरणार्थ, `--nabi-hl-yellow` बदलल्याने दस्तऐवज data न बदलता साठवलेल्या `yellow` highlights चा दिसणारा रंग बदलतो.
 
@@ -63,6 +64,20 @@ Highlight आणि text-color tokens `--nabi-hl-<name>` आणि `--nabi-tc-<n
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## मोबाइल मोडची मर्यादा
+
+टूलबार, संदर्भ ओळ किंवा व्ह्यूपोर्टची रुंदी `36rem` पेक्षा कमी झाल्यास मोबाइल मोड सुरू होतो. नेमक्या `36rem` रुंदीवर नेहमीची मांडणी कायम राहते. मोबाइल मोडमध्ये टूलबार आणि संदर्भ ओळ आडवी स्क्रोल होतात, पॅनेल मध्यभागी दिसतात आणि तक्ता निवडण्याचे ग्रिड स्पर्शासाठी सोयीच्या 5×5 घरांचे होते.
+
+मर्यादा बदलण्यासाठी `--nabi-mobile-breakpoint` हे `:root`, एखाद्या पूर्वज घटकावर किंवा स्वतंत्र `.nabi` वर सेट करा. `rem`, `px` किंवा `calc()` सारखी शून्य किंवा धन CSS लांबी वापरा. CSS मूल्य, रूट फॉन्टचा आकार, कंटेनरची किंवा व्ह्यूपोर्टची रुंदी बदलल्यावर उघडी पॅनेलही आपोआप अद्ययावत होतात. `body` खाली हलवलेली इनपुट पॅनेल मूळ संपादकाची मर्यादा वापरत राहतात.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+स्पर्श उपकरणांवर या मर्यादेपेक्षा जास्त रुंदी असतानाही मोठी नियंत्रणे कायम राहतात.
 
 ## Dark mode
 

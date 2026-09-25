@@ -30,9 +30,7 @@ const DETAILS_NAME: LocaleText = {
   id: 'Blok lipat',
 };
 
-const DETAILS_ICON =
-  '<g transform="translate(8 8) scale(1.0185) translate(-8 -8)" stroke-width="1.375">' +
-  '<path d="M3.4 2.6h5.4l3.8 3.8v7H3.4z"/><path d="M8.8 2.6v3.8h3.8"/></g>';
+const DETAILS_ICON = 'details-details';
 
 const DETAILS_CSS = `
 .nabi-content details {
@@ -159,7 +157,7 @@ export const detailsWing: Wing = {
   button: {
     group: 'container',
     shortcut: 'D',
-    svg: DETAILS_ICON,
+    icon: DETAILS_ICON,
     label: DETAILS_NAME,
     action: { kind: 'command', command: 'toggleDetails' },
   },

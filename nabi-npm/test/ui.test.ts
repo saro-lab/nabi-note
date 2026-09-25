@@ -569,7 +569,9 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     .map((wing) => wing.w);
   ok('사전: 버튼 있는 wing 은 전부 ko·en 이름을 든다', missing.length === 0, missing);
 
-  const noIcon = registry.wings.filter((wing) => wing.button && !wing.button.svg).map((wing) => wing.w);
+  const noIcon = registry.wings
+    .filter((wing) => wing.button && !wing.button.svg && !wing.button.icon)
+    .map((wing) => wing.w);
   ok('사전: 버튼 있는 wing 은 전부 아이콘을 든다', noIcon.length === 0, noIcon);
 
   const noAction = registry.wings.filter((wing) => wing.button && !wing.button.action).map((wing) => wing.w);
@@ -668,8 +670,8 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     const on = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-btn.on, .nabi-btn.on:hover {'));
     const onBody = on.slice(0, on.indexOf('}'));
     ok(
-      'CSS: 툴바 on도 바탕을 칠하지 않고 색만 바꾼다',
-      /color:\s*var\(--nabi-accent\)/.test(onBody) && !/background:/.test(onBody),
+      'CSS: 파일 아이콘의 선택 상태도 배경과 밑줄로 보인다',
+      /background:\s*var\(--nabi-soft\)/.test(onBody) && /box-shadow:\s*inset/.test(onBody),
     );
     const tap = CORE_CSS.slice(CORE_CSS.indexOf('@keyframes nabi-tap'));
     ok('CSS: 누름 반응은 아래로 내려갔다 돌아온다', /translateY\(2px\)/.test(tap.slice(0, tap.indexOf('\n}'))));
@@ -859,7 +861,7 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     // Must be the same two triangles as the viewer's "sortable" icon — same meaning, same glyph.
     ok(
       'CSS: 표식의 그림이 viewer 의 원본 아이콘과 같다',
-      mark.includes('M8 2.9 12 7.4H4Z') && mark.includes('M8 13.1 4 8.6h8Z'),
+      mark.includes('--nabi-icon-viewer-sort-original') && mark.includes('--nabi-default-icon-sort-original'),
     );
   }
 

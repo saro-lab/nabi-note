@@ -11,7 +11,13 @@ The entry exports:
 - `defaultWings`, `wingNames`, `wings`;
 - `safeUrl`;
 - NABI TREE types and `P`, `BR`, `isElement`, `isText`;
-- locale helpers needed by rendering.
+- locale helpers needed by rendering, including DOM-free `createLocale()`.
+
+Toolbar renderers accept a fixed string or a `LocaleSource` as `locale`. They read
+the current value without subscribing. Create a source per request or editor; do
+not share mutable language state between unrelated server requests. On the client,
+pass the same source to the mounts and call `setLocale()` to update labels without
+replacing the hydrated buttons or document. See `quickstart-npm.md`.
 
 It does not export `createNabiWith`, `mountSurface`, UI mounts, viewer behavior, or diff UI.
 
@@ -123,3 +129,7 @@ Link the built package CSS:
 Runtime `injectSheets()` requires a `Document` and is not the server path. If a build system extracts CSS, use `nabi-note/nabi.css` as the source.
 
 Published viewer behavior is separate. After hydration or on a read-only page, import `nabi-note/viewer` only when sorting or code paint is required.
+
+## Icon themes and individual view tools
+
+Pass the same `showPreview` and `showFullscreen` booleans to `renderViewToolsHtml()` and `mountViewTools()`. Both default to true; both false returns an empty SSR string and mounts no wrapper. Matching controls are reused. CSS URL changes keep button identity. Load the published CSS and icon assets before hydration; do not serialize server `CORE_CSS` with `file:` asset URLs into a page. See `icons.md`.

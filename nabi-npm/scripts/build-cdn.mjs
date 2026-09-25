@@ -1,6 +1,6 @@
 // CDN 배포 한 벌을 `cdn/dist/`에 모은다 — 빌드 산출물에 손으로 쓴 예문(index.html·cdn.css)과 생성된 시작 문서(sample.js)를 더해, 상대 경로만으로 서버 없이도(file://) 선다.
 // Assembles the CDN release into `cdn/dist/` — build output plus hand-written samples (index.html, cdn.css) and a generated sample doc (sample.js), all relative paths so it works even opened as a local file (file://).
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -43,6 +43,7 @@ async function main() {
   copyFileSync(join(root, 'cdn', 'cdn.css'), join(out, 'cdn.css'));
   copyFileSync(bundle, join(out, 'nabi-note.min.js'));
   copyFileSync(sheet, join(out, 'nabi.css'));
+  cpSync(join(root, 'dist', 'icons'), join(out, 'icons'), { recursive: true });
   writeFileSync(join(out, 'sample.js'), sampleScript(SAMPLE));
 
   const size = (name) => `${(readFileSync(join(out, name)).length / 1024).toFixed(1)}KB`;

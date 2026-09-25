@@ -8,24 +8,52 @@ export { NARROW_REM };
 
 type Watcher = { observe(el: Element): void; disconnect(): void };
 
-// 그릇의 폭을 지켜서 문턱 아래면 클래스를 단다 — 돌려준 함수는 unmount가 부른다. ResizeObserver가 없는 브라우저는 그냥 안 잰다(여러 줄로 접힐 뿐, 나머지는 그대로다).
-// Watches the container's width and toggles the class below the threshold; the returned function is called on unmount. Without ResizeObserver, it simply doesn't measure — content just wraps to more lines.
-export function watchNarrow(el: HTMLElement): () => void {
+// 측정 요소가 CSS 길이와 상속을 그대로 따른다. source는 body로 옮겨진 패널도 원래 편집기를 재게 한다.
+// The probe follows CSS lengths and inheritance; source keeps portaled panels tied to their original editor.
+export function watchNarrow(el: HTMLElement, source: HTMLElement = el): () => void {
   const owner = el.ownerDocument;
   const view = owner.defaultView;
   const Observer = (view as unknown as { ResizeObserver?: new (fn: () => void) => Watcher } | null)?.ResizeObserver;
   if (!view || !Observer) return () => {};
+  const probe = owner.createElement('span');
+  probe.setAttribute('aria-hidden', 'true');
+  probe.style.cssText = `all: initial; position: fixed; left: 0; top: 0; width: var(--nabi-mobile-breakpoint, ${NARROW_REM}rem); height: 0; font-size: inherit; overflow: hidden; visibility: hidden; pointer-events: none;`;
   const apply = (): void => {
-    // rem은 그때그때 읽는다 — 호스트가 뿌리 글자 크기를 바꾸면 문턱도 함께 옮겨 간다.
-    // rem is read fresh each time, so if the host changes the root font size, the threshold moves with it.
-    const rem = parseFloat(view.getComputedStyle(owner.documentElement).fontSize) || 16;
-    el.classList.toggle(NARROW_CLASS, el.clientWidth <= NARROW_REM * rem);
+    const style = view.getComputedStyle(source);
+    const width = parseFloat(style.width);
+    const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+    const border = (parseFloat(style.borderLeftWidth) || 0) + (parseFloat(style.borderRightWidth) || 0);
+    const room = Number.isFinite(width)
+      ? width + (style.boxSizing === 'border-box' ? -border : padding)
+      : source.clientWidth;
+    const threshold = parseFloat(view.getComputedStyle(probe).width);
+    el.classList.toggle(NARROW_CLASS, Math.min(room, owner.documentElement.clientWidth) < threshold);
   };
-  const watcher = new Observer(apply);
-  watcher.observe(el);
-  apply();
-  return () => {
+  let frame = 0;
+  const schedule = (): void => {
+    if (frame) return;
+    frame = view.requestAnimationFrame(() => {
+      frame = 0;
+      apply();
+    });
+  };
+  const watcher = new Observer(schedule);
+  const stop = (): void => {
     watcher.disconnect();
+    view.cancelAnimationFrame(frame);
+    view.removeEventListener('resize', schedule);
+    probe.remove();
     el.classList.remove(NARROW_CLASS);
   };
+  try {
+    source.append(probe);
+    watcher.observe(source);
+    watcher.observe(probe);
+    view.addEventListener('resize', schedule);
+    apply();
+  } catch (error) {
+    stop();
+    throw error;
+  }
+  return stop;
 }

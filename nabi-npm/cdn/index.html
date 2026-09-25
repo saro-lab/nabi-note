@@ -60,7 +60,10 @@
       'use strict';
       var N = NabiNote;
       var $ = function (id) { return document.getElementById(id); };
-      var locale = $('locale').value;
+      var locale = N.createLocale($('locale').value);
+      $('locale').addEventListener('change', function (event) {
+        locale.setLocale(event.target.value);
+      });
 
       // 1. 편집기 하나 — 날개 목록이 갈래 지식·커맨드·조립기를 함께 짓는다.
       var made = N.createNabiWith(N.wings().allBasic(), {
@@ -79,7 +82,7 @@
       //    (묶음만 쓰고 시트를 손수 붙이고 싶으면 `N.injectSheets(document, N.collectSheets(registry))`.)
 
       // 3. 표면과 줄 둘. 상황 줄은 캐럿이 선 자리를 따라 저 혼자 채워진다.
-      N.mountSurface({ nabi: nabi, registry: registry, root: $('content') });
+      N.mountSurface({ nabi: nabi, registry: registry, root: $('content'), locale: locale });
       var settle = N.watchSettle(document, { surface: $('content') });
       var shared = { nabi: nabi, registry: registry, surface: $('content'), settle: settle, locale: locale };
       // 로컬 기록 — localStorage 에 지정된 간격으로 스냅샷을 남긴다. **저장소는 호스트가 준다**
@@ -93,7 +96,7 @@
         N.openHistoryPanel({
           history: history,
           surface: $('content'),
-          locale: 'ko',
+          locale: locale,
           sessionId: history.sessionId,
           // 미리보기 — 기록의 값을 보기 HTML 로 그린다(편집기를 새로 세우지 않는다).
           render: function (record) {

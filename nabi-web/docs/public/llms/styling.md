@@ -91,10 +91,25 @@ The core reads these but does not always declare the host-facing value:
 | `--nabi-placeholder-color` | Empty-editor placeholder color |
 | `--nabi-sticky-top` | Offset below a fixed host header |
 | `--nabi-preview-width` | Preview card width; preview may set an inline measured width |
+| `--nabi-mobile-breakpoint` | Mobile-mode width threshold, default 36rem (strictly below) |
 | `--nabi-touch-font-size` | Core input size on touch/narrow screens, default 16px |
 | `--nabi-diff-height` | Standalone diff pane height, default 30rem |
 
 Fallback font and placeholder tokens are declared internally. Prefer the host-facing names above.
+
+## Mobile breakpoint
+
+Mobile mode starts when the toolbar/context row or viewport width is strictly below `36rem`. Exactly `36rem` keeps the regular layout. Mobile mode scrolls the toolbar and context row horizontally, centers panels, and reduces the table picker to 5x5 touch-sized cells.
+
+Set `--nabi-mobile-breakpoint` on `:root`, an ancestor, or an individual `.nabi`. Use a non-negative CSS length such as `rem`, `px`, or `calc()`. Changes to the CSS value, root font size, container width, or viewport width update mounted controls and open panels automatically, including prompts moved under `body`.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+The browser UI resolves the CSS length and toggles `.nabi-narrow`; do not put `var()` in a media-query condition or manually maintain that class. Coarse-pointer devices retain larger touch controls above this breakpoint.
 
 ## Light and dark
 
@@ -156,3 +171,7 @@ Avoid rules that:
 - move or replace live composing nodes.
 
 Those rules can change caret geometry or DOM-to-tree mapping, not just appearance.
+
+## Icon themes
+
+Use `--nabi-icon-<key>: url("/icons/name.svg")` for SVG, WebP, or PNG replacements. Default icons are external files in `dist/icons/`; copy this directory alongside a manually hosted `nabi.css`. Runtime CSS injection resolves assets from the browser module or script. Use the published CSS for SSR, not server `file:` URLs. See `icons.md` for all control families, dark variants, open-panel inheritance, and visibility options.

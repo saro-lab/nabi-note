@@ -1,9 +1,11 @@
+import type { LocaleInput } from '../locale/index.js';
+import { iconHtml } from '../style/icon.js';
 // --- 화면 --------------------------------------------------------------------------------------
 import { diffDocs, type DocDiff } from './model.js';
 import type { DiffPaneBlock } from './model.js';
 import type { DiffEntry } from './match.js';
 import type { Registry } from '../wing/index.js';
-import { localeDirection, translate } from '../locale/index.js';
+import { localeDirection, localeValue, makeTranslator } from '../locale/index.js';
 import {
   acquireStyleSheet,
   claimMountRoot,
@@ -19,7 +21,7 @@ export interface DiffMountOptions {
   readonly after: unknown;
   readonly registry: Registry;
   readonly allowLocalUrls?: boolean;
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
 }
 
 export interface DiffMount {
@@ -35,13 +37,13 @@ const FOLD_CONTEXT = 1;
 
 // 아이콘 단추 하나 — 판(mountDiff)과 전체화면(mountDiffWing)이 같은 모양을 나눠 쓴다.
 // One icon button shape shared by the pane (mountDiff) and the fullscreen view (mountDiffWing).
-export function diffButton(doc: Document, title: string, path: string): HTMLButtonElement {
+export function diffButton(doc: Document, title: string, icon: string): HTMLButtonElement {
   const button = doc.createElement('button');
   button.type = 'button';
   button.className = 'nabi-diff-btn';
   button.title = title;
   button.setAttribute('aria-label', title);
-  button.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
+  button.innerHTML = iconHtml(`diff-${icon.replace(/^diff-/, '')}`, icon);
   return button;
 }
 
@@ -57,33 +59,34 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
   lifecycle.add(claimMountRoot(root));
   try {
     const doc = root.ownerDocument;
-    const t = (key: string): string => translate(key, locale ?? 'en');
+    const translator = makeTranslator(locale);
+    const t = (key: string): string => translator.t(key);
     const releaseCss = ensureCss(doc);
     lifecycle.add(releaseCss);
     const attributes = new HostElementLease(root);
     lifecycle.add(() => attributes.dispose());
     attributes.className('nabi-diff', true);
     attributes.attribute('role', 'region');
-    attributes.attribute('aria-label', translate('diff.region', locale ?? 'en'));
-    if (locale !== undefined) attributes.attribute('dir', localeDirection(locale));
+    attributes.attribute('aria-label', t('diff.region'));
+    if (locale !== undefined) attributes.attribute('dir', localeDirection(localeValue(locale)));
 
     const el = (cls: string, tag = 'div'): HTMLElement => {
       const node = doc.createElement(tag);
       node.className = cls;
       return node;
     };
-    const iconButton = (title: string, path: string): HTMLButtonElement => diffButton(doc, title, path);
+    const iconButton = (title: string, icon: string): HTMLButtonElement => diffButton(doc, title, icon);
 
     const bar = el('nabi-diff-bar');
     bar.setAttribute('role', 'toolbar');
     bar.setAttribute('aria-label', t('diff.controls'));
-    const prevButton = iconButton(t('diff.prev'), 'M3.5 10 8 5.5 12.5 10');
-    const nextButton = iconButton(t('diff.next'), 'M3.5 6 8 10.5 12.5 6');
+    const prevButton = iconButton(t('diff.prev'), 'diff-prev');
+    const nextButton = iconButton(t('diff.next'), 'diff-next');
     const count = el('nabi-diff-count', 'span');
     const spacer = el('nabi-diff-spacer', 'span');
     // "바뀐 부분만" 은 글자가 아니라 서로를 향해 접히는 상하 세모 화살표다. 말은 title/aria 로 남는다.
     // "Only changes" is a pair of triangles folding toward each other, not text; the label lives in title/aria instead.
-    const toggleButton = iconButton(t('diff.onlyChanges'), 'M4.5 2.5 8 6l3.5-3.5M4.5 13.5 8 10l3.5 3.5');
+    const toggleButton = iconButton(t('diff.onlyChanges'), 'diff-fold');
     toggleButton.setAttribute('aria-pressed', 'false');
     // 숫자와 접기는 왼쪽 무리다 — 오른쪽 끝은 전체화면(mountDiffWing)이 얹는 닫기(X) 하나만의 자리다.
     // The count and fold toggle group on the left; the far right is reserved solely for the close (X) that mountDiffWing adds.
@@ -467,6 +470,20 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
     resizeObserver?.observe(afterDocEl);
     lifecycle.add(() => resizeObserver?.disconnect());
 
+    const localize = (): void => {
+      attributes.attribute('aria-label', t('diff.region'));
+      if (locale !== undefined) attributes.attribute('dir', localeDirection(localeValue(locale)));
+      bar.setAttribute('aria-label', t('diff.controls'));
+      for (const [button, key] of [
+        [prevButton, 'diff.prev'],
+        [nextButton, 'diff.next'],
+        [toggleButton, 'diff.onlyChanges'],
+      ] as const) {
+        button.title = t(key);
+        button.setAttribute('aria-label', t(key));
+      }
+    };
+    if (translator.onChange) lifecycle.add(translator.onChange(localize));
     paint(before, after);
 
     return {

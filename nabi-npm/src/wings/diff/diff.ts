@@ -10,17 +10,14 @@ const DIFF_NAME: LocaleText = { ko: '변경 비교', en: 'Diff' };
 
 // 엇갈린 화살표 둘 — before/after를 오가는 모양이다.
 // Two crossing arrows, evoking the back-and-forth between before and after.
-const DIFF_ICON =
-  '<g stroke-width="1.4">' +
-  '<path d="M2.5 5h9M9 2.5 11.5 5 9 7.5"/>' +
-  '<path d="M13.5 11h-9M7 8.5 4.5 11 7 13.5"/></g>';
+const DIFF_ICON = 'diff-diff';
 
 export const diffWing: Wing = {
   w: 'diff',
   place: 'tool',
   button: {
     group: 'file',
-    svg: DIFF_ICON,
+    icon: DIFF_ICON,
     label: DIFF_NAME,
     // 판을 여는 것은 화면의 일이라 호스트가 받는다 — `mountDiffWing(...).open()`이 그 답이다.
     // Opening the panel is a screen concern handed to the host — `mountDiffWing(...).open()` answers it.

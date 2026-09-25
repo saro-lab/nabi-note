@@ -54,6 +54,7 @@ Platzieren Sie gemeinsame Token auf einem gemeinsamen übergeordneten Element, d
 | Bearbeitungsoberfläche | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | Feststehende Symbolleiste und Vorschau | `--nabi-sticky-top`, `--nabi-preview-width` |
 | Touch-Steuerung | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| Umschaltbreite für den Mobilmodus | `--nabi-mobile-breakpoint` |
 
 Highlight- und Textfarb-Token verwenden `--nabi-hl-<name>` und `--nabi-tc-<name>`. Das Ändern von `--nabi-hl-yellow` ändert beispielsweise die Anzeigefarbe gespeicherter `yellow`-Highlights, ohne die Dokumentdaten zu ändern.
 
@@ -63,6 +64,20 @@ Highlight- und Textfarb-Token verwenden `--nabi-hl-<name>` und `--nabi-tc-<name>
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## Umschaltbreite für den Mobilmodus
+
+Der Mobilmodus beginnt, wenn die Breite der Werkzeug- oder Kontextleiste oder des Viewports unter `36rem` liegt. Bei genau `36rem` bleibt das normale Layout erhalten. Im Mobilmodus scrollen Werkzeug- und Kontextleiste horizontal, Panels stehen mittig und die Tabellenauswahl wird auf 5×5 berührungsfreundliche Zellen verkleinert.
+
+Setzen Sie `--nabi-mobile-breakpoint` auf `:root`, einem Vorfahren oder einer einzelnen `.nabi`. Verwenden Sie eine nicht negative CSS-Länge wie `rem`, `px` oder `calc()`. Änderungen des CSS-Werts, der Schriftgröße des Wurzelelements, der Containerbreite oder der Viewportbreite aktualisieren auch offene Panels automatisch. Unter `body` verschobene Eingabepanels verwenden weiterhin den Schwellenwert ihres ursprünglichen Editors.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+Auf Touch-Geräten bleiben die Bedienelemente auch oberhalb dieser Breite größer.
 
 ## Dunkelmodus
 

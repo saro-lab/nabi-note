@@ -30,6 +30,7 @@ export const NAV: readonly NavGroup[] = [
       { path: '/guide/cdn', key: 'menu_cdn' },
       { path: '/intro/vibe-coding', key: 'menu_intro_vibe_coding' },
       { path: '/guide/style', key: 'menu_style_guide' },
+      { path: '/guide/icons', key: 'menu_icon_theme' },
       { path: '/guide/extend', key: 'menu_extend_guide' },
     ],
   },

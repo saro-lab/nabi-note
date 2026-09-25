@@ -1,3 +1,4 @@
+import type { LocaleInput } from '../locale/index.js';
 import type { ArmedState } from '../caret/index.js';
 import type { EditEnv } from '../doc/index.js';
 import type { NabiDoc } from '../schema/index.js';
@@ -16,7 +17,7 @@ export interface NabiHost {
   bindChoose(sink: Choose): () => void;
   readonly toastMs: number;
   readonly toastMax: number;
-  bindLocale(locale: string): () => void;
+  bindLocale(locale: LocaleInput): () => void;
   locale(): string;
   applyRaw(run: Command, name?: string): boolean;
   markSaved(saved: NabiDoc): void;

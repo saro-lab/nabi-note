@@ -64,14 +64,18 @@ const viewerLayers = [...new Set(viewerFiles.map((rel) => rel.split('/')[1] as s
 
 ok('viewer 엔트리가 있다', has('src/viewer/index.ts'));
 ok('코어 엔트리가 있다', has('src/index.ts'));
-// viewer가 딛는 층은 locale·code·제 층뿐이다 — code가 낀 것은 편집 화면과 발행 페이지가 같은 토크나이저를 써야 해서다.
-// The only layers viewer touches are locale, code, and itself — code is included because the editor and the published page must share one tokenizer.
-eq('viewer 가 딛는 층은 viewer·locale·code·lifecycle 뿐이다', viewerLayers, [
+eq('viewer 가 딛는 층은 viewer·locale·code·lifecycle·아이콘 렌더러뿐이다', viewerLayers, [
   'code',
   'lifecycle.ts',
   'locale',
+  'style',
   'viewer',
 ]);
+eq(
+  'viewer 는 순수 아이콘 렌더러만 공유한다',
+  viewerFiles.filter((rel) => rel.startsWith('src/style/')),
+  ['src/style/icon.ts'],
+);
 ok(
   'viewer 가 editor·surface·ui·wing 파일을 하나도 안 문다',
   viewerFiles.every((rel) => !/^src\/(editor|surface|ui|wing|wings|html|doc|caret|schema)\//.test(rel)),

@@ -94,13 +94,9 @@ const VIEW_NAME: LocaleText = {
   ur: 'بڑا دیکھیں',
   id: 'Lihat besar',
 };
-const ZOOM_ICON =
-  '<g stroke-width="1.5"><circle cx="7" cy="7" r="4.25"/><path d="M10.2 10.2 13.5 13.5M5.2 7h3.6M7 5.2v3.6"/></g>';
+const ZOOM_ICON = 'img-zoom';
 
-const IMAGE_ICON =
-  '<g transform="translate(8 8) scale(1.0476) translate(-8 -8)" stroke-width="1.336">' +
-  '<rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.8"/><circle cx="5.75" cy="6.25" r="1.1"/>' +
-  '<path d="m2.5 11.5 3.25-3 3 2.5 2-1.75 2.75 2.5"/></g>';
+const IMAGE_ICON = 'img-image';
 
 // 폭 표식 하나가 그림·유튜브의 생김새를 다 말한다 — 값은 퍼센트 문자열이다.
 const WIDTH_CSS = `
@@ -207,7 +203,7 @@ export function makeImageWing(options: ImageWingOptions = {}): Wing {
       requires: ['src'],
       button: {
         group: 'media',
-        svg: IMAGE_ICON,
+        icon: IMAGE_ICON,
         label: IMAGE_NAME,
         action: {
           kind: 'prompt',
@@ -242,7 +238,7 @@ export function makeImageWing(options: ImageWingOptions = {}): Wing {
         },
         // 커맨드를 안 돌린다 — 보는 것으로는 문서가 안 바뀐다. 주소가 비면 안 선다.
         // Runs no command — viewing never mutates the document; hidden when there's no address.
-        { kind: 'lightbox', name: 'view', src: 'src', svg: ZOOM_ICON, label: VIEW_NAME },
+        { kind: 'lightbox', name: 'view', src: 'src', icon: ZOOM_ICON, label: VIEW_NAME },
       ],
     },
     commands: { insertImage, setImageWidth },

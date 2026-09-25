@@ -9,6 +9,7 @@ export const tr = {
   "menu_cdn": "CDN kullanımı",
   "menu_features": "Kanatlar",
   "menu_style_guide": "CSS temaları",
+  menu_icon_theme: "Simge temaları",
   "menu_rendering": "SSR kurulumu",
   "menu_extend_guide": "Özel kanatlar",
   "menu_intro_vibe_coding": "Yapay zekâ ile Vibe Coding",

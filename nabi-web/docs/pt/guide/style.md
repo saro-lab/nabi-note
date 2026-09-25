@@ -54,6 +54,7 @@ Se você colocar os mesmos tokens em um pai comum do editor e da tela publicada,
 | Área de edição | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | Barra fixa e prévia | `--nabi-sticky-top`, `--nabi-preview-width` |
 | Ambiente de toque | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| Largura de ativação do modo móvel | `--nabi-mobile-breakpoint` |
 
 Realce e cor de texto são alterados com `--nabi-hl-<name>` e `--nabi-tc-<name>`. Por exemplo, alterar `--nabi-hl-yellow` muda apenas a cor visível do realce `yellow` salvo no documento.
 
@@ -63,6 +64,20 @@ Realce e cor de texto são alterados com `--nabi-hl-<name>` e `--nabi-tc-<name>`
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## Limite do modo móvel
+
+O modo móvel é ativado quando a largura da barra de ferramentas, da barra contextual ou da janela é inferior a `36rem`. Com exatamente `36rem`, mantém-se o layout normal. No modo móvel, as duas barras rolam horizontalmente, os painéis ficam centralizados e o seletor de tabelas é reduzido a 5×5 células adequadas ao toque.
+
+Defina `--nabi-mobile-breakpoint` em `:root`, em um ancestral ou em uma `.nabi` específica. Use um comprimento CSS não negativo, como `rem`, `px` ou `calc()`. Alterações no valor CSS, no tamanho da fonte raiz, na largura do contêiner ou da janela atualizam automaticamente também os painéis abertos. Painéis de entrada movidos para dentro de `body` continuam usando o limite do editor original.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+Dispositivos de toque mantêm controles maiores acima desse limite.
 
 ## Modo escuro
 

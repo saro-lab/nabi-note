@@ -194,16 +194,13 @@ const PARAGRAPH_CSS = `
 .nabi-content > :is(h1,h2,h3,h4,h5,h6):has(+ :is(h1,h2,h3,h4,h5,h6)) { padding-block-end: .8em; }
 `;
 
-const HEADING_ICON = '<path d="M4 4.2V11.8M10.5 4.2V11.8M4 8h6.5"/>';
+const HEADING_ICON = 'attrs-heading';
 const ALIGN_ICONS: Readonly<Record<string, string>> = {
-  l: '<path d="M2.5 3.5h11M2.5 6.75h7M2.5 10h11M2.5 13.25h7"/>',
-  c: '<path d="M2.5 3.5h11M4.5 6.75h7M2.5 10h11M4.5 13.25h7"/>',
-  r: '<path d="M2.5 3.5h11M6.5 6.75h7M2.5 10h11M6.5 13.25h7"/>',
-};
-const DROPCAP_ICON =
-  '<g transform="translate(8 8) scale(1.25) translate(-8 -8)" stroke-width="1.12">' +
-  '<path d="M2.75 12.4 5.3 3.6l2.55 8.8M3.75 10.1h3.1"/>' +
-  '<path d="M10.28 4.4h2.97M10.28 8h2.97M10.28 11.6h2.97"/></g>';
+  l: 'attrs-l',
+  c: 'attrs-c',
+  r: 'attrs-r',
+} as const;
+const DROPCAP_ICON = 'attrs-dropcap';
 
 // --- 제목 h (1~6, wing 하나가 값 전부 — 눌림은 currentValue 로 답한다) -------------------------
 
@@ -232,7 +229,7 @@ export const headingWing: Wing = {
   inputRules: headingRules,
   button: {
     group: 'heading',
-    svg: HEADING_ICON,
+    icon: HEADING_ICON,
     label: HEADING_NAME,
     // 판을 안 띄운다 — 누르면 곧장 제목 1이 되고, 단계 고르기는 그 뒤 상황 줄의 일이다.
     // No popup — pressing goes straight to Heading 1; picking a level from there is the context bar's job.
@@ -332,7 +329,7 @@ export const alignWing: Wing = {
     group: 'align',
     name: String(value),
     value: value as string,
-    svg: ALIGN_ICONS[value as string] as string,
+    icon: ALIGN_ICONS[value as string] as string,
     label: ALIGN_LABELS[at] as LocaleText,
     action: { kind: 'command' as const, command: 'setAlign', args: { value } },
   })),
@@ -358,7 +355,7 @@ export const dropCapWing: Wing = {
   },
   button: {
     group: 'font',
-    svg: DROPCAP_ICON,
+    icon: DROPCAP_ICON,
     label: DROPCAP_NAME,
     action: { kind: 'command', command: 'toggleDropCap' },
   },

@@ -54,6 +54,7 @@ Placez les jetons partagés sur un ancêtre commun afin que l'éditeur et sa vue
 | Surface d'édition | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | Barre d'outils et aperçu épinglés | `--nabi-sticky-top`, `--nabi-preview-width` |
 | Contrôles tactiles | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| Largeur de passage au mode mobile | `--nabi-mobile-breakpoint` |
 
 Les jetons de surlignage et de couleur de texte utilisent `--nabi-hl-<name>` et `--nabi-tc-<name>`. Par exemple, modifier `--nabi-hl-yellow` change la couleur d'affichage des surlignages `yellow` stockés sans modifier les données du document.
 
@@ -63,6 +64,20 @@ Les jetons de surlignage et de couleur de texte utilisent `--nabi-hl-<name>` et 
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## Seuil du mode mobile
+
+Le mode mobile s’active lorsque la largeur de la barre d’outils, de la barre contextuelle ou de la fenêtre est strictement inférieure à `36rem`. À exactement `36rem`, la disposition normale est conservée. En mode mobile, les deux barres défilent horizontalement, les panneaux sont centrés et le sélecteur de tableau passe à 5×5 cellules adaptées au toucher.
+
+Définissez `--nabi-mobile-breakpoint` sur `:root`, un ancêtre ou une `.nabi` particulière. Utilisez une longueur CSS positive ou nulle, comme `rem`, `px` ou `calc()`. Les changements de valeur CSS, de taille de police racine, de largeur du conteneur ou de la fenêtre actualisent aussi automatiquement les panneaux ouverts. Les panneaux de saisie déplacés sous `body` conservent le seuil de leur éditeur d’origine.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+Les appareils tactiles conservent des commandes plus grandes au-delà de ce seuil.
 
 ## Mode sombre
 

@@ -54,6 +54,7 @@ import 'nabi-note/nabi.css'
 | 編集 surface | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | 固定ツールバーとプレビュー | `--nabi-sticky-top`, `--nabi-preview-width` |
 | タッチ操作 | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| モバイルモードの切り替え幅 | `--nabi-mobile-breakpoint` |
 
 ハイライトと文字色のトークンは `--nabi-hl-<name>` と `--nabi-tc-<name>` を使います。たとえば `--nabi-hl-yellow` を変えると、文書データを変えずに、保存済みの `yellow` ハイライトの表示色だけを変えられます。
 
@@ -63,6 +64,20 @@ import 'nabi-note/nabi.css'
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## モバイルモードの切り替え幅
+
+ツールバー・コンテキスト行の幅、または画面幅が `36rem` 未満になるとモバイルモードに切り替わります。ちょうど `36rem` では通常のレイアウトを維持します。モバイルモードではツールバーとコンテキスト行が横スクロールになり、パネルが中央に表示され、表の選択グリッドがタッチしやすい 5×5 マスになります。
+
+`--nabi-mobile-breakpoint` を `:root`、祖先要素、または個々の `.nabi` に指定すると基準を変更できます。`rem`、`px`、`calc()` など、0 以上の CSS 長さを使います。CSS 値、ルートの文字サイズ、コンテナー幅、画面幅が変わると、開いているパネルにも自動的に反映されます。`body` 配下に移動した入力パネルも、元のエディターの基準を使います。
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+タッチ端末では、この基準より広い画面でも大きな操作ボタンを維持します。
 
 ## ダークモード
 

@@ -1,3 +1,5 @@
+import { Translations } from './parts/translation.js';
+import type { LocaleInput } from '../locale/index.js';
 // 저장 판과 격자 부품을 나눠 쓴다(parts/grid.ts) — 한쪽만 손대면 두 판이 어긋난다. 취소는 -1을 반환한다.
 // Shares its grid with the save panel (parts/grid.ts) — editing only one drifts them apart; cancel resolves to -1.
 import type { ChooseOption } from '../editor/index.js';
@@ -13,7 +15,7 @@ export interface ChoosePanelOptions {
   // 닫히면 포커스가 여기로 돌아가고, 판이 속할 문서도 여기서 얻는다.
   // Focus returns here on close, and this is also where the panel's owner document comes from.
   readonly surface: HTMLElement;
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   readonly translator?: Translator;
 }
 
@@ -26,6 +28,7 @@ export function openChoosePanel(options: ChoosePanelOptions): Promise<number> {
   const owner = options.surface.ownerDocument;
   const t = options.translator ?? makeTranslator(options.locale);
   const direction = localeDirection(t.locale);
+  const copy = new Translations(t);
 
   return new Promise<number>((resolve) => {
     // 답은 한 번뿐이다 — 덮개 클릭과 Enter가 같은 순간에 와도 먼저 온 것이 답이다.
@@ -49,29 +52,50 @@ export function openChoosePanel(options: ChoosePanelOptions): Promise<number> {
 
     let scrim: ReturnType<typeof openScrim> | null = null;
 
-    const grid = makeGrid(owner, {
-      prefix: 'nabi-choose',
-      rtl: direction === 'rtl',
-      cells: options.options.map((choice) => ({
-        label: choice.label,
-        ...(choice.icon !== undefined && choice.icon !== '' ? { icon: choice.icon } : {}),
-      })),
-      onPick: (at) => {
-        answer(at);
-        scrim?.close();
-      },
-    });
-    card.append(title, grid.list);
+    try {
+      copy.attribute(card, 'dir', () => localeDirection(t.locale));
+      copy.attribute(card, 'aria-label', () => options.question);
+      copy.text(title, () => options.question);
+      const grid = makeGrid(owner, {
+        prefix: 'nabi-choose',
+        get rtl() {
+          return localeDirection(t.locale) === 'rtl';
+        },
+        translations: copy,
+        cells: options.options.map((choice) => ({
+          get label() {
+            return choice.label;
+          },
+          ...(choice.icon !== undefined && choice.icon !== '' ? { icon: choice.icon } : {}),
+        })),
+        onPick: (at) => {
+          answer(at);
+          scrim?.close();
+        },
+      });
+      card.append(title, grid.list);
 
-    // 키는 카드가 받아 격자에 건넨다 — 겨눔이 아리아 표식뿐이라 칸에는 실제 포커스가 안 선다.
-    // The card catches keys and forwards them to the grid, since the highlighted cell is only an ARIA marker, not real focus.
-    card.addEventListener('keydown', (event) => {
-      grid.key(event);
-    });
+      // 키는 카드가 받아 격자에 건넨다 — 겨눔이 아리아 표식뿐이라 칸에는 실제 포커스가 안 선다.
+      // The card catches keys and forwards them to the grid, since the highlighted cell is only an ARIA marker, not real focus.
+      card.addEventListener('keydown', (event) => {
+        grid.key(event);
+      });
 
-    // Escape·바깥 클릭으로 닫히면 취소다 — 그 경로는 덮개가 이미 처리하므로 여기서 더 할 일이 없다.
-    // Escape or an outside click cancels; the scrim already handles that path, so nothing more is needed here.
-    scrim = openScrim(owner, { card, restore: options.surface, onClose: () => answer(-1) });
-    card.focus({ preventScroll: true });
+      // Escape·바깥 클릭으로 닫히면 취소다 — 그 경로는 덮개가 이미 처리하므로 여기서 더 할 일이 없다.
+      // Escape or an outside click cancels; the scrim already handles that path, so nothing more is needed here.
+      scrim = openScrim(owner, {
+        card,
+        restore: options.surface,
+        onClose: () => {
+          copy.dispose();
+          answer(-1);
+        },
+      });
+      card.focus({ preventScroll: true });
+    } catch (error) {
+      copy.dispose();
+      scrim?.close();
+      throw error;
+    }
   });
 }

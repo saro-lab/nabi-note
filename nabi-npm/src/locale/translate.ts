@@ -2,6 +2,7 @@
 // This file is the whole rule for picking one piece of text — requested locale, then en, then the key, three steps with no side doors. A regional tag like `ko-KR` only looks at the language part (`ko`); an unfilled placeholder (`{name}`) is left as-is rather than blanked, since blanking would silently break the sentence.
 import { DICTIONARY, type Dictionary, type LocaleText } from './dict.js';
 import { FALLBACK_LOCALE, normalizedLocale } from './normalize.js';
+import { localeValue, type LocaleInput } from './state.js';
 
 // 마지막 보루 — 이 언어에 없으면 여기를 본다. 여기에도 없으면 키가 나온다.
 // The last resort — checked when the requested language has no entry; if even this is missing, the key itself is shown.
@@ -48,6 +49,7 @@ export function translate(
 
 export interface Translator {
   readonly locale: string;
+  onChange?(listener: () => void): () => void;
   // 말 하나 — 없으면 en, 그것도 없으면 키.
   // One piece of text — falls to en, then to the key.
   t(key: string, vars?: Readonly<Record<string, string | number>>): string;
@@ -58,12 +60,17 @@ export interface Translator {
 
 // 번역기 하나 — 호스트가 자기 사전을 얹을 수 있다(같은 키는 얹은 쪽이 이긴다).
 // One translator — a host can layer in its own dictionary; on a key collision, the host's entry wins.
-export function makeTranslator(rawLocale?: string, extra?: Dictionary): Translator {
-  const locale = localeOf(rawLocale);
+export function makeTranslator(rawLocale?: LocaleInput, extra?: Dictionary): Translator {
+  const locale = (): string => localeOf(localeValue(rawLocale));
   const dictionary: Dictionary = extra ? { ...DICTIONARY, ...extra } : DICTIONARY;
   return {
-    locale,
-    t: (key, vars) => translate(key, locale, dictionary, vars),
-    pick: (entry, fallbackKey) => fromRecord(entry, locale) ?? translate(fallbackKey, locale, dictionary),
+    get locale() {
+      return locale();
+    },
+    ...(rawLocale && typeof rawLocale === 'object'
+      ? { onChange: (listener: () => void) => rawLocale.onChange(listener) }
+      : {}),
+    t: (key, vars) => translate(key, locale(), dictionary, vars),
+    pick: (entry, fallbackKey) => fromRecord(entry, locale()) ?? translate(fallbackKey, locale(), dictionary),
   };
 }

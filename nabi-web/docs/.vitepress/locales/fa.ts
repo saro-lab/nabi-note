@@ -10,6 +10,7 @@ export const fa = {
   "menu_cdn": "استفاده از CDN",
   "menu_features": "بال‌ها",
   "menu_style_guide": "پوسته‌های CSS",
+  menu_icon_theme: "پوستهٔ آیکون‌ها",
   "menu_rendering": "تنظیم SSR",
   "menu_extend_guide": "بال‌های سفارشی",
   "menu_intro_vibe_coding": "کدنویسی ویبی با AI",

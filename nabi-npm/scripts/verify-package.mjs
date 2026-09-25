@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process';
 const root = new URL('..', import.meta.url).pathname;
 const dist = join(root, 'dist');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-const expectedExports = ['.', './diff', './nabi.css', './package.json', './ssr', './viewer'];
+const expectedExports = ['.', './diff', './icons/*', './nabi.css', './package.json', './ssr', './viewer'];
 
 const fail = (message) => {
   throw new Error(message);
@@ -28,6 +28,15 @@ for (const file of walk(dist)) {
   const source = readFileSync(file, 'utf8');
   if (!source.includes(`sourceMappingURL=${basename(map)}`)) fail(`broken sourceMappingURL: ${relative(root, file)}`);
   JSON.parse(readFileSync(map, 'utf8'));
+}
+
+const iconFiles = walk(join(dist, 'icons'));
+if (!iconFiles.length || iconFiles.some((file) => !readFileSync(file, 'utf8').includes('<svg')))
+  fail('missing icon assets');
+const cssSource = readFileSync(join(dist, 'nabi.css'), 'utf8');
+if (cssSource.includes('file://')) fail('filesystem URL in published CSS');
+for (const [, name] of cssSource.matchAll(/url\("\.\/icons\/([^"/]+)"\)/g)) {
+  if (!iconFiles.includes(join(dist, 'icons', name.split('?')[0]))) fail(`missing CSS icon: ${name}`);
 }
 
 const browserBytes = statSync(join(dist, 'browser', 'nabi-note.min.js')).size;

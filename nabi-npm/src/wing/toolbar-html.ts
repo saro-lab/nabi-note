@@ -1,3 +1,4 @@
+import type { LocaleInput } from '../locale/index.js';
 // 툴바의 글자 — 단추 줄을 DOM 없이 그린다. 캐럿도 문서도 안 보는 순수한 값이라 나오는 글자가 상수다.
 // `ui`가 아니라 `wing` 층에 사는 까닭은 서버(`nabi-note/ssr`)가 이 글자를 불러야 하는데 ssr 엔트리는
 // `ui`를 안 딛기 때문이고, `html` 층에 안 두는 까닭은 여기 들어오는 값이 사용자 문서가 아니라
@@ -5,6 +6,7 @@
 // The toolbar's markup, rendered with no DOM — a pure function of (registry, locale, group order) with no knowledge of caret or document, so its output is constant. Lives in the `wing` layer rather than `ui` because the server (`nabi-note/ssr`) must call it and the ssr entry never touches `ui`; lives outside `html` because the values here are developer-written wing declarations and dict strings, not user documents, so they cross a different trust boundary.
 import type { Registry, Wing, WingButton } from './index.js';
 import { makeTranslator, type Translator } from '../locale/index.js';
+import { iconHtml } from '../style/icon.js';
 
 // 기본 그룹 순서 — 글에 가까운 것부터 문서 전체의 일까지, 워드·구글 문서의 관례를 따른다.
 // The default group order, from text-level formatting to whole-document actions, following Word/Google Docs convention.
@@ -108,8 +110,11 @@ const esc = (value: string): string =>
 
 function buttonHtml(slot: ToolbarSlot): string {
   const { wing, decl } = slot;
-  const classes = decl.svg ? 'nabi-btn' : 'nabi-btn nabi-word';
-  const inner = decl.svg ? iconSvg(decl.svg, wing.place === 'mark' ? 1.6 : 1.4) : esc(slot.label);
+  const classes = decl.icon || decl.svg ? 'nabi-btn' : 'nabi-btn nabi-word';
+  const inner =
+    decl.icon || decl.svg
+      ? iconHtml(`toolbar-${slot.name}`, decl.icon, decl.svg, wing.place === 'mark' ? 1.6 : 1.4)
+      : esc(slot.label);
   return (
     `<button class="${classes}" type="button" data-name="${esc(slot.name)}"` +
     ` aria-label="${esc(slot.label)}" data-nabi-tip="${esc(slot.tip)}" data-wing="${esc(wing.w)}"` +
@@ -120,7 +125,7 @@ function buttonHtml(slot: ToolbarSlot): string {
 
 export interface ToolbarHtmlOptions {
   readonly registry: Registry;
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   readonly translator?: Translator;
   // 그룹 순서 — 안 주면 `TOOLBAR_GROUPS` 를 따른다.
   // Group order; falls back to `TOOLBAR_GROUPS` if omitted.
@@ -159,15 +164,28 @@ export const FULLSCREEN_EXIT_ICON = '<path d="M2.75 6H6V2.75M13.25 6H10V2.75M2.7
 // 미리 그리는 것은 처음 상태다 — 전체화면은 늘 꺼진 채로 뜬다(들어가기 아이콘). mount 뒤 `paint()`
 // 가 실제 상태로 다시 칠하므로 어긋날 자리가 없다.
 // What's pre-rendered is always the initial state — fullscreen always starts drawn as off (the "enter" icon); `paint()` repaints to the real state after mount, so there's no window for it to be wrong.
-export function renderViewToolsHtml(options: { readonly locale?: string; readonly translator?: Translator }): string {
+export interface ViewToolsVisibility {
+  readonly showPreview?: boolean;
+  readonly showFullscreen?: boolean;
+}
+
+export interface ViewToolsHtmlOptions extends ViewToolsVisibility {
+  readonly locale?: LocaleInput;
+  readonly translator?: Translator;
+}
+
+export function renderViewToolsHtml(options: ViewToolsHtmlOptions = {}): string {
+  const showPreview = options.showPreview !== false;
+  const showFullscreen = options.showFullscreen !== false;
+  if (!showPreview && !showFullscreen) return '';
   const t = options.translator ?? makeTranslator(options.locale);
-  const one = (name: string, label: string, svg: string): string =>
+  const one = (name: string, label: string, icon: string): string =>
     `<button class="nabi-btn" type="button" data-name="${esc(name)}"` +
-    ` aria-label="${esc(label)}" data-nabi-tip="${esc(label)}">${iconSvg(svg)}</button>`;
+    ` aria-label="${esc(label)}" data-nabi-tip="${esc(label)}">${iconHtml(`view-${icon}`, icon)}</button>`;
   return (
     '<span class="nabi-tools">' +
-    one('preview', t.t('preview'), PREVIEW_ICON) +
-    one('fullscreen', t.t('fullscreenEnter'), FULLSCREEN_ENTER_ICON) +
+    (showPreview ? one('preview', t.t('preview'), 'preview') : '') +
+    (showFullscreen ? one('fullscreen', t.t('fullscreenEnter'), 'fullscreen-enter') : '') +
     '</span>'
   );
 }

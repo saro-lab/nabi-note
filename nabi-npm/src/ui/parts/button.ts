@@ -4,7 +4,8 @@
 // 네 가지가 늘 함께 붙는다(하나라도 빠지면 버그였다): type="button", aria-label(이름), data-nabi-tip(이름표), mousedown 막기(누를 때 캐럿 유지).
 // Four things always travel together (missing any one was a real bug): type="button", aria-label (name), data-nabi-tip (visible tip), and swallowing mousedown (keeps the caret in place on press).
 import type { CommandHand } from '../../editor/index.js';
-import { iconSvg, make } from './dom.js';
+import { make } from './dom.js';
+import { iconHtml } from '../../style/icon.js';
 
 export interface IconButtonSpec {
   // data-name — 힌트·시험이 버튼을 찾는 손잡이.
@@ -13,6 +14,8 @@ export interface IconButtonSpec {
   // 아이콘 속(path들). 없으면 `text` 를 글자로 그린다.
   // The icon's inner paths; falls back to rendering `text` as a label when absent.
   readonly svg?: string;
+  readonly icon?: string;
+  readonly iconKey?: string;
   readonly text?: string;
   // 이미 번역된 말 — 이 층은 사전을 다시 안 뒤진다.
   // Already-translated text — this layer never consults the dictionary itself.
@@ -30,7 +33,7 @@ export interface IconButtonSpec {
 export function iconButton(owner: Document, spec: IconButtonSpec): HTMLButtonElement {
   const classes = ['nabi-btn'];
   if (spec.swatch) classes.push('nabi-swatch');
-  else if (!spec.svg && spec.text) classes.push('nabi-word');
+  else if (!spec.svg && !spec.icon && spec.text) classes.push('nabi-word');
   if (spec.className) classes.push(spec.className);
 
   const button = make(owner, 'button', classes.join(' '), {
@@ -41,7 +44,8 @@ export function iconButton(owner: Document, spec: IconButtonSpec): HTMLButtonEle
   }) as HTMLButtonElement;
 
   if (spec.swatch) button.style.background = spec.swatch;
-  else if (spec.svg) button.innerHTML = iconSvg(spec.svg, spec.strokeWidth);
+  else if (spec.icon || spec.svg)
+    button.innerHTML = iconHtml(spec.iconKey ?? spec.name, spec.icon, spec.svg, spec.strokeWidth);
   else button.textContent = spec.text ?? spec.label;
 
   wireIconButton(button, spec.press);

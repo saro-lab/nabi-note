@@ -7,6 +7,8 @@ import { make } from './dom.js';
 import { suppressMousedownTap } from './button.js';
 import { openPanel, type Panel, type PanelOptions } from './panel.js';
 import { openScrim } from './scrim.js';
+import { localeDirection, type Translator } from '../../locale/index.js';
+import { Translations } from './translation.js';
 
 export interface PromptField {
   readonly name: string;
@@ -20,6 +22,7 @@ export interface PromptField {
 }
 
 export interface PromptOptions extends PanelOptions {
+  readonly translator?: Translator;
   readonly fields: readonly PromptField[];
   readonly okLabel: string;
   // 값 묶음이 쓸 만한가 — 거짓이면 확인이 안 눌린다. 없으면 "필수 칸이 비지 않았나"만 본다.
@@ -43,6 +46,7 @@ export function promptValid(fields: readonly PromptField[], values: Readonly<Rec
 }
 
 export function openPrompt(owner: Document, options: PromptOptions): Panel {
+  const copy = options.translator ? new Translations(options.translator) : null;
   let cleanup = (): void => {};
   const panel = openPanel(owner, {
     ...options,
@@ -50,6 +54,7 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
     modal: true,
     restore: null,
     onClose: () => {
+      copy?.dispose();
       cleanup();
     },
   });
@@ -69,6 +74,8 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
         'data-name': field.name,
       }) as HTMLInputElement;
       input.value = field.value ?? '';
+      copy?.attribute(input, 'placeholder', () => field.placeholder ?? field.label);
+      copy?.attribute(input, 'aria-label', () => field.label);
       panel.root.append(input);
       inputs.push(input);
     }
@@ -80,6 +87,21 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
       'aria-label': options.okLabel,
     }) as HTMLButtonElement;
     ok.textContent = options.okLabel;
+    copy?.text(ok, () => options.okLabel);
+    copy?.attribute(ok, 'aria-label', () => options.okLabel);
+    if (copy && options.translator) {
+      const t = options.translator;
+      copy.attribute(panel.root, 'dir', () => localeDirection(t.locale));
+      copy.attribute(
+        panel.root,
+        'aria-label',
+        () =>
+          options.fields
+            .map((field) => field.label.trim())
+            .filter(Boolean)
+            .join(', ') || options.okLabel,
+      );
+    }
     panel.root.append(ok);
 
     const read = (): Record<string, string> => {

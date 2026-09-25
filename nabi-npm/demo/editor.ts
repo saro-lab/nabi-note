@@ -40,6 +40,7 @@ import {
   type UploadTask,
   type UploadView,
   type Wing,
+  type LocaleInput,
 } from '../src/index.js';
 // 보는 쪽 런타임 — **호스트가 든다.** 미리보기는 발행된 쪽과 같은 화면이라, 읽는 사람이 거기서
 // 겪는 것(표 정렬·코드 색칠)도 살아 있어야 한다. 코어가 대신 걸어 줄 수 없다: viewer 는 ui 의
@@ -65,7 +66,7 @@ export interface EditorHosts {
 
 export interface StandOptions {
   readonly doc?: unknown;
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   // 등록할 wing 목록 — 안 주면 `demoWings` 전부다. 데모가 wing 을 껐다 켤 수 있어서 인자다.
   // 진짜 호스트는 자기 목록을 한 번 넘기고 다시는 신경 안 쓴다.
   readonly wings?: readonly Wing[];
@@ -202,6 +203,7 @@ export function standEditor(hosts: EditorHosts, options: StandOptions = {}): Sto
     nabi,
     registry,
     root: hosts.content,
+    ...(locale ? { locale } : {}),
     allowLocalUrls: true,
     fileSink: (files) => upload.take(files),
   });
@@ -230,7 +232,8 @@ export function standEditor(hosts: EditorHosts, options: StandOptions = {}): Sto
         surface: hosts.content,
         ...(locale ? { locale } : {}),
         // 미리보기 — 기록의 저장본을 서 있는 registry 로 그린다. 에디터를 새로 짓지 않는다 (090).
-        render: (record) => renderStoredHtml(JSON.parse(record.body) as unknown, registry, { allowLocalUrls: true }) ?? '',
+        render: (record) =>
+          renderStoredHtml(JSON.parse(record.body) as unknown, registry, { allowLocalUrls: true }) ?? '',
         sessionId: history.sessionId,
       });
     },

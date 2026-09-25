@@ -1,3 +1,6 @@
+import { Translations } from './parts/translation.js';
+import type { LocaleInput } from '../locale/index.js';
+import { iconHtml } from '../style/icon.js';
 // 자리표시자는 문서(나비트리)에 안 들어간다 — 화면 DOM에만 살아, 재그리기가 지우면 onChange 뒤에 순서대로 다시 꽂는다. 상자는 캐럿이 든 최상위 블록 바로 뒤에 흐름 안의 형제로 서고, 진행률은 값 하나(--nabi-per)가 숫자와 격자를 함께 몬다.
 // The placeholder never enters the document (the NABI TREE) — it lives only in the screen DOM, and a redraw that wipes it gets it re-inserted in order after onChange. It sits as a flow sibling right after the block the caret was in when the file arrived, and progress is driven by one value (--nabi-per) that both the number and tile grid read.
 import { hostOf, type Nabi } from '../editor/index.js';
@@ -32,7 +35,7 @@ export interface UploadViewOptions {
   // 취소 단추가 부를 곳. 없으면 단추를 안 그린다.
   // Where the cancel button calls into; without it, no button is drawn.
   readonly upload?: Pick<UploadMount, 'cancel'>;
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   readonly translator?: Translator;
   // 회선 짐작 — 그물이 티커를 끄고(0) 진짜 콜백만 보게 할 때 쓴다.
   // Bandwidth estimate — tests set this to 0 to disable the ticker and see only real callbacks.
@@ -66,6 +69,7 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
   const owner = options.surface.ownerDocument;
   const t = options.translator ?? makeTranslator(options.locale);
   const { nabi, surface } = options;
+  const copy = new Translations(t);
 
   let boxes: Box[] = [];
   let anchorKey: string | null = null;
@@ -185,9 +189,9 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
   // The inside of an attachment box — clip, name, extension badge. The default name is "attachment," not the filename — while uploading, what matters is "something is coming in," and the filename is told by the link's text once it's done.
   const clipParts = (): HTMLElement[] => {
     const clip = make(owner, 'span', 'nabi-upload-clip');
-    clip.textContent = '📎';
+    clip.innerHTML = iconHtml('upload-attachment', 'attachment');
     const what = make(owner, 'span', 'nabi-upload-what');
-    what.textContent = t.t('upload.attachment');
+    copy.text(what, () => t.t('upload.attachment'));
     return [clip, what];
   };
 
@@ -216,6 +220,7 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
       preview.addEventListener(
         'error',
         () => {
+          if (!el.isConnected) return;
           preview.remove();
           el.setAttribute('data-nabi-kind', 'file');
           el.prepend(...clipParts());
@@ -248,9 +253,8 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
       stop.type = 'button';
       stop.className = 'nabi-upload-stop';
       stop.setAttribute('contenteditable', 'false');
-      stop.setAttribute('aria-label', t.t('cancel'));
-      stop.setAttribute('data-nabi-tip', t.t('cancel'));
-      stop.textContent = '×';
+      copy.button(stop, () => t.t('cancel'));
+      stop.innerHTML = iconHtml('upload-cancel', 'close');
       suppressMousedownTap(stop);
       stop.addEventListener('click', () => options.upload?.cancel());
       el.append(stop);
@@ -270,6 +274,7 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
   };
 
   const clearBoxes = (): void => {
+    copy.clear();
     for (const box of boxes) {
       box.ticker.stop();
       box.revoke?.();
@@ -308,6 +313,7 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
     },
 
     unmount() {
+      copy.dispose();
       stopWatch();
       clearBoxes();
     },

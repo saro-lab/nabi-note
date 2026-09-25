@@ -10,6 +10,7 @@ export const en = {
   menu_cdn: 'Using CDN',
   menu_features: 'Wings',
   menu_style_guide: 'CSS themes',
+  menu_icon_theme: "Icon themes",
   menu_rendering: 'SSR setup',
   menu_extend_guide: 'Custom wings',
   menu_intro_vibe_coding: 'AI Vibe Coding',

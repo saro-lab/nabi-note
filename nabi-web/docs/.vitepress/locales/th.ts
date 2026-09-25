@@ -2,6 +2,7 @@ export const th = {
   label: 'ไทย', lang: 'th', link: '/th/',
   description: 'NABI NOTE — โปรแกรมแก้ไข WYSIWYG แบบโอเพนซอร์ส',
   menu_docs: 'เอกสาร', menu_start: 'คู่มือ', menu_getting_started: 'การใช้งานพื้นฐาน', menu_cdn: 'ใช้ CDN', menu_features: 'ปีก', menu_style_guide: 'ธีม CSS', menu_rendering: 'ตั้งค่า SSR', menu_extend_guide: 'ปีกแบบกำหนดเอง', menu_intro_vibe_coding: 'การเขียนโค้ดแบบ Vibe ด้วย AI',
+  menu_icon_theme: "ธีมไอคอน",
 menu_projects: 'โครงการ',
   menu_inline: 'ในบรรทัด', menu_inline_bold: 'ตัวหนา', menu_inline_italic: 'ตัวเอียง', menu_inline_underline: 'ขีดเส้นใต้', menu_inline_strikethrough: 'ขีดทับ', menu_inline_superscript: 'ตัวยก', menu_inline_subscript: 'ตัวห้อย', menu_inline_link: 'ลิงก์', menu_inline_highlight: 'เน้นข้อความ', menu_inline_text_color: 'สีข้อความ',
   menu_block: 'บล็อก', menu_block_heading: 'หัวเรื่อง', menu_block_bullet_list: 'รายการหัวข้อย่อย', menu_block_ordered_list: 'รายการลำดับเลข', menu_block_task_list: 'รายการตรวจสอบ', menu_block_table: 'ตาราง', menu_block_image: 'รูปภาพ', menu_block_youtube: 'YouTube', menu_block_code: 'โค้ด', menu_block_details: 'รายละเอียด', menu_block_quote: 'คำพูดอ้างอิง', menu_block_divider: 'เส้นคั่น',

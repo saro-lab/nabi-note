@@ -55,6 +55,7 @@ import 'nabi-note/nabi.css'
 | 편집 영역 | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | 고정 툴바와 미리보기 | `--nabi-sticky-top`, `--nabi-preview-width` |
 | 터치 환경 | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| 모바일 모드 전환 폭 | `--nabi-mobile-breakpoint` |
 
 형광펜과 글자색은 각각 `--nabi-hl-<name>`, `--nabi-tc-<name>`으로 바꿉니다. 예를 들어
 `--nabi-hl-yellow`을 바꾸면 문서에 저장된 `yellow` 형광펜 값의 화면색만 바뀝니다.
@@ -65,6 +66,20 @@ import 'nabi-note/nabi.css'
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## 모바일 모드 기준
+
+툴바·상황 줄의 폭이나 화면 폭이 `36rem` 미만이면 모바일 모드로 전환됩니다. 정확히 `36rem`이면 일반 모드를 유지합니다. 모바일 모드에서는 툴바와 상황 줄을 가로로 스크롤하고, 패널을 가운데에 띄우며, 표 선택 격자를 터치하기 쉬운 5×5 칸으로 줄입니다.
+
+`--nabi-mobile-breakpoint`를 `:root`, 상위 요소 또는 개별 `.nabi`에 지정해 기준을 바꿀 수 있습니다. `rem`, `px`, `calc()` 등 0 이상의 CSS 길이 값을 사용합니다. CSS 값, 루트 글자 크기, 컨테이너 폭이나 화면 폭이 바뀌면 이미 열린 패널에도 자동으로 적용됩니다. `body` 아래로 옮겨진 입력 패널도 원래 편집기의 기준을 따릅니다.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+터치 기기의 큰 조작 버튼은 이 기준보다 넓은 화면에서도 유지됩니다.
 
 ## 다크 모드
 

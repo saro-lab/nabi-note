@@ -196,21 +196,13 @@ function rejectUnknown(tag: string, attr: string, values: readonly string[]): No
 
 // 툴바 단추는 판을 안 띄운다 — 값 고르기는 상황 줄의 일이다. 단추는 기본값 하나를 바로 걸거나(이미 값이 있으면 벗긴다) 할 뿐이다.
 // The toolbar button never opens a picker — choosing a value is the context toolbar's job; the button just applies (or strips) one default.
-const TEXT_COLOR_ICON =
-  '<g transform="translate(8 8) scale(0.0125) translate(-480 420)" fill="currentColor" stroke="none">' +
-  '<path d="M80 0v-160h800V0H80Zm140-280 210-560h100l210 560h-96l-50-144H368l-52 144h-96Zm176-224h168l-82-232h-4l-82 232Z"/></g>';
+const TEXT_COLOR_ICON = 'values-text-color';
 
-const HIGHLIGHT_ICON =
-  '<g transform="translate(8 8) scale(0.0146) translate(-480 480)" fill="currentColor" stroke="none">' +
-  '<path d="M280-320v-440q0-33 23.5-56.5T360-840q9 0 18 2t17 6l240 119q20 10 32.5 29.5T680-641v321H280Zm80-80h240v-241L360-760v360ZM160-120l22-65q8-25 29-40t47-15h444q26 0 47 15t29 40l22 65H160Z"/></g>';
+const HIGHLIGHT_ICON = 'values-highlight';
 
-const FONT_SIZE_ICON =
-  '<g transform="translate(8 8) scale(1.0305) translate(-8.05 -8)" stroke-width="1.359">' +
-  '<path d="M1.5 12.5 4.6 3.5h1.2l3.1 9M2.8 9.6h5"/><path d="M10.3 12.5 12 7.8h.9l1.7 4.7M11 10.9h2.7"/></g>';
+const FONT_SIZE_ICON = 'values-font-size';
 
-const TYPEFACE_ICON =
-  '<g transform="translate(8 8) scale(0.0218) translate(-480.5 479.4545)" fill="currentColor" stroke="none">' +
-  '<path d="M338-241q16 0 23-10.5t9-24.5q2-10 3.5-20t3.5-22q2-11 4.5-24t5.5-30q23-5 45-8.5t43-5.5q23-3 45.5-4.5T564-394q5 24 10.5 43t11.5 36q8 23 17.5 38t23.5 26q14 11 30.5 12t28.5-9q9-7 9-21t-8-35q-5-11-8.5-22.5T670-350q-5-14-9-25.5t-7-22.5q13-1 23.5-4.5T695-412q7-6 10.5-14.5T709-445q0-11-4.5-18.5T691-476q-9-5-22.5-6.5t-30.5.5q-2-18-4-35.5t-5-35.5q-3-17-5.5-35t-7.5-35q-6-26-17-44.5T574-698q-13-11-28.5-16.5T511-720q-22 0-42 9t-40 27q-11 11-22 23.5T386-631q-8-6-14.5-8t-14.5-2q-11 0-18.5 6t-7.5 20q0 18-2 36t-6 36q-5 26-11 51.5T301-440q-11 2-19.5 5.5T267-427q-8 5-11.5 12.5T252-399q0 7 2 13t7 11q5 5 12 7.5t16 3.5q-1 12-1.5 22.5T287-321q0 21 3 36t9 25q6 10 15.5 14.5T338-241Zm71-223q6-23 14-44.5t18-44.5q16-37 34-59t32-22q11 0 19 17t13 51q3 20 5 43t4 43q-17 1-35 2.5t-35 3.5q-17 2-34.5 4.5T409-464Z"/></g>';
+const TYPEFACE_ICON = 'values-typeface';
 
 // 화면 색은 시트가 준다(문서엔 이름만 산다) — 견본도 토큰 참조라, 칠해진 색과 견본이 언제나 같고 다크에서 함께 갈린다.
 // The screen color lives in the stylesheet (only a name is stored) — swatches reference the same token, so text and swatch never drift, even across themes.
@@ -664,7 +656,7 @@ export function makeHighlightWing(options: ValueWingOptions = {}): Wing {
       button: {
         group: 'color',
         shortcut: 'H',
-        svg: HIGHLIGHT_ICON,
+        icon: HIGHLIGHT_ICON,
         label: HIGHLIGHT_NAME,
         action: { kind: 'command', command: 'setHighlight', args: { c: first, toggleCurrent: true } },
       },
@@ -705,7 +697,7 @@ export function makeTextColorWing(options: ValueWingOptions = {}): Wing {
       button: {
         group: 'color',
         shortcut: 'C',
-        svg: TEXT_COLOR_ICON,
+        icon: TEXT_COLOR_ICON,
         label: TEXT_COLOR_NAME,
         action: { kind: 'command', command: 'setTextColor', args: { c: first, toggleCurrent: true } },
       },
@@ -747,7 +739,7 @@ export function makeFontSizeWing(options: ValueWingOptions = {}): Wing {
       values,
       button: {
         group: 'font',
-        svg: FONT_SIZE_ICON,
+        icon: FONT_SIZE_ICON,
         label: FONT_SIZE_NAME,
         action: { kind: 'command', command: 'setFontSize', args: { v: first } },
       },
@@ -811,7 +803,7 @@ export function makeTypefaceWing(options: ValueWingOptions = {}): Wing {
       values,
       button: {
         group: 'font',
-        svg: TYPEFACE_ICON,
+        icon: TYPEFACE_ICON,
         label: TYPEFACE_NAME,
         action: { kind: 'command', command: 'setTypeface', args: { v: first } },
       },

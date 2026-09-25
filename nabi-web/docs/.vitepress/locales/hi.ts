@@ -7,6 +7,7 @@ export const hi = {
   description: 'NABI NOTE — एक ओपन-सोर्स WYSIWYG संपादक।',
 
   menu_docs: 'दस्तावेज़',
+  menu_icon_theme: "आइकन थीम",
   menu_intro_vibe_coding: 'AI वाइब कोडिंग',
 
 

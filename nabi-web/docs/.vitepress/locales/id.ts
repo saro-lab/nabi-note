@@ -7,6 +7,7 @@ export const id = {
   description: 'NABI NOTE — editor WYSIWYG sumber terbuka.',
 
   menu_docs: 'Dokumentasi',
+  menu_icon_theme: "Tema ikon",
   menu_intro_vibe_coding: 'Vibe Coding AI',
 
 

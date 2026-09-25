@@ -1,10 +1,12 @@
+import type { LocaleInput } from '../locale/index.js';
+import { followIconTheme } from '../icon-theme.js';
 // diff wing 의 배선 — 대조 스냅샷 + 전체화면 판.
 // Wiring for the diff wing: the compare snapshot plus the fullscreen pane.
 // 대조 상태는 문서를 실은 순간(setJson·setHtml)마다 갈린다 — 타자·붙여넣기·undo 는 안 건드려, 판은 "실은 뒤 무엇이 달라졌나"만 답한다.
 // The compare snapshot resets only when a doc is loaded (setJson/setHtml); typing, paste, and undo leave it alone, so the pane always answers "what changed since load."
 import type { Nabi } from '../editor/index.js';
 import type { Registry } from '../wing/index.js';
-import { localeDirection, translate } from '../locale/index.js';
+import { localeDirection, localeValue, makeTranslator } from '../locale/index.js';
 import { inertDocumentBackground, pushDocumentLayer, topLayerFocus, type DocumentLayer } from '../layer.js';
 import { mountDiff, diffButton, type DiffMount } from './mount.js';
 import { ensureCss } from './styles.js';
@@ -15,7 +17,7 @@ export interface DiffWingMountOptions {
   // 판이 닫힌 뒤 포커스가 돌아갈 편집 표면.
   readonly surface: HTMLElement;
   readonly allowLocalUrls?: boolean;
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
 }
 
 export interface DiffWingMount {
@@ -33,7 +35,8 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
   const locale = options.locale;
   const allowLocalUrls = options.allowLocalUrls;
   const doc = surface.ownerDocument;
-  const t = (key: string): string => translate(key, locale ?? 'en');
+  const translator = makeTranslator(locale);
+  const t = (key: string): string => translator.t(key);
   const releaseCss = ensureCss(doc);
 
   let base: unknown = nabi.getJson();
@@ -41,6 +44,8 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
     if (change.loaded) base = nabi.getJson();
   });
 
+  let stopTheme = () => {};
+  let stopLocale = () => {};
   let screen: HTMLElement | null = null;
   let inner: DiffMount | null = null;
   let layer: DocumentLayer | null = null;
@@ -80,6 +85,9 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
   const close = (): void => {
     if (!screen) return;
     const closing = screen;
+    stopTheme();
+    stopLocale();
+    stopLocale = () => {};
     let failure: unknown = null;
     try {
       offCloseButton?.();
@@ -147,7 +155,10 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
     screen.setAttribute('aria-modal', 'true');
     screen.setAttribute('aria-label', t('diff.region'));
     const inherited = doc.defaultView?.getComputedStyle(surface).direction;
-    screen.setAttribute('dir', locale === undefined ? (inherited === 'rtl' ? 'rtl' : 'ltr') : localeDirection(locale));
+    screen.setAttribute(
+      'dir',
+      locale === undefined ? (inherited === 'rtl' ? 'rtl' : 'ltr') : localeDirection(localeValue(locale)),
+    );
     screen.tabIndex = -1;
     const host = doc.createElement('div');
     host.className = 'nabi-diff-screen-host';
@@ -155,6 +166,7 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
     doc.body.append(screen);
     const opening = screen;
     try {
+      stopTheme = followIconTheme(surface, screen);
       const mounted = mountDiff({
         root: host,
         before: base,
@@ -170,7 +182,14 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
       inner = mounted;
       // 닫기(X)는 제 줄을 안 만들고 diff 줄의 오른쪽 끝에 얹는다 — 줄은 방금 mountDiff 가 세웠으니 반드시 있다.
       // The close (X) doesn't get its own row; it's appended to the diff toolbar's right end, which mountDiff just built so it's guaranteed to exist.
-      closeButton = diffButton(doc, t('close'), 'M4.5 4.5l7 7M11.5 4.5l-7 7');
+      closeButton = diffButton(doc, t('close'), 'close');
+      stopLocale =
+        translator.onChange?.(() => {
+          screen?.setAttribute('aria-label', t('diff.region'));
+          if (locale !== undefined) screen?.setAttribute('dir', localeDirection(localeValue(locale)));
+          closeButton?.setAttribute('aria-label', t('close'));
+          if (closeButton) closeButton.title = t('close');
+        }) ?? (() => {});
       const onCloseButton = (): void => {
         if (screen === opening) close();
       };
@@ -182,6 +201,9 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
       doc.addEventListener('keydown', onKey, true);
       closeButton.focus({ preventScroll: true });
     } catch (error) {
+      stopTheme();
+      stopLocale();
+      stopLocale = () => {};
       try {
         offCloseButton?.();
       } catch {}

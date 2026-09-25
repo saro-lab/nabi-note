@@ -54,6 +54,7 @@ Put shared tokens on a common parent so the editor and its published view retain
 | Editing surface | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | Sticky toolbar and preview | `--nabi-sticky-top`, `--nabi-preview-width` |
 | Touch controls | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| Mobile-mode width threshold | `--nabi-mobile-breakpoint` |
 
 Highlight and text-color tokens use `--nabi-hl-<name>` and `--nabi-tc-<name>`. Changing `--nabi-hl-yellow`, for example, changes the display color of stored `yellow` highlights without changing document data.
 
@@ -63,6 +64,20 @@ Highlight and text-color tokens use `--nabi-hl-<name>` and `--nabi-tc-<name>`. C
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## Mobile breakpoint
+
+Mobile mode starts when the toolbar/context row or viewport width is strictly below `36rem`. Exactly `36rem` keeps the regular layout. Mobile mode scrolls the toolbar and context row horizontally, centers panels, and reduces the table picker to 5×5 touch-sized cells.
+
+Set `--nabi-mobile-breakpoint` on `:root`, an ancestor, or an individual `.nabi`. Use a non-negative CSS length such as `rem`, `px`, or `calc()`. Changes to the CSS value, root font size, container width, or viewport width automatically update open panels too. Input panels moved under `body` keep using their original editor’s threshold.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+Touch devices retain larger controls above this breakpoint.
 
 ## Dark mode
 

@@ -24,9 +24,7 @@ const QUOTE_NAME: LocaleText = {
   id: 'Kutipan',
 };
 
-const QUOTE_ICON =
-  '<g transform="translate(8 8) scale(1.0185) translate(-8.1 -8)" stroke-width="1.375">' +
-  '<path d="M3.4 2.6v10.8"/><path d="M6.8 4.4h6M6.8 8h6M6.8 11.6h4"/></g>';
+const QUOTE_ICON = 'quote-quote';
 
 const QUOTE_CSS = `
 .nabi-content blockquote {
@@ -55,7 +53,7 @@ export const quoteWing: Wing = {
   inputRules: [{ trigger: 'space', pattern: /^>$/, run: () => ({ name: 'toggleQuote' }) }],
   button: {
     group: 'container',
-    svg: QUOTE_ICON,
+    icon: QUOTE_ICON,
     label: QUOTE_NAME,
     action: { kind: 'command', command: 'toggleQuote' },
   },

@@ -214,8 +214,7 @@ const HISTORY_NAME: LocaleText = {
   id: 'Riwayat lokal',
 };
 
-const HISTORY_ICON =
-  '<path d="M8 4.25V8l2.5 1.5"/><path d="M2.9 6.6A5.5 5.5 0 1 1 2.75 9.4"/><path d="M1.75 3.75v3h3"/>';
+const HISTORY_ICON = 'local-history-history';
 
 export const localHistoryWing: Wing = {
   w: 'localHistory',
@@ -226,7 +225,7 @@ export const localHistoryWing: Wing = {
   commands: { restoreHistory },
   button: {
     group: 'file',
-    svg: HISTORY_ICON,
+    icon: HISTORY_ICON,
     label: HISTORY_NAME,
     // 목록 패널은 호스트가 든다 — 저장소가 인스턴스 것이라 ui가 대신 기억할 수 없다.
     // The list panel is mounted by the host — storage belongs to the instance, so ui can't remember it on its own.

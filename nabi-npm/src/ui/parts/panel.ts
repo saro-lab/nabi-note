@@ -2,6 +2,7 @@
 // The panel is placed inside its trigger button's positioned parent, so it follows a moving sticky toolbar with no JS tracking. Small screens are centered by a CSS breakpoint; this file only supplies where "center" is (from the visual viewport), since CSS can't know that on its own.
 import { focusQuiet, make } from './dom.js';
 import { closeOnOutside } from './outside.js';
+import { watchNarrow } from '../narrow.js';
 
 // --- 순수 산수 — 뷰포트 안으로 밀어 넣기 (DOM 없이 그물에 잡힌다) ------------------------------
 
@@ -91,9 +92,11 @@ export function openPanel(owner: Document, options: PanelOptions): Panel {
 
   let closed = false;
   let stopOutside = (): void => {};
+  let stopNarrow = (): void => {};
   const close = (): void => {
     if (closed) return;
     closed = true;
+    stopNarrow();
     stopOutside();
     owner.removeEventListener('keydown', onKey, true);
     visual?.removeEventListener('resize', follow);
@@ -130,6 +133,10 @@ export function openPanel(owner: Document, options: PanelOptions): Panel {
 
   try {
     (anchor.parentElement ?? owner.body).append(root);
+    stopNarrow = watchNarrow(
+      root,
+      anchor.closest<HTMLElement>('.nabi-toolbar-row, .nabi-context, .nabi') ?? anchor.parentElement ?? owner.body,
+    );
     anchor.setAttribute('aria-expanded', 'true');
     follow();
     place(owner, root, anchor);
@@ -147,6 +154,7 @@ export function openPanel(owner: Document, options: PanelOptions): Panel {
     if (!options.modal) stopOutside = closeOnOutside(owner, () => [root, anchor], close);
     return { root, close, reposition: () => place(owner, root, anchor) };
   } catch (error) {
+    stopNarrow();
     try {
       stopOutside();
     } catch {}

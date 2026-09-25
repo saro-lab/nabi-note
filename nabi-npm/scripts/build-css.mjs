@@ -1,6 +1,6 @@
 // 발행 CSS를 굳힌다(`dist/nabi.css` = 코어 시트 + 등록된 wing 시트) — 접는 열쇠가 문자열 내용이라 가족이 시트 하나를 나눠 써도 중복되지 않는다.
 // Freezes the published CSS (`dist/nabi.css` = core sheet + registered wing sheets) — folding keys on sheet content, so a family sharing one sheet never duplicates it.
-import { writeFileSync } from 'node:fs';
+import { cpSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const HEADER = '/* nabi-note — 코어 시트 + wing 시트. scripts/build-css.mjs 가 냈다. 손으로 고치지 마라. */';
@@ -22,7 +22,11 @@ export function nabiCss(sheets) {
 async function main() {
   const dist = new URL('../dist/', import.meta.url);
   const { CORE_CSS, collectSheets, defaultWings, makeRegistry } = await import(new URL('index.js', dist));
-  const css = nabiCss(collectSheets(makeRegistry(defaultWings), CORE_CSS));
+  const css = nabiCss(collectSheets(makeRegistry(defaultWings), CORE_CSS)).replace(
+    /url\("file:[^"]*\/icons\/([^"/]+)"\)/g,
+    'url("./icons/$1")',
+  );
+  cpSync(new URL('../src/style/icons/', import.meta.url), new URL('icons/', dist), { recursive: true });
   const out = fileURLToPath(new URL('nabi.css', dist));
   writeFileSync(out, css);
   console.log(`built ${out} (${css.length} bytes)`);

@@ -15,28 +15,12 @@ const wrapMd =
     `${mark}${ctx.children()}${mark}`;
 
 const ICONS = {
-  b:
-    '<g transform="translate(8 8) scale(1) translate(-7 -8.25)" stroke-width="1.4">' +
-    '<path d="M4.75 2.75h3.75a2.6 2.6 0 0 1 0 5.5H4.75z" stroke-width="2"/>' +
-    '<path d="M4.75 8.25h4.5a2.6 2.6 0 0 1 0 5.5h-4.5z" stroke-width="2"/></g>',
-  i:
-    '<g transform="translate(8 8) scale(1.1) translate(-8 -8)" stroke-width="1.273">' +
-    '<path d="M10.5 3h-4M9.5 13h-4M9.5 3l-3 10"/></g>',
-  u:
-    '<g transform="translate(8 8) scale(1.0476) translate(-8 -8)" stroke-width="1.336">' +
-    '<path d="M4.5 2.75v5a3.5 3.5 0 0 0 7 0v-5M3.5 13.25h9"/></g>',
-  s:
-    '<g transform="translate(8 8) scale(1.0476) translate(-8 -8)" stroke-width="1.336">' +
-    '<path d="M2.75 8h10.5M12 4.5C11.3 3.3 9.8 2.75 8 2.75 6 2.75 4.5 3.6 4.5 5.2c0 1 .6 1.9 2 2.4' +
-    'M4.2 11c.6 1.4 2 2.25 4 2.25 2.2 0 3.6-1 3.6-2.6 0-.9-.4-1.6-1.2-2.1"/></g>',
-  sub:
-    '<g transform="translate(8 8) scale(1.2857) translate(-8.4 -8.105)" stroke-width="1.089">' +
-    '<path d="M3.15 10.43 8 4.03M3.15 4.03 8 10.43M10.65 9.1c0-.88.71-1.41 1.5-1.41.79 0 1.41.53 1.41 1.23 ' +
-    '0 1.23-2.91 1.68-2.91 3.26h3"/></g>',
-  sup:
-    '<g transform="translate(8 8) scale(1.2857) translate(-8.4 -8.175)" stroke-width="1.089">' +
-    '<path d="M3.15 12.19 8 5.79M3.15 5.79 8 12.19M10.65 5.57c0-.88.71-1.41 1.5-1.41.79 0 1.41.53 1.41 1.23 ' +
-    '0 1.23-2.91 1.68-2.91 3.26h3"/></g>',
+  b: 'marks-b',
+  i: 'marks-i',
+  u: 'marks-u',
+  s: 'marks-s',
+  sub: 'marks-sub',
+  sup: 'marks-sup',
 } as const;
 
 // 위·아래 첨자만 시트를 든다 — 나머지 넷은 브라우저 기본 태그 생김새 그대로가 맞다.
@@ -55,7 +39,7 @@ export const boldWing: Wing = {
       group: 'emphasis',
       accelerator: 'mod+b',
       shortcut: 'B',
-      svg: ICONS.b,
+      icon: ICONS.b,
       label: {
         ko: '굵게',
         en: 'Bold',
@@ -87,7 +71,7 @@ export const italicWing: Wing = {
       group: 'emphasis',
       accelerator: 'mod+i',
       shortcut: 'I',
-      svg: ICONS.i,
+      icon: ICONS.i,
       label: {
         ko: '기울임',
         en: 'Italic',
@@ -121,7 +105,7 @@ export const underlineWing: Wing = {
       group: 'emphasis',
       accelerator: 'mod+u',
       shortcut: 'U',
-      svg: ICONS.u,
+      icon: ICONS.u,
       label: {
         ko: '밑줄',
         en: 'Underline',
@@ -151,7 +135,7 @@ export const strikeWing: Wing = {
     button: {
       group: 'emphasis',
       shortcut: 'S',
-      svg: ICONS.s,
+      icon: ICONS.s,
       label: {
         ko: '취소선',
         en: 'Strikethrough',
@@ -182,7 +166,7 @@ export const subscriptWing: Wing = {
     button: {
       group: 'script',
       shortcut: '↓',
-      svg: ICONS.sub,
+      icon: ICONS.sub,
       label: {
         ko: '아랫첨자',
         en: 'Subscript',
@@ -213,7 +197,7 @@ export const superscriptWing: Wing = {
     button: {
       group: 'script',
       shortcut: '↑',
-      svg: ICONS.sup,
+      icon: ICONS.sup,
       label: {
         ko: '윗첨자',
         en: 'Superscript',

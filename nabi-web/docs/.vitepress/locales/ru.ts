@@ -7,6 +7,7 @@ export const ru = {
   description: 'NABI NOTE — WYSIWYG-редактор с открытым исходным кодом.',
 
   menu_docs: 'Документация',
+  menu_icon_theme: "Темы значков",
   menu_intro_vibe_coding: 'AI-вайб-кодинг',
 
 

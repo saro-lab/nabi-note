@@ -30,5 +30,7 @@ export type { Attrs, AttrValue, ElementNode, NabiDoc, NabiNode } from './schema/
 // --- 말 ----------------------------------------------------------------------------------------
 // 이름이 문서에 실리는 자리(첨부 링크의 "첨부파일" 같은 것)가 있어 서버도 말을 든다.
 // The server carries locale text too, since some names land right in the document (e.g. an attachment link's label).
-export { LOCALES, RTL_LOCALES, localeDirection, localeOf, translate } from './locale/index.js';
-export type { Translator } from './locale/index.js';
+export { LOCALES, RTL_LOCALES, createLocale, localeDirection, localeOf, translate } from './locale/index.js';
+export type { Translator, LocaleController, LocaleInput, LocaleSource } from './locale/index.js';
+
+export type { ViewToolsVisibility, ViewToolsHtmlOptions } from './wing/toolbar-html.js';

@@ -10,6 +10,7 @@ const urBase = {
   description: 'NABI NOTE — ایک اوپن سورس WYSIWYG ایڈیٹر۔',
 
   menu_docs: 'دستاویزات',
+  menu_icon_theme: "آئیکن تھیم",
   menu_intro_vibe_coding: 'AI وائب کوڈنگ',
 
 

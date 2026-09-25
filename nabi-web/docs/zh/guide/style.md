@@ -54,6 +54,7 @@ import 'nabi-note/nabi.css'
 | 编辑 surface | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | 粘性工具栏和预览 | `--nabi-sticky-top`, `--nabi-preview-width` |
 | 触控控件 | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| 移动模式切换宽度 | `--nabi-mobile-breakpoint` |
 
 荧光笔和文字颜色 token 使用 `--nabi-hl-<name>` 与 `--nabi-tc-<name>`。例如修改 `--nabi-hl-yellow`，会改变已保存的 `yellow` 荧光笔显示颜色，而不会改变文档数据。
 
@@ -63,6 +64,20 @@ import 'nabi-note/nabi.css'
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## 移动模式切换宽度
+
+当工具栏、上下文栏的宽度或视口宽度小于 `36rem` 时，界面切换到移动模式。宽度恰好为 `36rem` 时保持常规布局。移动模式下，工具栏和上下文栏可横向滚动，面板居中显示，表格选择网格缩减为便于触摸的 5×5 个单元格。
+
+在 `:root`、祖先元素或单个 `.nabi` 上设置 `--nabi-mobile-breakpoint` 即可更改阈值。请使用 `rem`、`px` 或 `calc()` 等非负 CSS 长度。CSS 值、根元素字号、容器宽度或视口宽度变化时，已打开的面板也会自动更新。移至 `body` 下的输入面板仍使用原编辑器的阈值。
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+触摸设备在宽度超过此阈值时仍保留较大的操作控件。
 
 ## 深色模式
 

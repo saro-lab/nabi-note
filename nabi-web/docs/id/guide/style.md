@@ -54,6 +54,7 @@ Letakkan token bersama pada parent umum agar editor dan tampilan terbitannya mem
 | Surface pengeditan | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | Toolbar lengket dan pratinjau | `--nabi-sticky-top`, `--nabi-preview-width` |
 | Kontrol sentuh | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| Lebar peralihan mode seluler | `--nabi-mobile-breakpoint` |
 
 Token sorotan dan warna teks memakai `--nabi-hl-<name>` dan `--nabi-tc-<name>`. Misalnya, mengubah `--nabi-hl-yellow` mengubah warna tampilan sorotan `yellow` yang tersimpan tanpa mengubah data dokumen.
 
@@ -63,6 +64,20 @@ Token sorotan dan warna teks memakai `--nabi-hl-<name>` dan `--nabi-tc-<name>`. 
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## Ambang mode seluler
+
+Mode seluler aktif ketika lebar bilah alat, baris konteks, atau viewport kurang dari `36rem`. Tepat pada `36rem`, tata letak biasa tetap digunakan. Dalam mode seluler, bilah alat dan baris konteks bergulir secara horizontal, panel berada di tengah, dan pemilih tabel menjadi 5×5 sel yang nyaman disentuh.
+
+Atur `--nabi-mobile-breakpoint` pada `:root`, elemen leluhur, atau satu `.nabi`. Gunakan panjang CSS nonnegatif seperti `rem`, `px`, atau `calc()`. Perubahan nilai CSS, ukuran font akar, lebar kontainer, atau viewport juga memperbarui panel yang terbuka secara otomatis. Panel masukan yang dipindahkan ke bawah `body` tetap menggunakan ambang editor asalnya.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+Perangkat sentuh tetap menggunakan kontrol yang lebih besar di atas ambang ini.
 
 ## Mode gelap
 

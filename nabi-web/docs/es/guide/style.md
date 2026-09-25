@@ -54,6 +54,7 @@ Si pones los mismos tokens en un padre común del editor y de la pantalla public
 | Área de edición | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | Barra fija y vista previa | `--nabi-sticky-top`, `--nabi-preview-width` |
 | Entorno táctil | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| Ancho de activación del modo móvil | `--nabi-mobile-breakpoint` |
 
 El resaltado y el color de texto se cambian con `--nabi-hl-<name>` y `--nabi-tc-<name>`. Por ejemplo, si cambias `--nabi-hl-yellow`, solo cambia el color visible del resaltado `yellow` guardado en el documento.
 
@@ -63,6 +64,20 @@ El resaltado y el color de texto se cambian con `--nabi-hl-<name>` y `--nabi-tc-
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## Umbral del modo móvil
+
+El modo móvil se activa cuando el ancho de la barra de herramientas, la barra contextual o la ventana es menor que `36rem`. Con exactamente `36rem` se mantiene la disposición normal. En modo móvil, ambas barras se desplazan horizontalmente, los paneles se centran y el selector de tablas se reduce a 5×5 celdas adaptadas al uso táctil.
+
+Define `--nabi-mobile-breakpoint` en `:root`, un antecesor o una `.nabi` individual. Usa una longitud CSS no negativa, como `rem`, `px` o `calc()`. Los cambios del valor CSS, el tamaño de fuente raíz, el ancho del contenedor o el de la ventana actualizan automáticamente también los paneles abiertos. Los paneles de entrada trasladados bajo `body` mantienen el umbral de su editor original.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+Los dispositivos táctiles conservan controles más grandes por encima de este umbral.
 
 ## Modo oscuro
 

@@ -129,3 +129,7 @@ mountToolbar({
 The integration stores the last loaded document as its baseline. It updates that baseline only on a `NabiChange` with `loaded: true`; typing, paste commands, undo, and redo do not move it. `baseline()` returns the current baseline. The screen closes on Escape and restores focus to the surface.
 
 Unmount both the toolbar and diff integration.
+
+## Reader and diff icon themes
+
+Viewer sorting exposes `viewer-sort-original`, `viewer-sort-ascending`, and `viewer-sort-descending`. Diff uses `diff-prev`, `diff-next`, `diff-fold`, and `diff-close`. Set `--nabi-icon-<key>: url("/icons/name.webp")` on the corresponding container or its ancestor. SVG and PNG work too. The standalone viewer still does not import editor UI; load `nabi.css` with its icons directory. Diff provides its own required styles and default image URLs. Editor-mounted diff screens follow the source editor icon theme. See `icons.md`.

@@ -1,3 +1,5 @@
+import type { LocaleInput } from '../locale/index.js';
+import { Translations } from './parts/translation.js';
 // 등록된 wing의 button 선언을 읽어 버튼을 세우고, 캐럿이 움직일 때마다 눌림·노출을 다시 칠한다 — 판정은 press·visible의 순수 함수이고 이 파일엔 배선만 있다. 버튼이 하는 일도 짐작하지 않는다: wing이 button.action으로 말한 대로만 한다.
 // Reads registered wings' `button` declarations to build buttons and repaints pressed/visible state on every caret move — the actual logic lives in press's and visible's pure functions; this file is wiring only. It never guesses what a button does either, only what the wing's `button.action` declares.
 import { hostOf, type CommandHand, type Nabi } from '../editor/index.js';
@@ -39,7 +41,7 @@ export interface ToolbarOptions {
   // 편집 표면 — 누른 뒤 포커스가 돌아갈 자리이자 가속키의 땅이다(이 자리와 툴바 줄 안에서 난 키만 우리 것이다). 안 주면 옛길(문서 전체)로 듣는다 — 편집기가 둘이면 반드시 줘야 한다.
   // The edit surface — where focus returns after a press, and also the territory accelerator keys respect (only keys originating inside this or the toolbar row are ours). Without it, keys are heard the old way (the whole document) — required whenever two editors share a page.
   readonly surface?: HTMLElement;
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   readonly translator?: Translator;
   // 그룹 순서 — 안 주면 `TOOLBAR_GROUPS` 를 따른다.
   // Group order — falls back to `TOOLBAR_GROUPS` when omitted.
@@ -130,6 +132,8 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     const owner = root.ownerDocument;
     if (options.surface) lifecycle.add(acquireGestureRoot(root, [options.surface]));
     const t = options.translator ?? makeTranslator(options.locale);
+    const copy = new Translations(t);
+    lifecycle.add(() => copy.dispose());
     const suppliedSettle = options.settle;
     const settle = suppliedSettle ?? watchSettle(owner, options.surface ? { surface: options.surface } : {});
     const ownSettle = suppliedSettle === undefined;
@@ -177,29 +181,45 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
 
     // 차림표 — 값 하나를 고른다 (색·크기·제목 레벨).
     const openMenu = (wing: Wing, anchor: HTMLButtonElement, action: Extract<WingAction, { kind: 'menu' }>): void => {
-      const panel = openPanel(owner, { anchor, className: 'nabi-menu', restore: options.surface ?? null });
+      const labels = new Translations(t);
+      const panel = openPanel(owner, {
+        anchor,
+        className: 'nabi-menu',
+        restore: options.surface ?? null,
+        onClose: () => labels.dispose(),
+      });
       picker = panel;
+      labels.attribute(panel.root, 'dir', () => localeDirection(t.locale));
       for (const choice of action.values) {
-        const label = t.pick(choice.label, `value.${wing.w}.${choice.value}`);
-        panel.root.append(
-          iconButton(owner, {
-            name: String(choice.value),
-            label,
-            ...(choice.swatch ? { swatch: choice.swatch } : choice.svg ? { svg: choice.svg } : { text: label }),
-            ...(pressedValue(pressEnv(), wing.w, choice.value) ? { className: 'on' } : {}),
-            // 칸을 누른 손이 곧 커맨드의 손이다 — 판을 연 손이 아니다(연 것과 고른 것은 다른 몸짓).
-            // The hand that presses the cell is the command's hand, not the hand that opened the panel — opening and picking are different gestures.
-            press: (by) => run(action.command, { [action.argKey]: choice.value }, by),
-          }),
-        );
+        const label = (): string => t.pick(choice.label, `value.${wing.w}.${choice.value}`);
+        const button = iconButton(owner, {
+          name: String(choice.value),
+          label: label(),
+          iconKey: `menu-${anchor.getAttribute('data-name') ?? wing.w}-${choice.value}`,
+          ...(choice.swatch
+            ? { swatch: choice.swatch }
+            : choice.icon
+              ? { icon: choice.icon }
+              : choice.svg
+                ? { svg: choice.svg }
+                : { text: label() }),
+          ...(pressedValue(pressEnv(), wing.w, choice.value) ? { className: 'on' } : {}),
+          // 칸을 누른 손이 곧 커맨드의 손이다 — 판을 연 손이 아니다(연 것과 고른 것은 다른 몸짓).
+          // The hand that presses the cell is the command's hand, not the hand that opened the panel — opening and picking are different gestures.
+          press: (by) => run(action.command, { [action.argKey]: choice.value }, by),
+        });
+        labels.button(button, label, choice.swatch || choice.icon || choice.svg ? undefined : label);
+        panel.root.append(button);
       }
     };
 
     // 격자 — 행·열 두 수를 한 몸짓으로 (표 삽입).
     const openGrid = (anchor: HTMLButtonElement, action: Extract<WingAction, { kind: 'grid' }>): void => {
       const max = action.max ?? 8;
-      const panel = openPanel(owner, { anchor, restore: options.surface ?? null });
+      const labels = new Translations(t);
+      const panel = openPanel(owner, { anchor, restore: options.surface ?? null, onClose: () => labels.dispose() });
       picker = panel;
+      labels.attribute(panel.root, 'dir', () => localeDirection(t.locale));
       const grid = make(owner, 'div', 'nabi-grid');
       grid.style.gridTemplateColumns = `repeat(${max}, auto)`;
       const readout = make(owner, 'div', 'nabi-readout');
@@ -241,15 +261,15 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
         };
         if (key === 'ArrowDown') step(1, 0);
         else if (key === 'ArrowUp') step(-1, 0);
-        else if (key === 'ArrowRight') step(0, 1);
-        else if (key === 'ArrowLeft') step(0, -1);
+        else if (key === 'ArrowRight') step(0, localeDirection(t.locale) === 'rtl' ? -1 : 1);
+        else if (key === 'ArrowLeft') step(0, localeDirection(t.locale) === 'rtl' ? 1 : -1);
         else if (key === 'Enter' || key === ' ')
           run(action.command, { [action.rowsKey]: rows, [action.colsKey]: cols });
         else return;
         event.preventDefault();
       });
 
-      paint();
+      labels.add(paint);
       panel.root.focus();
     };
 
@@ -258,14 +278,19 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
       picker = openPrompt(owner, {
         anchor,
         restore: options.surface ?? null,
-        okLabel: t.t('ok'),
+        translator: t,
+        get okLabel() {
+          return t.t('ok');
+        },
         fields: action.fields.map((field) => {
           // 미리 채울 값 — 노드에서 읽는 것이 먼저고(고치는 자리), 없으면 선언의 initial.
           // The value to prefill — read from the node first (an edit site), else the declared `initial`.
           const filled = field.initial?.();
           return {
             name: field.name,
-            label: t.pick(field.label, `field.${wing.w}.${field.name}`),
+            get label() {
+              return t.pick(field.label, `field.${wing.w}.${field.name}`);
+            },
             ...(filled !== undefined && filled !== '' ? { value: filled } : {}),
             ...(field.optional ? { optional: true } : {}),
             // 형식 검사는 wing의 것이다 — ui는 나르기만 한다. 없으면 "빈 것만 막는다"가 답이다.
@@ -366,7 +391,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     // 세우는 손과 서버의 손이 같은 함수를 쓴다 — 옛 판은 여기서 DOM을 직접 지었고, 그러면 서버가 그린 줄과 브라우저가 그릴 줄이 언젠가 갈린다. 말이 곧 방향이다: 로케일을 준 자리에만 dir을 적는다 — 안 주는 호스트는 방향을 제 손으로 쥐고 있다는 뜻이라 우리가 덮으면 안 된다.
     // Building here uses the same function the server uses — direct DOM construction would eventually let the server-rendered row and the browser-built one drift apart. The language dictates direction too: `dir` is only set when a locale was supplied — a host that didn't give one is holding direction itself, and we must not override that.
     if (options.locale !== undefined || options.translator !== undefined)
-      attributes.attribute('dir', localeDirection(t.locale));
+      copy.add(() => attributes.attribute('dir', localeDirection(t.locale)));
 
     const order = options.groups ?? GROUP_ORDER;
     const slots = toolbarSlots(registry, t, order);
@@ -379,7 +404,12 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
       list.length === slots.length &&
       slots.every((slot, i) => {
         const el = list[i];
-        return el?.getAttribute('data-name') === slot.name && el.getAttribute('aria-label') === slot.label;
+        return (
+          el?.getAttribute('data-name') === slot.name &&
+          el.getAttribute('aria-label') === slot.label &&
+          (!(slot.decl.icon || slot.decl.svg) ||
+            el.querySelector('[data-nabi-icon]')?.getAttribute('data-nabi-icon') === `toolbar-${slot.name}`)
+        );
       });
 
     let standingButtons = standing();
@@ -463,6 +493,15 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     };
 
     const stopChange = nabi.onChange(refresh);
+    copy.add(() => {
+      toolbarSlots(registry, t, order).forEach((slot, at) => {
+        const button = buttons[at]?.el;
+        if (!button) return;
+        button.setAttribute('aria-label', slot.label);
+        button.setAttribute('data-nabi-tip', slot.tip);
+        if (!slot.decl.icon && !slot.decl.svg) button.textContent = slot.label;
+      });
+    });
     lifecycle.add(stopChange);
     const stopSettle = settle.onSettle(() => {
       if (unmounted || unmounting) return;
@@ -510,8 +549,6 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     );
     lifecycle.add(unbindChoose);
 
-    // 화면의 말을 코어에 걸어 준다 — 코어의 문도 제 이름으로 말할 때가 있고(포인터 손의 "선택된 글자가 없습니다"), 그 말이 툴바와 다른 언어면 안 된다. 호스트는 로케일을 한 번만 선언하고, 언어를 바꾸면 어차피 화면을 다시 세우므로 새 값이 그때 다시 걸린다.
-    // Wires the UI's language into the core too — the core has its own messages sometimes (a pointer-hand toast like "no text selected"), and those must speak the same language as the toolbar. The host declares its locale once here; if it changes languages it remounts anyway, rewiring the new value then.
     const unbindLocale = options.locale === undefined ? null : hostOf(nabi).bindLocale(options.locale);
     if (unbindLocale) lifecycle.add(unbindLocale);
 

@@ -55,6 +55,7 @@ Aynı token'ları düzenleyici ve yayın ekranının ortak üst öğesine koyars
 | Düzenleme yüzeyi | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | Sabit araç çubuğu ve önizleme | `--nabi-sticky-top`, `--nabi-preview-width` |
 | Dokunmatik denetimler | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| Mobil moda geçiş genişliği | `--nabi-mobile-breakpoint` |
 
 Vurgulama ve metin rengi token'ları `--nabi-hl-<name>` ve `--nabi-tc-<name>` kullanır. Örneğin
 `--nabi-hl-yellow` değerini değiştirmek, belgede saklanan `yellow` vurgusunun ekran rengini yalnızca değiştirir.
@@ -65,6 +66,20 @@ Vurgulama ve metin rengi token'ları `--nabi-hl-<name>` ve `--nabi-tc-<name>` ku
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## Mobil mod eşiği
+
+Araç çubuğu, bağlam satırı veya görünüm alanı genişliği `36rem` değerinden küçük olduğunda mobil mod etkinleşir. Tam `36rem` genişlikte normal düzen korunur. Mobil modda araç çubuğu ve bağlam satırı yatay kayar, paneller ortalanır ve tablo seçici dokunmaya uygun 5×5 hücreye küçülür.
+
+`--nabi-mobile-breakpoint` değerini `:root`, bir üst öğe veya tek bir `.nabi` üzerinde ayarlayın. `rem`, `px` veya `calc()` gibi negatif olmayan bir CSS uzunluğu kullanın. CSS değeri, kök yazı boyutu, kapsayıcı veya görünüm alanı genişliği değiştiğinde açık paneller de otomatik güncellenir. `body` altına taşınan giriş panelleri asıl düzenleyicinin eşiğini kullanmayı sürdürür.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+Dokunmatik cihazlar bu eşiğin üzerinde de daha büyük denetimleri korur.
 
 ## Koyu mod
 

@@ -1,5 +1,7 @@
-// 표 정렬은 보는 쪽에서만 도는 로직이다(편집기는 안 부른다) — 저장값엔 data-nabi-sortable 표식만 남고, 정렬 방향·열은 순간 상태라 나비트리·undo·어떤 출력에도 안 들어간다. import는 locale/ 하나뿐이라 편집기 무게 없이 이 모듈만 실을 수 있다(test/entry.test.ts가 기계로 지킨다)
-// Table sort is reader-only logic (the editor never calls this) -- only the data-nabi-sortable marker persists, while which column/direction is sorted is transient state that never enters the NABI TREE, undo history, or any output. The only import is locale/, so a reading page can load just this module without editor weight (enforced mechanically by test/entry.test.ts)
+import type { LocaleInput } from '../locale/index.js';
+import { iconHtml } from '../style/icon.js';
+// 표 정렬은 보는 쪽에서만 도는 로직이다(편집기는 안 부른다) — 저장값엔 data-nabi-sortable 표식만 남고, 정렬 방향·열은 순간 상태라 나비트리·undo·어떤 출력에도 안 들어간다.
+// Table sort is reader-only logic (the editor never calls this) -- only the data-nabi-sortable marker persists, while which column/direction is sorted is transient state that never enters the NABI TREE, undo history, or any output.
 import { localeOf, makeTranslator, type LocaleText } from '../locale/index.js';
 
 // 값 없는 불리언 속성 — 있으면 켜짐이다. 적는 쪽은 호스트(또는 표 wing)이고 읽는 쪽이 이 파일이다
@@ -87,21 +89,6 @@ const TEXT = {
 
 // 꽉 찬 삼각형 둘 — 표 프로그램 어디서나 쓰는 모양이다. 정렬 안 된 열은 둘 다 연하고, 정렬된 열은 하나만 보여 방향을 가장 크게 말한다
 // Two filled triangles, the shape used everywhere in spreadsheet software; an unsorted column shows both faintly, a sorted one shows only one, making the direction the loudest signal
-const UP = 'M8 2.9 12 7.4H4Z';
-const DOWN = 'M8 13.1 4 8.6h8Z';
-
-const ICONS = {
-  original: `<path d="${UP}" opacity="0.38"/><path d="${DOWN}" opacity="0.38"/>`,
-  ascending: `<path d="${UP}"/>`,
-  descending: `<path d="${DOWN}"/>`,
-} as const;
-
-// 이 파일이 쓴 SVG이지 사용자 입력이 아니다 — 선이 아니라 채움이다(이만한 삼각형은 윤곽선이면 얼룩으로 읽힌다)
-// This SVG is written by this file, not user input; it's filled, not outlined, since a triangle this small reads as a smudge when only outlined
-function iconSvg(body: string): string {
-  return `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">${body}</svg>`;
-}
-
 export type SortDirection = 'descending' | 'ascending';
 
 export interface SortState {
@@ -152,13 +139,13 @@ export function rankRows(values: readonly string[], direction: SortDirection, lo
 }
 
 export interface TableSortOptions {
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   // 어떤 표를 붙일까 — 기본은 표식(data-nabi-sortable)이 달린 표만이다. 'all'은 뿌리 안의 표 전부를 받는다(발행 HTML에 표식을 못 심는 호스트·데모의 길)
   // Which tables to attach to; the default is only tables carrying the marker (data-nabi-sortable). 'all' takes every table under the root, a path for hosts (or demos) that can't embed the marker in their published HTML
   readonly tables?: 'marked' | 'all';
 }
 
-function attachOne(table: HTMLTableElement, locale: string): (() => void) | null {
+function attachOne(table: HTMLTableElement, locale: LocaleInput): (() => void) | null {
   // 표식이 있어도 병합이 보이면 거절한다 — 병합된 행은 묶여 있어 재배열이 격자를 부순다
   // Declines even a marked table if it has merged cells; merged rows are bound together, and reordering them would break the grid
   if (hasMergedCells(table)) return null;
@@ -191,7 +178,7 @@ function attachOne(table: HTMLTableElement, locale: string): (() => void) | null
     for (const [column, button] of buttons.entries()) {
       const state = active?.column === column ? active.direction : null;
       const name = label(state ?? 'original');
-      button.innerHTML = iconSvg(ICONS[state ?? 'original']);
+      button.innerHTML = iconHtml(`viewer-sort-${state ?? 'original'}`, `sort-${state ?? 'original'}`);
       button.setAttribute('aria-label', `${label('sort')}: ${name}`);
       button.dataset['nabiTip'] = name;
       button.toggleAttribute('data-nabi-sort-active', state !== null);
@@ -209,7 +196,7 @@ function attachOne(table: HTMLTableElement, locale: string): (() => void) | null
       ? rankRows(
           original.map((row) => row.cells[(active as SortState).column]?.textContent?.trim() ?? ''),
           active.direction,
-          locale,
+          t.locale,
         ).map((index) => original[index] as HTMLTableRowElement)
       : original;
     // 제목 행은 손대지 않는다 — 몸통 행만 순서대로 다시 붙인다
@@ -218,7 +205,9 @@ function attachOne(table: HTMLTableElement, locale: string): (() => void) | null
     renderedSequence = [...parent.children];
   };
 
+  let stopLocale = (): void => {};
   const detach = (): void => {
+    stopLocale();
     // 순서·단추·aria를 전부 되돌린다 — 해제 뒤의 DOM은 붙이기 전과 같다
     // Restores order, buttons, and aria all together; the DOM after detach matches before attach
     const current = [...parent.children];
@@ -258,6 +247,7 @@ function attachOne(table: HTMLTableElement, locale: string): (() => void) | null
       cell.append(button);
     }
     render();
+    stopLocale = t.onChange?.(render) ?? (() => {});
   } catch (error) {
     detach();
     throw error;

@@ -39,7 +39,7 @@ export const dividerWing: Wing = {
     attrs: {},
     button: {
       group: 'structure',
-      svg: '<path d="M2 8h12"/>',
+      icon: 'hr-rule',
       label: DIVIDER_NAME,
       action: { kind: 'command', command: 'insertDivider' },
     },

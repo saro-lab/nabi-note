@@ -40,10 +40,7 @@ const CLEAR_NAME: LocaleText = {
   id: 'Hapus format',
 };
 
-const CLEAR_ICON =
-  '<g transform="translate(8 8) scale(1.134) translate(-8.2 -7.75)" stroke-width="1.235">' +
-  '<path d="M5.9 12.6 2.9 9.6a1.4 1.4 0 0 1 0-2l4.7-4.7a1.4 1.4 0 0 1 2 0l3.5 3.5a1.4 1.4 0 0 1 0 2l-4.2 4.2"/>' +
-  '<path d="M5.1 7 9.9 11.8"/><path d="M6 12.6h7.5"/></g>';
+const CLEAR_ICON = 'clear-format-clear';
 
 export const CLEARED_MARKS: readonly string[] = ['b', 'i', 'u', 's', 'sub', 'sup', 'hl', 'tc', 'fs', 'tf', 'a'];
 
@@ -183,7 +180,7 @@ export const clearFormatWing: Wing = {
   doubleKeys: { Escape: 'clearFormat' },
   button: {
     group: 'clear',
-    svg: CLEAR_ICON,
+    icon: CLEAR_ICON,
     label: CLEAR_NAME,
     action: { kind: 'command', command: 'clearFormat' },
   },

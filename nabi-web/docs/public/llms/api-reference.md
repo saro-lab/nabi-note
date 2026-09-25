@@ -11,6 +11,7 @@ This is an index, not a tutorial. Import paths are public package exports; inter
 | `nabi-note/viewer` | Reader behavior; see `viewer-diff.md` |
 | `nabi-note/diff` | Document diff; see `viewer-diff.md` |
 | `nabi-note/nabi.css` | Bundled stylesheet |
+| `nabi-note/icons/*` | Packaged SVG assets, including dark variants |
 | `nabi-note/package.json` | Package metadata |
 
 ## Assembly
@@ -62,7 +63,7 @@ interface NabiOptions {
   readonly onError?: (error: unknown) => void;
   readonly undoLimit?: number;    // default 200; positive integer
   readonly typingMergeMs?: number; // default 1000; 0 disables merging
-  readonly locale?: string;   // default en
+  readonly locale?: LocaleInput;   // default en
 }
 ```
 
@@ -113,7 +114,7 @@ interface SurfaceOptions {
   readonly root: HTMLElement;
   readonly hydrate?: boolean;
   readonly allowLocalUrls?: boolean;
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   readonly placeholder?: string;
   readonly ioFilters?: readonly IoFilter[];
   readonly fileSink?: (files: readonly File[]) => void;
@@ -248,7 +249,7 @@ Toolbar HTML:
 
 - `toolbarSlots(registry, translator, order?)`;
 - `renderToolbarHtml({ registry, locale?, translator?, groups? })`;
-- `renderViewToolsHtml({ locale?, translator? })`.
+- `renderViewToolsHtml({ locale?, translator?, showPreview?, showFullscreen? })`.
 
 Style:
 
@@ -315,7 +316,7 @@ Root-exported types include:
 - command: `Command`, `CommandArgs`, `CommandHand`, `CommandOutcome`;
 - editor: `Nabi`, `NabiOptions`, `NabiChange`, `Ask`, `ChooseOption`, `Toast`, `ToastLevel`;
 - HTML: `HtmlAttrs`, `HtmlBuilder`, `HtmlBuilders`, `HtmlContext`;
-- locale: `Dictionary`, `LocaleText`, `Translator`.
+- locale: `Dictionary`, `LocaleText`, `Translator`, `LocaleInput`, `LocaleSource`, `LocaleController`.
 
 Tree values: `P`, `BR`, `isElement`, `isText`.
 
@@ -337,7 +338,46 @@ See `io-security.md` before implementing a custom filter.
 
 ## Locale values
 
-- `LOCALES`: 24 supported locale codes: `en`, `zh`, `hi`, `es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `de`, `ja`, `fa`, `mr`, `vi`, `te`, `ha`, `tr`, `sw`, `ta`, `ko`, `th`, `it`.
+```ts
+interface LocaleSource {
+  readonly locale: string;
+  onChange(listener: () => void): () => void;
+}
+interface LocaleController extends LocaleSource {
+  setLocale(locale: string): void;
+}
+type LocaleInput = string | LocaleSource;
+function createLocale(initial?: string): LocaleController; // default en
+```
+
+Pass the same controller to the editor and every locale-aware mount or overlay.
+A string remains a fixed locale. Omitted locale options retain their existing
+fallback behavior; they do not automatically subscribe to another mount.
+There is no global locale and no implicit editor recreation.
+
+The source retains the full regional tag for date formatting and HTML export.
+Translation lookup still uses the primary language. Repeating the exact same
+value does nothing. Non-string values throw. Listeners run synchronously after
+the value changes; all active listeners are attempted, then listener failures
+are reported as an AggregateError. Unsubscribe functions are idempotent.
+
+`makeTranslator(source, extraDictionary)` keeps custom dictionary overrides and
+exposes an optional `Translator.onChange(listener)` subscription. Existing custom
+translators without that method stay static. Locale-aware browser mounts update
+existing labels and direction in place and release subscriptions on unmount or
+close. Static renderers read the source's current value without subscribing.
+`PromptOptions.translator` allows a prompt to reread field-label and ok-label
+getters on locale changes without replacing its inputs.
+
+Changing a locale never loads or edits a document, creates an undo entry, clears
+redo, marks a document saved, changes the session ID, restarts an upload, or emits
+`Nabi.onChange`. The surface retains its nodes, selection and active IME composition.
+Open editor panels retain draft input, focus and selection. Already delivered
+plain-text messages and host-supplied literal labels are not translated again.
+Viewer sort labels update, but existing row order is retained until another sort
+operation; that operation uses the current locale.
+
+- `LOCALES`: supported locale codes: `en`, `zh`, `hi`, `es`, `ar`, `fr`, `bn`, `pt`, `ru`, `id`, `ur`, `de`, `ja`, `fa`, `mr`, `vi`, `te`, `ha`, `tr`, `sw`, `ta`, `ko`, `th`, `it`.
 - `RTL_LOCALES`: `ar`, `ur`, `fa`.
 - `DICTIONARY`.
 - `localeOf(raw)`: normalize a primary language tag; invalid input becomes `en`.
@@ -356,12 +396,18 @@ The root entry exports these public type names. Earlier sections and the topic d
 - Tree and editor: `AttrValue`, `Attrs`, `ElementNode`, `NabiNode`, `NabiDoc`, `Position`, `Selection`, `EditEnv`, `Command`, `CommandArgs`, `CommandHand`, `CommandOutcome`, `Nabi`, `NabiOptions`, `NabiChange`, `Ask`, `ChooseOption`, `Toast`, `ToastLevel`.
 - HTML and IO: `HtmlAttrs`, `HtmlBuilder`, `HtmlBuilders`, `HtmlContext`, `StoredHtmlOptions`, `ClipFile`, `PasteData`, `PasteCandidate`, `DocSource`, `IoFilter`, `MdContext`, `MdBuilder`, `MdBuilders`, `FileStore`, `NabiFileBody`, `NabiFileText`.
 - Surface and persistence mounts: `EditSurfacePort`, `Surface`, `SurfaceActions`, `SurfaceOptions`, `FileMount`, `FileMountOptions`, `SaveFormat`, `UploadMount`, `UploadOptions`, `UploadTask`, `Uploader`, `HistoryMount`, `HistoryMountOptions`, `HistoryRecord`, `HistoryStorage`, `HistoryView`.
-- UI: `Toolbar`, `ToolbarButton`, `ToolbarOptions`, `ContextGroupView`, `ContextToolbar`, `ContextToolbarOptions`, `HintOptions`, `Hints`, `PickedMark`, `PickedMarkOptions`, `Sticky`, `StickyOptions`, `ViewTools`, `ViewToolsOptions`, `PreviewOptions`, `LightboxOptions`, `Overlay`, `UploadView`, `UploadViewOptions`, `ChoosePanelOptions`, `HistoryPanelOptions`, `SavePanelOptions`, `Panel`, `PanelOptions`, `PromptField`, `PromptOptions`, `Settle`, `SettleOptions`, `ToolbarHtmlOptions`, `ToolbarSlot`.
+- UI: `Toolbar`, `ToolbarButton`, `ToolbarOptions`, `ContextGroupView`, `ContextToolbar`, `ContextToolbarOptions`, `HintOptions`, `Hints`, `PickedMark`, `PickedMarkOptions`, `Sticky`, `StickyOptions`, `ViewTools`, `ViewToolsOptions`, `PreviewOptions`, `LightboxOptions`, `Overlay`, `UploadView`, `UploadViewOptions`, `ChoosePanelOptions`, `HistoryPanelOptions`, `SavePanelOptions`, `Panel`, `PanelOptions`, `PromptField`, `PromptOptions`, `Settle`, `SettleOptions`, `ToolbarHtmlOptions`, `ToolbarSlot`, `ViewToolsVisibility`, `ViewToolsHtmlOptions`.
 - Upload and code data: `UploadFile`, `UploadItem`, `UploadLimits`, `UploadReject`, `CodeDialect`, `CodeHighlighter`, `CodeToken`.
-- Locale: `Dictionary`, `LocaleText`, `Translator`.
+- Locale: `Dictionary`, `LocaleText`, `Translator`, `LocaleInput`, `LocaleSource`, `LocaleController`.
 
 ## Separate-entry type names
 
-- `nabi-note/ssr`: `Registry`, `StoredHtmlOptions`, `ToolbarHtmlOptions`, `ToolbarSlot`, `WingName`, `WingsBuilder`, `Wing`, `AttrValue`, `Attrs`, `ElementNode`, `NabiNode`, `NabiDoc`, `Translator`.
+- `nabi-note/ssr`: `Registry`, `StoredHtmlOptions`, `ToolbarHtmlOptions`, `ToolbarSlot`, `WingName`, `WingsBuilder`, `Wing`, `AttrValue`, `Attrs`, `ElementNode`, `NabiNode`, `NabiDoc`, `Translator`, `LocaleInput`, `LocaleSource`, `LocaleController`.
 - `nabi-note/viewer`: `ViewerAttachment`, `ViewerOptions`, `TableSortOptions`, `SortDirection`, `SortState`, `CodePaintOptions`, `CodeHighlighter`, `CodeToken`.
 - `nabi-note/diff`: `CharRange`, `DiffEntry`, `DiffKind`, `DiffPaneBlock`, `DocDiff`, `DiffOptions`, `DiffMountOptions`, `DiffMount`, `DiffWingMountOptions`, `DiffWingMount`.
+
+## Icon themes and view-tool visibility
+
+`ViewToolsOptions` and `ViewToolsHtmlOptions` share `showPreview?: boolean` and `showFullscreen?: boolean`; both default to true. Both false renders no tools wrapper. Mount only connects visible controls. Use matching flags for SSR and mounting. `ViewToolsVisibility` is available from the core and SSR entry points.
+
+`WingButton`, `WingChoice`, and icon-capable context declarations add `icon?: string` for a packaged fallback asset ID. Existing `svg` fields remain supported. CSS `--nabi-icon-<key>` URL overrides apply to wings and built-in controls, including preview/fullscreen, panels, diff, and viewer sorting. See `icons.md` for keys, asset delivery, and compatibility.

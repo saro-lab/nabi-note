@@ -54,6 +54,7 @@ editor और published view में समान visual language रखने
 | editing surface | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | sticky toolbar और preview | `--nabi-sticky-top`, `--nabi-preview-width` |
 | touch controls | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| मोबाइल मोड में बदलने की चौड़ाई | `--nabi-mobile-breakpoint` |
 
 highlight और text-color tokens `--nabi-hl-<name>` और `--nabi-tc-<name>` उपयोग करते हैं। जैसे `--nabi-hl-yellow` बदलने से saved `yellow` highlight का display color बदलता है, document data नहीं।
 
@@ -63,6 +64,20 @@ highlight और text-color tokens `--nabi-hl-<name>` और `--nabi-tc-<name>` 
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## मोबाइल मोड की सीमा
+
+टूलबार, संदर्भ पंक्ति या व्यूपोर्ट की चौड़ाई `36rem` से कम होने पर मोबाइल मोड चालू होता है। ठीक `36rem` पर सामान्य लेआउट बना रहता है। मोबाइल मोड में टूलबार और संदर्भ पंक्ति क्षैतिज रूप से स्क्रॉल होती हैं, पैनल बीच में दिखते हैं और तालिका चयन ग्रिड स्पर्श के अनुकूल 5×5 खानों का हो जाता है।
+
+सीमा बदलने के लिए `--nabi-mobile-breakpoint` को `:root`, किसी पूर्वज तत्व या अलग `.nabi` पर सेट करें। `rem`, `px` या `calc()` जैसी गैर-ऋणात्मक CSS लंबाई इस्तेमाल करें। CSS मान, रूट फ़ॉन्ट आकार, कंटेनर या व्यूपोर्ट की चौड़ाई बदलने पर खुले पैनल भी अपने आप अपडेट होते हैं। `body` के नीचे ले जाए गए इनपुट पैनल मूल एडिटर की सीमा का उपयोग करते रहते हैं।
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+स्पर्श उपकरणों पर इस सीमा से अधिक चौड़ाई में भी बड़े नियंत्रण बने रहते हैं।
 
 ## dark mode
 

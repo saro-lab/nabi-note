@@ -54,6 +54,7 @@ Idan an sanya tokens iri ɗaya a parent na gama-gari na edita da allon wallafawa
 | Yankin gyara | `--nabi-content-min-height`, `--nabi-placeholder-color` |
 | Toolbar mai tsayawa da preview | `--nabi-sticky-top`, `--nabi-preview-width` |
 | Yanayin taɓawa | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
+| Faɗin sauyawa zuwa yanayin wayar hannu | `--nabi-mobile-breakpoint` |
 
 Ana canza highlighter da launin rubutu da `--nabi-hl-<name>` da `--nabi-tc-<name>` bi da bi. Misali, canza `--nabi-hl-yellow` yana canza launin allo kaɗai na ƙimar highlighter `yellow` da aka adana a takarda.
 
@@ -63,6 +64,20 @@ Ana canza highlighter da launin rubutu da `--nabi-hl-<name>` da `--nabi-tc-<name
   --nabi-tc-blue: #2563eb;
 }
 ```
+
+## Iyakar yanayin wayar hannu
+
+Yanayin wayar hannu yana farawa idan faɗin sandar kayan aiki, layin mahalli ko yankin kallo ya yi ƙasa da `36rem`. A daidai `36rem`, tsarin yau da kullum yana nan. A yanayin wayar hannu, sandar kayan aiki da layin mahalli suna gungurawa a kwance, bangarori suna tsakiya, kuma ragar zaɓen tebur tana raguwa zuwa ƙwayoyi 5×5 masu sauƙin taɓawa.
+
+Saita `--nabi-mobile-breakpoint` a kan `:root`, wani kashi na sama ko `.nabi` guda. Yi amfani da tsawon CSS marar ƙima mara kyau, kamar `rem`, `px` ko `calc()`. Sauyin ƙimar CSS, girman rubutun tushe, faɗin akwati ko yankin kallo yana sabunta bangarorin da suke buɗe kai tsaye. Bangarorin shigar da bayanai da aka matsar ƙarƙashin `body` suna ci gaba da amfani da iyakar editan asalinsu.
+
+```css
+.article-editor {
+  --nabi-mobile-breakpoint: 40rem;
+}
+```
+
+Na’urorin taɓawa suna riƙe manyan maɓallan sarrafawa ko da faɗin ya haura wannan iyaka.
 
 ## Dark mode
 

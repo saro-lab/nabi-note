@@ -1,6 +1,7 @@
+import type { LocaleInput } from '../../locale/index.js';
 // 열기·저장의 표면 절반(다운로드·파일 대화상자) — wing(wings/file)은 커맨드 이름과 가속키만 선언하고, 실제 배선은 여기서 인스턴스에 $registerCommand로 맨다(모듈이 기억하면 편집기 둘이 저장소를 나눠 쓰게 된다). 형식은 여기서 안 짓는다 — ioFiltersOf가 낸 한 목록(붙여넣기와 같은 목록)에서 save를 든 것이 저장 형식, read를 든 것이 여는 형식이다
 // The screen half of open/save (download, file picker); the wing (wings/file) only declares command names and shortcuts, wired here via $registerCommand to a specific instance (a module-level binding would let two editors share one store). Formats aren't defined here -- from ioFiltersOf's one list (the same list paste uses), whatever carries `save` is a save format, whatever carries `read` is an open format
-import { translate, type LocaleText } from '../../locale/index.js';
+import { localeValue, translate, type LocaleText } from '../../locale/index.js';
 import { hostOf, type Nabi } from '../../editor/index.js';
 import type { ParseNode } from '../../html/index.js';
 import { AsyncMountScope, DisposerStack, openFilePicker } from '../../lifecycle.js';
@@ -115,7 +116,7 @@ export interface FileMountOptions {
   // 쓰던 글을 잃기 전에 묻는 말 — 기본 문구는 사전에서 온다(12, 이전의 한국어 하드코딩을 locale로 옮겼다). 호스트가 주면 그것이 이기고, 묻는 길 자체는 인스턴스의 $ask다(머리 없는 환경은 침묵)
   // The prompt shown before discarding unsaved work; the default text comes from the dictionary (12, moving an earlier hardcoded Korean string into locale). A host-supplied message wins, and the actual prompting goes through the instance's $ask (silent in a headless environment)
   readonly discardMessage?: string;
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   readonly onError?: (error: unknown) => void;
 }
 
@@ -202,7 +203,7 @@ export function mountFile(options: FileMountOptions): FileMount {
         title,
         sheets: collectSheets(registry),
         body: nabi.getHtml(),
-        ...(options.locale !== undefined ? { lang: options.locale } : {}),
+        ...(options.locale !== undefined ? { lang: localeValue(options.locale) } : {}),
       }),
     // md는 등록된 어휘만 적는다 — 못 적는 노드는 그것만 html로 떨어진다(renderMarkdown의 폴백)
     // md writes only registered vocabulary; a node it can't express falls back to inline html just for that node (renderMarkdown's fallback)
@@ -294,7 +295,7 @@ export function mountFile(options: FileMountOptions): FileMount {
     if (!alive()) return false;
     if (nabi.isChanged()) {
       const go = await hostOf(nabi).ask.confirm(
-        options.discardMessage ?? translate('openWhileChanged', options.locale ?? 'en'),
+        options.discardMessage ?? translate('openWhileChanged', localeValue(options.locale)),
       );
       if (!go || !alive()) return false;
     }
