@@ -1249,7 +1249,7 @@ dies('빌더 ① — 이름 오타는 부른 그 줄에서 죽는다', () => win
   '받는 이름: b·i·u·s·sup·sub·tf',
 ]);
 dies('빌더 ① — 커스텀을 이름으로 부르면 객체의 길을 알려 준다', () => wings().use('exNote' as never), [
-  '커스텀 wing 은 객체로 넣는다',
+  '커스텀 wing은 객체로 전달해 주세요',
 ]);
 
 // ② 옵션 키 오타 — 가장 조용히 새는 자리. 모르는 키는 죽고 받는 키가 실린다.
@@ -1260,15 +1260,15 @@ dies('빌더 ② — 모르는 옵션 키는 죽는다', () => wings().use('tf',
   '받는 것: values',
 ]);
 dies('빌더 ② — 옵션 없는 wing 에 옵션을 주면 죽는다', () => wings().use('b', { values: [] } as never), [
-  "'b' 는 받는 옵션이 없다",
+  "'b' 는 추가 옵션을 지원하지 않습니다",
 ]);
 dies('빌더 ② — values 에 배열 아닌 것을 주면 죽는다', () => wings().use('tf', { values: 'sans' } as never), [
-  "'tf' 의 values 는 배열이다",
+  "'tf' 의 values 는 배열로 지정해 주세요",
 ]);
 dies(
   '빌더 ② — allowLocalUrls 에 불리언 아닌 것을 주면 죽는다',
   () => wings().use('img', { allowLocalUrls: 'yes' } as never),
-  ["'img' 의 allowLocalUrls 는 true/false 다"],
+  ["'img' 의 allowLocalUrls 는 true/false로 지정해 주세요"],
 );
 
 // ③ 목록 밖 값 — 팩토리(계약의 원본)가 던지고, 받는 목록이 실린다.
@@ -1288,18 +1288,18 @@ dies('빌더 ④ — ex 아닌 커스텀은 죽고 고친 이름을 보여 준�
 dies(
   '빌더 ④ — 객체에 옵션을 얹으면 죽는다(조용히 버리지 않는다)',
   () => (wings() as { use(a: unknown, b: unknown): unknown }).use(uploadWing, { allowLocalUrls: true }),
-  ['객체에는 옵션을 못 얹는다'],
+  ['객체에는 옵션을 추가할 수 없습니다'],
 );
-dies('빌더 — 이름도 객체도 아닌 것은 죽는다', () => wings().use(42 as never), ['이름(글자열) 또는 wing 객체']);
+dies('빌더 — 이름도 객체도 아닌 것은 죽는다', () => wings().use(42 as never), ['이름(문자열) 또는 wing 객체']);
 
 // ⑤ 의존성 깨는 drop — 마지막 딛는 자리를 빼면 죽고, 함께 빼는 길이 실린다.
 // (5) A drop that breaks a dependency — removing the last thing another wing stands on throws, showing how to drop both together.
 dies('빌더 ⑤ — 마지막 딛는 wing 을 빼면 죽는다', () => wings().all().drop('img').drop('a'), [
-  "'a' 를 빼면 'upload' 가 설 수 없다",
-  'img·a 중 하나가 필요하다',
+  "'a' 를 빼면 'upload' 를 사용할 수 없습니다",
+  'img·a 중 하나가 필요합니다',
   ".drop('upload')",
 ]);
-dies('빌더 ⑤ — 안 든 것을 빼면 죽는다(조용한 no-op 이 아니다)', () => wings().drop('upload'), ['지금 목록에 없다']);
+dies('빌더 ⑤ — 안 든 것을 빼면 죽는다(조용한 no-op 이 아니다)', () => wings().drop('upload'), ['현재 목록에 없습니다']);
 
 {
   // 의존성 — 더할 때는 조용히 끌어오고(img 가 딸려 온다), 하나가 남아 있으면 빼도 산다.

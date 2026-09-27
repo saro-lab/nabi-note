@@ -67,7 +67,7 @@ export const it = {
 
   search: 'Cerca',
   search_no_results: 'Nessun risultato',
-  search_hint: 'Inserisci un termine di ricerca',
+  search_hint: 'È possibile inserire un termine di ricerca',
   search_move: 'Sposta',
   search_open: 'Apri',
   search_close: 'Chiudi',

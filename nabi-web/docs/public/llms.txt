@@ -33,6 +33,7 @@ Use this file as a router. Read only the document that owns your question.
 - Store `nabi.getJson()` or `nabi.getHtml()`. Never store `getEditorHtml()`.
 - Treat HTML, JSON, paste data, command args, and custom filter output as untrusted input.
 - Use `NabiOptions.onError` for isolated command and callback failure reporting.
+- Built-in notices and input prompts use polite localized wording; see `llms/quickstart-npm.md` for locale configuration.
 - For live language switching, share `createLocale()` across the editor and mounts, then call `locale.setLocale(code)`; see `llms/quickstart-npm.md`.
 - Configure bounded undo with `undoLimit`; set `typingMergeMs` to 0 to disable typing coalescing.
 - In a wing `attach()`, call `host.onDispose()` immediately after each direct side effect that must roll back if later setup throws.

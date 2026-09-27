@@ -252,7 +252,7 @@ el('wings-none').addEventListener('click', () => {
 // 이 단추 셋은 데모 페이지 자신의 알림 견본이다. 편집기 내부 host sink는 공개 Nabi API가 아니다.
 el('toast-info').addEventListener('click', () => window.alert('Saved.'));
 el('toast-warn').addEventListener('click', () => window.alert('Line breaks survive:\nthis is the second line.'));
-el('toast-error').addEventListener('click', () => window.alert('Upload failed - try again.'));
+el('toast-error').addEventListener('click', () => window.alert('The upload could not be completed. Please try again.'));
 
 // --- 테마 -------------------------------------------------------------------------------------
 // 편집기 API 가 아니다 — `html` 의 `dark`/`light` 클래스로 갈린다. 편집기는 아무것도 모르고 시트가

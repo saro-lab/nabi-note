@@ -48,7 +48,7 @@ export const es = {
 
   search: 'Buscar',
   search_no_results: 'Sin resultados',
-  search_hint: 'Escriba un término de búsqueda',
+  search_hint: 'Introduzca un término de búsqueda, por favor',
   search_move: 'Mover',
   search_open: 'Abrir',
   search_close: 'Cerrar',

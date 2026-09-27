@@ -175,7 +175,7 @@ function unknownName(name: string): never {
   const maybe = guess === null ? '' : ` 혹시 ${hintOf(guess)}?`;
   // ex로 시작하면 커스텀을 이름으로 부르려던 것 — 커스텀은 객체로 넣어야 계약이 함께 온다.
   // An `ex`-prefixed name means someone tried to call a custom wing by name — it needs the object instead.
-  const custom = name.startsWith('ex') ? ` 커스텀 wing 은 객체로 넣는다: .use(${name}).` : '';
+  const custom = name.startsWith('ex') ? ` 커스텀 wing은 객체로 전달해 주세요: .use(${name}).` : '';
   die(`없는 wing: '${name}'.${maybe}${custom} 받는 이름: ${NAME_LIST}`);
 }
 
@@ -183,11 +183,11 @@ function unknownName(name: string): never {
 // Validates options then calls the factory — the quietest place to leak a typo, so an unknown key must die here.
 function optioned(entry: Entry, options: object): Wing {
   if (Array.isArray(options) || typeof options !== 'object' || options === null) {
-    die(`'${entry.w}' 의 옵션은 객체다: .use('${entry.w}', { … })`);
+    die(`'${entry.w}' 의 옵션은 객체로 전달해 주세요: .use('${entry.w}', { … })`);
   }
   const takes = entry.takes;
   if (takes === undefined || entry.make === undefined) {
-    die(`'${entry.w}' 는 받는 옵션이 없다 — .use('${entry.w}') 로 부른다`);
+    die(`'${entry.w}' 는 추가 옵션을 지원하지 않습니다 — .use('${entry.w}') 로 호출해 주세요`);
   }
   const keys = Object.keys(takes);
   for (const [key, value] of Object.entries(options)) {
@@ -199,10 +199,10 @@ function optioned(entry: Entry, options: object): Wing {
       );
     }
     if (shape === 'boolean' && typeof value !== 'boolean') {
-      die(`'${entry.w}' 의 ${key} 는 true/false 다: { ${key}: true }`);
+      die(`'${entry.w}' 의 ${key} 는 true/false로 지정해 주세요: { ${key}: true }`);
     }
     if (shape === 'list' && !Array.isArray(value)) {
-      die(`'${entry.w}' 의 ${key} 는 배열이다: { ${key}: ['…'] }`);
+      die(`'${entry.w}' 의 ${key} 는 배열로 지정해 주세요: { ${key}: ['…'] }`);
     }
   }
   // 키·모양 검사를 다 지났다 — 옵션 타입은 wing마다 달라 여기서 한 번 좁힌다.
@@ -283,36 +283,36 @@ export function wings(): WingsBuilder {
     if (typeof target === 'object' && target !== null && typeof target.w === 'string') {
       if (options !== undefined) {
         die(
-          `객체에는 옵션을 못 얹는다 — 공식 wing 은 이름으로 부르고(.use('${target.w}', { … })), 커스텀은 저를 지은 팩토리가 옵션을 받는다`,
+          `객체에는 옵션을 추가할 수 없습니다. 공식 wing은 이름으로 호출해 주세요(.use('${target.w}', { … })), 커스텀 wing의 옵션은 해당 팩토리에 전달해 주세요`,
         );
       }
       if (ENTRIES.some((entry) => entry.w === target.w)) {
         // 공식 이름을 든 객체는 팩토리로 미리 지은 인스턴스 — 공식 자리(차례 포함)에 앉는다.
         // An object carrying an official name is a pre-built instance — it takes the official slot, order included.
-        if (!$isBuiltinWing(target)) die(`'${target.w}' 는 package 공식 wing 인스턴스만 객체로 넣을 수 있다`);
+        if (!$isBuiltinWing(target)) die(`'${target.w}' 는 package 공식 wing 인스턴스만 객체로 전달할 수 있습니다`);
         add(target.w, target);
         return self;
       }
       if (!EX_SHAPE.test(target.w)) {
         const fixed = `ex${(target.w[0] ?? '').toUpperCase()}${target.w.slice(1)}`;
-        die(`커스텀 wing 의 w 는 ex 로 시작해야 한다: '${target.w}' → '${fixed}'`);
+        die(`커스텀 wing 의 w 는 ex로 시작해야 합니다: '${target.w}' → '${fixed}'`);
       }
       customs.set(target.w, target);
       pullDeps(target);
       return self;
     }
-    die(`use 는 wing 이름(글자열) 또는 wing 객체를 받는다. 받는 이름: ${NAME_LIST}`);
+    die(`use 는 wing 이름(문자열) 또는 wing 객체를 받습니다. 받는 이름: ${NAME_LIST}`);
   };
 
   const drop = (target: WingName | (string & {}) | Wing): WingsBuilder => {
     const w =
       typeof target === 'string' ? target : typeof target === 'object' && target !== null ? target.w : undefined;
-    if (typeof w !== 'string') die('drop 은 wing 이름(글자열) 또는 wing 객체를 받는다');
+    if (typeof w !== 'string') die('drop 은 wing 이름(문자열) 또는 wing 객체를 받습니다');
     if (!has(w)) {
       // 공식 이름이나 ex 꼴이면 "안 들었다"가 답, 그 밖은 오타다 — 각각 다른 고칠 길을 준다.
       // A known/ex-shaped name just isn't present; anything else is a typo — each gets its own fix hint.
       if (!ENTRIES.some((entry) => entry.w === w) && !EX_SHAPE.test(w)) unknownName(w);
-      die(`'${w}' 는 지금 목록에 없다 — .all()·.allBasic() 이나 .use() 로 든 것만 뺄 수 있다`);
+      die(`'${w}' 는 현재 목록에 없습니다 — .all()·.allBasic() 이나 .use() 로 추가한 wing만 제거할 수 있습니다`);
     }
     // makeRegistry도 이걸 잡지만 mount 때라 늦다 — 빌더는 일찍 알려 준다는 값이 있어 여기서도 던진다.
     // makeRegistry catches this too, but only at mount time — the builder's whole point is catching it earlier.
@@ -322,7 +322,7 @@ export function wings(): WingsBuilder {
       const needs = wing.requiresAnyOf;
       if (needs !== undefined && !needs.some((n) => present.has(n))) {
         die(
-          `'${w}' 를 빼면 '${wing.w}' 가 설 수 없다('${wing.w}' 는 ${needs.join('·')} 중 하나가 필요하다). 함께 빼려면 .drop('${wing.w}') 을 먼저 부른다`,
+          `'${w}' 를 빼면 '${wing.w}' 를 사용할 수 없습니다('${wing.w}' 는 ${needs.join('·')} 중 하나가 필요합니다). 함께 제거하려면 .drop('${wing.w}') 을 먼저 호출해 주세요`,
         );
       }
     }

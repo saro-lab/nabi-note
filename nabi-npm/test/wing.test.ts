@@ -138,7 +138,7 @@ throws(
     ]),
   '예약어',
 );
-throws('중복 w 는 죽는다', () => makeRegistry([bold, simpleMark({ w: 'b' })]), '두 번');
+throws('중복 w 는 죽는다', () => makeRegistry([bold, simpleMark({ w: 'b' })]), '중복');
 throws(
   '부품이 다른 wing 의 w 와 부딪히면 죽는다',
   () =>
@@ -173,7 +173,7 @@ throws(
 throws(
   'container 밖의 holds는 죽는다',
   () => makeRegistry([{ ...simpleMark({ w: 'exX' }), holds: 'inline' } as Wing]),
-  'container만',
+  'container에만',
 );
 throws(
   'inline holder의 singleParagraph는 죽는다',
@@ -187,7 +187,7 @@ throws('부품에 partHtml 이 없으면 죽는다', () => makeRegistry([{ ...bu
 throws(
   '컨테이너 아닌 wing 의 parts 는 죽는다',
   () => makeRegistry([{ ...bold, parts: { x: { holds: 'blocks' } } } as Wing]),
-  '컨테이너만',
+  '컨테이너에만',
 );
 throws(
   'custom part도 ex namespace를 지킨다',
@@ -267,7 +267,7 @@ throws('attr wing 에 attrKey 가 없으면 죽는다', () => makeRegistry([{ w:
 throws(
   'attrKey 가 화이트리스트(h·a·dc) 밖이면 죽는다',
   () => makeRegistry([{ w: 'exX', place: 'attr', attrKey: 'z' } as Wing]),
-  '화이트리스트',
+  '허용된 문단 속성',
 );
 throws(
   '커맨드 이름이 낱말 하나면 죽는다',

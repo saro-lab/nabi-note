@@ -41,7 +41,7 @@ Divider
 Document diff
 Document diff controls
 Drop cap
-Drop files here
+Please drop files here
 Exit fullscreen
 Extra large
 Extra small
@@ -100,7 +100,7 @@ Superscript
 Table
 Text color
 Text size
-The browser blocks storage on local files (file://), so there is no local history here.\nServe the page from a server.
+Local history is unavailable because the browser has restricted access to storage.\nIf you opened a local file (file://), please open the page through a web server.
 This clears the whole local history. It cannot be undone. Continue?
 This document has unsaved changes. Open anyway?
 This removes the entry. It cannot be undone. Continue?
@@ -111,10 +111,10 @@ Underline
 Upload
 View image
 Violet
-Write here…
+Please write here…
 Yellow
 YouTube width
-an upload is running — try again when it finishes
+An upload is in progress. Please try again after it finishes.
 created {when}
 just now
 up to {max} in one batch
@@ -165,7 +165,7 @@ Separatore
 Confronto documenti
 Controlli confronto documenti
 Capolettera
-Rilascia qui i file
+È possibile trascinare e rilasciare i file qui
 Esci da schermo intero
 Molto grande
 Molto piccolo
@@ -224,7 +224,7 @@ Apice
 Tabella
 Colore testo
 Dimensione testo
-Il browser blocca l'archiviazione nei file locali (file://), quindi qui non è disponibile la cronologia locale.\nApri la pagina da un server.
+La cronologia locale non è disponibile perché il browser ha limitato l’accesso all’archiviazione.\nSe la pagina è stata aperta come file locale (file://), è possibile aprirla tramite un server web.
 Questa operazione cancella tutta la cronologia locale e non può essere annullata. Continuare?
 Questo documento contiene modifiche non salvate. Aprirlo comunque?
 Questa operazione rimuove la voce e non può essere annullata. Continuare?
@@ -235,10 +235,10 @@ Sottolineato
 Carica
 Visualizza immagine
 Violetto
-Scrivi qui…
+È possibile scrivere qui…
 Giallo
 Larghezza YouTube
-È in corso un caricamento — riprova al termine
+È in corso un caricamento. Sarà possibile riprovare al termine.
 creato {when}
 proprio ora
 fino a {max} per gruppo
@@ -289,7 +289,7 @@ Ayırıcı
 Belge karşılaştırması
 Belge karşılaştırma denetimleri
 Baş harf
-Dosyaları buraya bırakın
+Lütfen dosyaları buraya bırakın
 Tam ekrandan çık
 Çok büyük
 Çok küçük
@@ -348,7 +348,7 @@ Alt simge
 Tablo
 Metin rengi
 Metin boyutu
-Tarayıcı yerel dosyalarda (file://) depolamayı engellediğinden burada yerel geçmiş kullanılamaz.\nSayfayı bir sunucudan açın.
+Tarayıcı depolama erişimini kısıtladığı için yerel geçmiş kullanılamıyor.\nYerel bir dosya (file://) açtıysanız lütfen sayfayı bir web sunucusu üzerinden açın.
 Bu işlem tüm yerel geçmişi temizler ve geri alınamaz. Devam edilsin mi?
 Bu belgede kaydedilmemiş değişiklikler var. Yine de açılsın mı?
 Bu işlem kaydı kaldırır ve geri alınamaz. Devam edilsin mi?
@@ -359,10 +359,10 @@ Altı çizili
 Yükle
 Görseli görüntüle
 Menekşe
-Buraya yazın…
+Lütfen buraya yazın…
 Sarı
 YouTube genişliği
-Bir yükleme sürüyor — bitince yeniden deneyin
+Bir yükleme devam ediyor. Lütfen tamamlandıktan sonra yeniden deneyin.
 {when} oluşturuldu
 az önce
 tek seferde en fazla {max}
@@ -413,7 +413,7 @@ Tên hiển thị
 So sánh tài liệu
 Điều khiển so sánh tài liệu
 Chữ cái đầu lớn
-Thả tệp vào đây
+Vui lòng thả tệp vào đây
 Thoát toàn màn hình
 Rất lớn
 Rất nhỏ
@@ -472,7 +472,7 @@ Chỉ số trên
 Bảng
 Màu chữ
 Cỡ chữ
-Trình duyệt chặn lưu trữ trên tệp cục bộ (file://), vì vậy không có lịch sử cục bộ ở đây.\nHãy mở trang từ máy chủ.
+Không thể sử dụng lịch sử cục bộ vì trình duyệt đã hạn chế quyền truy cập bộ nhớ.\nNếu bạn đã mở tệp cục bộ (file://), vui lòng mở trang thông qua máy chủ web.
 Thao tác này xóa toàn bộ lịch sử cục bộ và không thể hoàn tác. Tiếp tục?
 Tài liệu này có thay đổi chưa lưu. Vẫn mở?
 Thao tác này xóa mục và không thể hoàn tác. Tiếp tục?
@@ -483,10 +483,10 @@ Gạch chân
 Tải lên
 Xem hình ảnh
 Tím
-Viết tại đây…
+Vui lòng nhập nội dung tại đây…
 Vàng
 Chiều rộng YouTube
-Đang tải lên — hãy thử lại khi hoàn tất
+Đang tải lên. Vui lòng thử lại sau khi hoàn tất.
 đã tạo {when}
 vừa xong
 tối đa {max} mỗi đợt
@@ -537,7 +537,7 @@ const FA = rows(String.raw`
 مقایسه سند
 کنترل‌های مقایسه سند
 حرف آغازین بزرگ
-فایل‌ها را اینجا رها کنید
+لطفاً فایل‌ها را اینجا رها کنید
 خروج از تمام‌صفحه
 بسیار بزرگ
 بسیار کوچک
@@ -596,7 +596,7 @@ const FA = rows(String.raw`
 جدول
 رنگ متن
 اندازه متن
-مرورگر ذخیره‌سازی روی فایل‌های محلی (file://) را مسدود می‌کند، بنابراین اینجا تاریخچه محلی وجود ندارد.\nصفحه را از یک سرور باز کنید.
+به دلیل محدودیت دسترسی مرورگر به فضای ذخیره‌سازی، تاریخچه محلی در دسترس نیست.\nاگر یک فایل محلی (file://) باز کرده‌اید، لطفاً صفحه را از طریق یک وب‌سرور باز کنید.
 این کار تمام تاریخچه محلی را پاک می‌کند و قابل بازگشت نیست. ادامه می‌دهید؟
 این سند تغییرات ذخیره‌نشده دارد. با این حال باز شود؟
 این کار مورد را حذف می‌کند و قابل بازگشت نیست. ادامه می‌دهید؟
@@ -607,10 +607,10 @@ const FA = rows(String.raw`
 بارگذاری
 نمایش تصویر
 بنفش
-اینجا بنویسید…
+لطفاً اینجا بنویسید…
 زرد
 پهنای YouTube
-بارگذاری در حال انجام است — پس از پایان دوباره تلاش کنید
+بارگذاری در حال انجام است. لطفاً پس از پایان دوباره تلاش کنید.
 ایجادشده در {when}
 همین حالا
 حداکثر {max} در هر نوبت
@@ -661,7 +661,7 @@ const MR = rows(String.raw`
 दस्तऐवज तुलना
 दस्तऐवज तुलना नियंत्रणे
 मोठे आद्याक्षर
-फायली येथे सोडा
+कृपया फायली येथे सोडा
 पूर्ण स्क्रीनमधून बाहेर पडा
 अतिशय मोठे
 अतिशय लहान
@@ -720,7 +720,7 @@ const MR = rows(String.raw`
 तक्ता
 मजकूर रंग
 मजकूर आकार
-ब्राउझर स्थानिक फाइलवरील (file://) संचय रोखतो, त्यामुळे येथे स्थानिक इतिहास उपलब्ध नाही.\nपृष्ठ सर्व्हरवरून उघडा.
+ब्राउझरने संचयाचा प्रवेश मर्यादित केल्यामुळे स्थानिक इतिहास उपलब्ध नाही.\nआपण स्थानिक फाइल (file://) उघडली असल्यास, कृपया पृष्ठ वेब सर्व्हरद्वारे उघडा.
 यामुळे संपूर्ण स्थानिक इतिहास साफ होईल आणि ते पूर्ववत करता येणार नाही. पुढे जायचे?
 या दस्तऐवजात जतन न केलेले बदल आहेत. तरीही उघडायचे?
 यामुळे नोंद काढली जाईल आणि ते पूर्ववत करता येणार नाही. पुढे जायचे?
@@ -731,10 +731,10 @@ const MR = rows(String.raw`
 अपलोड करा
 प्रतिमा पहा
 जांभळट
-येथे लिहा…
+कृपया येथे लिहा…
 पिवळा
 YouTube रुंदी
-अपलोड सुरू आहे — पूर्ण झाल्यावर पुन्हा प्रयत्न करा
+अपलोड सुरू आहे. कृपया पूर्ण झाल्यावर पुन्हा प्रयत्न करा.
 {when} रोजी तयार केले
 आत्ताच
 एका तुकडीत कमाल {max}
@@ -756,7 +756,7 @@ const TE = rows(String.raw`
 కుడికి సమలేఖనం
 సమలేఖనం
 అంబర్
-వర్తింపజేయి
+వర్తింపజేయండి
 జోడింపు
 నీలం
 బోల్డ్
@@ -765,19 +765,19 @@ const TE = rows(String.raw`
 మార్పులు మాత్రమే
 తనిఖీ జాబితా
 ఫైళ్లను ఎంచుకోండి
-అన్నీ తొలగించు
-ఆకృతీకరణను తొలగించు
-మూసివేయి
+అన్నీ తొలగించండి
+ఆకృతీకరణను తొలగించండి
+మూసివేయండి
 కోడ్
-నిర్ధారించు
+నిర్ధారించండి
 సందర్భ పట్టీ
 పగడపు రంగు
 ప్రస్తుత సెషన్
 చేతిరాత
 సయాన్
 డిఫాల్ట్
-నిలువు వరుసను తొలగించు
-అడ్డు వరుసను తొలగించు
+నిలువు వరుసను తొలగించండి
+అడ్డు వరుసను తొలగించండి
 వివరాలు
 పోలిక
 ప్రదర్శన పేరు
@@ -785,16 +785,16 @@ const TE = rows(String.raw`
 పత్రం పోలిక
 పత్రం పోలిక నియంత్రణలు
 పెద్ద మొదటి అక్షరం
-ఫైళ్లను ఇక్కడ వదలండి
-పూర్తి తెర నుండి నిష్క్రమించు
+దయచేసి ఫైళ్లను ఇక్కడ వదలండి
+పూర్తి తెర నుండి నిష్క్రమించండి
 చాలా పెద్దది
 చాలా చిన్నది
 ఫైల్ పేరు
 ఆకృతి లోపం — డేటాను చదవలేకపోయాం
 పూర్తి తెర
 ఆకుపచ్చ
-ఈ నిలువు వరుసను శీర్షికగా చేయి
-ఈ అడ్డు వరుసను శీర్షికగా చేయి
+ఈ నిలువు వరుసను శీర్షికగా చేయండి
+ఈ అడ్డు వరుసను శీర్షికగా చేయండి
 శీర్షిక
 శీర్షిక 1
 శీర్షిక 2
@@ -805,16 +805,16 @@ const TE = rows(String.raw`
 హైలైట్
 చిత్రం
 చిత్ర వెడల్పు
-ఎడమవైపు నిలువు వరుసను చేర్చు
-కుడివైపు నిలువు వరుసను చేర్చు
-పైన అడ్డు వరుసను చేర్చు
-కింద అడ్డు వరుసను చేర్చు
+ఎడమవైపు నిలువు వరుసను చేర్చండి
+కుడివైపు నిలువు వరుసను చేర్చండి
+పైన అడ్డు వరుసను చేర్చండి
+కింద అడ్డు వరుసను చేర్చండి
 ఇటాలిక్
 భాష
 పెద్దది
 లింక్
 స్థానిక చరిత్ర
-గడులను విలీనం చేయి
+గడులను విలీనం చేయండి
 ఏకవెడల్పు
 తదుపరి మార్పు
 ఇంకా చరిత్ర లేదు
@@ -822,19 +822,19 @@ const TE = rows(String.raw`
 పాఠ్యం ఎంచుకోలేదు.
 సంఖ్యా జాబితా
 సరే
-తెరువు
+తెరవండి
 నారింజ
-అతికించు
+అతికించండి
 పత్రం మారినందున అతికించడం రద్దయింది.
 గులాబీ
 మునుజూపు
 మునుపటి మార్పు
 ఊదా
 ఉల్లేఖనం
-ఈ నమోదును తొలగించు
+ఈ నమోదును తొలగించండి
 సెరిఫ్ లేని
-భద్రపరచు
-{ext}గా భద్రపరచు
+భద్రపరచండి
+{ext}గా భద్రపరచండి
 సెరిఫ్
 సత్వరమార్గ సూచనలు
 చిన్నది
@@ -844,21 +844,21 @@ const TE = rows(String.raw`
 పట్టిక
 పాఠ్య రంగు
 పాఠ్య పరిమాణం
-స్థానిక ఫైళ్లలో (file://) నిల్వను బ్రౌజర్ నిరోధిస్తుంది, కాబట్టి ఇక్కడ స్థానిక చరిత్ర లేదు.\nపేజీని సర్వర్ నుండి తెరవండి.
+బ్రౌజర్ నిల్వకు ప్రాప్యతను పరిమితం చేసినందున స్థానిక చరిత్ర అందుబాటులో లేదు.\nమీరు స్థానిక ఫైల్‌ను (file://) తెరిచి ఉంటే, దయచేసి వెబ్ సర్వర్ ద్వారా పేజీని తెరవండి.
 ఇది మొత్తం స్థానిక చరిత్రను తొలగిస్తుంది; తిరిగి పొందలేరు. కొనసాగించాలా?
 ఈ పత్రంలో భద్రపరచని మార్పులు ఉన్నాయి. అయినా తెరవాలా?
 ఇది నమోదును తొలగిస్తుంది; తిరిగి పొందలేరు. కొనసాగించాలా?
-క్రమబద్ధీకరణను మార్చు
+క్రమబద్ధీకరణను మార్చండి
 సాధన పట్టీ
 అక్షర రూపం
 అండర్‌లైన్
 అప్‌లోడ్
-చిత్రాన్ని చూడు
+చిత్రాన్ని చూడండి
 వయలెట్
-ఇక్కడ వ్రాయండి…
+దయచేసి ఇక్కడ వ్రాయండి…
 పసుపు
 YouTube వెడల్పు
-అప్‌లోడ్ జరుగుతోంది — పూర్తయ్యాక మళ్లీ ప్రయత్నించండి
+అప్‌లోడ్ జరుగుతోంది. దయచేసి పూర్తయిన తర్వాత మళ్లీ ప్రయత్నించండి.
 {when}న సృష్టించబడింది
 ఇప్పుడే
 ఒక విడతలో గరిష్ఠంగా {max}
@@ -909,7 +909,7 @@ Mai raba
 Kwatanta daftari
 Abubuwan sarrafa kwatancin daftari
 Babban harafin farko
-Ajiye fayiloli nan
+Da fatan za a ajiye fayiloli a nan
 Fita daga cikakken allo
 Mafi girma
 Mafi ƙanƙanta
@@ -968,7 +968,7 @@ Rubutun sama
 Tebur
 Launin rubutu
 Girman rubutu
-Mai lilo yana hana ajiya a fayilolin gida (file://), don haka babu tarihin gida a nan.\nBuɗe shafin daga uwar garke.
+Tarihin gida ba ya samuwa saboda mai lilo ya taƙaita damar shiga ma’ajiya.\nIdan an buɗe fayil na gida (file://), da fatan za a buɗe shafin ta uwar garken yanar gizo.
 Wannan zai goge duk tarihin gida kuma ba za a iya mayar da shi ba. A ci gaba?
 Wannan daftarin yana da canje-canjen da ba a ajiye ba. A buɗe duk da haka?
 Wannan zai cire shigarwar kuma ba za a iya mayar da ita ba. A ci gaba?
@@ -979,10 +979,10 @@ Ja layi a ƙasa
 Loda
 Duba hoto
 Launin violet
-Rubuta a nan…
+Da fatan za a rubuta a nan…
 Rawaya
 Faɗin YouTube
-Ana lodi — sake gwadawa idan an gama
+Ana lodi. Da fatan za a sake gwadawa bayan an gama.
 an ƙirƙira {when}
 yanzu-yanzu
 har zuwa {max} a rukuni ɗaya
@@ -1033,7 +1033,7 @@ Kitenganishi
 Tofauti ya hati
 Vidhibiti vya tofauti ya hati
 Herufi kubwa ya mwanzo
-Dondosha faili hapa
+Tafadhali dondosha faili hapa
 Ondoka kwenye skrini nzima
 Kubwa sana
 Ndogo sana
@@ -1092,7 +1092,7 @@ Hati juu
 Jedwali
 Rangi ya maandishi
 Ukubwa wa maandishi
-Kivinjari kinazuia hifadhi kwenye faili za ndani (file://), kwa hiyo hakuna historia ya ndani hapa.\nFungua ukurasa kutoka kwenye seva.
+Historia ya ndani haipatikani kwa sababu kivinjari kimezuia ufikiaji wa hifadhi.\nIkiwa umefungua faili ya ndani (file://), tafadhali fungua ukurasa kupitia seva ya wavuti.
 Hii itafuta historia yote ya ndani na haiwezi kutenduliwa. Endelea?
 Hati hii ina mabadiliko ambayo hayajahifadhiwa. Uifungue hata hivyo?
 Hii itaondoa ingizo na haiwezi kutenduliwa. Endelea?
@@ -1103,10 +1103,10 @@ Pigia mstari
 Pakia
 Tazama picha
 Urujuani
-Andika hapa…
+Tafadhali andika hapa…
 Njano
 Upana wa YouTube
-Upakiaji unaendelea — jaribu tena ukikamilika
+Upakiaji unaendelea. Tafadhali jaribu tena baada ya kukamilika.
 imeundwa {when}
 sasa hivi
 hadi {max} kwa kundi moja
@@ -1157,7 +1157,7 @@ const TA = rows(String.raw`
 ஆவண ஒப்பீடு
 ஆவண ஒப்பீட்டுக் கட்டுப்பாடுகள்
 முதலெழுத்தை பெரிதாக்கு
-கோப்புகளை இங்கே விடவும்
+கோப்புகளை இங்கே விடுங்கள்
 முழுத்திரையிலிருந்து வெளியேறு
 மிகப் பெரியது
 மிகச் சிறியது
@@ -1216,7 +1216,7 @@ const TA = rows(String.raw`
 அட்டவணை
 உரை நிறம்
 உரை அளவு
-உள்ளூர் கோப்புகளில் (file://) சேமிப்பை உலாவி தடுக்கிறது; எனவே இங்கு உள்ளூர் வரலாறு இல்லை.\nபக்கத்தை ஒரு சேவையகத்திலிருந்து திறக்கவும்.
+உலாவி சேமிப்பக அணுகலைக் கட்டுப்படுத்தியுள்ளதால் உள்ளூர் வரலாற்றைப் பயன்படுத்த முடியவில்லை.\nஉள்ளூர் கோப்பை (file://) திறந்திருந்தால், வலைச் சேவையகம் வழியாகப் பக்கத்தைத் திறக்கவும்.
 இது முழு உள்ளூர் வரலாற்றையும் அழிக்கும்; இதை மீட்டெடுக்க முடியாது. தொடரவா?
 இந்த ஆவணத்தில் சேமிக்காத மாற்றங்கள் உள்ளன. இருந்தும் திறக்கவா?
 இது பதிவை நீக்கும்; இதை மீட்டெடுக்க முடியாது. தொடரவா?
@@ -1227,10 +1227,10 @@ const TA = rows(String.raw`
 பதிவேற்று
 படத்தைப் பார்
 வயலெட்
-இங்கே எழுதவும்…
+இங்கே எழுதுங்கள்…
 மஞ்சள்
 YouTube அகலம்
-பதிவேற்றம் நடைபெறுகிறது — முடிந்ததும் மீண்டும் முயலவும்
+பதிவேற்றம் நடைபெறுகிறது. முடிந்த பிறகு மீண்டும் முயற்சிக்கவும்.
 {when} அன்று உருவாக்கப்பட்டது
 இப்போதுதான்
 ஒரு தொகுதியில் அதிகபட்சம் {max}
@@ -1281,7 +1281,7 @@ const TH = rows(String.raw`
 เปรียบเทียบเอกสาร
 ตัวควบคุมการเปรียบเทียบเอกสาร
 อักษรนำขนาดใหญ่
-วางไฟล์ที่นี่
+กรุณาวางไฟล์ที่นี่
 ออกจากโหมดเต็มหน้าจอ
 ใหญ่มาก
 เล็กมาก
@@ -1340,7 +1340,7 @@ const TH = rows(String.raw`
 ตาราง
 สีข้อความ
 ขนาดข้อความ
-เบราว์เซอร์ปิดกั้นการจัดเก็บบนไฟล์ในเครื่อง (file://) จึงไม่มีประวัติในเครื่องที่นี่\nเปิดหน้าจากเซิร์ฟเวอร์
+ไม่สามารถใช้ประวัติในเครื่องได้ เนื่องจากเบราว์เซอร์จำกัดการเข้าถึงพื้นที่จัดเก็บ\nหากเปิดไฟล์ในเครื่อง (file://) กรุณาเปิดหน้าผ่านเว็บเซิร์ฟเวอร์
 การดำเนินการนี้จะล้างประวัติในเครื่องทั้งหมดและย้อนกลับไม่ได้ ดำเนินการต่อหรือไม่
 เอกสารนี้มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการเปิดต่อหรือไม่
 การดำเนินการนี้จะลบรายการและย้อนกลับไม่ได้ ดำเนินการต่อหรือไม่
@@ -1351,10 +1351,10 @@ const TH = rows(String.raw`
 อัปโหลด
 ดูรูปภาพ
 สีไวโอเล็ต
-เขียนที่นี่…
+กรุณาเขียนที่นี่…
 สีเหลือง
 ความกว้าง YouTube
-กำลังอัปโหลด — ลองอีกครั้งเมื่อเสร็จสิ้น
+กำลังอัปโหลด กรุณาลองอีกครั้งหลังจากอัปโหลดเสร็จสิ้น
 สร้างเมื่อ {when}
 เมื่อสักครู่
 สูงสุด {max} ต่อหนึ่งชุด

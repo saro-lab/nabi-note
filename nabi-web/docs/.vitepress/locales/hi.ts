@@ -48,7 +48,7 @@ export const hi = {
 
   search: 'खोजें',
   search_no_results: 'कोई परिणाम नहीं',
-  search_hint: 'खोज शब्द दर्ज करें',
+  search_hint: 'कृपया खोज शब्द दर्ज करें',
   search_move: 'चलें',
   search_open: 'खोलें',
   search_close: 'बंद करें',

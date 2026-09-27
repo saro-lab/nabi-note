@@ -85,7 +85,7 @@ ok('ownerOf — 항목은 제 리스트 wing 의 것', registry.ownerOf('tli')?.
 ok('ownerOf — 접기 제목은 접기 wing 의 것', registry.ownerOf('summary') === detailsWing);
 eq('정렬 wing 의 이름은 align, 키는 a (링크 wing 이 이름 a 를 쓴다)', [alignWing.w, alignWing.attrKey], ['align', 'a']);
 throws('예약어를 얹으면 묶음째 죽는다', () => makeRegistry([...defaultWings, simpleMark({ w: 'p' })]), '예약어');
-throws('같은 이름을 두 번 얹으면 죽는다', () => makeRegistry([...defaultWings, simpleMark({ w: 'b' })]), '두 번');
+throws('같은 이름을 두 번 얹으면 죽는다', () => makeRegistry([...defaultWings, simpleMark({ w: 'b' })]), '중복');
 throws(
   '이름 규칙 어긴 커맨드는 죽는다',
   () => makeRegistry([...defaultWings, { ...simpleMark({ w: 'exZ' }), commands: { paint: () => null } } as Wing]),

@@ -76,7 +76,8 @@ views, history/save/preview panels, diff mounts and viewer attachments that
 should follow the switch. A string locale stays fixed. For dictionary overrides,
 use `makeTranslator(locale, extraDictionary)` and pass it as `translator` to UI
 mounts. Make one controller per independently localized editor, or deliberately
-share one between editors.
+share one between editors. Built-in notices and input prompts use polite wording
+in every supported locale; preserve that tone in custom dictionary overrides.
 
 Do not unmount, recreate the editor, call `setHtml`/`setJson`, or redraw the
 surface for a locale change. Content, undo/redo, selection, dirty state, session,

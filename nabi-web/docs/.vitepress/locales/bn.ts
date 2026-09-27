@@ -48,7 +48,7 @@ export const bn = {
 
   search: 'খুঁজুন',
   search_no_results: 'কোনো ফল নেই',
-  search_hint: 'অনুসন্ধানের শব্দ লিখুন',
+  search_hint: 'অনুগ্রহ করে অনুসন্ধানের শব্দ লিখুন',
   search_move: 'সরান',
   search_open: 'খুলুন',
   search_close: 'বন্ধ করুন',

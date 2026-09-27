@@ -46,7 +46,7 @@ export const fa = {
   "menu_etc_upload": "بارگذاری پرونده",
   "search": "جست‌وجو",
   "search_no_results": "نتیجه‌ای نیست",
-  "search_hint": "عبارت جست‌وجو را وارد کنید",
+  "search_hint": "لطفاً عبارت جست‌وجو را وارد کنید",
   "search_move": "جابجایی",
   "search_open": "باز کردن",
   "search_close": "بستن",

@@ -51,7 +51,7 @@ export const ar = {
 
   search: 'بحث',
   search_no_results: 'لا نتائج',
-  search_hint: 'أدخل كلمة للبحث',
+  search_hint: 'يرجى إدخال كلمة للبحث',
   search_move: 'تنقل',
   search_open: 'فتح',
   search_close: 'إغلاق',

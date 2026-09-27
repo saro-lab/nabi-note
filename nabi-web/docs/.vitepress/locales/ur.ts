@@ -51,7 +51,7 @@ const urBase = {
 
   search: 'تلاش',
   search_no_results: 'کوئی نتیجہ نہیں',
-  search_hint: 'تلاش کے لیے لفظ درج کریں',
+  search_hint: 'براہ کرم تلاش کے لیے لفظ درج کریں',
   search_move: 'حرکت',
   search_open: 'کھولیں',
   search_close: 'بند کریں',

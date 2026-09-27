@@ -158,83 +158,86 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
 
   for (const filter of extra?.ioFilters ?? []) {
     $assertIoFilter(filter);
-    if (RESERVED_FILTER_IDS.has(filter.id)) fail(`IO 필터 id "${filter.id}" 는 내장 형식이 예약했다`);
-    if (filterIds.has(filter.id)) fail(`IO 필터 id "${filter.id}" 를 호스트가 두 번 든다`);
+    if (RESERVED_FILTER_IDS.has(filter.id)) fail(`IO 필터 id "${filter.id}" 는 내장 형식에서 예약한 값입니다`);
+    if (filterIds.has(filter.id)) fail(`IO 필터 id "${filter.id}" 를 호스트에서 중복으로 지정했습니다`);
     filterIds.set(filter.id, '호스트');
   }
 
   for (const wing of wings) {
-    if (!wing.w) fail('wing 에 w(이름)가 없다');
+    if (!wing.w) fail('wing에 w(이름)가 없습니다');
     const custom = !OFFICIAL_WINGS.has(wing.w);
     const builtinTypes = new Set($builtinAttrTypes(wing) ?? []);
-    if (RESERVED.has(wing.w)) fail(`"${wing.w}" 는 코어 예약어라 wing 이 쓸 수 없다`);
-    if (custom && !EXTENSION_NAME.test(wing.w)) fail(`custom wing 이름 "${wing.w}" 는 ex 뒤에 영숫자만 써야 한다`);
+    if (RESERVED.has(wing.w)) fail(`"${wing.w}" 는 코어 예약어이므로 wing에서 사용할 수 없습니다`);
+    if (custom && !EXTENSION_NAME.test(wing.w))
+      fail(`custom wing 이름 "${wing.w}" 는 ex 뒤에 영문자와 숫자만 사용할 수 있습니다`);
     if (!['mark', 'void', 'container', 'attr', 'tool'].includes(wing.place))
-      fail(`"${wing.w}" 의 place가 올바르지 않다`);
-    if (byW.has(wing.w) || byType.has(wing.w)) fail(`"${wing.w}" 가 두 번 등록됐다`);
+      fail(`"${wing.w}" 의 place가 올바르지 않습니다`);
+    if (byW.has(wing.w) || byType.has(wing.w)) fail(`"${wing.w}" 가 중복으로 등록되었습니다`);
     if (OFFICIAL_WINGS.has(wing.w) && !$isBuiltinWing(wing)) {
-      fail(`"${wing.w}" 는 package 공식 wing 인스턴스만 그 이름을 쓸 수 있다`);
+      fail(`"${wing.w}" 는 package 공식 wing 인스턴스만 해당 이름을 사용할 수 있습니다`);
     }
     const stringList = (label: string, value: unknown): readonly string[] => {
       if (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || item === '')) {
-        fail(`"${wing.w}" 의 ${label} 는 빈 값 없는 문자열 배열이어야 한다`);
+        fail(`"${wing.w}" 의 ${label} 는 빈 값이 없는 문자열 배열이어야 합니다`);
       }
-      if (new Set(value).size !== value.length) fail(`"${wing.w}" 의 ${label} 에 중복 이름이 있다`);
+      if (new Set(value).size !== value.length) fail(`"${wing.w}" 의 ${label} 에 중복된 이름이 있습니다`);
       return value;
     };
     if (wing.attrs !== undefined) stringList('attrs', wing.attrs);
     if (wing.boolAttrs !== undefined) stringList('boolAttrs', wing.boolAttrs);
     if (wing.clearable !== undefined && typeof wing.clearable !== 'boolean')
-      fail(`"${wing.w}" 의 clearable 은 true/false 여야 한다`);
+      fail(`"${wing.w}" 의 clearable 은 true/false여야 합니다`);
     if (wing.clearable !== undefined && wing.place !== 'mark' && wing.place !== 'attr') {
-      fail(`"${wing.w}" 의 clearable 은 mark 또는 attr 에만 쓸 수 있다`);
+      fail(`"${wing.w}" 의 clearable 은 mark 또는 attr 에만 사용할 수 있습니다`);
     }
     if ((wing.attrs !== undefined || wing.boolAttrs !== undefined) && !erectsNode(wing.place)) {
-      fail(`"${wing.w}" 의 attrs/boolAttrs 는 node를 세우는 wing에만 쓸 수 있다`);
+      fail(`"${wing.w}" 의 attrs/boolAttrs 는 node를 세우는 wing에만 사용할 수 있습니다`);
     }
     if (wing.place === 'container') {
-      if (wing.holds !== 'blocks' && wing.holds !== 'inline') fail(`"${wing.w}" 컨테이너의 holds가 올바르지 않다`);
+      if (wing.holds !== 'blocks' && wing.holds !== 'inline') fail(`"${wing.w}" 컨테이너의 holds가 올바르지 않습니다`);
     } else {
-      if (wing.holds !== undefined) fail(`"${wing.w}" 의 holds 는 container만 가진다`);
-      if (wing.singleParagraph !== undefined) fail(`"${wing.w}" 의 singleParagraph 는 container만 가진다`);
+      if (wing.holds !== undefined) fail(`"${wing.w}" 의 holds 는 container에만 지정할 수 있습니다`);
+      if (wing.singleParagraph !== undefined)
+        fail(`"${wing.w}" 의 singleParagraph 는 container에만 지정할 수 있습니다`);
     }
     if (wing.singleParagraph !== undefined && typeof wing.singleParagraph !== 'boolean') {
-      fail(`"${wing.w}" 의 singleParagraph 는 true/false 여야 한다`);
+      fail(`"${wing.w}" 의 singleParagraph 는 true/false여야 합니다`);
     }
     if (wing.singleParagraph === true && wing.holds !== 'blocks') {
-      fail(`"${wing.w}" 의 singleParagraph 는 blocks holder에만 쓸 수 있다`);
+      fail(`"${wing.w}" 의 singleParagraph 는 blocks holder에만 사용할 수 있습니다`);
     }
-    if (wing.allows !== undefined && wing.place !== 'container') fail(`"${wing.w}" 의 allows 는 container만 가진다`);
+    if (wing.allows !== undefined && wing.place !== 'container')
+      fail(`"${wing.w}" 의 allows 는 container에만 지정할 수 있습니다`);
     if (wing.allows !== undefined) stringList('allows', wing.allows);
     byW.set(wing.w, wing);
 
     if (erectsNode(wing.place)) {
-      if (!wing.toHtml) fail(`"${wing.w}" 는 노드를 세우는 wing 인데 toHtml 이 없다`);
+      if (!wing.toHtml) fail(`"${wing.w}" 는 노드를 생성하는 wing이지만 toHtml이 없습니다`);
       byType.set(wing.w, wing);
     }
-    if (wing.place === 'container' && !wing.holds) fail(`"${wing.w}" 컨테이너에 holds 선언이 없다`);
-    if (wing.place !== 'container' && wing.parts) fail(`"${wing.w}" — parts 는 컨테이너만 가진다`);
+    if (wing.place === 'container' && !wing.holds) fail(`"${wing.w}" 컨테이너에 holds 선언이 없습니다`);
+    if (wing.place !== 'container' && wing.parts) fail(`"${wing.w}" — parts 는 컨테이너에만 지정할 수 있습니다`);
     // 정렬은 래퍼문단의 것이라, 마다하겠다는 말도 래퍼문단을 입는 물건만 할 수 있다.
     // Alignment belongs to the wrapper paragraph, so only objects that get one (void, container) can opt out via noAlign.
     if (wing.noAlign && wing.place !== 'void' && wing.place !== 'container') {
-      fail(`"${wing.w}" — noAlign 은 물건(void·container)만 든다`);
+      fail(`"${wing.w}" — noAlign 은 void 또는 container에만 지정할 수 있습니다`);
     }
 
     for (const part of Object.keys(wing.parts ?? {})) {
       const decl = wing.parts?.[part] as StructureDecl;
-      if (RESERVED.has(part)) fail(`"${wing.w}" 의 부품 "${part}" 가 코어 예약어다`);
-      if (byW.has(part) || byType.has(part)) fail(`부품 "${part}" 가 이미 다른 이름과 부딪힌다`);
+      if (RESERVED.has(part)) fail(`"${wing.w}" 의 부품 "${part}" 가 코어 예약어입니다`);
+      if (byW.has(part) || byType.has(part)) fail(`부품 "${part}" 가 이미 등록된 다른 이름과 부딪힙니다`);
       if (!builtinTypes.has(part) && !EXTENSION_NAME.test(part)) {
-        fail(`"${wing.w}" 의 custom 부품 "${part}" 는 ex namespace여야 한다`);
+        fail(`"${wing.w}" 의 custom 부품 "${part}" 는 ex namespace여야 합니다`);
       }
-      if (!wing.partHtml?.[part]) fail(`"${wing.w}" 의 부품 "${part}" 에 partHtml 조립이 없다`);
+      if (!wing.partHtml?.[part]) fail(`"${wing.w}" 의 부품 "${part}" 에 partHtml 구현이 없습니다`);
       if (decl.holds !== 'blocks' && decl.holds !== 'inline')
-        fail(`"${wing.w}" 의 부품 "${part}" holds가 올바르지 않다`);
+        fail(`"${wing.w}" 의 부품 "${part}" holds가 올바르지 않습니다`);
       if (decl.singleParagraph !== undefined && typeof decl.singleParagraph !== 'boolean') {
-        fail(`"${wing.w}" 의 부품 "${part}" singleParagraph는 true/false 여야 한다`);
+        fail(`"${wing.w}" 의 부품 "${part}" singleParagraph는 true/false여야 합니다`);
       }
       if (decl.singleParagraph === true && decl.holds !== 'blocks') {
-        fail(`"${wing.w}" 의 부품 "${part}" singleParagraph는 blocks holder에만 쓸 수 있다`);
+        fail(`"${wing.w}" 의 부품 "${part}" singleParagraph는 blocks holder에만 사용할 수 있습니다`);
       }
       if (decl.attrs !== undefined) stringList(`부품 "${part}" attrs`, decl.attrs);
       if (decl.boolAttrs !== undefined) stringList(`부품 "${part}" boolAttrs`, decl.boolAttrs);
@@ -249,67 +252,70 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     ]) {
       if (!builtinTypes.has(type)) {
         for (const attr of attrs)
-          if (!EXTENSION_NAME.test(attr)) fail(`custom 타입 "${type}" 의 attr "${attr}" 는 ex namespace여야 한다`);
+          if (!EXTENSION_NAME.test(attr)) fail(`custom 타입 "${type}" 의 attr "${attr}" 는 ex namespace여야 합니다`);
         for (const attr of boolAttrs)
-          if (!attrs.includes(attr)) fail(`custom 타입 "${type}" 의 bool attr "${attr}" 를 attrs에도 선언해야 한다`);
+          if (!attrs.includes(attr)) fail(`custom 타입 "${type}" 의 bool attr "${attr}" 를 attrs에도 선언해야 합니다`);
       }
     }
 
     for (const key of Object.keys(wing.partHtml ?? {}))
-      if (!wing.parts?.[key]) fail(`"${wing.w}" 의 partHtml "${key}" 선언이 parts에 없다`);
+      if (!wing.parts?.[key]) fail(`"${wing.w}" 의 partHtml "${key}" 선언이 parts에 없습니다`);
     for (const key of Object.keys(wing.partMd ?? {}))
-      if (!wing.parts?.[key]) fail(`"${wing.w}" 의 partMd "${key}" 선언이 parts에 없다`);
+      if (!wing.parts?.[key]) fail(`"${wing.w}" 의 partMd "${key}" 선언이 parts에 없습니다`);
     for (const key of Object.keys(wing.partRepair ?? {}))
-      if (!wing.parts?.[key]) fail(`"${wing.w}" 의 partRepair "${key}" 선언이 parts에 없다`);
+      if (!wing.parts?.[key]) fail(`"${wing.w}" 의 partRepair "${key}" 선언이 parts에 없습니다`);
 
     if (wing.place === 'attr') {
-      if (!wing.attrKey) fail(`"${wing.w}" 는 문단 속성 wing 인데 attrKey 가 없다`);
+      if (!wing.attrKey) fail(`"${wing.w}" 는 문단 속성 wing이지만 attrKey가 없습니다`);
       // cocoon의 문단 화이트리스트(h·a·dc)가 곧 이 계약의 한계다 — 밖의 키는 어차피 걷힌다.
       // cocoon's paragraph attribute whitelist (h, a, dc) is this contract's actual limit; a key outside it gets stripped anyway.
       if (!['h', 'a', 'dc'].includes(wing.attrKey)) {
-        fail(`"${wing.w}" 의 attrKey "${wing.attrKey}" 는 문단 속성 화이트리스트(h·a·dc) 밖이다`);
+        fail(`"${wing.w}" 의 attrKey "${wing.attrKey}" 는 허용된 문단 속성(h·a·dc)에 포함되지 않습니다`);
       }
     }
 
     for (const name of Object.keys(wing.commands ?? {})) {
-      if (!COMMAND_NAME.test(name)) fail(`"${wing.w}" 의 커맨드 "${name}" 가 이름 규칙(동사+목적어 카멜)을 어긴다`);
-      if (CORE_COMMAND_NAMES.has(name)) fail(`"${wing.w}" 의 커맨드 "${name}" 가 core command와 부딪힌다`);
+      if (!COMMAND_NAME.test(name))
+        fail(`"${wing.w}" 의 커맨드 "${name}" 가 이름 규칙(동사+목적어 카멜)을 따르지 않습니다`);
+      if (CORE_COMMAND_NAMES.has(name)) fail(`"${wing.w}" 의 커맨드 "${name}" 가 core command와 부딪힙니다`);
     }
 
     for (const button of [wing.button, ...(wing.buttons ?? [])]) {
       const shortcut = button?.shortcut;
       if (shortcut !== undefined) {
         if (!SHORTCUT.test(shortcut))
-          fail(`"${wing.w}" 의 단축키 "${shortcut}" 는 라틴 대문자·숫자 한 글자 또는 ↑·↓여야 한다`);
+          fail(`"${wing.w}" 의 단축키 "${shortcut}" 는 라틴 대문자·숫자 한 글자 또는 ↑·↓여야 합니다`);
         const taken = shortcuts.get(shortcut);
-        if (taken) fail(`단축키 "${shortcut}" 를 "${taken}" 와 "${wing.w}" 가 같이 주장한다`);
+        if (taken) fail(`단축키 "${shortcut}" 를 "${taken}" 와 "${wing.w}" 가 중복으로 지정했습니다`);
         shortcuts.set(shortcut, wing.w);
       }
       const accelerator = button?.accelerator;
       if (accelerator !== undefined) {
-        if (!ACCELERATOR.test(accelerator)) fail(`"${wing.w}" 의 가속키 "${accelerator}" 는 mod+<소문자> 여야 한다`);
+        if (!ACCELERATOR.test(accelerator))
+          fail(`"${wing.w}" 의 가속키 "${accelerator}" 는 mod+<소문자> 형식이어야 합니다`);
         const taken = accelerators.get(accelerator);
-        if (taken) fail(`가속키 "${accelerator}" 를 "${taken}" 와 "${wing.w}" 가 같이 주장한다`);
+        if (taken) fail(`가속키 "${accelerator}" 를 "${taken}" 와 "${wing.w}" 가 중복으로 지정했습니다`);
         accelerators.set(accelerator, wing.w);
       }
     }
 
     if (wing.ioFilter) {
       $assertIoFilter(wing.ioFilter);
-      if (RESERVED_FILTER_IDS.has(wing.ioFilter.id)) fail(`IO 필터 id "${wing.ioFilter.id}" 는 내장 형식이 예약했다`);
+      if (RESERVED_FILTER_IDS.has(wing.ioFilter.id))
+        fail(`IO 필터 id "${wing.ioFilter.id}" 는 내장 형식에서 예약한 값입니다`);
       const taken = filterIds.get(wing.ioFilter.id);
-      if (taken) fail(`IO 필터 id "${wing.ioFilter.id}" 를 ${taken} 와 "${wing.w}" 가 같이 주장한다`);
+      if (taken) fail(`IO 필터 id "${wing.ioFilter.id}" 를 ${taken} 와 "${wing.w}" 가 중복으로 지정했습니다`);
       filterIds.set(wing.ioFilter.id, `"${wing.w}"`);
     }
   }
 
   for (const wing of wings) {
     if (wing.requiresAnyOf && !wing.requiresAnyOf.some((w) => byW.has(w))) {
-      fail(`"${wing.w}" 는 [${wing.requiresAnyOf.join(', ')}] 중 하나가 함께 등록돼야 한다`);
+      fail(`"${wing.w}" 는 [${wing.requiresAnyOf.join(', ')}] 중 하나가 함께 등록되어야 합니다`);
     }
     for (const child of wing.allows ?? []) {
       if (!RESERVED.has(child) && !byType.has(child)) {
-        fail(`"${wing.w}" 의 allows 에 모르는 타입 "${child}" 가 있다`);
+        fail(`"${wing.w}" 의 allows 에 모르는 타입 "${child}" 가 있습니다`);
       }
     }
   }
@@ -398,7 +404,7 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     if (wing.ioFilter) ioFilters.push(wing.ioFilter);
 
     for (const [name, command] of Object.entries(wing.commands ?? {})) {
-      if (commands[name]) fail(`커맨드 "${name}" 를 wing 둘이 같이 주장한다`);
+      if (commands[name]) fail(`커맨드 "${name}" 를 wing 둘이 중복으로 지정했습니다`);
       commands[name] = command;
     }
     for (const rule of wing.inputRules ?? []) rules.push({ ...rule, w: wing.w });
@@ -411,7 +417,7 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     // 연타 키는 하나에 하나다 — 커맨드처럼 둘이 같이 주장하면 등록이 죽는다(고를 근거가 없다).
     // A double-tap key maps to exactly one command; two wings claiming it fails registration, same as commands (there's no basis to pick one).
     for (const [key, name] of Object.entries(wing.doubleKeys ?? {})) {
-      if (doubles.has(key)) fail(`연타 키 "${key}" 를 wing 둘이 같이 주장한다`);
+      if (doubles.has(key)) fail(`연타 키 "${key}" 를 wing 둘이 중복으로 지정했습니다`);
       doubles.set(key, name);
     }
   }
@@ -419,7 +425,8 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
   // 연타가 가리키는 커맨드는 실재해야 한다 — 없는 이름을 두면 그 몸짓만 조용히 죽는다.
   // A double-tap must point to a real command; a nonexistent name would make just that gesture silently do nothing.
   for (const [key, name] of doubles) {
-    if (!commands[name] && !CORE_COMMAND_NAMES.has(name)) fail(`연타 키 "${key}" 가 없는 커맨드 "${name}" 를 가리킨다`);
+    if (!commands[name] && !CORE_COMMAND_NAMES.has(name))
+      fail(`연타 키 "${key}" 가 없는 커맨드 "${name}" 를 참조합니다`);
   }
 
   const referencedCommand = (action: unknown): string | null => {
@@ -427,7 +434,8 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     return value && value.kind !== 'mark' && typeof value.command === 'string' ? value.command : null;
   };
   const assertCommand = (owner: string, name: string | null): void => {
-    if (name && !commands[name] && !CORE_COMMAND_NAMES.has(name)) fail(`${owner}가 없는 커맨드 "${name}" 를 가리킨다`);
+    if (name && !commands[name] && !CORE_COMMAND_NAMES.has(name))
+      fail(`${owner}가 없는 커맨드 "${name}" 를 참조합니다`);
   };
   for (const wing of wings) {
     for (const button of [wing.button, ...(wing.buttons ?? [])]) {

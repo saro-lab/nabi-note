@@ -55,7 +55,7 @@ export const de = {
 
   search: 'Suchen',
   search_no_results: 'Keine Treffer',
-  search_hint: 'Bitte einen Suchbegriff eingeben',
+  search_hint: 'Bitte geben Sie einen Suchbegriff ein',
   search_move: 'Bewegen',
   search_open: 'Öffnen',
   search_close: 'Schließen',

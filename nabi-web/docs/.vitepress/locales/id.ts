@@ -48,7 +48,7 @@ export const id = {
 
   search: 'Cari',
   search_no_results: 'Tidak ada hasil',
-  search_hint: 'Masukkan kata pencarian',
+  search_hint: 'Silakan masukkan kata pencarian',
   search_move: 'Pindah',
   search_open: 'Buka',
   search_close: 'Tutup',

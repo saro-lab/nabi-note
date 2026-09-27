@@ -53,7 +53,7 @@ export const ta = {
 
   search: 'தேடு',
   search_no_results: 'முடிவுகள் இல்லை',
-  search_hint: 'தேடல் சொல்லை உள்ளிடுக',
+  search_hint: 'தேடல் சொல்லை உள்ளிடுங்கள்',
   search_move: 'நகர்த்து',
   search_open: 'திற',
   search_close: 'மூடு',

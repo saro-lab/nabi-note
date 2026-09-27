@@ -53,7 +53,7 @@ export const en = {
 
   search: 'Search',
   search_no_results: 'No results',
-  search_hint: 'Enter a search term',
+  search_hint: 'Please enter a search term',
   search_move: 'Move',
   search_open: 'Open',
   search_close: 'Close',

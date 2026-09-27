@@ -629,7 +629,7 @@ function narrowed(w: string, full: readonly string[], options: ValueWingOptions)
   const given = options.values;
   if (given === undefined) return full;
   if (!Array.isArray(given)) {
-    throw new Error(`'${w}' 의 values 는 배열이어야 한다: { values: ['${full[0]}'] }`);
+    throw new Error(`'${w}' 의 values 는 배열이어야 합니다: { values: ['${full[0]}'] }`);
   }
   const unknown = given.filter((value) => !full.includes(value));
   if (unknown.length > 0) {
@@ -638,7 +638,7 @@ function narrowed(w: string, full: readonly string[], options: ValueWingOptions)
     );
   }
   if (given.length === 0) {
-    throw new Error(`'${w}' 의 values 가 비었다 — wing 자체를 빼려면 빌더의 .drop('${w}') 이 그 문이다`);
+    throw new Error(`'${w}' 의 values가 비어 있습니다. wing을 제거하려면 빌더의 .drop('${w}') 을 사용해 주세요`);
   }
   return full.filter((value) => given.includes(value));
 }

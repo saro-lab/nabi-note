@@ -155,7 +155,7 @@ An uploader receives `onProgress` and `AbortSignal`. It returns `{ uri }` or `nu
 
 Default storage key is `nabi-note.history`; default record limit is 20; default automatic interval is 3000 ms. Records are newest first. A separate 60000 ms threshold controls whether UI shows a distinct created time.
 
-Storage is best effort. `browserHistoryStorage()` returns `null` when local storage is blocked, including common `file://` cases. Mounting with `null` keeps the integration alive enough to explain that state.
+Storage is best effort. `browserHistoryStorage()` returns `null` when local storage is blocked, including common `file://` cases. Mounting with `null` keeps the integration alive enough to explain that state. The localized notice describes restricted storage access and, if the page was opened as a local file, asks the user to open it through a web server.
 
 Unmount flushes a throttled trailing document change. Restoring another session writes the new current-session record successfully before deleting the source record.
 

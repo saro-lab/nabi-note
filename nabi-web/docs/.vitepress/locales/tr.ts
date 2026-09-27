@@ -45,7 +45,7 @@ export const tr = {
   "menu_etc_upload": "Dosya yükleme",
   "search": "Ara",
   "search_no_results": "Sonuç yok",
-  "search_hint": "Arama terimi girin",
+  "search_hint": "Lütfen arama terimini girin",
   "search_move": "Taşı",
   "search_open": "Aç",
   "search_close": "Kapat",

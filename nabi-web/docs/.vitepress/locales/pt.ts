@@ -48,7 +48,7 @@ export const pt = {
 
   search: 'Buscar',
   search_no_results: 'Nenhum resultado',
-  search_hint: 'Digite um termo de busca',
+  search_hint: 'Por favor, digite um termo de busca',
   search_move: 'Mover',
   search_open: 'Abrir',
   search_close: 'Fechar',

@@ -53,7 +53,7 @@ export const ko = {
 
   search: '검색',
   search_no_results: '결과가 없습니다',
-  search_hint: '검색어를 입력해주세요',
+  search_hint: '검색어를 입력해 주세요',
   search_move: '이동',
   search_open: '열기',
   search_close: '닫기',

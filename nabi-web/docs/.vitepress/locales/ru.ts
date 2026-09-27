@@ -48,7 +48,7 @@ export const ru = {
 
   search: 'Поиск',
   search_no_results: 'Ничего не найдено',
-  search_hint: 'Введите поисковый запрос',
+  search_hint: 'Введите поисковый запрос, пожалуйста',
   search_move: 'Перемещение',
   search_open: 'Открыть',
   search_close: 'Закрыть',
