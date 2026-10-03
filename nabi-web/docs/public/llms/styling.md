@@ -44,13 +44,60 @@ The host normally supplies:
 ```
 
 - `.nabi`: theme and editor shell.
-- `.nabi-toolbar`: sticky chrome wrapper.
+- `.nabi-toolbar`: chrome wrapper; sticky at the top on desktop and docked during compact mobile editing.
 - `.nabi-content`: editing or published document body.
 - `mountSurface()` adds `.nabi-editing` and `contenteditable`.
 - `.nabi-tools`: preview/fullscreen controls created by `mountViewTools()`.
 - `.is-fullscreen`: class-based fullscreen, not the browser Fullscreen API.
 
+Mount the main toolbar and context toolbar on the two separate child roots, not on their shared `.nabi-toolbar` wrapper. Pass that wrapper to `mountSticky()` and as the `mountViewTools()` container. Keep each mount root dedicated to package-owned UI.
+
 Never put `.nabi-editing` on published content.
+
+## Toolbar layouts
+
+`mountToolbar()` and `renderToolbarHtml()` accept the same layout options:
+
+- `layout?: 'compact' | 'wrap'`, default `'compact'`.
+- `quick?: readonly string[]`, default `['b', 'i', 'tc', 'fs']`. Entries are `ToolbarSlot.name` values. Their order is the quick-action priority.
+
+Compact layout keeps the main toolbar in one `3rem` row. Quick actions that do not fit remain available in the full Tools palette; the toolbar does not gain another row. The palette shows all registered toolbar commands that are valid for the current selection together as icons in their original wing groups and toolbar order. It has no category tabs, title/close header, or group borders. Custom groups stay in the same palette. Group identity remains available for keyboard navigation even without a visible border.
+
+The desktop palette fills the editor toolbar width and uses `2rem` regular buttons with `.875rem` icons (32px and 14px at the default root font size). Desktop main-toolbar icons also use `.875rem`, while its `3rem` row and `2.75rem` regular buttons stay unchanged. Mobile icons keep their existing size, and regular mobile palette buttons retain `2.75rem` touch targets (44px at the default root font size).
+
+In both the compact row and Object properties panel, text-color and highlight swatch buttons use `1.75rem` click targets on desktop and `2rem` on mobile (28px and 32px at the default root font size). Their painted area and selected border remain `1.25rem` (20px). This smaller button size applies only to swatches. Swatches show tooltips but do not enlarge on hover. Hovering an unselected swatch shows only a `--nabi-muted` border; selected swatches retain their `--nabi-accent` border around the small painted area.
+
+Text inputs and range controls in those same areas are vertically centered and use `1.75rem` heights on desktop and `2rem` on mobile (28px and 32px at the default root font size). Mobile inline input prompts also use `2rem` inputs. Labels and value readouts keep their natural height.
+
+The full wing palette has zero padding and icon gaps. Its group containers use `display: contents` so icons fill available rows while preserving DOM groups for Tab navigation. The Object properties panel instead has `.5rem` body padding, `.25rem` gaps between controls, and `.5rem` spacing between groups (8px, 4px, and 8px at the default root font size), with no trailing group margin. Only this context panel omits its outer border and shadow and uses `color-mix(in srgb, var(--nabi-bg) 95%, var(--nabi-fg) 5%)` for a subtly contrasting background in both light and dark themes.
+
+Desktop tool panels open above the row when there is more room there, and their bodies scroll within the available height. All palettes, including detailed tools, omit the title/close header. Input prompts keep their fields and submit button. Use Escape or an outside interaction to close; the full/selection palette can also be closed with its toggle.
+
+A `mountContextToolbar()` for the same `nabi` joins the compact layout automatically. Selection controls replace the quick actions in the same row, with a route back to the basic tools. When the current context controls do not all fit in that row, a highlighted down-chevron labeled Object properties appears immediately after Tools and opens the full set of context controls. The button is absent when all controls fit. The existing `toolsContext` dictionary key supplies its localized label. There is no separate context-layout option. A standalone context toolbar keeps its previous behavior. Preview/fullscreen controls mounted inside the same `.nabi-toolbar` wrapper stay visible in the compact row, subject to `showPreview` and `showFullscreen`. The full Tools palette contains registered wing buttons only: it does not duplicate view controls or add another context-tools entry, and it does not add undo/redo buttons. The basic row has no added undo/redo buttons either. Existing editor undo/redo APIs and keyboard shortcuts retain their behavior.
+
+Use `layout: 'wrap'` to retain the previous main toolbar groups and separate context row. On narrow screens those rows retain their horizontal scrolling behavior. `quick` configures the compact layout only.
+
+`Toolbar.buttons` still contains commands exposed through the Tools palette. A button's own `hidden` flag describes whether it is valid for the current selection; a hidden ancestor describes whether it is currently on screen. Registered keyboard accelerators can still invoke valid commands while the palette is closed.
+
+All compact toolbar and palette items, including color swatches, show hover tooltips that float under `body`, so toolbar and panel overflow do not clip them. Tooltips include actual registered accelerators such as Ctrl/Cmd+B and preserve registered double-key labels such as Esc Esc. The Tools tooltip shows Shift Shift. The former letter-hint shortcuts remain removed.
+
+## Palette keyboard navigation
+
+Mount `mountHints({ toolbar, context, root, surface })` to enable double-Shift entry. In compact layout, tapping Shift twice opens the full Tools palette. In `wrap` layout it focuses the first available toolbar button without opening a palette. The former letter badges and single-letter command lookup are removed.
+
+- `Tab` moves to the first available icon of the next group; `Shift+Tab` moves to the previous group. Both wrap around the group list.
+- `ArrowRight` and `ArrowLeft` move through available icons and wrap at the ends.
+- `ArrowDown` and `ArrowUp` move to the nearest column in the next or previous rendered row, wrapping between the first and last rows. Movement follows the actual layout rather than a fixed column count.
+- `Enter` or `Space` activates the focused icon.
+- `Escape` closes the palette and returns to editing.
+
+These navigation rules also apply to selection-control groups and hosted panels. Inputs, selects, textareas, and editable fields retain their normal key behavior. Events already handled by a specialized picker are left alone; for example, the table grid retains its own arrow-key behavior. Repeated key events, active IME composition, and modified Shift combinations do not trigger double-Shift entry.
+
+On desktop and mobile, executing a command in an open non-input palette keeps focus in the palette for consecutive actions. Escape closes it and restores editing focus. Input prompts follow their own input and submission behavior.
+
+For compact layout, `Hints.active()` reflects whether the tool panel is open, including a panel opened with the pointer. `Hints.hide()` closes it and restores surface focus. In `wrap` layout, `active()` reports keyboard navigation and `hide()` ends it. Clicking or focusing outside the editor, or unmounting, ends the interaction without stealing focus back.
+
+The legacy `shortcut` declaration remains compatibility metadata with registry validation; it does not render a badge, add a letter-shortcut tooltip suffix, or enable letter-based palette activation. Registered `accelerator` and `doubleKeys` commands retain their separate behavior.
 
 ## Main theme tokens
 
@@ -101,7 +148,7 @@ Fallback font and placeholder tokens are declared internally. Prefer the host-fa
 
 ## Fullscreen paper
 
-`mountViewTools()` measures the edit surface's border-box width before entering fullscreen and keeps that width centered, capped at the available viewport width. The paper fills the remaining height below the toolbar and grows with long content. The toolbar keeps its usual background. Exiting fullscreen or unmounting restores the surface's previous layout.
+`mountViewTools()` measures the edit surface's border-box width before entering fullscreen and keeps that width centered, capped at the available viewport width. When the measured paper is narrower than the fullscreen container's available width, exposing workspace background on its sides, it receives `1.5rem` top and bottom margins (24px at the default root font size) and subtle shadows above and below. When the paper fills the available width, both margins are zero and there is no shadow. This follows the actual paper and container widths, not the mobile breakpoint; a narrow viewport can still show the margins when its paper is narrower. A short document fills the remaining height below the toolbar after subtracting any margins. Long content grows normally, and scrolling to the end reveals any bottom margin. The toolbar keeps its usual background. Exiting fullscreen or unmounting restores the surface's previous layout. These spacing and shadow changes apply to fullscreen editing; preview layout is unchanged.
 
 Set the two background tokens on `:root`, an ancestor, or an individual editor. Their defaults follow the active light/dark theme:
 
@@ -112,11 +159,15 @@ Set the two background tokens on `:root`, an ancestor, or an individual editor. 
 }
 ```
 
-The transient `.nabi-fullscreen-content` class and `--nabi-fullscreen-content-width` property are managed by `mountViewTools()` on the supplied surface; do not maintain them manually.
+The transient `.nabi-fullscreen-content` and `.nabi-fullscreen-framed` classes and `--nabi-fullscreen-content-width` property are managed by `mountViewTools()` on the supplied surface; do not maintain them manually.
 
 ## Mobile breakpoint
 
-Mobile mode starts when the toolbar/context row or viewport width is strictly below `36rem`. Exactly `36rem` keeps the regular layout. Mobile mode scrolls the toolbar and context row horizontally, centers panels, and reduces the table picker to 5x5 touch-sized cells.
+Narrow controls activate when the toolbar/context row or viewport width is strictly below `36rem`. Exactly `36rem` keeps the regular controls. Narrow mode centers standalone panels and reduces the table picker to 5x5 touch-sized cells. Compact panels stay inside the shared tool panel. A compact toolbar remains a single row at every container width; `layout: 'wrap'` and standalone context rows keep their narrow horizontal scrolling.
+
+Compact docking requires the viewport itself to be below this breakpoint and the associated surface or tool panel to be active. A narrow editor column on a desktop viewport does not dock. The toolbar follows the visible viewport above the software keyboard. Opening a mobile selection/menu panel moves focus out of the editing surface, waits for the detected keyboard to close, and uses that area for the panel. The panel shrinks to its content height, capped by the measured keyboard height or a bounded fallback when no keyboard height is available. Text-input prompts instead replace the toolbar row with their fields and submit button so the keyboard can remain available; Escape or an outside interaction closes them. The browser controls the actual keyboard; viewport changes are used to update placement.
+
+This behavior requires `surface` on the toolbar mount. Physical-device IME transitions were not verified for this toolbar change. A visual viewport simulation cannot establish that behavior. Check keyboard transitions, composition, orientation changes, and external keyboards on the target devices before relying on a specific mobile layout.
 
 Set `--nabi-mobile-breakpoint` on `:root`, an ancestor, or an individual `.nabi`. Use a non-negative CSS length such as `rem`, `px`, or `calc()`. Changes to the CSS value, root font size, container width, or viewport width update mounted controls and open panels automatically, including prompts moved under `body`.
 

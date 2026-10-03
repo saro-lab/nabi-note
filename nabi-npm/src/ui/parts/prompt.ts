@@ -48,6 +48,7 @@ export function promptValid(fields: readonly PromptField[], values: Readonly<Rec
 export function openPrompt(owner: Document, options: PromptOptions): Panel {
   const copy = options.translator ? new Translations(options.translator) : null;
   let cleanup = (): void => {};
+  let hosted = false;
   const panel = openPanel(owner, {
     ...options,
     className: 'nabi-prompt',
@@ -56,8 +57,10 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
     onClose: () => {
       copy?.dispose();
       cleanup();
+      if (hosted) options.onClose?.();
     },
   });
+  hosted = panel.root.hasAttribute('data-nabi-hosted');
   const inputs: HTMLInputElement[] = [];
   let close = (): void => panel.close();
 
@@ -190,6 +193,10 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
           .filter(Boolean)
           .join(', ') || options.okLabel;
       panel.root.setAttribute('aria-label', name);
+    }
+    if (hosted) {
+      (inputs[0] ?? ok).focus();
+      return panel;
     }
     // openPanel은 처음에 anchor를 기준으로 잰다 — 모달 층에 들어가면 그 좌표계가 뷰포트로 바뀌므로, 잰 위치를 그대로 고정 배치로 옮겨 쓴다.
     // openPanel first measures against its anchor; once it enters the modal layer, that coordinate system becomes the viewport, so the measured position is retained as a fixed position.

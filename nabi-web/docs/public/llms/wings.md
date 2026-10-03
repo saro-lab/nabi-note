@@ -23,7 +23,7 @@ Value factories are `makeTypefaceWing`, `makeFontSizeWing`, `makeTextColorWing`,
 With a collapsed caret, font size and typeface target the paragraph's current text. Color/highlight target the current mark span or arm future text. A selected range always remains the target.
 The main toolbar color and highlight buttons remove an existing effect regardless of its current value; otherwise, they keep their existing default-value action. Context swatches still replace a different value and remove the same value.
 Like other mark buttons, a pointer click with a collapsed caret and no current mark reports that no text is selected instead of arming future text.
-After the user taps Shift twice, C arms the first text color and H arms the first highlight color for the next typed text. ArrowUp arms superscript and ArrowDown arms subscript through the same keyboard-only path. The `shortcut` field accepts one uppercase Latin letter, one digit, or the built-in up/down arrow key labels; duplicate shortcuts are rejected.
+With `mountHints()`, tapping Shift twice opens the compact Tools palette. Tab changes groups and arrow keys navigate icons; Enter or Space activates the focused tool through its keyboard action. Letters such as C or H and the up/down arrows no longer directly invoke color, highlight, superscript, or subscript after double-Shift. The legacy `shortcut` field remains validated compatibility metadata; see `custom-wing.md`.
 
 ## Paragraph attributes
 

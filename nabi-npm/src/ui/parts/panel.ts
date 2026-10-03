@@ -3,6 +3,7 @@
 import { focusQuiet, make } from './dom.js';
 import { closeOnOutside } from './outside.js';
 import { watchNarrow } from '../narrow.js';
+import { hostedPanel } from './panel-host.js';
 
 // --- 순수 산수 — 뷰포트 안으로 밀어 넣기 (DOM 없이 그물에 잡힌다) ------------------------------
 
@@ -80,6 +81,8 @@ export interface PanelOptions {
 }
 
 export function openPanel(owner: Document, options: PanelOptions): Panel {
+  const hosted = hostedPanel(options);
+  if (hosted) return hosted;
   const { anchor } = options;
   const root = make(owner, 'div', options.className ? `nabi-panel ${options.className}` : 'nabi-panel', {
     tabindex: '-1',

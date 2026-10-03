@@ -82,20 +82,15 @@ export function toolbarSlots(
     const decls = wing.buttons ?? (wing.button ? [wing.button] : []);
     for (const decl of decls) {
       const label = t.pick(decl.label, `wing.${wing.w}.${decl.name ?? ''}`);
-      // 이름표의 꼬리는 하나뿐이다 — 힌트 글자가 있으면 그것이, 없고 연타가 있으면 연타가 붙는다.
-      // The tooltip gets at most one suffix — a hint letter if present, otherwise a double-tap key if present.
       const twice = doubleKeyOf(wing, decl);
+      const tip = decl.accelerator ? `${label} (Ctrl/Cmd+${decl.accelerator.slice(4).toUpperCase()})` : label;
       slots.push({
         wing,
         decl,
         name: decl.name === undefined ? wing.w : `${wing.w}:${decl.name}`,
         group: decl.group,
         label,
-        tip: decl.shortcut
-          ? t.t('hintTail', { label, key: decl.shortcut })
-          : twice
-            ? t.t('twiceTail', { label, key: twice })
-            : label,
+        tip: twice ? t.t('twiceTail', { label: tip, key: twice }) : tip,
       });
     }
   }
@@ -108,7 +103,7 @@ export function toolbarSlots(
 const esc = (value: string): string =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-function buttonHtml(slot: ToolbarSlot): string {
+function buttonHtml(slot: ToolbarSlot, quick = false): string {
   const { wing, decl } = slot;
   const classes = decl.icon || decl.svg ? 'nabi-btn' : 'nabi-btn nabi-word';
   const inner =
@@ -117,13 +112,15 @@ function buttonHtml(slot: ToolbarSlot): string {
       : esc(slot.label);
   return (
     `<button class="${classes}" type="button" data-name="${esc(slot.name)}"` +
+    (quick ? ' data-nabi-quick="true"' : '') +
     ` aria-label="${esc(slot.label)}" data-nabi-tip="${esc(slot.tip)}" data-wing="${esc(wing.w)}"` +
-    (decl.shortcut ? ` data-hint="${esc(decl.shortcut)}"` : '') +
     `>${inner}</button>`
   );
 }
 
 export interface ToolbarHtmlOptions {
+  readonly layout?: 'compact' | 'wrap';
+  readonly quick?: readonly string[];
   readonly registry: Registry;
   readonly locale?: LocaleInput;
   readonly translator?: Translator;
@@ -139,14 +136,18 @@ export function renderToolbarHtml(options: ToolbarHtmlOptions): string {
   const t = options.translator ?? makeTranslator(options.locale);
   const order = options.groups ?? TOOLBAR_GROUPS;
   const slots = toolbarSlots(options.registry, t, order);
+  const compact = options.layout !== 'wrap';
+  const quick = options.quick ?? ['b', 'i', 'tc', 'fs'];
   const byGroup = new Map<string, string[]>();
   for (const name of order) byGroup.set(name, []);
   for (const slot of slots) {
     const list = byGroup.get(slot.group);
-    if (list) list.push(buttonHtml(slot));
-    else byGroup.set(slot.group, [buttonHtml(slot)]);
+    if (list) list.push(buttonHtml(slot, compact && quick.includes(slot.name)));
+    else byGroup.set(slot.group, [buttonHtml(slot, compact && quick.includes(slot.name))]);
   }
-  let html = '';
+  let html = compact
+    ? `<button type="button" class="nabi-btn nabi-compact-tools" data-name="tools" data-nabi-compact="true" aria-label="${esc(t.t('tools'))}" data-nabi-tip="${esc(t.t('twiceTail', { label: t.t('tools'), key: 'Shift' }))}" aria-expanded="false">☷</button>`
+    : '';
   for (const [name, list] of byGroup) {
     html += `<div class="nabi-group" data-group="${esc(name)}">${list.join('')}</div>`;
   }

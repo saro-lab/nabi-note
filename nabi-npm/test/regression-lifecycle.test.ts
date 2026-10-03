@@ -22,12 +22,39 @@ import {
   openSavePanel,
   openScrim,
 } from '../src/ui/index.js';
+import { registerToolbox } from '../src/ui/parts/toolbox-keyboard.js';
 import { suppressMousedownTap } from '../src/ui/parts/button.js';
 import { done, eq, ok } from './net.js';
 import { hostOf, type Command } from '../src/editor/index.js';
 import { mountDiff, mountDiffWing } from '../src/diff/index.js';
 import { makeTranslator } from '../src/locale/index.js';
 import { claimMountRoot } from '../src/lifecycle.js';
+
+function paletteToolbar(parent: HTMLElement, onOpen: () => void) {
+  const root = parent.ownerDocument.createElement('div');
+  parent.append(root);
+  let active = false;
+  const stop = registerToolbox(root, {
+    open() {
+      active = true;
+      onOpen();
+    },
+    close() {
+      active = false;
+    },
+    active: () => active,
+  });
+  return {
+    root,
+    buttons: [],
+    refresh() {},
+    unmount() {
+      active = false;
+      stop();
+      root.remove();
+    },
+  };
+}
 
 const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 const file = { name: 'a.png', size: 10, type: 'image/png' };
@@ -597,22 +624,14 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   let broken = true;
   let bPressed = 0;
   const toolbarA = {
-    get buttons() {
+    get root() {
       if (broken) throw new Error('toolbar getter');
-      return [];
+      return root;
     },
   };
-  const toolbarB = {
-    buttons: [
-      {
-        shortcut: 'Q',
-        el: owner.createElement('button'),
-        press: () => {
-          bPressed += 1;
-        },
-      },
-    ],
-  };
+  const toolbarB = paletteToolbar(root, () => {
+    bPressed += 1;
+  });
   let threw = false;
   try {
     mountHints({ root, surface: surfaceA, toolbar: toolbarA as never });
@@ -624,12 +643,12 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   root.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   root.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   owner.body.dispatchEvent(
-    new dom.window.KeyboardEvent('keydown', { key: 'q', code: 'KeyQ', bubbles: true, cancelable: true }),
+    new dom.window.KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }),
   );
   const bOwns = bPressed === 1;
   retry.unmount();
   ok(
-    'hints setup - failed A leaves shared-root ownership clean so distinct B owns one key action and unmounts cleanly',
+    'toolbox setup - failed A leaves shared-root ownership clean so distinct B opens once and unmounts cleanly',
     threw && bOwns && !root.classList.contains('nabi-hinting'),
   );
   dom.window.close();
@@ -1503,33 +1522,30 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   const hints = mountHints({
     root: rootA,
     surface: surfaceA,
-    toolbar: {
-      buttons: [
-        {
-          shortcut: 'Q',
-          el: owner.createElement('button'),
-          press: () => {
-            pressed += 1;
-          },
-        },
-      ],
-    } as never,
+    toolbar: paletteToolbar(rootA, () => {
+      pressed += 1;
+    }),
   });
   surfaceA.focus();
   surfaceA.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   surfaceA.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   owner.body.dispatchEvent(
-    new dom.window.KeyboardEvent('keydown', { key: 'q', code: 'KeyQ', bubbles: true, cancelable: true }),
+    new dom.window.KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }),
   );
   const ownShortcut = pressed === 1;
   surfaceA.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   surfaceA.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   surfaceB.focus();
-  const key = new dom.window.KeyboardEvent('keydown', { key: 'q', code: 'KeyQ', bubbles: true, cancelable: true });
+  const key = new dom.window.KeyboardEvent('keydown', {
+    key: 'Escape',
+    code: 'Escape',
+    bubbles: true,
+    cancelable: true,
+  });
   surfaceB.dispatchEvent(key);
   ok(
-    'hints ownership - own body shortcut works once, foreign focus hides A and does not consume it',
-    ownShortcut && !hints.active() && !key.defaultPrevented && pressed === 1,
+    'toolbox ownership - opening works once, foreign focus closes A and does not consume its Escape',
+    ownShortcut && !hints.active() && !key.defaultPrevented && pressed === 2,
   );
   hints.unmount();
   dom.window.close();
@@ -1549,56 +1565,40 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   const a = mountHints({
     root: rootA,
     surface: surfaceA,
-    toolbar: {
-      buttons: [
-        {
-          shortcut: 'Q',
-          el: owner.createElement('button'),
-          press: () => {
-            aPressed += 1;
-          },
-        },
-      ],
-    } as never,
+    toolbar: paletteToolbar(rootA, () => {
+      aPressed += 1;
+    }),
   });
   const b = mountHints({
     root: rootB,
     surface: surfaceB,
-    toolbar: {
-      buttons: [
-        {
-          shortcut: 'Q',
-          el: owner.createElement('button'),
-          press: () => {
-            bPressed += 1;
-          },
-        },
-      ],
-    } as never,
+    toolbar: paletteToolbar(rootB, () => {
+      bPressed += 1;
+    }),
   });
   for (const surface of [surfaceA, surfaceB]) {
     surface.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
     surface.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   }
   const handoff =
-    !a.active() && b.active() && !rootA.classList.contains('nabi-hinting') && rootB.classList.contains('nabi-hinting');
+    !a.active() && b.active() && !rootA.classList.contains('nabi-hinting') && !rootB.classList.contains('nabi-hinting');
   owner.body.dispatchEvent(
-    new dom.window.KeyboardEvent('keydown', { key: 'q', code: 'KeyQ', bubbles: true, cancelable: true }),
+    new dom.window.KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }),
   );
   const bOwns =
-    bPressed === 1 && aPressed === 0 && !a.active() && !b.active() && !rootA.classList.contains('nabi-hinting');
+    bPressed === 1 && aPressed === 1 && !a.active() && !b.active() && !rootA.classList.contains('nabi-hinting');
   surfaceA.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   surfaceA.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   owner.body.dispatchEvent(
-    new dom.window.KeyboardEvent('keydown', { key: 'q', code: 'KeyQ', bubbles: true, cancelable: true }),
+    new dom.window.KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }),
   );
   a.unmount();
   b.unmount();
   ok(
-    'hints ownership - exact A to B to A handoff deactivates the prior layer without leaving it dead-active',
+    'toolbox ownership - exact A to B to A handoff deactivates the prior palette without leaving it active',
     handoff &&
       bOwns &&
-      aPressed === 1 &&
+      aPressed === 2 &&
       bPressed === 1 &&
       !a.active() &&
       !b.active() &&
@@ -2011,39 +2011,23 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   const hintsA = mountHints({
     root: outer,
     surface: outerSurface,
-    toolbar: {
-      buttons: [
-        {
-          shortcut: 'Q',
-          el: owner.createElement('button'),
-          press: () => {
-            outerPressed += 1;
-          },
-        },
-      ],
-    } as never,
+    toolbar: paletteToolbar(outer, () => {
+      outerPressed += 1;
+    }),
   });
   const hintsB = mountHints({
     root: inner,
     surface: innerSurface,
-    toolbar: {
-      buttons: [
-        {
-          shortcut: 'Q',
-          el: owner.createElement('button'),
-          press: () => {
-            innerPressed += 1;
-          },
-        },
-      ],
-    } as never,
+    toolbar: paletteToolbar(inner, () => {
+      innerPressed += 1;
+    }),
   });
   const viewA = mountViewTools({ ...a, root: outer, surface: outerSurface, container: outerTools });
   const viewB = mountViewTools({ ...b, root: inner, surface: innerSurface, container: innerTools });
   innerSurface.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   innerSurface.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   owner.body.dispatchEvent(
-    new dom.window.KeyboardEvent('keydown', { key: 'q', code: 'KeyQ', bubbles: true, cancelable: true }),
+    new dom.window.KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }),
   );
   (outerTools.querySelector('button[data-name="fullscreen"]') as HTMLButtonElement).click();
   (innerTools.querySelector('button[data-name="fullscreen"]') as HTMLButtonElement).click();
@@ -2051,7 +2035,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
     new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
   );
   ok(
-    'nested editor ownership - inner hints and Escape never activate or close the containing editor',
+    'nested editor ownership - inner toolbox and Escape never activate or close the containing editor',
     outerPressed === 0 &&
       innerPressed === 1 &&
       outer.classList.contains('is-fullscreen') &&
@@ -2236,23 +2220,15 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   const hints = mountHints({
     root: frame,
     surface,
-    toolbar: {
-      buttons: [
-        {
-          shortcut: 'Q',
-          el: owner.createElement('button'),
-          press: () => {
-            hinted += 1;
-          },
-        },
-      ],
-    } as never,
+    toolbar: paletteToolbar(toolbarRoot, () => {
+      hinted += 1;
+    }),
   });
   const view = mountViewTools({ nabi, root: frame, surface, container: tools });
   surface.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   surface.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   owner.body.dispatchEvent(
-    new dom.window.KeyboardEvent('keydown', { key: 'q', code: 'KeyQ', bubbles: true, cancelable: true }),
+    new dom.window.KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }),
   );
   (tools.querySelector('button[data-name="fullscreen"]') as HTMLButtonElement).click();
   const enteredFullscreen = frame.classList.contains('is-fullscreen');
@@ -2291,37 +2267,21 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   const hintsA = mountHints({
     root: frame,
     surface: a,
-    toolbar: {
-      buttons: [
-        {
-          shortcut: 'Q',
-          el: owner.createElement('button'),
-          press: () => {
-            aPressed += 1;
-          },
-        },
-      ],
-    } as never,
+    toolbar: paletteToolbar(frame, () => {
+      aPressed += 1;
+    }),
   });
   const hintsB = mountHints({
     root: frame,
     surface: b,
-    toolbar: {
-      buttons: [
-        {
-          shortcut: 'Q',
-          el: owner.createElement('button'),
-          press: () => {
-            bPressed += 1;
-          },
-        },
-      ],
-    } as never,
+    toolbar: paletteToolbar(frame, () => {
+      bPressed += 1;
+    }),
   });
   a.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   a.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
   owner.body.dispatchEvent(
-    new dom.window.KeyboardEvent('keydown', { key: 'q', code: 'KeyQ', bubbles: true, cancelable: true }),
+    new dom.window.KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }),
   );
   ok(
     'gesture identity - sibling surfaces sharing one broad frame still select their exact surface land',

@@ -20,6 +20,13 @@ export function bandOf(chromeBottom: number | null, viewport: Rect): Band {
   return { top, bottom: viewport.bottom };
 }
 
+export function dockBandOf(chromeTop: number | null, viewport: Rect): Band {
+  return {
+    top: viewport.top,
+    bottom: chromeTop === null ? viewport.bottom : Math.max(viewport.top, Math.min(viewport.bottom, chromeTop)),
+  };
+}
+
 export function bandFix(caret: Rect, band: Band, limit: number): number {
   const height = Math.max(0, band.bottom - band.top);
   if (height <= 0) return 0;
@@ -131,6 +138,14 @@ export function underWalk(
   push: (delta: number) => number,
 ): number {
   return walkWith(steps, look, push, underFix);
+}
+
+export function bandWalk(
+  steps: number,
+  look: () => { readonly caret: Rect; readonly band: Band; readonly limit: number } | null,
+  push: (delta: number) => number,
+): number {
+  return walkWith(steps, look, push, bandFix);
 }
 
 export function placeWalk(

@@ -164,7 +164,8 @@ test('demo locale change during IME keeps the composing DOM and commits one undo
 
 test('an open prompt keeps its draft, focus and range while its labels change', async ({ page }) => {
   await page.goto('/');
-  await page.locator('#toolbar button[data-name="a"]').click();
+  await page.locator('#toolbar .nabi-compact-bar > [data-name="tools"]').click();
+  await page.locator('#toolbar .nabi-toolbox [data-name="a"]').click();
   const input = page.locator('.nabi-prompt input').first();
   await input.fill('https://example.test/draft');
   await input.evaluate((el) => (el as HTMLInputElement).setSelectionRange(4, 12));

@@ -89,29 +89,33 @@ test('viewport, open table picker, and context controls share the breakpoint', a
   await setup(page);
   const root = page.locator('#mobile-a');
   const row = root.locator('.nabi-toolbar-row');
-  await root.locator('[data-name="table"]').click();
+  await root.locator('.nabi-compact-bar > [data-name="tools"]').click();
+  await root.locator('.nabi-toolbox [data-name="table"]').click();
   const panel = root.locator('.nabi-panel');
-  await expect(panel).toHaveCSS('position', 'absolute');
+  await expect(panel).toHaveClass(/nabi-hosted-panel/);
+  await expect(panel).toHaveCSS('position', 'static');
   await expect(panel.locator('.nabi-cell:visible')).toHaveCount(64);
   await root.evaluate((el) => {
     el.style.setProperty('--nabi-mobile-breakpoint', '40rem');
   });
   await expect(row).toHaveClass(/nabi-narrow/);
   await expect(root.locator('.nabi-context')).toHaveClass(/nabi-narrow/);
-  await expect(panel).toHaveCSS('position', 'fixed');
+  await expect(panel).toHaveCSS('position', 'static');
   await expect(panel.locator('.nabi-cell:visible')).toHaveCount(25);
   await root.evaluate((el) => {
     el.style.setProperty('--nabi-mobile-breakpoint', '36rem');
   });
-  await expect(panel).toHaveCSS('position', 'absolute');
+  await expect(panel).toHaveClass(/nabi-hosted-panel/);
+  await expect(panel).toHaveCSS('position', 'static');
   await expect(panel.locator('.nabi-cell:visible')).toHaveCount(64);
   await page.setViewportSize({ width: 575, height: 800 });
   await expect(row).toHaveClass(/nabi-narrow/);
-  await expect(panel).toHaveCSS('position', 'fixed');
+  await expect(panel).toHaveCSS('position', 'static');
   await expect(panel.locator('.nabi-cell:visible')).toHaveCount(25);
   await page.setViewportSize({ width: 576, height: 800 });
   await expect(row).not.toHaveClass(/nabi-narrow/);
-  await expect(panel).toHaveCSS('position', 'absolute');
+  await expect(panel).toHaveClass(/nabi-hosted-panel/);
+  await expect(panel).toHaveCSS('position', 'static');
 });
 
 test('modal prompts keep the editor breakpoint after moving to body and clean up', async ({ page }) => {
@@ -120,7 +124,9 @@ test('modal prompts keep the editor breakpoint after moving to body and clean up
   const probeCount = await root.locator('span[aria-hidden="true"]').count();
   await page.evaluate(async (entry) => {
     const { openPrompt } = await import(/* @vite-ignore */ entry.replace('/index.ts', '/ui/parts/prompt.ts'));
-    const anchor = document.querySelector<HTMLElement>('#mobile-a [data-name="table"]')!;
+    const anchor = document.createElement('button');
+    anchor.textContent = 'Standalone prompt';
+    document.getElementById('mobile-a')!.append(anchor);
     openPrompt(document, {
       anchor,
       fields: [{ name: 'url', label: 'URL' }],

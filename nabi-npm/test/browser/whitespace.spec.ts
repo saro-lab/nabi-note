@@ -81,7 +81,7 @@ test('typed leading spaces survive HTML clipboard, storage, and preview', async 
     nabi.setHtml(nabi.getHtml());
   }, copied);
   expect(await readParagraphs()).toEqual(expected);
-  await page.locator('#app [data-name="preview"]').click();
+  await page.locator('#app .nabi-compact-bar [data-name="preview"]').click();
   const preview = page.locator('.nabi-preview-body');
   await expect(preview).toBeVisible();
   expect(

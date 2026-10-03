@@ -10,6 +10,7 @@ import { renderViewToolsHtml, type ViewToolsVisibility } from '../wing/toolbar-h
 import { setPressed, wireIconButton } from './parts/button.js';
 import { openScrim, type Scrim } from './parts/scrim.js';
 import { acquireGestureRoot, HostElementBaseline, HostElementLease, ownsGestureRoot } from '../lifecycle.js';
+import { refreshCompactViewTools, registerCompactViewTools } from './compact.js';
 
 export const FULLSCREEN_CLASS = 'is-fullscreen';
 
@@ -241,6 +242,7 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
   const releaseRoot = showFullscreen ? acquireGestureRoot(root, [surface]) : () => {};
   const rootLease = new HostElementLease(root);
   let fullscreenSurfaceLease: HostElementLease | null = null;
+  let fullscreenObserver: ResizeObserver | null = null;
   let unmounted = false;
   let preview: Overlay | null = null;
   let box: HTMLElement | null = null;
@@ -248,12 +250,20 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
   let fullButton: HTMLButtonElement | null = null;
   let unbindPreview = (): void => {};
   let unbindFull = (): void => {};
+  let unbindCompact = (): void => {};
   let copy: Translations | null = null;
   let rootReleased = false;
   const releaseGesture = (): void => {
     if (rootReleased) return;
     rootReleased = true;
     releaseRoot();
+  };
+  const syncFullscreenFrame = (): void => {
+    if (unmounted || !fullscreenSurfaceLease) return;
+    fullscreenSurfaceLease.className(
+      'nabi-fullscreen-framed',
+      isFullscreen(root) && root.clientWidth - surface.getBoundingClientRect().width > 1,
+    );
   };
   const setOwnFullscreen = (on: boolean): void => {
     if (on && !isFullscreen(root)) {
@@ -267,7 +277,7 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
     if (!on) {
       fullscreenSurfaceLease?.dispose();
       fullscreenSurfaceLease = null;
-    }
+    } else syncFullscreenFrame();
   };
 
   const finish = (work: () => void, failure: { value: unknown }): void => {
@@ -281,8 +291,11 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
     if (unmounted) return;
     unmounted = true;
     const failure: { value: unknown } = { value: null };
+    finish(() => fullscreenObserver?.disconnect(), failure);
+    finish(() => owner.defaultView?.removeEventListener('resize', syncFullscreenFrame), failure);
     finish(() => owner.removeEventListener('keydown', onKey), failure);
     finish(releaseGesture, failure);
+    finish(unbindCompact, failure);
     finish(unbindPreview, failure);
     finish(unbindFull, failure);
     finish(() => copy?.dispose(), failure);
@@ -298,14 +311,16 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
   };
 
   const paint = (): void => {
-    if (!fullButton) return;
-    const on = isFullscreen(root);
-    const label = t.t(on ? 'fullscreenExit' : 'fullscreenEnter');
-    const icon = on ? 'fullscreen-exit' : 'fullscreen-enter';
-    fullButton.innerHTML = iconHtml(`view-${icon}`, icon);
-    fullButton.setAttribute('aria-label', label);
-    fullButton.setAttribute('data-nabi-tip', label);
-    setPressed(fullButton, on);
+    if (fullButton) {
+      const on = isFullscreen(root);
+      const label = t.t(on ? 'fullscreenExit' : 'fullscreenEnter');
+      const icon = on ? 'fullscreen-exit' : 'fullscreen-enter';
+      fullButton.innerHTML = iconHtml(`view-${icon}`, icon);
+      fullButton.setAttribute('aria-label', label);
+      fullButton.setAttribute('data-nabi-tip', label);
+      setPressed(fullButton, on);
+    }
+    refreshCompactViewTools(options.nabi);
   };
 
   const onKey = (event: Event): void => {
@@ -361,6 +376,13 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
       });
     }
     if (fullButton) {
+      const Observer = owner.defaultView?.ResizeObserver;
+      if (Observer) {
+        fullscreenObserver = new Observer(syncFullscreenFrame);
+        fullscreenObserver.observe(root);
+        fullscreenObserver.observe(surface);
+      }
+      owner.defaultView?.addEventListener('resize', syncFullscreenFrame);
       unbindFull = wireIconButton(fullButton, () => {
         setOwnFullscreen(!isFullscreen(root));
         paint();
@@ -369,6 +391,11 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
     }
     if (previewButton) copy.button(previewButton, () => t.t('preview'));
     copy.add(paint);
+    unbindCompact = registerCompactViewTools(options.nabi, {
+      container,
+      surface,
+      buttons: [previewButton, fullButton].filter((button): button is HTMLButtonElement => button !== null),
+    });
 
     return {
       buttons: [previewButton, fullButton].filter((button): button is HTMLButtonElement => button !== null),

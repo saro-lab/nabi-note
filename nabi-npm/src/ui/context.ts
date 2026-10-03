@@ -17,6 +17,8 @@ import { watchSettle, type Settle } from './parts/settle.js';
 import { openLightbox } from './overlay.js';
 import type { Overlay } from './overlay.js';
 import { watchNarrow } from './narrow.js';
+import { compactKeepsFocus, refreshCompactContext, registerCompactContext } from './compact.js';
+import { dockViewportRect } from './dock.js';
 import { claimMountRoot, DisposerStack, HostElementBaseline, HostElementLease } from '../lifecycle.js';
 
 export interface ContextToolbarOptions {
@@ -104,6 +106,7 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
       for (const view of views) view.el.remove();
       views = [];
     });
+    lifecycle.add(registerCompactContext(nabi, { root, groups: () => views }));
 
     attributes.className('nabi-context', true);
     // 한 줄 모드 — 줄 자체가 flex 그릇이라 툴바처럼 감쌀 것 없이 제가 구른다.
@@ -121,8 +124,8 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
       lightbox = null;
     });
 
-    // 상황 줄에서 고친 자리가 화면 밖으로 밀려나면 안 보인다 — scrollIntoView는 상황 줄이 뜬 채인 두 줄 크롬을 몰라 그 밑에 가려 세운다. band.ts와 같은 산수로 크롬 아랫변을 그때그때 재서 부른다.
-    // A fix made from the context toolbar can scroll offscreen; scrollIntoView doesn't know about this two-row chrome and lands the target under it. This reuses band.ts's math, remeasuring the chrome's bottom edge each time.
+    // 서식 변경 뒤 선택이 툴바나 키보드에 가리지 않게 한다.
+    // Keep the selection clear of toolbar chrome and the keyboard after formatting.
     const targetBox = (): Rect | null => {
       const selection = owner.getSelection?.() ?? owner.defaultView?.getSelection() ?? null;
       if (selection && selection.rangeCount > 0) {
@@ -143,23 +146,29 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
       if (!view || !options.surface) return;
       const box = targetBox();
       if (!box) return;
-      // 띠의 위 변은 붙는 크롬의 아랫변이다 — 그 클래스가 "위에 붙는다"는 계약이고, 안 붙는 호스트에서는 창의 위가 위 변이 된다.
-      // The band's top edge is the sticky chrome's bottom; that class is the "pins to top" contract, so a non-sticky host falls back to the window top.
       const chrome = root.closest('.nabi-toolbar');
-      const chromeBottom = chrome ? chrome.getBoundingClientRect().bottom : null;
+      const chromeBox = chrome?.getBoundingClientRect();
+      const docked = chrome?.getAttribute('data-nabi-docked') === 'true';
       const visual = view.visualViewport;
-      const viewport: Rect = { top: 0, bottom: visual ? visual.height : view.innerHeight };
-      const delta = bandFix(box, bandOf(chromeBottom, viewport), viewport.bottom - viewport.top);
+      const viewport: Rect = docked
+        ? dockViewportRect(owner)
+        : { top: 0, bottom: visual ? visual.height : view.innerHeight };
+      const band =
+        docked && chromeBox
+          ? { top: viewport.top, bottom: Math.max(viewport.top, Math.min(viewport.bottom, chromeBox.top)) }
+          : bandOf(chromeBox?.bottom ?? null, viewport);
+      const delta = bandFix(box, band, viewport.bottom - viewport.top);
       if (delta !== 0) view.scrollBy({ top: delta, behavior: 'auto' });
     };
 
     const run = (command: string, args?: Readonly<Record<string, unknown>>): void => {
       if (unmounted) return;
-      // 겨눔을 먼저 돌려주고 문을 지난다 — 커맨드는 캐럿이 든 자리를 보고 일한다.
-      // Focus returns before the command runs, since the command acts on wherever the caret is.
-      focusQuiet(options.surface);
+      // 도구판이 열린 동안은 본문 포커스를 되찾아 키보드를 다시 열지 않는다.
+      // Keep focus in an open tool panel so the surface does not reopen the keyboard.
+      const keepsFocus = compactKeepsFocus(nabi);
+      if (!keepsFocus) focusQuiet(options.surface);
       nabi.applyCommand(command, args ?? {});
-      reveal();
+      if (!keepsFocus) reveal();
     };
 
     const ask = (anchor: HTMLElement, control: Extract<ContextControl, { kind: 'prompt' }>): void => {
@@ -246,6 +255,7 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
         views.push(drawn);
       }
       attributes.attribute('hidden', views.length === 0 ? '' : null);
+      refreshCompactContext(nabi);
     };
 
     const refresh = (): void => {

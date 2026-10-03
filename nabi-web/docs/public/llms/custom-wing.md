@@ -165,7 +165,7 @@ Call `host.onDispose()` immediately after every direct side effect and before la
 
 `context.controls` may declare button, toggle, select, range, text, prompt, or lightbox controls. Generic UI reads these declarations; application code should not duplicate their argument rules.
 
-A one-character shortcut must be `A-Z` or `0-9`. An accelerator must be `mod+<lowercase letter>`. Both must be unique. A `doubleKeys` key must be unique and point to an existing command.
+The legacy `shortcut` field remains compatibility metadata. It accepts one uppercase Latin letter, one digit, or an up/down arrow label, and duplicates are rejected. It no longer renders a badge or binds a letter after double-Shift. The Tools palette uses group and icon navigation instead. An accelerator must be `mod+<lowercase letter>` and must be unique. A `doubleKeys` key must be unique and point to an existing command.
 
 Set `basic: true` only when the official wing runs without host wiring. `allBasic()` uses this flag while scanning the official catalog; custom wings enter through `use(customWing)` and are not auto-discovered.
 

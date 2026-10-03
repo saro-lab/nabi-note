@@ -174,11 +174,14 @@ function fixture(doc: unknown = [{ w: 'p', ch: ['base'] }]) {
 {
   const f = fixture([{ w: 'p', ch: [{ w: 'a', a: { href: 'https://example.test' }, ch: ['link'] }] }]);
   f.nabi.select({ anchor: { path: [0], offset: 1 }, focus: { path: [0], offset: 1 } });
-  const controls = [...f.el('context').querySelectorAll('button, input')];
+  const controls = f.context.groups().flatMap((group) => [...group.el.querySelectorAll('button, input')]);
   assert.ok(controls.length > 0);
   const labels = controls.map((el) => el.getAttribute('aria-label'));
   f.controller.setLocale('ko');
-  assert.deepEqual([...f.el('context').querySelectorAll('button, input')], controls);
+  assert.deepEqual(
+    f.context.groups().flatMap((group) => [...group.el.querySelectorAll('button, input')]),
+    controls,
+  );
   assert.notDeepEqual(
     controls.map((el) => el.getAttribute('aria-label')),
     labels,

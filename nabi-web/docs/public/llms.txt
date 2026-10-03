@@ -29,7 +29,12 @@ Use this file as a router. Read only the document that owns your question.
 - Use `nabi-note/viewer` for optional behavior on published HTML.
 - Use `nabi-note/diff` for comparing two stored documents.
 - Load `nabi-note/nabi.css` on editor and published pages unless all required sheets are injected.
-- Mobile mode starts strictly below `36rem`; override `--nabi-mobile-breakpoint` in CSS (see `llms/styling.md`).
+- Toolbars default to a compact single row. Use `layout: 'wrap'` for the previous wrapping layout; see `llms/styling.md`.
+- The Tools palette shows commands together in their original wing groups. With `mountHints()`, double-Shift opens keyboard navigation: Tab changes groups and arrow keys move between icons; letter badges are no longer used.
+- Every compact toolbar and palette item, including color swatches, has a floating tooltip under `body` to avoid clipping. Tooltips show actual accelerators and double-key gestures; Tools shows Shift Shift. Swatches do not enlarge on hover and use border feedback. See `llms/styling.md`.
+- Connected preview/fullscreen controls stay on the compact toolbar. The highlighted Object properties down-chevron appears immediately after Tools only when the current context controls do not all fit in the row. Its localized label uses the existing `toolsContext` key.
+- The full palette contains registered wing buttons only, without duplicate view or context-entry buttons or added undo/redo controls. The full palette has zero padding/gaps; Object properties has separate padding and group spacing. Desktop toolbar icons use 14px at the default root font size while its buttons stay 44px; mobile icons and touch targets retain their size. See `llms/styling.md`.
+- Narrow UI starts strictly below `36rem`; override `--nabi-mobile-breakpoint` in CSS. Mobile docking uses viewport width, not only a narrow editor container (see `llms/styling.md`).
 - Store `nabi.getJson()` or `nabi.getHtml()`. Never store `getEditorHtml()`. HTML output and clipboard fragments protect leading spaces, including partial selections; see `llms/document-model.md`.
 - Treat HTML, JSON, paste data, command args, and custom filter output as untrusted input.
 - Use `NabiOptions.onError` for isolated command and callback failure reporting.
@@ -40,7 +45,7 @@ Use this file as a router. Read only the document that owns your question.
 
 ## Package facts
 
-- Package contract documented here: 1.1.2 (working version; not a publication claim).
+- Package contract documented here: 1.2.0 (working version; not a publication claim).
 - Runtime dependencies: zero.
 - Node.js for package tooling and SSR: 20 or newer.
 - Declared browser baseline: Chrome and Edge 120, Firefox 120, Safari 17.

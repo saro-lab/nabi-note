@@ -131,6 +131,8 @@ const allowedSourceEqual = new Set([
   'fr:Code',
   'de:Code',
   'fr:Image',
+  'de:Text',
+  'fr:Document',
 ]);
 const sourceFallback: string[] = [];
 let checkedValues = 0;

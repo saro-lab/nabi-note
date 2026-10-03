@@ -99,20 +99,27 @@ const registry = makeRegistry(wings().allBasic().build());
 const toolbarHtml = renderToolbarHtml({
   registry,
   locale: 'en',
+  layout: 'compact',
+  quick: ['b', 'i', 'tc', 'fs'],
 });
 
 const viewToolsHtml = renderViewToolsHtml({ locale: 'en' });
 ```
 
+`layout` defaults to `'compact'`; use `'wrap'` for the previous layout. `quick` takes toolbar slot names in priority order and defaults to `['b', 'i', 'tc', 'fs']`. A server cannot know the final container width, active selection, or software keyboard. The browser adjusts the compact row, menu placement, and mobile docking after mounting.
+
+Toolbar HTML no longer includes the old letter-badge attributes or letter-shortcut tooltip suffixes. Keyboard palette navigation is wired after mounting; keep server and browser package versions aligned.
+
 In the browser, mount the matching UI on those roots. `mountToolbar()` compares button names and localized labels. If the structure matches, it wires the existing buttons. If not, it removes only direct pre-rendered wing groups and renders the correct structure.
 
-Matching direct toolbar groups produced by `renderToolbarHtml()` are the package-owned pre-render exception to the otherwise empty dedicated-root rule. The toolbar mount may move, wire, replace, and remove those groups. Arbitrary host-owned child DOM inside a toolbar root is not a supported baseline and must live outside that root.
+Matching toolbar markup produced by `renderToolbarHtml()` is the package-owned pre-render exception to the otherwise empty dedicated-root rule. The toolbar mount may move, wire, replace, and remove those package-owned controls, including placement inside the compact Tools palette. Arbitrary host-owned child DOM inside a toolbar root is not a supported baseline and must live outside that root.
 
 The matching inputs are:
 
 - the registry and wing order;
 - locale or translator;
-- toolbar group order.
+- toolbar group order;
+- `layout` and `quick` configuration.
 
 Pre-rendering avoids an empty toolbar before JavaScript, but the browser remains authoritative. A failed browser mount rolls back wiring on matching pre-rendered buttons, and `unmount()` detaches that wiring.
 
@@ -132,4 +139,4 @@ Published viewer behavior is separate. After hydration or on a read-only page, i
 
 ## Icon themes and individual view tools
 
-Pass the same `showPreview` and `showFullscreen` booleans to `renderViewToolsHtml()` and `mountViewTools()`. Both default to true; both false returns an empty SSR string and mounts no wrapper. Matching controls are reused. CSS URL changes keep button identity. Load the published CSS and icon assets before hydration; do not serialize server `CORE_CSS` with `file:` asset URLs into a page. See `icons.md`.
+Pass the same `showPreview` and `showFullscreen` booleans to `renderViewToolsHtml()` and `mountViewTools()`. Both default to true; both false returns an empty SSR string and mounts no wrapper. Matching controls are reused. When connected to a compact toolbar, the browser keeps enabled view controls visible in the main row. CSS URL changes keep button identity. Load the published CSS and icon assets before hydration; do not serialize server `CORE_CSS` with `file:` asset URLs into a page. See `icons.md`.

@@ -207,7 +207,7 @@ export const CORE_CSS = `${ICON_CSS}
   border-radius: calc(var(--nabi-radius-sm) - .1875rem);
   display: inline-flex; align-items: center; justify-content: center; position: relative;
 }
-.nabi-btn:hover, .nabi-btn.nabi-kbd { color: var(--nabi-accent); }
+.nabi-btn:hover { color: var(--nabi-accent); }
 /* mousedown을 삼켜 캐럿을 지키는 버튼(parts/button.ts)은 :active도 안 걸려 눌린 티가 안 난다 — 이 애니메이션이 그 응답을 대신한다
    Buttons that swallow mousedown to preserve the caret (parts/button.ts) never trigger :active, so this animation supplies the missing tap feedback */
 @keyframes nabi-tap {
@@ -240,14 +240,14 @@ export const CORE_CSS = `${ICON_CSS}
 }
 .nabi-btn svg { inline-size: 1rem; block-size: 1rem; }
 .nabi-btn.nabi-word { inline-size: auto; padding: 0 .5rem; }
-/* 색 견본은 제 색이 내용이라 배경으로 눌림을 못 말한다 — 테두리는 선택을, 크기 변화는 hover를 맡는다
-   A color swatch can't show state via background (it'd blend into its own color); border marks selection, size change marks hover */
+/* 색 면은 유지하고, 테두리색으로 hover와 선택을 구분한다.
+   Keep the color face and distinguish hover from selection through its border. */
 .nabi-swatch {
   inline-size: 1.25rem; block-size: 1.25rem; min-inline-size: 0; border-radius: var(--nabi-radius-xs);
   border: 1px solid color-mix(in srgb, var(--nabi-line) 70%, transparent);
-  transition: transform var(--nabi-motion-fast);
+  transition: border-color var(--nabi-motion-fast);
 }
-.nabi-swatch:hover { transform: scale(1.18); }
+.nabi-swatch:not(.on):hover { border-color: var(--nabi-muted); }
 /* 눌린 견본은 .on의 배경 규칙을 덮고 테두리만 강조색으로 바꾼다
    A selected swatch overrides the .on background rule and only recolors its border */
 .nabi-btn.nabi-swatch.on {
@@ -255,8 +255,8 @@ export const CORE_CSS = `${ICON_CSS}
 }
 .nabi-ctx-group:has(.nabi-swatch) { gap: 5px; }
 
-/* 툴팁은 ::after 하나만 쓴다(힌트 배지는 ::before라 안 겹친다). 가운데 정렬은 물리 속성(left)만 써야 한다 — 논리 속성(inset-inline-start)과 translate(-50%)를 섞으면 RTL에서 어긋난다
-   Tooltip uses only ::after (hint badge is ::before, so they don't collide). Centering must use the physical 'left' property, not logical inset-inline-start, mixed with translate(-50%) breaks in RTL */
+/* 툴팁 가운데 정렬은 RTL에서도 물리 좌표를 쓴다.
+   Tooltip centering uses physical coordinates in RTL too. */
 [data-nabi-tip]:hover::after {
   content: attr(data-nabi-tip); position: absolute; inset-block-start: 100%; left: 50%;
   transform: translate(-50%, 4px); background: var(--nabi-fg); color: var(--nabi-bg);
@@ -264,13 +264,11 @@ export const CORE_CSS = `${ICON_CSS}
   pointer-events: none; z-index: 2;
 }
 [data-nabi-tip][aria-expanded="true"]::after { content: none; }
-
-/* 힌트 배지는 Shift 연타 동안만 뜬다
-   The hint badge only shows while double-tapping Shift */
-.nabi-hinting [data-hint]::before {
-  content: attr(data-hint); position: absolute; inset-block-start: -2px; inset-inline-end: -2px;
-  background: var(--nabi-accent); color: #fff; font-size: 9px; line-height: 1;
-  padding: 2px 3px; border-radius: 3px; pointer-events: none; z-index: 3;
+[data-nabi-tooltips] [data-nabi-tip]:hover::after { content: none !important; }
+.nabi-tooltip {
+  position: fixed; box-sizing: border-box; inline-size: max-content; max-inline-size: calc(100vw - 16px);
+  padding: 2px 6px; border-radius: 4px; background: var(--nabi-fg); color: var(--nabi-bg);
+  font-size: 11px; line-height: 1.6; white-space: normal; overflow-wrap: anywhere; pointer-events: none;
 }
 
 /* 피커 판 — 격자·차림표·주소 상자가 모두 이 판 위에 선다
@@ -459,6 +457,207 @@ export const CORE_CSS = `${ICON_CSS}
   font-size: .75rem; opacity: .62; min-inline-size: 3.5rem;
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+
+.nabi-toolbar.nabi-compact, .nabi-compact-row,
+.nabi-toolbar:has([data-nabi-compact]) { padding: 0; }
+.nabi-toolbar.nabi-compact { position: sticky; }
+.nabi-compact-row { position: relative; min-inline-size: 0; min-block-size: 3rem; }
+.nabi-compact-row::after { display: none; }
+.nabi-compact-source, .nabi-compact .nabi-tools { display: none !important; }
+.nabi-compact [hidden], .nabi-compact-row [hidden],
+.nabi-compact-row .nabi-strip[hidden] { display: none !important; }
+.nabi-compact-bar {
+  display: flex; flex-wrap: nowrap; align-items: center; gap: .125rem;
+  box-sizing: border-box; inline-size: 100%; block-size: 3rem;
+  min-inline-size: 0; padding: .125rem; background: var(--nabi-bg);
+}
+.nabi-compact-bar > .nabi-btn,
+.nabi-compact-quick > .nabi-btn,
+.nabi-compact-view > .nabi-btn,
+.nabi-compact-context .nabi-btn {
+  flex: none; box-sizing: border-box; block-size: 2.75rem; min-inline-size: 2.75rem;
+}
+.nabi-compact-view { display: flex; flex: none; gap: .125rem; }
+.nabi-compact-bar > .nabi-object-properties {
+  color: var(--nabi-accent);
+  background: color-mix(in srgb, var(--nabi-accent) 12%, var(--nabi-bg));
+}
+.nabi-compact-bar > .nabi-object-properties:hover,
+.nabi-compact-bar > .nabi-object-properties[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--nabi-accent) 20%, var(--nabi-bg));
+}
+.nabi-compact-quick, .nabi-compact-context {
+  display: flex; flex: 1 1 0; flex-wrap: nowrap; align-items: center;
+  min-inline-size: 0; gap: .125rem; overflow: hidden;
+}
+.nabi-compact-quick > .nabi-btn {
+  inline-size: 2.75rem; max-inline-size: 2.75rem; overflow: hidden;
+}
+.nabi-compact-context > .nabi-ctx-group {
+  flex: 0 1 auto; flex-wrap: nowrap; gap: .25rem;
+  min-inline-size: 0; min-block-size: 2.75rem; margin: 0; padding: 0;
+}
+.nabi-compact-context .nabi-ctx-group > * { flex: none; }
+.nabi-compact-context .nabi-ctx-tag {
+  max-inline-size: 6rem; overflow: hidden; text-overflow: ellipsis;
+}
+.nabi-compact-context .nabi-range { block-size: 2rem; }
+.nabi-compact-context .nabi-input { block-size: 2rem; }
+.nabi-compact-context .nabi-field { min-inline-size: 0; max-inline-size: 100%; }
+.nabi-compact-row:has(> .nabi-toolbox:not(.nabi-toolbox-mobile)) .nabi-compact-bar .nabi-icon,
+.nabi-compact-row:has(> .nabi-toolbox:not(.nabi-toolbox-mobile)) .nabi-compact-bar .nabi-btn > svg {
+  inline-size: .875rem; block-size: .875rem;
+}
+.nabi-compact-row:has(> .nabi-toolbox:not(.nabi-toolbox-mobile)) .nabi-compact-context :is(.nabi-input, .nabi-range) {
+  block-size: 1.75rem;
+}
+
+.nabi-toolbox {
+  position: absolute; inset-block-start: 100%; inset-inline-start: 0;
+  z-index: calc(var(--nabi-z-sticky) + 5); display: flex; flex-direction: column;
+  box-sizing: border-box; inline-size: 100%; max-inline-size: 100%;
+  max-block-size: min(32rem, calc(100dvh - 3rem)); min-block-size: 0;
+  color: var(--nabi-fg); background: var(--nabi-bg); border: 1px solid var(--nabi-line);
+  box-shadow: var(--nabi-shadow); outline: none;
+}
+.nabi-toolbox:not(.nabi-toolbox-mobile).nabi-toolbox-above {
+  inset-block-start: auto; inset-block-end: 100%;
+}
+.nabi-toolbox-body {
+  flex: 1 1 auto; min-block-size: 0; min-inline-size: 0; padding: 0;
+  overflow: auto; overscroll-behavior: contain;
+}
+.nabi-toolbox-body:has(> .nabi-ctx-group) { padding: .5rem; }
+.nabi-toolbox:has(> .nabi-toolbox-body > .nabi-ctx-group) {
+  border: 0; box-shadow: none;
+  background: color-mix(in srgb, var(--nabi-bg) 95%, var(--nabi-fg));
+}
+.nabi-toolbox-icons { display: flex; flex-wrap: wrap; align-items: center; gap: 0; }
+.nabi-toolbox-group { display: contents; }
+.nabi-toolbox-group > .nabi-btn {
+  flex: none; box-sizing: border-box; inline-size: 2.75rem; min-inline-size: 2.75rem;
+  block-size: 2.75rem; padding: 0; overflow: hidden;
+}
+.nabi-toolbox-group > .nabi-word { inline-size: auto; max-inline-size: 100%; padding-inline: .5rem; }
+.nabi-toolbox-group > .nabi-btn:focus-visible,
+.nabi-toolbox-body .nabi-ctx-group button:focus-visible {
+  outline: 2px solid var(--nabi-accent); outline-offset: -2px;
+  background: var(--nabi-soft);
+}
+.nabi-toolbox-body .nabi-ctx-group {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .25rem;
+  min-inline-size: 0; min-block-size: 0; margin: 0 0 .5rem; padding: 0;
+}
+.nabi-toolbox-body > .nabi-ctx-group:last-child { margin-block-end: 0; }
+.nabi-toolbox-body .nabi-ctx-group > .nabi-btn {
+  box-sizing: border-box; block-size: 2.75rem; min-inline-size: 2.75rem;
+}
+.nabi-toolbox-body .nabi-field { flex: 1 1 100%; min-inline-size: 0; }
+.nabi-toolbox-body .nabi-input, .nabi-toolbox-body .nabi-range { block-size: 2rem; }
+.nabi-toolbox-body .nabi-field > .nabi-input { inline-size: 0; }
+.nabi-toolbox .nabi-panel.nabi-hosted-panel {
+  position: static !important; inset: auto !important; inset-inline: auto !important;
+  inset-block: auto !important; transform: none !important;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0;
+  box-sizing: border-box; inline-size: 100% !important; max-inline-size: 100%;
+  min-inline-size: 0; max-block-size: none; margin: 0; padding: 0;
+  border: 0; box-shadow: none; overflow: visible;
+}
+.nabi-toolbox .nabi-hosted-panel > .nabi-btn {
+  min-block-size: 2.75rem; min-inline-size: 2.75rem;
+}
+.nabi-toolbox .nabi-hosted-panel > .nabi-input { flex: 1 1 8rem; inline-size: 0; }
+.nabi-toolbox .nabi-hosted-panel > .nabi-readout { flex: 1 1 100%; }
+.nabi-toolbox:not(.nabi-toolbox-mobile) .nabi-btn {
+  block-size: 2rem; min-block-size: 2rem; min-inline-size: 2rem;
+}
+.nabi-toolbox:not(.nabi-toolbox-mobile) .nabi-toolbox-group > .nabi-btn:not(.nabi-word) {
+  inline-size: 2rem;
+}
+.nabi-toolbox:not(.nabi-toolbox-mobile) .nabi-btn .nabi-icon,
+.nabi-toolbox:not(.nabi-toolbox-mobile) .nabi-btn > svg {
+  inline-size: .875rem; block-size: .875rem;
+}
+.nabi-toolbox:not(.nabi-toolbox-mobile) .nabi-input,
+.nabi-toolbox:not(.nabi-toolbox-mobile) .nabi-range { block-size: 1.75rem; }
+:is(.nabi-compact-context, .nabi-toolbox-body) .nabi-ctx-group > .nabi-swatch {
+  --nabi-swatch-inset: .375rem;
+  inline-size: 2rem; min-inline-size: 2rem; block-size: 2rem; min-block-size: 2rem;
+  padding: var(--nabi-swatch-inset); border: 0; box-shadow: none;
+  background-clip: content-box !important;
+  border-radius: calc(var(--nabi-swatch-inset) + var(--nabi-radius-xs));
+}
+:is(.nabi-compact-context, .nabi-toolbox-body) .nabi-ctx-group > .nabi-swatch::before {
+  content: ""; position: absolute; inset: var(--nabi-swatch-inset); box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--nabi-line) 70%, transparent);
+  border-radius: var(--nabi-radius-xs); pointer-events: none;
+}
+:is(.nabi-compact-context, .nabi-toolbox-body) .nabi-ctx-group > .nabi-swatch.on::before {
+  border: 2px solid var(--nabi-accent);
+}
+:is(.nabi-compact-context, .nabi-toolbox-body) .nabi-ctx-group > .nabi-swatch:not(.on):hover::before {
+  border-color: var(--nabi-muted);
+}
+:is(.nabi-compact-context, .nabi-toolbox-body) .nabi-ctx-group > .nabi-swatch:hover {
+  transform: none;
+}
+.nabi-compact-row:has(> .nabi-toolbox:not(.nabi-toolbox-mobile)) .nabi-compact-context .nabi-swatch,
+.nabi-toolbox:not(.nabi-toolbox-mobile) .nabi-ctx-group > .nabi-swatch {
+  --nabi-swatch-inset: .25rem;
+  inline-size: 1.75rem; min-inline-size: 1.75rem; block-size: 1.75rem; min-block-size: 1.75rem;
+}
+.nabi-toolbox-mobile {
+  inset-block-start: 100%; inset-inline: 0; inline-size: 100%;
+  block-size: var(--nabi-toolbox-height); max-block-size: var(--nabi-toolbox-height);
+  border-inline: 0; box-shadow: 0 1px 0 var(--nabi-line);
+}
+.nabi-toolbox-mobile .nabi-input { font-size: var(--nabi-touch-font-size, 16px); }
+.nabi-toolbox-waiting { visibility: hidden; pointer-events: none; }
+.nabi-toolbox-input.nabi-toolbox-inline {
+  inset-block-start: 0; block-size: 3rem; max-block-size: 3rem;
+  flex-direction: row; align-items: center; border: 0; box-shadow: none;
+}
+.nabi-toolbox-input.nabi-toolbox-inline > .nabi-toolbox-body {
+  order: 1; padding: 0; overflow: visible;
+}
+.nabi-toolbox-input.nabi-toolbox-inline .nabi-panel.nabi-hosted-panel {
+  flex-wrap: nowrap; block-size: 3rem; min-block-size: 3rem; gap: .25rem; padding: .125rem;
+}
+.nabi-toolbox-input.nabi-toolbox-inline .nabi-hosted-panel > .nabi-input {
+  flex: 1 1 0; inline-size: 0; min-inline-size: 0; block-size: 2rem;
+}
+.nabi-toolbox-input.nabi-toolbox-inline .nabi-hosted-panel > .nabi-btn {
+  flex: none; block-size: 2.75rem; min-inline-size: 2.75rem;
+}
+.nabi-compact[data-nabi-docked="true"] {
+  position: fixed !important; inset: auto !important; inset-inline: auto !important;
+  inset-block: auto !important; top: var(--nabi-dock-top) !important;
+  left: var(--nabi-dock-left) !important; right: auto !important; bottom: auto !important;
+  width: var(--nabi-dock-width) !important; box-sizing: border-box;
+  box-shadow: 0 -1px 0 var(--nabi-line);
+}
+.nabi-compact[data-nabi-docked="true"] .nabi-toasts {
+  inset-block-start: auto; inset-block-end: calc(100% + .375rem);
+}
+.nabi-dock-placeholder { block-size: 3rem; }
+.nabi-dock-placeholder[hidden] { display: none; }
+
+.nabi-toolbar-row:has(> [data-nabi-compact]), .nabi-toolbar:has(> [data-nabi-compact]) {
+  display: flex; flex-wrap: nowrap; align-items: center; gap: .125rem;
+  box-sizing: border-box; block-size: 3rem; min-inline-size: 0; padding: .125rem;
+  overflow: hidden;
+}
+.nabi-toolbar-row:has(> [data-nabi-compact]) > .nabi-group,
+.nabi-toolbar:has(> [data-nabi-compact]) > .nabi-group { display: contents; }
+.nabi-toolbar-row:has(> [data-nabi-compact]) > .nabi-group > .nabi-btn:not([data-nabi-quick]),
+.nabi-toolbar:has(> [data-nabi-compact]) > .nabi-group > .nabi-btn:not([data-nabi-quick]),
+.nabi-toolbar:has([data-nabi-compact]) .nabi-tools { display: none !important; }
+.nabi-toolbar-row:has(> [data-nabi-compact]) .nabi-btn,
+.nabi-toolbar:has(> [data-nabi-compact]) .nabi-btn {
+  flex: none; block-size: 2.75rem; min-inline-size: 2.75rem;
+}
+.nabi-toolbar-row:has(> [data-nabi-compact]) [hidden],
+.nabi-toolbar:has(> [data-nabi-compact]) [hidden] { display: none !important; }
 
 /* toast는 편집기가 흘리는 한 마디(ui/toast.ts가 세운다) — 툴바 아래 고정 지점에 절대 배치라 글을 안 민다
    A toast (raised by ui/toast.ts) sits at a fixed point below the toolbar and is absolutely positioned so it never shifts content */
@@ -708,6 +907,10 @@ export const CORE_CSS = `${ICON_CSS}
 .nabi-content > * {
   scroll-margin-block-start: calc(var(--nabi-sticky-top, 0px) + var(--nabi-keyboard-top, 0px) + var(--nabi-bar-height, 3.5rem));
 }
+.nabi:has([data-nabi-docked="true"]) .nabi-content > * {
+  scroll-margin-block-start: var(--nabi-sticky-top, 0px);
+  scroll-margin-block-end: var(--nabi-bar-height, 3rem);
+}
 
 .nabi-content { padding: 12px 14px; line-height: 1.7; outline: none; overflow-wrap: break-word; }
 /* .nabi-editing에만 최소 높이를 준다 — 전체선택 삭제 뒤 상자가 한 줄로 접히면 그 아래 페이지가 통째로 딸려 올라온다(2026-08-23). 발행·미리보기는 글 길이가 그대로 높이다
@@ -767,8 +970,13 @@ export const CORE_CSS = `${ICON_CSS}
 }
 .nabi.is-fullscreen .nabi-content.nabi-fullscreen-content {
   box-sizing: border-box; flex: 1 0 auto;
-  inline-size: min(100%, var(--nabi-fullscreen-content-width, 100%)); margin-inline: auto;
+  inline-size: min(100%, var(--nabi-fullscreen-content-width, 100%));
+  margin-block: 0; margin-inline: auto;
   background: var(--nabi-fullscreen-content-bg, var(--nabi-bg));
+}
+.nabi.is-fullscreen .nabi-content.nabi-fullscreen-content.nabi-fullscreen-framed {
+  margin-block: 1.5rem;
+  box-shadow: 0 -2px 8px rgb(0 0 0 / 6%), 0 3px 10px rgb(0 0 0 / 8%);
 }
 
 /* 덮개(미리보기·라이트박스 공용)에 옅은 블러를 준다 — 반투명 막만으로는 뒤 글자가 앞과 겹쳐 읽힌다

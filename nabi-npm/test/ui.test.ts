@@ -661,7 +661,7 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   ok('CSS: 같은 글은 한 번만 실린다', new Set(sheets).size === sheets.length);
 
   {
-    const hover = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-btn:hover, .nabi-btn.nabi-kbd {'));
+    const hover = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-btn:hover {'));
     const hoverBody = hover.slice(0, hover.indexOf('}'));
     ok(
       'CSS: 툴바 hover는 바탕을 칠하지 않고 색만 바꾼다',

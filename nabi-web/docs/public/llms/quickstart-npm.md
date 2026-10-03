@@ -12,7 +12,10 @@ NABI NOTE declares zero runtime dependencies. The package declares Node.js 20 or
 
 ```html
 <div id="editor" class="nabi">
-  <div id="toolbar" class="nabi-toolbar"></div>
+  <div id="toolbar-chrome" class="nabi-toolbar">
+    <div id="toolbar" class="nabi-toolbar-row"></div>
+    <div id="context" class="nabi-context"></div>
+  </div>
   <div id="content" class="nabi-content"></div>
 </div>
 ```
@@ -29,6 +32,7 @@ import 'nabi-note/nabi.css';
 const root = document.querySelector<HTMLElement>('#editor')!;
 const content = document.querySelector<HTMLElement>('#content')!;
 const toolbarRoot = document.querySelector<HTMLElement>('#toolbar')!;
+const toolbarChrome = document.querySelector<HTMLElement>('#toolbar-chrome')!;
 
 const { nabi, registry } = createNabiWith(wings().allBasic(), {
   locale: 'en',
@@ -44,6 +48,8 @@ const toolbar = mountToolbar({
   root: toolbarRoot,
   surface: content,
   locale: 'en',
+  layout: 'compact',
+  quick: ['b', 'i', 'tc', 'fs'],
 });
 
 // Later:
@@ -52,6 +58,8 @@ const toolbar = mountToolbar({
 ```
 
 Do not set `contenteditable` yourself. `mountSurface()` sets it and adds `.nabi-editing`. Give every active surface, toolbar, context toolbar, and standalone diff its own separate, non-overlapping root. A duplicate root or an active ancestor and descendant overlap throws. After the owning mount unmounts, the other root can be mounted. Mount roots should otherwise start without host-owned child DOM. Matching direct groups from `renderToolbarHtml()` are the package-owned SSR toolbar exception. The host supplies `.nabi`, `.nabi-toolbar`, and `.nabi-content` placement classes.
+
+`layout: 'compact'` is the default: quick tools and selection tools share one row, and the Tools palette shows available commands together in their original wing groups. `quick` lists toolbar slot names in priority order. Use `layout: 'wrap'` to retain the previous wrapping toolbar. Compact mobile docking follows the viewport breakpoint, so a narrow desktop column stays at the top. See `styling.md` for layout and keyboard details.
 
 The browser factory wires its internal `DOMParser` adapter automatically, so `setHtml()`, HTML files, and HTML paste need no parser option.
 
@@ -97,7 +105,7 @@ createNabiWith(wings().allBasic().use('save').use('open'));
 createNabiWith(wings().all().drop('upload').use('fs', { values: ['sm', 'lg'] }));
 ```
 
-- `all()` includes all 30 official wings.
+- `all()` includes all official wings.
 - `allBasic()` includes 26 and omits `upload`, `save`, `open`, and `diff`, which need host wiring.
 - A direct array is the tree-shakable route for a small set.
 - `use('upload')` pulls its first available dependency, `img`, if neither `img` nor `a` is present.
@@ -137,20 +145,19 @@ import {
 } from 'nabi-note';
 import { attachViewer } from 'nabi-note/viewer';
 
-const contextRoot = document.createElement('div');
-toolbarRoot.append(contextRoot);
+const contextRoot = document.querySelector<HTMLElement>('#context')!;
 
 const context = mountContextToolbar({
   nabi, registry, root: contextRoot, surface: content, locale: 'en',
 });
 const hints = mountHints({ toolbar, context, root, surface: content });
 const picked = mountPickedMark({ nabi, surface: content });
-const sticky = mountSticky({ root: toolbarRoot, surface: content, nabi });
+const sticky = mountSticky({ root: toolbarChrome, surface: content, nabi });
 const view = mountViewTools({
   nabi,
   surface: content,
   root,
-  container: toolbarRoot,
+  container: toolbarChrome,
   locale: 'en',
   onBody: (body) => {
     const viewer = attachViewer(body, { locale: 'en' });
@@ -158,6 +165,10 @@ const view = mountViewTools({
   },
 });
 ```
+
+The context toolbar follows the compact toolbar mounted for the same `nabi`; do not give it a separate layout option. Keep the toolbar and context roots as siblings. View controls mounted inside the shared `toolbarChrome` wrapper stay visible in the compact row, subject to their individual visibility options. When context controls do not all fit, the highlighted Object properties down-chevron appears immediately after Tools and opens the full context panel. The full palette contains registered wing buttons only, with no duplicate view/context-entry controls or added undo/redo buttons. Without a compact toolbar, the context and view mounts retain their standalone placement.
+
+`mountHints()` makes double-Shift open the compact palette. Tab/Shift+Tab cycle groups, arrow keys move between icons, Enter/Space activate, and Escape returns to editing. The former letter badges are no longer used. See `styling.md` for wrapping and visual-row navigation rules.
 
 Pass `surface` to toolbar-like mounts. It scopes keyboard accelerators and focus restoration, which is required when multiple editors share a page.
 

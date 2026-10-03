@@ -206,7 +206,21 @@ File/history utility exports:
 | `mountViewTools` | `nabi, surface, root, container` | buttons/unmount |
 | `mountUploadView` | `nabi, surface` | start/progress/settle/done/unmount |
 
-Important optional toolbar inputs: `surface`, `locale`, `translator`, `groups`, `settle`, `onFiles`, `onHost`, `file`, and `accelerators`.
+Important optional toolbar inputs: `surface`, `locale`, `translator`, `groups`, `layout`, `quick`, `settle`, `onFiles`, `onHost`, `file`, and `accelerators`.
+
+`ToolbarOptions.layout?: 'compact' | 'wrap'` defaults to `'compact'`. `quick?: readonly string[]` defaults to `['b', 'i', 'tc', 'fs']` and identifies `ToolbarSlot.name` values in priority order. Compact layout uses one row and keeps overflow commands in the full Tools palette. That palette displays available commands together in their original wing groups, without category tabs. `layout: 'wrap'` keeps the previous toolbar layout.
+
+A context toolbar mounted for the same `nabi` joins the compact toolbar and displays its controls in that row. If they do not all fit, a highlighted Object properties down-chevron appears immediately after Tools and opens the full context panel; it is hidden when all controls fit. The localized label uses the unchanged `toolsContext` dictionary key. `ContextToolbarOptions` has no `layout` option; standalone context toolbars retain their previous behavior. Preview/fullscreen buttons from `mountViewTools()` stay visible in the compact row when its `container` is the same `.nabi-toolbar` wrapper, subject to `showPreview` and `showFullscreen`. The full palette contains registered wing buttons only, without duplicate view controls, an extra context-tools entry, or added undo/redo buttons. The compact row also adds no undo/redo buttons; editor undo/redo APIs and shortcuts are unchanged.
+
+When several compact toolbars share one `nabi`, the most recently mounted toolbar hosts the most recently mounted context toolbar. Earlier toolbars retain their quick commands and Tools palettes. Unmounting the current host restores the previous connection.
+
+`Toolbar.buttons` includes commands in a closed Tools palette. `ToolbarButton.el.hidden` describes current selection validity, not overflow placement; an ancestor hides commands that are currently offscreen. Registered accelerators remain available for valid overflow commands. See `styling.md` for mobile docking, dimensions, and keyboard behavior.
+
+`mountHints()` retains its public name and enables double-Shift entry into keyboard navigation. In compact layout this opens the full Tools palette; in `wrap` layout it focuses the first available toolbar button. Tab/Shift+Tab cycle group starts, Left/Right cycle icons, Up/Down choose the nearest column in adjacent rendered rows, Enter/Space activate, and Escape returns to editing. Inputs and editable fields retain their normal key behavior, and events already handled by specialized pickers are not intercepted. On desktop and mobile, commands in an open non-input palette retain palette focus. Letter badges and letter-based command lookup are removed. The legacy `shortcut` declaration remains validated compatibility metadata; `accelerator` and `doubleKeys` keep their separate behavior.
+
+`Hints.active()` reflects the open compact panel, including pointer-opened panels, or the active keyboard session for `wrap`. `Hints.hide()` closes that interaction and restores surface focus. Outside interaction and unmounting close without focus restoration. See `styling.md` for navigation scope and IME handling.
+
+`ToolbarButton.press(by?: 'keyboard' | 'pointer')` defaults to `'keyboard'` and returns whether the action reached a command, panel, or host handler. Pass `'pointer'` when forwarding a pointer action through a custom control. `accelerate()` uses the button's accelerator-specific action when one is declared.
 
 Surface, toolbar, context-toolbar, and standalone-diff mounts require distinct dedicated roots. Do not place arbitrary host-owned child DOM inside those roots. A toolbar may instead receive matching direct groups produced by `renderToolbarHtml()`; those groups are package-owned pre-rendered UI that the mount wires, replaces when mismatched, and removes on teardown.
 
@@ -248,8 +262,10 @@ The stored renderer pair is the only public detached document rendering boundary
 Toolbar HTML:
 
 - `toolbarSlots(registry, translator, order?)`;
-- `renderToolbarHtml({ registry, locale?, translator?, groups? })`;
+- `renderToolbarHtml({ registry, locale?, translator?, groups?, layout?, quick? })`;
 - `renderViewToolsHtml({ locale?, translator?, showPreview?, showFullscreen? })`.
+
+`ToolbarHtmlOptions.layout` and `quick` have the same types and defaults as `ToolbarOptions`. Pass matching layout and quick-action configuration during SSR and browser mounting.
 
 Style:
 

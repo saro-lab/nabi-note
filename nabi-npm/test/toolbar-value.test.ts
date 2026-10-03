@@ -3,7 +3,7 @@ import { caretAt } from '../src/caret/index.js';
 import { hostOf } from '../src/editor/index.js';
 import { createNabiWith } from '../src/wing/index.js';
 import { bulletListWing, defaultWings, orderedListWing, taskListWing } from '../src/wings/index.js';
-import { mountHints, mountToolbar } from '../src/ui/index.js';
+import { mountToolbar } from '../src/ui/index.js';
 import { translate } from '../src/locale/index.js';
 import { SAMPLE } from '../demo/sample.js';
 import { done, eq, ok } from './net.js';
@@ -74,11 +74,11 @@ for (const w of ['tc', 'hl'] as const) {
   eq(`${w} 데모 문장 — 선택된 글자가 없다는 토스트를 띄운다`, clicked.toast, [`info:${translate('noTarget', 'ko')}`]);
 }
 
-function hintPress(
-  w: 'tc' | 'hl' | 'sup' | 'sub',
-  key: 'c' | 'h' | 'ArrowUp' | 'ArrowDown',
-  code: 'KeyC' | 'KeyH' | 'ArrowUp' | 'ArrowDown',
-): { readonly value: unknown; readonly pressed: string | null; readonly doc: unknown } {
+function keyboardPress(w: 'tc' | 'hl' | 'sup' | 'sub'): {
+  readonly value: unknown;
+  readonly pressed: string | null;
+  readonly doc: unknown;
+} {
   const dom = new JSDOM(
     '<!doctype html><html><body><div id="chrome"><div id="toolbar"></div></div><div id="surface" tabindex="0"></div></body></html>',
   );
@@ -91,15 +91,9 @@ function hintPress(
     registry,
     root: owner.getElementById('toolbar') as HTMLElement,
     surface,
+    quick: [w],
   });
-  const hints = mountHints({
-    toolbar,
-    root: owner.getElementById('chrome') as HTMLElement,
-    surface,
-  });
-  surface.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', code: 'ShiftLeft', bubbles: true }));
-  surface.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Shift', code: 'ShiftLeft', bubbles: true }));
-  surface.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key, code, bubbles: true }));
+  toolbar.buttons.find((button) => button.w === w)!.press();
   const mark = hostOf(nabi)
     .armed.peek()
     .plus.find((candidate) => candidate.w === w);
@@ -109,35 +103,34 @@ function hintPress(
     pressed: toolbar.buttons.find((candidate) => candidate.w === w)?.el.getAttribute('aria-pressed') ?? null,
     doc: nabi.getJson(),
   };
-  hints.unmount();
   toolbar.unmount();
   dom.window.close();
   return answer;
 }
 
-const hintedTextColor = hintPress('tc', 'c', 'KeyC');
-eq('Shift 두 번 C — 첫 번째 초록색을 임시 선택한다', hintedTextColor.value, 'green');
-eq('Shift 두 번 C — 글자색 버튼도 눌린 상태로 보인다', hintedTextColor.pressed, 'true');
-eq('Shift 두 번 C — 다음 입력에 초록 글자색이 실제로 걸린다', hintedTextColor.doc, [
+const hintedTextColor = keyboardPress('tc');
+eq('글자색 키보드 실행 — 첫 번째 초록색을 임시 선택한다', hintedTextColor.value, 'green');
+eq('글자색 키보드 실행 — 글자색 버튼도 눌린 상태로 보인다', hintedTextColor.pressed, 'true');
+eq('글자색 키보드 실행 — 다음 입력에 초록 글자색이 실제로 걸린다', hintedTextColor.doc, [
   { w: 'p', ch: ['글', { w: 'tc', a: { c: 'green' }, ch: ['자'] }] },
 ]);
 
-const hintedHighlight = hintPress('hl', 'h', 'KeyH');
-eq('Shift 두 번 H — 첫 번째 노란색을 임시 선택한다', hintedHighlight.value, 'yellow');
-eq('Shift 두 번 H — 형광펜 버튼도 눌린 상태로 보인다', hintedHighlight.pressed, 'true');
-eq('Shift 두 번 H — 다음 입력에 노란 형광펜이 실제로 걸린다', hintedHighlight.doc, [
+const hintedHighlight = keyboardPress('hl');
+eq('형광펜 키보드 실행 — 첫 번째 노란색을 임시 선택한다', hintedHighlight.value, 'yellow');
+eq('형광펜 키보드 실행 — 형광펜 버튼도 눌린 상태로 보인다', hintedHighlight.pressed, 'true');
+eq('형광펜 키보드 실행 — 다음 입력에 노란 형광펜이 실제로 걸린다', hintedHighlight.doc, [
   { w: 'p', ch: ['글', { w: 'hl', a: { c: 'yellow' }, ch: ['자'] }] },
 ]);
 
-const hintedSuperscript = hintPress('sup', 'ArrowUp', 'ArrowUp');
-eq('Shift 두 번 ↑ — 윗첨자 버튼이 임시 선택된다', hintedSuperscript.pressed, 'true');
-eq('Shift 두 번 ↑ — 다음 입력에 윗첨자가 실제로 걸린다', hintedSuperscript.doc, [
+const hintedSuperscript = keyboardPress('sup');
+eq('윗첨자 키보드 실행 — 윗첨자 버튼이 임시 선택된다', hintedSuperscript.pressed, 'true');
+eq('윗첨자 키보드 실행 — 다음 입력에 윗첨자가 실제로 걸린다', hintedSuperscript.doc, [
   { w: 'p', ch: ['글', { w: 'sup', ch: ['자'] }] },
 ]);
 
-const hintedSubscript = hintPress('sub', 'ArrowDown', 'ArrowDown');
-eq('Shift 두 번 ↓ — 아랫첨자 버튼이 임시 선택된다', hintedSubscript.pressed, 'true');
-eq('Shift 두 번 ↓ — 다음 입력에 아랫첨자가 실제로 걸린다', hintedSubscript.doc, [
+const hintedSubscript = keyboardPress('sub');
+eq('아랫첨자 키보드 실행 — 아랫첨자 버튼이 임시 선택된다', hintedSubscript.pressed, 'true');
+eq('아랫첨자 키보드 실행 — 다음 입력에 아랫첨자가 실제로 걸린다', hintedSubscript.doc, [
   { w: 'p', ch: ['글', { w: 'sub', ch: ['자'] }] },
 ]);
 

@@ -6,6 +6,8 @@ import {
   REVEAL_STEPS,
   bandFix,
   bandOf,
+  bandWalk,
+  dockBandOf,
   isIos,
   placeWalk,
   revealFix,
@@ -16,6 +18,7 @@ import {
 } from './band.js';
 import { watchSettle, type Settle } from './parts/settle.js';
 import { HostElementLease } from '../lifecycle.js';
+import { dockViewportRect } from './dock.js';
 
 export const KEYBOARD_TOP_VAR = '--nabi-keyboard-top';
 export const KEYBOARD_BOTTOM_VAR = '--nabi-keyboard-bottom';
@@ -73,6 +76,7 @@ export function mountSticky(options: StickyOptions): Sticky {
   const ownSettle = suppliedSettle === undefined;
   let unmounted = false;
   const styles = new HostElementLease(root);
+  const docked = (): boolean => chrome?.getAttribute?.('data-nabi-docked') === 'true';
   let ios: boolean;
   try {
     ios =
@@ -218,6 +222,11 @@ export function mountSticky(options: StickyOptions): Sticky {
 
   const bandNow = (): { readonly band: Band; readonly aim: Band; readonly limit: number } | null => {
     if (!view) return null;
+    if (docked()) {
+      const viewport = dockViewportRect(owner);
+      const band = dockBandOf(chrome?.getBoundingClientRect().top ?? null, viewport);
+      return { band, aim: band, limit: viewport.bottom - viewport.top };
+    }
     const visual = view.visualViewport;
     // ruler + offsetTop으로 보이는 창을 캐럿·크롬의 rect와 같은 좌표계로 옮긴다 — {0, height}만 쓰면 안드로이드에서 띠가 뒤집힌다
     // Adding `ruler` aligns the visual viewport to the caret/chrome rect's coordinate system; using {0, height} alone flips the band on Android
@@ -239,9 +248,33 @@ export function mountSticky(options: StickyOptions): Sticky {
     };
   };
 
+  const pushDock = (delta: number): number => {
+    if (!view) return 0;
+    let remaining = delta;
+    for (
+      let element: HTMLElement | null = surface;
+      element && element !== owner.body && element !== owner.documentElement;
+      element = element.parentElement
+    ) {
+      if (Math.abs(remaining) < 1) break;
+      if (element.scrollHeight <= element.clientHeight) continue;
+      if (!/(auto|scroll)/.test(view.getComputedStyle(element).overflowY)) continue;
+      const before = element.scrollTop;
+      element.scrollTop += remaining;
+      remaining -= element.scrollTop - before;
+    }
+    if (Math.abs(remaining) >= 1) {
+      const before = view.scrollY;
+      view.scrollBy({ top: remaining, behavior: 'auto' });
+      mine = view.scrollY;
+      remaining -= view.scrollY - before;
+    }
+    return delta - remaining;
+  };
+
   const measure = (): void => {
     if (!view) return;
-    if (ios) {
+    if (ios && !docked()) {
       reAim();
       return;
     }
@@ -250,7 +283,8 @@ export function mountSticky(options: StickyOptions): Sticky {
     if (!caret || !now) return;
     const delta = bandFix(caret, now.band, now.limit);
     if (delta === 0) return;
-    view.scrollBy({ top: delta, behavior: 'auto' });
+    if (docked()) pushDock(delta);
+    else view.scrollBy({ top: delta, behavior: 'auto' });
   };
 
   const aim = (): void => {
@@ -289,11 +323,23 @@ export function mountSticky(options: StickyOptions): Sticky {
       return { caret, band: now.aim, limit: now.limit };
     };
     const push = (delta: number): number => {
+      if (docked()) return pushDock(delta);
       const before = window_.scrollY;
       window_.scrollBy({ top: delta, behavior: 'auto' });
       mine = window_.scrollY;
       return window_.scrollY - before;
     };
+    if (docked()) {
+      if (by === 'view' && !armed) return;
+      const seen = look();
+      if (!seen || Math.abs(bandFix(seen.caret, seen.band, seen.limit)) < TINY_FIX) return;
+      bandWalk(by === 'view' ? KEYBOARD_STEPS : REVEAL_STEPS, look, push);
+      if (closing) {
+        closing = false;
+        armed = false;
+      }
+      return;
+    }
     // 편집 문은 키보드 유무와 무관하게 위 변만 본다 — 아래 변까지 보면 편집마다 사람이 굴려 내린 화면을 도로 끌어올린다
     // The edit door only checks the top edge regardless of the keyboard; also checking the bottom would pull back a scroll the user made on every keystroke
     if (by !== 'view') {

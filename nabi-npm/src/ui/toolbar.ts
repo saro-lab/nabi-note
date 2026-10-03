@@ -16,6 +16,7 @@ import { openPrompt } from './parts/prompt.js';
 import { watchSettle, type Settle } from './parts/settle.js';
 import { mountToast, type ToastMount } from './toast.js';
 import { openChoosePanel } from './choose.js';
+import { mountCompactToolbar, compactKeepsFocus, type CompactToolbar } from './compact.js';
 import { openSavePanel } from './save.js';
 import { saveFileWing } from '../wings/file/file.js';
 import type { FileMount } from '../surface/index.js';
@@ -35,6 +36,8 @@ import {
 export { TOOLBAR_GROUPS } from '../wing/toolbar-html.js';
 
 export interface ToolbarOptions {
+  readonly layout?: 'compact' | 'wrap';
+  readonly quick?: readonly string[];
   readonly nabi: Nabi;
   readonly registry: Registry;
   readonly root: HTMLElement;
@@ -71,9 +74,9 @@ export interface ToolbarButton {
   readonly el: HTMLButtonElement;
   readonly shortcut?: string;
   readonly accelerator?: string;
-  // 눌러 본다 — 힌트(Shift 연타)가 부르는 공식 문이다. 키보드 손이다 — 포인터 손은 DOM 클릭으로 온다(iconButton이 detail로 가른다). 답은 닿았는가다: 커맨드·판으로 가면 참이고, host 갈래인데 받을 손이 없으면 거짓이다.
-  // Presses the button — the official door hints (double-Shift) call. This is the keyboard hand; the pointer hand comes through a real DOM click instead (iconButton distinguishes them by `detail`). The return value means "did this reach anything" — true for a command or panel, false for a `host` action with nothing wired to receive it.
-  press(): boolean;
+  // 힌트는 기본 keyboard로, 메뉴 사본은 실제 누른 손을 넘겨 같은 명령을 실행한다. 받을 곳 없는 host 동작은 false다.
+  // Hints default to keyboard; menu copies pass the actual input hand. Unwired host actions return false.
+  press(by?: CommandHand): boolean;
   // 가속키가 부르는 문 — 선언이 따로 없으면 `press` 와 같다.
   // The door an accelerator calls — identical to `press` unless a declaration overrides it.
   accelerate(): boolean;
@@ -145,6 +148,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     let filePicker: Disposer | null = null;
     let pendingVisibility = false;
     let unmounted = false;
+    let compact: CompactToolbar | null = null;
     const attributes = new HostElementLease(root);
     lifecycle.add(() => attributes.dispose());
 
@@ -164,8 +168,9 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     // One command — closes any panel, returns focus to the editor, and sends it through one door. The triggering hand (`by`) travels with it, since a mark gesture on a collapsed caret is distinguished by this.
     const run = (command: string, args?: Readonly<Record<string, unknown>>, by?: CommandHand): void => {
       if (unmounted || unmounting) return;
-      closePicker();
-      focusQuiet(options.surface);
+      const keepFocus = compactKeepsFocus(nabi);
+      if (!keepFocus) closePicker();
+      if (!keepFocus) focusQuiet(options.surface);
       nabi.applyCommand(command, args ?? {}, by);
     };
 
@@ -362,6 +367,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
           openAsk(wing, button, action);
           return true;
         case 'file':
+          compact?.close();
           openFiles(action);
           return true;
         default: {
@@ -371,6 +377,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
           // 저장 판도 호스트의 손도 없다 — 이 단추는 아무 데도 안 닿는다.
           // Neither the save panel nor a host handler exists — this button reaches nothing.
           if (!actionReaches(action, { savePanel, onHost: options.onHost !== undefined })) return false;
+          compact?.close();
           if (savePanel && options.file) {
             openSavePanel({
               file: options.file,
@@ -417,7 +424,16 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
       // 미리 그린 것이 없거나 어긋난다 — 그 자리에서 새로 그린다. 조용히 안 깨진다: 잃는 것은 미리 그린 값(깜박임이 돌아온다)뿐이고 화면은 언제나 옳다.
       // No pre-rendered row, or it doesn't match — redrawn on the spot. This never fails silently: the only cost is losing the pre-render (a flash returns), while the screen is always correct.
       for (const el of Array.from(root.querySelectorAll(':scope > .nabi-group'))) el.remove();
-      root.insertAdjacentHTML('beforeend', renderToolbarHtml({ registry, translator: t, groups: order }));
+      root.insertAdjacentHTML(
+        'beforeend',
+        renderToolbarHtml({
+          registry,
+          translator: t,
+          groups: order,
+          ...(options.layout ? { layout: options.layout } : {}),
+          ...(options.quick ? { quick: options.quick } : {}),
+        }),
+      );
       standingButtons = standing();
     }
     for (const el of Array.from(root.querySelectorAll<HTMLElement>(':scope > .nabi-group'))) {
@@ -437,6 +453,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     slots.forEach((slot, at) => {
       const el = standingButtons[at];
       if (!el) return;
+      el.removeAttribute('data-hint');
       const { wing, decl } = slot;
       // 누른 손(by)도 그대로 잇는다 — 어느 단추를 눌렀는지 함께 보낸다.
       // The triggering hand (by) is passed straight through too.
@@ -448,7 +465,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
         ...(decl.value !== undefined ? { value: decl.value } : {}),
         ...(decl.shortcut ? { shortcut: decl.shortcut } : {}),
         ...(decl.accelerator ? { accelerator: decl.accelerator } : {}),
-        press: () => fire(wing, el, decl),
+        press: (by = 'keyboard') => fire(wing, el, decl, by),
         accelerate: () => (decl.accelerated ? act(wing, el, decl.accelerated) : fire(wing, el, decl)),
       });
     });
@@ -490,6 +507,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
       }
       pendingVisibility = false;
       paintVisibility();
+      compact?.refresh();
     };
 
     const stopChange = nabi.onChange(refresh);
@@ -508,6 +526,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
       if (!pendingVisibility) return;
       pendingVisibility = false;
       paintVisibility();
+      compact?.refresh();
     });
     lifecycle.add(stopSettle);
 
@@ -552,6 +571,18 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     const unbindLocale = options.locale === undefined ? null : hostOf(nabi).bindLocale(options.locale);
     if (unbindLocale) lifecycle.add(unbindLocale);
 
+    if (options.layout !== 'wrap') {
+      compact = mountCompactToolbar({
+        nabi,
+        root,
+        strip,
+        buttons,
+        translator: t,
+        quick: options.quick ?? ['b', 'i', 'tc', 'fs'],
+        ...(options.surface ? { surface: options.surface } : {}),
+      });
+      lifecycle.add(() => compact?.unmount());
+    } else root.querySelector(':scope > [data-nabi-compact]')?.remove();
     refresh();
 
     return {
