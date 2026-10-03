@@ -7,6 +7,12 @@
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-10-03
+
+### Fixed
+
+- 문단 앞 공백이 HTML 저장·불러오기와 편집 화면에서 유지되도록 수정했습니다. 제목·중첩 서식·인용문 안의 문단과 드롭캡 앞 공백에도 적용됩니다.
+
 ## [1.1.1] - 2026-09-28
 
 ### Changed
@@ -35,6 +41,7 @@
 - 정식 버전을 출시했습니다.
 
 [Unreleased]: https://github.com/saro-lab/nabi-note
+[1.1.2]: https://www.npmjs.com/package/nabi-note/v/1.1.2
 [1.1.1]: https://www.npmjs.com/package/nabi-note/v/1.1.1
 [1.1.0]: https://www.npmjs.com/package/nabi-note/v/1.1.0
 [1.0.0]: https://www.npmjs.com/package/nabi-note/v/1.0.0

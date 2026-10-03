@@ -103,7 +103,7 @@ HTML import is described in `io-security.md`.
 - `getHtml()` creates published/storage HTML.
 - `getEditorHtml()` creates editing HTML with deterministic `data-key`, content seals, fillers, and edit-only markup.
 - `renderStoredHtml(json, registry)` and `renderStoredEditorHtml(json, registry)` are the detached equivalents.
-- Multiple spaces and trailing spaces are protected in HTML output so browser whitespace collapse does not change visible content.
+- Leading paragraph spaces (including inside inline formatting), multiple spaces, and trailing spaces are protected in HTML output so browser whitespace collapse does not change visible content.
 - Empty published paragraphs render as `<p></p>`. Editor HTML uses a marked filler `br`. A sole unmarked `br` is a real line, and a trailing real `br` receives a separate marked editor-only filler.
 
 Never persist editor HTML as content. It is an implementation representation for mounting and hydration.

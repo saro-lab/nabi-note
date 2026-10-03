@@ -7,6 +7,12 @@ Dates use Korea Standard Time (KST).
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-10-03
+
+### Fixed
+
+- Fixed leading paragraph spaces being collapsed in saved or loaded HTML and in the editor, including headings, nested formatting, paragraphs inside blockquotes, and spaces before drop caps.
+
 ## [1.1.1] - 2026-09-28
 
 ### Changed
@@ -35,6 +41,7 @@ Dates use Korea Standard Time (KST).
 - First stable release.
 
 [Unreleased]: https://github.com/saro-lab/nabi-note
+[1.1.2]: https://www.npmjs.com/package/nabi-note/v/1.1.2
 [1.1.1]: https://www.npmjs.com/package/nabi-note/v/1.1.1
 [1.1.0]: https://www.npmjs.com/package/nabi-note/v/1.1.0
 [1.0.0]: https://www.npmjs.com/package/nabi-note/v/1.0.0

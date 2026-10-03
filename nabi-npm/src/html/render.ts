@@ -13,11 +13,12 @@ function escapeText(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function escapeTextRun(text: string, preserveEnd = false): string {
+function escapeTextRun(text: string, preserveStart = false, preserveEnd = false): string {
   const escaped = escapeText(text);
   return escaped.replace(/ +/g, (spaces, offset: number) => {
+    const atStart = preserveStart && offset === 0;
     const atEnd = preserveEnd && offset + spaces.length === escaped.length;
-    if (spaces.length === 1) return atEnd ? '&nbsp;' : spaces;
+    if (spaces.length === 1) return atStart || atEnd ? '&nbsp;' : spaces;
     return Array.from(spaces, (_space, at) =>
       at % 2 === 0 || (atEnd && at === spaces.length - 1) ? '&nbsp;' : ' ',
     ).join('');
@@ -111,7 +112,7 @@ const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 const SPACE = /^\s+$/u;
 const PUNCTUATION = /^\p{P}+$/u;
 
-function renderDropCapText(text: string, preserveEnd: boolean, state: DropCapState): string {
+function renderDropCapText(text: string, preserveStart: boolean, preserveEnd: boolean, state: DropCapState): string {
   let start = -1;
   let end = -1;
   for (const part of GRAPHEMES.segment(text)) {
@@ -120,12 +121,12 @@ function renderDropCapText(text: string, preserveEnd: boolean, state: DropCapSta
     end = part.index + part.segment.length;
     if (!PUNCTUATION.test(part.segment)) break;
   }
-  if (start < 0 || end < 0) return escapeTextRun(text, preserveEnd);
+  if (start < 0 || end < 0) return escapeTextRun(text, preserveStart, preserveEnd);
 
   state.pending = false;
-  const before = escapeTextRun(text.slice(0, start));
+  const before = escapeTextRun(text.slice(0, start), preserveStart);
   const letter = tagOf('span', escapeText(text.slice(start, end)), { 'data-nabi-dropcap-letter': '' });
-  const after = escapeTextRun(text.slice(end), preserveEnd);
+  const after = escapeTextRun(text.slice(end), false, preserveEnd);
   return before + letter + after;
 }
 
@@ -148,12 +149,18 @@ function isBlockGrade(w: string, env: SchemaEnv): boolean {
   return w === P || env.lumps.has(w) || env.blockHolders.has(w) || env.inlineHolders.has(w);
 }
 
-function contextFor(job: Job, node: ElementNode, block: boolean, preserveEnd: boolean): HtmlContext {
+function contextFor(
+  job: Job,
+  node: ElementNode,
+  block: boolean,
+  preserveStart: boolean,
+  preserveEnd: boolean,
+): HtmlContext {
   const key: HtmlAttrs = job.keys && block && typeof node._id === 'string' ? { 'data-key': node._id } : {};
   return {
     element: (tag, inner, attrs) => tagOf(tag, inner, { ...key, ...attrs }),
     wrap: (tag, inner, attrs) => tagOf(tag, inner, attrs ?? {}),
-    escape: (text) => escapeTextRun(text, preserveEnd),
+    escape: (text) => escapeTextRun(text, preserveStart, preserveEnd),
     // 가는 자리는 언제나 엄격하다 — 호스트의 allowLocalUrls 가 여기까지 오지 않는다.
     // A navigation target is always strict — the host's allowLocalUrls never reaches this far.
     url: (raw) => safeUrl(raw),
@@ -165,9 +172,17 @@ function contextFor(job: Job, node: ElementNode, block: boolean, preserveEnd: bo
   };
 }
 
-function renderNode(node: NabiNode, job: Job, preserveEnd = false, dropCap?: DropCapState): string {
+function renderNode(
+  node: NabiNode,
+  job: Job,
+  preserveStart = false,
+  preserveEnd = false,
+  dropCap?: DropCapState,
+): string {
   if (!isElement(node)) {
-    return dropCap?.pending === true ? renderDropCapText(node, preserveEnd, dropCap) : escapeTextRun(node, preserveEnd);
+    return dropCap?.pending === true
+      ? renderDropCapText(node, preserveStart, preserveEnd, dropCap)
+      : escapeTextRun(node, preserveStart, preserveEnd);
   }
   if (node.w === P) return renderParagraph(node, job);
   // 라인은 코어의 것이라 조립 맵을 안 거친다 — wing 이 예약어를 못 쓰기 때문이다.
@@ -178,19 +193,32 @@ function renderNode(node: NabiNode, job: Job, preserveEnd = false, dropCap?: Dro
   }
 
   const block = isBlockGrade(node.w, job.env);
+  const childStart = block || preserveStart;
   const childEnd = block || preserveEnd;
-  const children = (): string => renderChildren(node.ch, job, childEnd, dropCap);
+  const children = (): string => renderChildren(node.ch, job, childStart, childEnd, dropCap);
   const builder = Object.prototype.hasOwnProperty.call(job.builders, node.w) ? job.builders[node.w] : undefined;
   // 조립을 아는 이가 없는 타입 — 껍데기를 벗기고 속만 남긴다. 낯선 태그가 문서로 새지 않는다.
   // A type with no builder — its wrapper is dropped, keeping only content. An unknown tag never leaks into the document.
   if (!builder) return children();
-  return builder(node, children, contextFor(job, node, block, childEnd));
+  return builder(node, children, contextFor(job, node, block, childStart, childEnd));
 }
 
-function renderChildren(nodes: readonly NabiNode[], job: Job, preserveEnd = false, dropCap?: DropCapState): string {
+function renderChildren(
+  nodes: readonly NabiNode[],
+  job: Job,
+  preserveStart = false,
+  preserveEnd = false,
+  dropCap?: DropCapState,
+): string {
   let out = '';
   for (let i = 0; i < nodes.length; i += 1) {
-    out += renderNode(nodes[i] as NabiNode, job, preserveEnd && i === nodes.length - 1, dropCap);
+    out += renderNode(
+      nodes[i] as NabiNode,
+      job,
+      preserveStart && i === 0,
+      preserveEnd && i === nodes.length - 1,
+      dropCap,
+    );
   }
   return out;
 }
@@ -218,7 +246,7 @@ function renderParagraph(p: ElementNode, job: Job): string {
   if (!wrapper && p.a?.['dc'] === 1) attrs['data-nabi-dropcap'] = '1';
 
   const dropCap = job.keys && attrs['data-nabi-dropcap'] === '1' ? { pending: true } : undefined;
-  const inner = renderChildren(p.ch, job, true, dropCap);
+  const inner = renderChildren(p.ch, job, true, true, dropCap);
   return tagOf(tag, bodyOf(inner, job, p.ch), attrs);
 }
 

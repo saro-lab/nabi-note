@@ -178,6 +178,16 @@ export default defineConfig({
   cleanUrls: true,
   vite: {
     plugins: [tailwindcss() as never],
+    server: {
+      fs: {
+        // 형제 패키지의 소스와 빌드 CSS가 참조하는 아이콘은 개발 서버의 기본 허용 범위 밖에 있다.
+        // Icons referenced by the sibling package's source and built CSS are outside the dev server's default allow list.
+        allow: [
+          fileURLToPath(new URL('../../../nabi-npm/src/style/icons', import.meta.url)),
+          fileURLToPath(new URL('../../../nabi-npm/dist/icons', import.meta.url)),
+        ],
+      },
+    },
     build: {
       target: 'esnext',
       // Shiki 문법마다 조각을 나누되 딸린 문법은 안 묶는다 — cpp 하나가 768K로 붇는 걸 막는다.

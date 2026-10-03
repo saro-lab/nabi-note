@@ -30,7 +30,7 @@ Use this file as a router. Read only the document that owns your question.
 - Use `nabi-note/diff` for comparing two stored documents.
 - Load `nabi-note/nabi.css` on editor and published pages unless all required sheets are injected.
 - Mobile mode starts strictly below `36rem`; override `--nabi-mobile-breakpoint` in CSS (see `llms/styling.md`).
-- Store `nabi.getJson()` or `nabi.getHtml()`. Never store `getEditorHtml()`.
+- Store `nabi.getJson()` or `nabi.getHtml()`. Never store `getEditorHtml()`. HTML output protects leading paragraph spaces; see `llms/document-model.md`.
 - Treat HTML, JSON, paste data, command args, and custom filter output as untrusted input.
 - Use `NabiOptions.onError` for isolated command and callback failure reporting.
 - Built-in notices and input prompts use polite localized wording; see `llms/quickstart-npm.md` for locale configuration.
@@ -40,7 +40,7 @@ Use this file as a router. Read only the document that owns your question.
 
 ## Package facts
 
-- Package contract documented here: 1.1.0 (working version; not a publication claim).
+- Package contract documented here: 1.1.2 (working version; not a publication claim).
 - Runtime dependencies: zero.
 - Node.js for package tooling and SSR: 20 or newer.
 - Declared browser baseline: Chrome and Edge 120, Firefox 120, Safari 17.

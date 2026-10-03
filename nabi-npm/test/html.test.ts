@@ -297,6 +297,41 @@ eq(
   renderHtml([{ w: 'p', ch: ['abc    '] }], OPT),
   '<p>abc&nbsp; &nbsp;&nbsp;</p>',
 );
+for (const [name, source, expected] of [
+  ['문단 시작 한 칸', [{ w: 'p', ch: [' abc'] }], '<p>&nbsp;abc</p>'],
+  ['문단 시작 여러 칸', [{ w: 'p', ch: ['   abc'] }], '<p>&nbsp; &nbsp;abc</p>'],
+  ['공백뿐인 문단', [{ w: 'p', ch: [' '] }], '<p>&nbsp;</p>'],
+  [
+    '겹마크 안의 시작',
+    [{ w: 'p', ch: [{ w: 'b', ch: [{ w: 'i', ch: [' abc'] }] }] }],
+    '<p><b><i>&nbsp;abc</i></b></p>',
+  ],
+  ['마크 앞의 한 칸', [{ w: 'p', ch: [' ', { w: 'b', ch: ['abc'] }] }], '<p>&nbsp;<b>abc</b></p>'],
+  ['제목 시작', [{ w: 'p', a: { h: 2 }, ch: [' abc'] }], '<h2>&nbsp;abc</h2>'],
+  [
+    '인용 속 문단',
+    [{ w: 'p', ch: [{ w: 'quote', ch: [{ w: 'p', ch: [' abc'] }] }] }],
+    '<div data-nabi-p><blockquote><p>&nbsp;abc</p></blockquote></div>',
+  ],
+] as const) {
+  eq(`${name}: 저장 HTML이 앞 공백을 보호한다`, renderHtml(source, OPT), expected);
+  eq(`${name}: 편집 HTML도 앞 공백을 보호한다`, renderEditorHtml(source, OPT), expected);
+  eq(
+    `${name}: 저장하고 다시 불러와도 공백 수를 유지한다`,
+    json(read(renderHtml(source, OPT))).replace(/\u00a0/g, ' '),
+    json(source),
+  );
+}
+eq(
+  '드롭캡 앞 공백도 편집 HTML에서 보호한다',
+  renderEditorHtml([{ w: 'p', a: { dc: 1 }, ch: [' abc'] }], OPT),
+  '<p data-nabi-dropcap="1">&nbsp;<span data-nabi-dropcap-letter>a</span>bc</p>',
+);
+eq(
+  '문단 중간 마크의 앞 공백은 일반 줄바꿈 자리를 유지한다',
+  renderHtml([{ w: 'p', ch: ['abc', { w: 'b', ch: [' def'] }] }], OPT),
+  '<p>abc<b> def</b></p>',
+);
 eq('문단 끝 공백 하나도 접히지 않는다', renderHtml([{ w: 'p', ch: ['abc '] }], OPT), '<p>abc&nbsp;</p>');
 eq('공백 하나는 손대지 않는다', renderHtml([{ w: 'p', ch: ['abc def'] }], OPT), '<p>abc def</p>');
 eq(
