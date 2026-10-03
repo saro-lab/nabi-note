@@ -762,7 +762,13 @@ export const CORE_CSS = `${ICON_CSS}
    Fullscreen is a plain class, not the Fullscreen API, so it also works inside an iframe */
 .nabi.is-fullscreen {
   position: fixed; inset: 0; inset-block-end: var(--nabi-keyboard-bottom, 0px);
-  z-index: var(--nabi-z-overlay); overflow: auto; background: var(--nabi-bg);
+  z-index: var(--nabi-z-overlay); overflow: auto;
+  background: var(--nabi-fullscreen-bg, color-mix(in srgb, var(--nabi-bg) 94%, var(--nabi-fg)));
+}
+.nabi.is-fullscreen .nabi-content.nabi-fullscreen-content {
+  box-sizing: border-box; flex: 1 0 auto;
+  inline-size: min(100%, var(--nabi-fullscreen-content-width, 100%)); margin-inline: auto;
+  background: var(--nabi-fullscreen-content-bg, var(--nabi-bg));
 }
 
 /* 덮개(미리보기·라이트박스 공용)에 옅은 블러를 준다 — 반투명 막만으로는 뒤 글자가 앞과 겹쳐 읽힌다

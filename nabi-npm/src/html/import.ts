@@ -190,9 +190,9 @@ function importNodes(nodes: readonly ParseNode[], block: boolean, cx: Cx): NabiN
   const out: NabiNode[] = [];
   for (const item of expand(nodes)) {
     if (item.kind === 'text') {
-      // 블록 자리의 공백뿐인 글자는 태그 사이 들여쓰기다 — 거두면 없던 빈 줄이 생긴다.
-      // Whitespace-only text in a block position is just inter-tag indentation; keeping it would create a phantom blank line.
-      if (block && item.text.trim() === '') continue;
+      // 태그 사이 HTML 공백은 거두되, NBSP처럼 너비를 보존하는 공백은 남긴다.
+      // Drop inter-tag HTML whitespace, but keep width-preserving spaces such as NBSP.
+      if (block && /^[\t\n\f\r ]*$/.test(item.text)) continue;
       if (item.text !== '') out.push(item.text);
       continue;
     }

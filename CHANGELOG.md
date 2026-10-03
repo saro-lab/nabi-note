@@ -9,9 +9,14 @@ Dates use Korea Standard Time (KST).
 
 ## [1.1.2] - 2026-10-03
 
+### Added
+
+- Fullscreen editing preserves the previous content width and separates the outer background from the paper-like content background. Customize each color with `--nabi-fullscreen-bg` and `--nabi-fullscreen-content-bg`.
+
 ### Fixed
 
 - Fixed leading paragraph spaces being collapsed in saved or loaded HTML and in the editor, including headings, nested formatting, paragraphs inside blockquotes, and spaces before drop caps.
+- Fixed spaces disappearing during HTML paste when copying a selection starting within a space run or containing only spaces. Copy/cut fragments preserve leading and trailing spaces through storage reloads and preview.
 
 ## [1.1.1] - 2026-09-28
 

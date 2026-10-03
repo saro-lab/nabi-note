@@ -121,6 +121,7 @@ export function wrapClipHtml(inner: string, opens: readonly string[]): string {
 
 const START_TO_START = 0;
 const END_TO_END = 2;
+const SHOW_TEXT = 4;
 
 // 범위가 이 블록의 글자를 전부 덮었나 — 화면 전용인 끝의 받침 br은 사람이 고를 수 없어 셈에서 뺀다
 // Whether the range covers all of this block's text; a trailing filler br is screen-only and unselectable, so it's excluded from the count
@@ -167,6 +168,16 @@ function openTagOf(el: Element): string {
 export function clipHtmlOf(range: Range, root: Element, owner: Document): string {
   const box = owner.createElement('div');
   box.appendChild(range.cloneContents());
+  // 부분 선택은 보호된 공백 사이에서 시작할 수 있어, 복사 조각의 양 끝을 다시 보호한다.
+  // Partial selections can split protected spaces, so protect the copied fragment's edges again.
+  const texts = owner.createTreeWalker(box, SHOW_TEXT);
+  const first = texts.nextNode();
+  if (first) {
+    let last = first;
+    for (let next = texts.nextNode(); next; next = texts.nextNode()) last = next;
+    first.nodeValue = (first.nodeValue ?? '').replace(/^ +/, (spaces) => '\u00a0'.repeat(spaces.length));
+    last.nodeValue = (last.nodeValue ?? '').replace(/ +$/, (spaces) => '\u00a0'.repeat(spaces.length));
+  }
   const inner = dressClipHtml(box.innerHTML);
   if (loneFileLink(inner)) return fileClipHtml(inner);
   const opens = clipContextOf(range, root).map(openTagOf);

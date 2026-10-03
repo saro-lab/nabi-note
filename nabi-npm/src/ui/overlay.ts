@@ -240,6 +240,7 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
   const showFullscreen = options.showFullscreen !== false;
   const releaseRoot = showFullscreen ? acquireGestureRoot(root, [surface]) : () => {};
   const rootLease = new HostElementLease(root);
+  let fullscreenSurfaceLease: HostElementLease | null = null;
   let unmounted = false;
   let preview: Overlay | null = null;
   let box: HTMLElement | null = null;
@@ -254,7 +255,20 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
     rootReleased = true;
     releaseRoot();
   };
-  const setOwnFullscreen = (on: boolean): void => rootLease.className(FULLSCREEN_CLASS, on);
+  const setOwnFullscreen = (on: boolean): void => {
+    if (on && !isFullscreen(root)) {
+      const width = surface.getBoundingClientRect().width;
+      fullscreenSurfaceLease?.dispose();
+      fullscreenSurfaceLease = new HostElementLease(surface);
+      if (width > 0) fullscreenSurfaceLease.style('--nabi-fullscreen-content-width', `${width}px`);
+      fullscreenSurfaceLease.className('nabi-fullscreen-content', true);
+    }
+    rootLease.className(FULLSCREEN_CLASS, on);
+    if (!on) {
+      fullscreenSurfaceLease?.dispose();
+      fullscreenSurfaceLease = null;
+    }
+  };
 
   const finish = (work: () => void, failure: { value: unknown }): void => {
     try {
@@ -275,6 +289,8 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
     finish(() => preview?.close(), failure);
     preview = null;
     finish(() => rootLease.dispose(), failure);
+    finish(() => fullscreenSurfaceLease?.dispose(), failure);
+    fullscreenSurfaceLease = null;
     finish(() => previewButton?.remove(), failure);
     finish(() => fullButton?.remove(), failure);
     finish(() => box?.remove(), failure);

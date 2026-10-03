@@ -91,11 +91,28 @@ The core reads these but does not always declare the host-facing value:
 | `--nabi-placeholder-color` | Empty-editor placeholder color |
 | `--nabi-sticky-top` | Offset below a fixed host header |
 | `--nabi-preview-width` | Preview card width; preview may set an inline measured width |
+| `--nabi-fullscreen-bg` | Fullscreen outer background; defaults to a 94% main background / 6% text color mix (light gray in light mode) |
+| `--nabi-fullscreen-content-bg` | Fullscreen paper background; defaults to `--nabi-bg` (white in light mode) |
 | `--nabi-mobile-breakpoint` | Mobile-mode width threshold, default 36rem (strictly below) |
 | `--nabi-touch-font-size` | Core input size on touch/narrow screens, default 16px |
 | `--nabi-diff-height` | Standalone diff pane height, default 30rem |
 
 Fallback font and placeholder tokens are declared internally. Prefer the host-facing names above.
+
+## Fullscreen paper
+
+`mountViewTools()` measures the edit surface's border-box width before entering fullscreen and keeps that width centered, capped at the available viewport width. The paper fills the remaining height below the toolbar and grows with long content. The toolbar keeps its usual background. Exiting fullscreen or unmounting restores the surface's previous layout.
+
+Set the two background tokens on `:root`, an ancestor, or an individual editor. Their defaults follow the active light/dark theme:
+
+```css
+.article-editor {
+  --nabi-fullscreen-bg: #eee;
+  --nabi-fullscreen-content-bg: #fff;
+}
+```
+
+The transient `.nabi-fullscreen-content` class and `--nabi-fullscreen-content-width` property are managed by `mountViewTools()` on the supplied surface; do not maintain them manually.
 
 ## Mobile breakpoint
 

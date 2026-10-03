@@ -508,6 +508,9 @@ eq(
   json(read('<ul>\n  <li>\n    <p>항목</p>\n  </li>\n</ul>')),
   '[{"w":"p","ch":[{"w":"ul","ch":[{"w":"li","ch":[{"w":"p","ch":["항목"]}]}]}]}]',
 );
+for (const spaces of ['\u00a0', ' \u00a0 ', '\u3000']) {
+  eq('보호된 공백뿐인 HTML 조각도 남는다', json(read(spaces)), JSON.stringify([{ w: 'p', ch: [spaces] }]));
+}
 eq(
   '출력 관례의 체크박스도 체크로 읽는다',
   json(read('<ul data-nabi-list="task"><li><input type="checkbox" checked><p>한</p></li></ul>')),

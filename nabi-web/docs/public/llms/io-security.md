@@ -58,6 +58,8 @@ The browser assembly factory wires an internal `DOMParser` adapter automatically
 
 The importer understands registered wing claims plus common structural HTML. It unwraps browser-only wrappers such as `tbody`, `thead`, `tfoot`, and `div.nabi-scroll` without `data-nabi-p`.
 
+Inter-tag indentation containing only HTML whitespace (ASCII space, tab, LF, FF, CR) is ignored at block level. Protected spaces such as NBSP remain content, including HTML clipboard fragments consisting only of those spaces. Copy/cut protects leading and trailing spaces at fragment boundaries before writing `text/html`.
+
 These tags and their entire subtrees are dropped:
 
 `script`, `style`, `noscript`, `template`, `head`, `title`, `meta`, `link`, `base`, `object`, `embed`, `applet`, `form`, `input`, `button`, `select`, `option`, `textarea`, `svg`, `canvas`, `audio`, `video`, `source`, `track`, `param`, `frame`, `frameset`, `map`, and `area`.
