@@ -666,6 +666,10 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   root.style.setProperty('--nabi-keyboard-top', '17px');
   root.style.setProperty('--nabi-keyboard-bottom', '19px');
   root.style.setProperty('--nabi-bar-height', '23px');
+  // jsdom의 지연 초기화 리스너를 편집기 리스너와 따로 센다.
+  // Initialize jsdom's lazy selector listeners before counting editor listeners.
+  surface.focus();
+  view.getComputedStyle(root);
   let adds = 0;
   let removes = 0;
   const add = view.addEventListener.bind(view);
@@ -688,7 +692,6 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
       disconnected += 1;
     }
   } as never;
-  surface.focus();
   let threw = false;
   try {
     mountSticky({ root, surface, chrome, iosBranch: false });
@@ -1320,7 +1323,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   (owner.querySelector('button[data-name="edit"]') as HTMLButtonElement).click();
   const prompt = owner.querySelector('.nabi-prompt') as HTMLElement;
   ok(
-    'translator locale - a fa context root and its prompt preserve rtl modal direction and accessible name',
+    'translator locale - a fa context root and its prompt preserve rtl panel direction and accessible name',
     context.root.getAttribute('dir') === 'rtl' &&
       prompt.getAttribute('dir') === 'rtl' &&
       prompt.getAttribute('role') === 'dialog' &&
@@ -1818,7 +1821,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   }
   const retry = openPrompt(owner, { anchor, fields: [], okLabel: 'OK', onSubmit: () => undefined });
   retry.close();
-  ok('prompt setup - throwing field label/value accessors restore the panel, scrim, anchor, and permit retry', clean);
+  ok('prompt setup - throwing field label/value accessors restore the panel and anchor and permit retry', clean);
   dom.window.close();
 }
 
@@ -1936,15 +1939,17 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
     .at(-1)
     ?.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
   const wrapped = owner.activeElement === controls[0];
-  const modal =
+  const nonmodal =
     prompt.root.getAttribute('role') === 'dialog' &&
-    prompt.root.getAttribute('aria-modal') === 'true' &&
+    !prompt.root.hasAttribute('aria-modal') &&
     Boolean(prompt.root.getAttribute('aria-label') || prompt.root.getAttribute('aria-labelledby')) &&
-    anchor.hasAttribute('inert');
+    !anchor.hasAttribute('inert') &&
+    owner.querySelector('.nabi-scrim') === null &&
+    prompt.root.parentElement === anchor.parentElement;
   outside.dispatchEvent(new dom.window.PointerEvent('pointerdown', { bubbles: true }));
   ok(
-    'prompt modal - dialog semantics, inert background, focus cycle, and outside pointer close are owned',
-    modal && wrapped && !prompt.root.isConnected,
+    'prompt panel - named dialog, interactive background, focus cycle, and outside pointer close',
+    nonmodal && wrapped && !prompt.root.isConnected,
   );
   dom.window.close();
 }
@@ -2312,7 +2317,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   });
   owner.removeEventListener('focusin', onFocus, true);
   ok(
-    'prompt modal - focusin submit reentry closes the scrim after its close delegate is installed',
+    'prompt panel - focusin submit reentry closes the panel after its close delegate is installed',
     submitted === 1 &&
       owner.querySelector('.nabi-scrim') === null &&
       !anchor.hasAttribute('inert') &&
@@ -2374,7 +2379,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   const movedTop = prompt.root.style.top;
   await tick();
   ok(
-    'prompt modal position - content is measured before the move and the deferred anchor placement cannot overwrite fixed viewport coordinates',
+    'prompt panel position - content and deferred measurements retain anchor-relative coordinates',
     prompt.root.style.left === movedLeft && prompt.root.style.top === movedTop,
   );
   prompt.close();

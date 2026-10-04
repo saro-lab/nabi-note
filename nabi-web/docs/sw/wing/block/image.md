@@ -23,6 +23,32 @@ const selected = wings().use('img', {
 
 Wing hii huingiza anwani kwenye hati; haipakii faili. Ili kutuma faili kwenye seva, unganisha [wing ya kupakia](/sw/wing/etc/upload).
 
+## Kuunganisha kichaguzi cha picha
+
+Tumia `panels.img` katika `mountToolbar()` kubadilisha dirisha la kawaida la kuingiza URL la kitufe cha picha kwa kichaguzi cha picha cha huduma yako. Funguo ni majina ya nafasi za upau wa zana; zana ambazo hazijatajwa zinaendelea kutumia madirisha yake ya kawaida.
+
+```ts
+import { mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  panels: {
+    img: ({ root, signal, run }) =>
+      mountMyImagePicker(root, {
+        signal,
+        onSelect: (url: string) => run('insertImage', { src: url }),
+      }),
+  },
+})
+```
+
+`mountMyImagePicker` ni chaguo la kukokotoa unalotekeleza katika huduma yako. Linaunda UI yako kwa ulandanishi ndani ya `root` iliyotolewa na kurudisha chaguo la kukokotoa la kusafisha. Unganisha `signal` na kazi zisizolandanishwa kama kupakia orodha ya picha au kutuma faili, kisha pitisha URL ya picha iliyochaguliwa kwa `onSelect`. API hii haitumi faili; sheria zilizopo za kuruhusu URL za picha bado zinatumika.
+
+Kufunga dirisha au kuondoa upau wa zana kunakatisha `signal` na kuita chaguo la kukokotoa la kusafisha. `run()` inafunga dirisha na kutumia amri mara moja kwenye uteuzi uliohifadhiwa wakati wa kufungua. Ikiwa dirisha tayari limefungwa au maudhui ya hati yamebadilika tangu kufunguliwa, inarudisha `false` bila kutekeleza amri.
+
 ## Mitindo ya CSS
 
 Tia mtindo kwenye picha kwa `.nabi-content img`. Dumisha upana na mpangilio uliohifadhiwa, na ubadilishe maelezo ya mwonekano pekee kama mipaka au vivuli.

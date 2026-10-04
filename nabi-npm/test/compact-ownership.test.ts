@@ -11,7 +11,7 @@ import {
 } from '../src/index.js';
 import { compactKeepsFocus } from '../src/ui/compact.js';
 
-function fixture(image = true, mobile = false) {
+function fixture(image = true, mobile = true) {
   const dom = new JSDOM('<!doctype html><main><div id="surface"></div><button id="outside">Outside</button></main>', {
     pretendToBeVisual: true,
     url: 'https://example.test',
@@ -71,7 +71,12 @@ function named(root: ParentNode, name: string): HTMLButtonElement {
 }
 
 function owns(toolbar: Toolbar, context: ContextToolbar): boolean {
-  return context.groups().length > 0 && context.groups().every((group) => toolbar.root.contains(group.el));
+  return (
+    toolbar.root.classList.contains('nabi-compact-row') &&
+    context.root.classList.contains('nabi-compact-context') &&
+    context.groups().length > 0 &&
+    context.groups().every((group) => context.root.contains(group.el))
+  );
 }
 
 for (const contextFirst of [false, true]) {
@@ -83,21 +88,15 @@ for (const contextFirst of [false, true]) {
   const original = port.groups().map((group) => group.el);
   const second = f.addToolbar();
   assert.ok(owns(second, port), 'the last toolbar receives the existing context nodes');
-  assert.ok(first.root.querySelector<HTMLElement>('.nabi-compact-context')!.hidden);
+  assert.equal(first.root.querySelector('.nabi-compact-context'), null);
   assert.equal(first.root.querySelector<HTMLElement>('.nabi-compact-quick')!.hidden, false);
   first.refresh();
   assert.ok(owns(second, port), 'an earlier toolbar refresh cannot reclaim the active context');
   named(first.root, 'tools').click();
-  assert.equal(named(first.root, 'context-tools').hidden, true);
+  assert.equal(first.root.querySelector('[data-name="context-tools"]'), null);
   second.unmount();
-  assert.equal(named(first.root, 'context-tools').hidden, false, 'the main row regains its context entry');
-  named(first.root, 'context-tools').click();
-  assert.ok(
-    port.groups().every((group) => first.root.querySelector('.nabi-toolbox')!.contains(group.el)),
-    'the remaining context entry opens the original live controls',
-  );
-  named(first.root, 'context-tools').click();
-  assert.ok(owns(first, port), 'closing the last toolbar reconnects the previous toolbar');
+  assert.ok(owns(first, port), 'the preceding toolbar keeps properties connected when the last toolbar closes');
+  assert.equal(port.root.hidden, false, 'property controls remain visible without an entry button');
   assert.deepEqual(
     port.groups().map((group) => group.el),
     original,
@@ -118,13 +117,13 @@ for (const contextFirst of [false, true]) {
   const context = f.addContext();
   first.unmount();
   assert.ok(owns(second, context), 'removing an inactive toolbar preserves the active owner');
-  assert.ok(context.root.classList.contains('nabi-compact-source'));
+  assert.ok(context.root.classList.contains('nabi-compact-context'));
   first.refresh();
   context.refresh();
   assert.ok(owns(second, context));
   second.unmount();
   assert.ok(context.groups().every((group) => context.root.contains(group.el)));
-  assert.equal(context.root.classList.contains('nabi-compact-source'), false);
+  assert.equal(context.root.classList.contains('nabi-compact-context'), false);
   f.dispose();
 }
 
@@ -139,7 +138,7 @@ for (const removeInactive of [false, true]) {
     firstGroups.every((group) => first.root.contains(group)),
     'a displaced context keeps its own nodes',
   );
-  assert.equal(first.root.classList.contains('nabi-compact-source'), false);
+  assert.equal(first.root.classList.contains('nabi-compact-context'), false);
   first.refresh();
   assert.ok(owns(toolbar, second), 'inactive context updates do not change ownership');
   if (removeInactive) {

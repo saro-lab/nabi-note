@@ -89,9 +89,9 @@ For complete assembly and IO examples, read `quickstart-npm.md`.
 
 For 1.1.0 and later builds, keep the same package version for JS, CSS, and `dist/icons/`. Manual hosting must copy the icons directory beside `nabi.css`; the local CDN demo already includes it. Keep `dist/browser/` relative to `dist/icons/` when using runtime CSS injection with the IIFE. The pinned 1.0.0 examples above describe the earlier baseline; icon themes and individual `showPreview`/`showFullscreen` options require 1.1.0 or later. See `icons.md`.
 
-## Compact layout in 1.2.0 builds
+## Compact layout in 1.3.0 builds
 
-The pinned 1.0.0 examples above describe the earlier published baseline. To use the 1.2.0 toolbar contract, load a matching 1.2.0 JavaScript/CSS build from your own build or an available package version. This document does not claim that 1.2.0 has been published to a CDN.
+The pinned 1.0.0 examples above describe the earlier published baseline. To use the 1.3.0 toolbar contract, load a matching 1.3.0 JavaScript/CSS build from your own build or an available package version. This document does not claim that 1.3.0 has been published to a CDN.
 
 ```js
 const toolbar = N.mountToolbar({
@@ -105,11 +105,11 @@ const toolbar = N.mountToolbar({
 });
 ```
 
-Compact is the default. `quick` contains toolbar slot names in priority order. Commands that do not fit remain in the Tools palette, which shows available icons together in their original wing groups without category tabs, group borders, or a title/close header. The desktop palette fills the toolbar width with smaller controls; mobile buttons keep their touch size. Use `layout: 'wrap'` for the previous toolbar. A context toolbar mounted on its own sibling root for the same `nabi` joins the compact row automatically; do not nest its mount root inside `toolbarRoot`. Connected preview/fullscreen controls stay in the compact row. A highlighted Object properties down-chevron appears immediately after Tools only when the context controls do not all fit. The full palette contains registered wing buttons only, without duplicate view/context-entry controls or added undo/redo buttons.
+Compact is the default. On desktop it shows all main-toolbar commands and wraps like fullscreen, even inside a narrow editor. Mobile keeps a single row; `quick` contains its toolbar slot names in priority order. The viewport width and `--nabi-mobile-breakpoint` determine the switch. Commands that do not fit remain in the mobile Tools palette, which shows available icons together in their original wing groups without category tabs, group borders, or a title/close header. Desktop and mobile toolbar buttons use `2rem` with `.875rem` icons. Use `layout: 'wrap'` for the explicit wrapping main toolbar. A context toolbar mounted on its own sibling root for the same `nabi` automatically shows available object properties below the main toolbar; do not nest its mount root inside `toolbarRoot`. The property row takes up layout space, wraps on desktop and mobile, and moves with the main row inside their shared sticky wrapper. Connected preview/fullscreen controls remain in the main toolbar. There is no Object properties entry button or back-to-tools button. The full palette contains registered wing buttons only, without duplicate view controls or added undo/redo buttons.
 
-With `N.mountHints({ toolbar, root: document.querySelector('#editor'), surface: content })`, double-Shift opens the compact palette. Tab/Shift+Tab cycle groups, arrow keys move between icons, Enter/Space activate, and Escape closes it. Letter badges are no longer used; see `styling.md` for the complete navigation rules.
+With `N.mountHints({ toolbar, root: document.querySelector('#editor'), surface: content })`, double-Shift opens the mobile compact palette or focuses the visible toolbar on desktop and in fullscreen. Tab/Shift+Tab cycle groups, arrow keys move between icons, Enter/Space activate, and Escape returns to editing. Letter badges are no longer used; see `styling.md` for the complete navigation rules.
 
-Only a mobile viewport activates bottom docking; a narrow desktop editor remains at the top. Mobile selection/menu panels use the keyboard area, while text-input prompts replace the toolbar row. See `styling.md` for the breakpoint, viewport, and physical-device IME validation limits.
+The toolbar stays sticky at the top within its own editor on desktop and mobile, and scrolls out of view with that editor. Mobile selection/menu panels open from the toolbar within the available viewport space, while text-input prompts replace the toolbar row. See `styling.md` for the breakpoint, viewport, and physical-device IME validation limits.
 
 ## Live language changes
 

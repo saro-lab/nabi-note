@@ -23,6 +23,32 @@ const selected = wings().use('img', {
 
 Este wing insere um endereço no documento; ele não faz upload de arquivos. Para enviar arquivos a um servidor, conecte o [wing de upload](/pt/wing/etc/upload).
 
+## Conectar um seletor de imagens
+
+Use `panels.img` em `mountToolbar()` para substituir a entrada de URL padrão do botão de imagem pelo seletor de imagens do seu serviço. As chaves são nomes de slots da barra de ferramentas; as ferramentas omitidas mantêm suas entradas padrão.
+
+```ts
+import { mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  panels: {
+    img: ({ root, signal, run }) =>
+      mountMyImagePicker(root, {
+        signal,
+        onSelect: (url: string) => run('insertImage', { src: url }),
+      }),
+  },
+})
+```
+
+`mountMyImagePicker` é uma função que você implementa no seu serviço. Ela cria sua interface de forma síncrona dentro do `root` recebido e retorna uma função de limpeza. Conecte `signal` a tarefas assíncronas, como carregar uma lista de imagens ou fazer upload, e passe a URL da imagem escolhida para `onSelect`. Esta API não transfere arquivos; as regras existentes para URLs de imagens continuam valendo.
+
+Fechar o painel ou desmontar a barra de ferramentas interrompe `signal` e chama a função de limpeza. `run()` fecha o painel e aplica um comando uma única vez à seleção capturada na abertura. Se o painel já estiver fechado ou o conteúdo do documento tiver mudado desde a abertura, retorna `false` sem executar o comando.
+
 ## Estilos CSS
 
 Estilize imagens com `.nabi-content img`. Mantenha intactos a largura e o alinhamento salvos, e altere apenas detalhes visuais como bordas ou sombras.

@@ -23,6 +23,32 @@ const selected = wings().use('img', {
 
 Wing ini menyisipkan alamat ke dalam dokumen; wing ini tidak mengunggah berkas. Untuk mengirim berkas ke server, hubungkan [wing unggah](/id/wing/etc/upload).
 
+## Menghubungkan pemilih gambar
+
+Gunakan `panels.img` di `mountToolbar()` untuk mengganti dialog URL bawaan tombol gambar dengan pemilih gambar layanan Anda. Kunci adalah nama slot toolbar; alat yang tidak dicantumkan tetap menggunakan dialog bawaannya.
+
+```ts
+import { mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  panels: {
+    img: ({ root, signal, run }) =>
+      mountMyImagePicker(root, {
+        signal,
+        onSelect: (url: string) => run('insertImage', { src: url }),
+      }),
+  },
+})
+```
+
+`mountMyImagePicker` adalah fungsi yang Anda implementasikan di layanan Anda. Fungsi ini membuat UI secara sinkron di dalam `root` yang diberikan dan mengembalikan fungsi pembersihan. Hubungkan `signal` ke pekerjaan asinkron seperti memuat daftar gambar atau mengunggah, lalu teruskan URL gambar yang dipilih ke `onSelect`. API ini tidak mengirim berkas; aturan URL gambar yang sudah ada tetap berlaku.
+
+Menutup panel atau melepas toolbar membatalkan `signal` dan memanggil fungsi pembersihan. `run()` menutup panel dan menerapkan perintah satu kali pada pilihan yang disimpan saat panel dibuka. Jika panel sudah ditutup atau isi dokumen berubah sejak dibuka, fungsi ini mengembalikan `false` tanpa menjalankan perintah.
+
 ## Gaya CSS
 
 Atur gaya gambar dengan `.nabi-content img`. Pertahankan lebar dan perataan tersimpan, dan ubah hanya detail visual seperti batas atau bayangan.

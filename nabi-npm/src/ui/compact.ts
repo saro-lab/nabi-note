@@ -11,11 +11,12 @@ import { registerPanelHost } from './parts/panel-host.js';
 import { mountTooltip } from './parts/tooltip.js';
 import { Translations } from './parts/translation.js';
 import { DisposerStack, HostElementLease } from '../lifecycle.js';
-import { watchDockViewport } from './dock.js';
+import { visibleViewportRect, watchDockViewport } from './dock.js';
 
 interface ContextPort {
   root: HTMLElement;
   groups(): readonly ContextGroupView[];
+  close?(): void;
 }
 interface Session {
   contexts: ContextPort[];
@@ -103,6 +104,7 @@ interface CompactOptions {
   surface?: HTMLElement;
   translator: Translator;
   quick: readonly string[];
+  onLayoutChange?(): void;
 }
 export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
   const { nabi, root, strip, buttons, surface, translator: t } = options;
@@ -112,61 +114,50 @@ export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
   const copy = new Translations(t);
   const lease = new HostElementLease(root);
   const chrome = root.closest<HTMLElement>('.nabi-toolbar') ?? root;
+  const shell = chrome.closest('.nabi');
   const chromeLease = new HostElementLease(chrome);
   const item = session(nabi);
   let context: ContextPort | null = null;
   let contextLease: HostElementLease | null = null;
+  let contextTooltip: ReturnType<typeof mountTooltip> | null = null;
+  let contextKeyboard: ReturnType<typeof mountToolboxKeyboard> | null = null;
+  let releaseContextPanelHost: (() => void) | null = null;
   const origins = new Map(buttons.map((button) => [button.el, button.el.parentElement!]));
-  const hiddenControls = new Map<HTMLElement, HTMLElement['hidden']>();
+  const originGroups = new Map<HTMLElement, HTMLElement[]>();
+  for (const [el, parent] of origins) originGroups.set(parent, [...(originGroups.get(parent) ?? []), el]);
   const bar = make(owner, 'div', 'nabi-compact-bar', { role: 'toolbar' });
   const quickRow = make(owner, 'div', 'nabi-compact-quick');
-  const contextRow = make(owner, 'div', 'nabi-compact-context');
   const viewRow = make(owner, 'div', 'nabi-compact-view');
   const viewButtons = new Map<HTMLButtonElement, { el: HTMLButtonElement; dispose(): void }>();
   const tools =
     root.querySelector<HTMLButtonElement>(':scope > [data-name="tools"][data-nabi-compact]') ??
-    iconButton(owner, { name: 'tools', label: t.t('tools'), text: '☷', press: () => open('all') });
-  const back = iconButton(owner, {
-    name: 'tools-back',
-    label: t.t('toolsBack'),
-    text: '←',
-    press: () => {
-      suppressed = true;
-      close(false);
-      refresh();
-      focusQuiet(surface);
-    },
-  });
-  const more = iconButton(owner, {
-    name: 'context-tools',
-    label: t.t('toolsContext'),
-    svg: '<path d="m4 6 4 4 4-4"/>',
-    className: 'nabi-object-properties',
-    press: () => open('context'),
-  });
-  more.setAttribute('aria-haspopup', 'dialog');
+    iconButton(owner, { name: 'tools', label: t.t('tools'), text: '☷', press: open });
   const toolbox = make(owner, 'section', 'nabi-toolbox', { role: 'dialog', tabindex: '-1' });
   const body = make(owner, 'div', 'nabi-toolbox-body');
   const keyboard = mountToolboxKeyboard(body);
   const tooltip = mountTooltip(root);
-  const placeholder = make(owner, 'div', 'nabi-dock-placeholder', { 'aria-hidden': 'true' });
   const probe = make(owner, 'span', 'nabi-compact-breakpoint', { 'aria-hidden': 'true' });
   probe.style.cssText =
     'position:absolute;width:var(--nabi-mobile-breakpoint,36rem);height:0;visibility:hidden;pointer-events:none';
   let dead = false;
   let painting = false;
-  let mode: 'all' | 'context' | 'detail' | null = null;
-  let suppressed = false;
-  let signature = '';
+  let expanded = false;
+  let navigating = false;
+  let expandedKeyboard: ReturnType<typeof mountToolboxKeyboard> | null = null;
+  let releasePanelHost: (() => void) | null = null;
+  let mode: 'all' | 'detail' | null = null;
   let detail: Panel | null = null;
   let detailOptions: PanelOptions | null = null;
   let controls = new DisposerStack();
   let mobile = false;
-  let active = false;
   let frame = 0;
   const hadStripHidden = strip.hidden;
-  const viewport = surface ? watchDockViewport({ surface, onChange: () => position() }) : null;
+  const viewport = surface ? watchDockViewport({ surface, onChange: () => schedule() }) : null;
   const unit = (): number => parseFloat(view?.getComputedStyle(owner.documentElement).fontSize ?? '') || 16;
+  const isNarrow = (): boolean => {
+    const threshold = parseFloat(view?.getComputedStyle(probe).width ?? '') || 36 * unit();
+    return (owner.documentElement.clientWidth || view?.innerWidth || 1024) < threshold;
+  };
   const sourceViewButtons = (): readonly HTMLButtonElement[] => {
     const ports = [...item.viewTools].reverse();
     return (
@@ -189,7 +180,7 @@ export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
       return children.reduce((sum, child) => sum + widthOf(child), 0) + Math.max(0, children.length - 1) * gapOf(el);
     }
     const style = view?.getComputedStyle(el);
-    return length(style?.width, length(style?.minInlineSize, 2.75 * unit()));
+    return length(style?.width, length(style?.minInlineSize, 2 * unit()));
   };
   const rowRoom = (flexible: HTMLElement): number => {
     const style = view?.getComputedStyle(bar);
@@ -205,6 +196,23 @@ export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
         fixed.length * gapOf(bar),
     );
   };
+  function arrange(parent: HTMLElement, children: readonly HTMLElement[]): void {
+    const wanted = new Set(children);
+    let previous: HTMLElement | null = null;
+    for (const child of children) {
+      let next: Element | null = previous ? previous.nextElementSibling : parent.firstElementChild;
+      while (next && !wanted.has(next as HTMLElement)) next = next.nextElementSibling;
+      if (next !== child) parent.insertBefore(child, next);
+      previous = child;
+    }
+  }
+  function restoreButtons(kept: ReadonlySet<HTMLElement>): void {
+    for (const [parent, children] of originGroups)
+      arrange(
+        parent,
+        children.filter((el) => !kept.has(el)),
+      );
+  }
   function syncViewButtons(): void {
     const sources = sourceViewButtons();
     for (const [source, button] of viewButtons) {
@@ -248,37 +256,33 @@ export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
     viewRow.hidden = sources.length === 0;
   }
   const labels = (): void => {
-    for (const [node, key] of [
-      [tools, 'tools'],
-      [back, 'toolsBack'],
-      [more, 'toolsContext'],
-    ] as const) {
-      node.setAttribute('aria-label', t.t(key));
-      node.setAttribute('data-nabi-tip', t.t(key));
-    }
+    tools.setAttribute('aria-label', t.t('tools'));
     tools.setAttribute('data-nabi-tip', t.t('twiceTail', { label: t.t('tools'), key: 'Shift' }));
     bar.setAttribute('aria-label', t.t('toolbar'));
-    more.setAttribute('aria-expanded', String(mode === 'context'));
-    toolbox.setAttribute('aria-label', t.t(mode === 'context' ? 'toolsContext' : 'tools'));
+    toolbox.setAttribute('aria-label', t.t('tools'));
     toolbox.dir = localeDirection(t.locale);
     tooltip.refresh();
+    contextTooltip?.refresh();
   };
-  function returnContext(): void {
-    for (const [el, was] of hiddenControls) el.hidden = was;
-    hiddenControls.clear();
-    if (context) for (const group of context.groups()) context.root.append(group.el);
-  }
   function connect(port: ContextPort | null): void {
     if (dead) port = null;
     if (context === port) return;
-    const closeContext =
-      mode === 'context' ||
-      (detailOptions !== null && context?.groups().some((group) => group.el.contains(detailOptions!.anchor)));
-    returnContext();
+    const closeContext = detailOptions !== null && context?.root.contains(detailOptions.anchor);
+    releaseContextPanelHost?.();
+    releaseContextPanelHost = null;
+    contextTooltip?.unmount();
+    contextTooltip = null;
+    contextKeyboard?.unmount();
+    contextKeyboard = null;
     contextLease?.dispose();
     context = port;
     contextLease = port ? new HostElementLease(port.root) : null;
-    contextLease?.className('nabi-compact-source', true);
+    contextLease?.className('nabi-compact-context', true);
+    if (port && !expanded) contextKeyboard = mountToolboxKeyboard(port.root);
+    if (port && !root.contains(port.root)) {
+      contextTooltip = mountTooltip(port.root);
+      if (!expanded) releaseContextPanelHost = registerPanelHost(port.root, hostPanel);
+    }
     if (closeContext && !dead) close(false);
     else refresh();
   }
@@ -290,12 +294,12 @@ export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
   }
   function close(restore = false): void {
     if (dead) return;
+    navigating = false;
     viewport?.cancelPanel();
     mode = null;
     closeDetail();
     controls.dispose();
     controls = new DisposerStack();
-    returnContext();
     body.replaceChildren();
     toolbox.hidden = true;
     tools.setAttribute('aria-expanded', 'false');
@@ -317,60 +321,88 @@ export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
   }
   function renderMenu(): void {
     if (!mode || mode === 'detail') return;
+    const visibleGroups = new Map<string, ToolbarButton[]>();
+    for (const button of buttons) {
+      if (!button.el.hidden) visibleGroups.set(button.group, [...(visibleGroups.get(button.group) ?? []), button]);
+    }
+    const visible = [...visibleGroups.values()].flat();
+    const existing = [...body.querySelectorAll<HTMLButtonElement>('.nabi-toolbox-group > .nabi-btn')];
+    if (
+      body.querySelector('.nabi-toolbox-icons') &&
+      existing.length === visible.length &&
+      existing.every(
+        (el, at) =>
+          el.getAttribute('data-name') === visible[at]!.el.getAttribute('data-name') &&
+          el.parentElement?.getAttribute('data-group') === visible[at]!.group,
+      )
+    ) {
+      for (const [at, el] of existing.entries()) {
+        const source = visible[at]!.el;
+        for (const name of ['class', 'aria-label', 'aria-pressed', 'aria-expanded', 'data-nabi-tip', 'disabled']) {
+          let value = source.getAttribute(name);
+          if (name === 'class' && el.classList.contains('nabi-tap') && !source.classList.contains('nabi-tap'))
+            value = `${value ?? ''} nabi-tap`;
+          if (value === null) el.removeAttribute(name);
+          else if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+        }
+        if (el.innerHTML !== source.innerHTML) el.innerHTML = source.innerHTML;
+      }
+      return;
+    }
     tooltip.hide();
+    contextTooltip?.hide();
     const focused = body.contains(owner.activeElement)
       ? (owner.activeElement as HTMLElement).getAttribute('data-name')
       : null;
     controls.dispose();
     controls = new DisposerStack();
-    returnContext();
     body.replaceChildren();
-    if (mode === 'context') {
-      for (const group of context?.groups() ?? []) body.append(group.el);
-    } else {
-      const icons = make(owner, 'div', 'nabi-toolbox-icons');
-      const groups = new Map<string, HTMLElement>();
-      const groupFor = (name: string): HTMLElement => {
-        let group = groups.get(name);
-        if (!group) {
-          group = make(owner, 'div', 'nabi-toolbox-group', { role: 'group', 'data-group': name });
-          groups.set(name, group);
-          icons.append(group);
-        }
-        return group;
-      };
-      for (const button of buttons) {
-        if (!button.el.hidden) groupFor(button.group).append(proxy(button));
+    const icons = make(owner, 'div', 'nabi-toolbox-icons');
+    const groups = new Map<string, HTMLElement>();
+    const groupFor = (name: string): HTMLElement => {
+      let group = groups.get(name);
+      if (!group) {
+        group = make(owner, 'div', 'nabi-toolbox-group', { role: 'group', 'data-group': name });
+        groups.set(name, group);
+        icons.append(group);
       }
-      body.append(icons);
+      return group;
+    };
+    for (const button of buttons) {
+      if (!button.el.hidden) groupFor(button.group).append(proxy(button));
     }
+    body.append(icons);
     if (focused)
       Array.from(body.querySelectorAll<HTMLElement>('[data-name]'))
         .find((el) => el.getAttribute('data-name') === focused)
         ?.focus({ preventScroll: true });
   }
-  function open(next: 'all' | 'context'): void {
+  function open(): void {
     if (dead) return;
+    if (expanded) {
+      navigating = true;
+      navigating = expandedKeyboard?.focusFirst() ?? false;
+      return;
+    }
     const state = viewport?.read();
     if (state?.composing) return;
-    if (mode === next) {
+    if (mode === 'all') {
       close(true);
       return;
     }
     closeDetail();
-    mode = next;
+    mode = 'all';
     toolbox.hidden = false;
     tools.setAttribute('aria-expanded', 'true');
     renderMenu();
     labels();
     position();
+    if (mobile && viewport) viewport.preparePanel(toolbox);
     if (!keyboard.focusFirst()) toolbox.focus({ preventScroll: true });
-    if (mobile && viewport) viewport.preparePanel(owner.activeElement as HTMLElement);
   }
   function hostPanel(settings: PanelOptions): Panel {
     viewport?.cancelPanel();
     closeDetail();
-    returnContext();
     controls.dispose();
     controls = new DisposerStack();
     body.replaceChildren();
@@ -409,125 +441,107 @@ export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
     toolbox.hidden = false;
     labels();
     position();
-    if (mobile && !settings.modal && viewport) viewport.preparePanel(panel);
-    if (!settings.modal)
+    if (mobile && settings.className !== 'nabi-prompt' && viewport) viewport.preparePanel(panel);
+    if (settings.className !== 'nabi-prompt')
       queueMicrotask(() => {
-        if (!dead && detail === instance) keyboard.focusFirst();
+        if (!dead && detail === instance && !panel.contains(owner.activeElement)) keyboard.focusFirst();
       });
     return instance;
-  }
-  function fitContext(groups: readonly ContextGroupView[], hide: boolean): boolean {
-    const room = rowRoom(contextRow);
-    let used = 0;
-    let visibleGroups = 0;
-    let overflow = false;
-    for (const group of groups) {
-      let visibleChildren = 0;
-      for (const child of Array.from(group.el.children) as HTMLElement[]) {
-        if (child.hidden || view?.getComputedStyle(child).display === 'none') continue;
-        const style = view?.getComputedStyle(child);
-        const width =
-          (child.getBoundingClientRect().width || (child.classList.contains('nabi-range') ? 10 : 2.75) * unit()) +
-          length(style?.marginLeft) +
-          length(style?.marginRight);
-        const gap = visibleChildren > 0 ? gapOf(group.el) : visibleGroups > 0 ? gapOf(contextRow) : 0;
-        if (used + gap + width > room + 0.5) {
-          overflow = true;
-          if (hide) {
-            hiddenControls.set(child, child.hidden);
-            child.hidden = true;
-          }
-        } else {
-          used += gap + width;
-          visibleChildren += 1;
-        }
-      }
-      if (visibleChildren > 0) visibleGroups += 1;
-      else if (hide) {
-        hiddenControls.set(group.el, group.el.hidden);
-        group.el.hidden = true;
-      }
-    }
-    return overflow;
   }
   function refresh(): void {
     if (dead || painting) return;
     const focused = owner.activeElement as HTMLElement | null;
-    const restore =
-      focused &&
-      (quickRow.contains(focused) ||
-        contextRow.contains(focused) ||
-        viewRow.contains(focused) ||
-        (mode === 'context' && body.contains(focused)))
-        ? focused
-        : null;
+    const restore = focused && (chrome.contains(focused) || context?.root.contains(focused)) ? focused : null;
+    const restoreFocus = (fallback: HTMLElement | undefined): void => {
+      if (!restore || (owner.activeElement === restore && !restore.closest('[hidden]'))) return;
+      const original = buttons.find(
+        (button) => button.el.getAttribute('data-name') === restore.getAttribute('data-name'),
+      )?.el;
+      const target = [restore, original].find((el) => el?.isConnected && !el.closest('[hidden]'));
+      focusQuiet(target ?? fallback);
+    };
     painting = true;
     try {
-      const port = context;
-      returnContext();
-      for (const [el, parent] of origins) parent.append(el);
-      quickRow.replaceChildren();
-      contextRow.replaceChildren();
+      mobile = isNarrow();
+      const nextExpanded = !mobile || (shell?.classList.contains('is-fullscreen') ?? false);
+      if (expanded !== nextExpanded) {
+        close(false);
+        options.onLayoutChange?.();
+        context?.close?.();
+        expanded = nextExpanded;
+        tooltip.hide();
+        chromeLease.className('nabi-expanded', expanded);
+        expandedKeyboard?.unmount();
+        expandedKeyboard = expanded ? mountToolboxKeyboard(chrome) : null;
+        contextKeyboard?.unmount();
+        contextKeyboard = !expanded && context ? mountToolboxKeyboard(context.root) : null;
+        releasePanelHost?.();
+        releasePanelHost = expanded ? null : registerPanelHost(root, hostPanel);
+        releaseContextPanelHost?.();
+        releaseContextPanelHost =
+          !expanded && context && !root.contains(context.root) ? registerPanelHost(context.root, hostPanel) : null;
+      }
       syncViewButtons();
-      const views = port?.groups() ?? [];
-      const nextSignature = views.map((group) => `${group.w}:${group.node._id ?? ''}`).join('|');
-      if (nextSignature !== signature) {
-        signature = nextSignature;
-        suppressed = false;
-      }
-      const useContext = views.length > 0 && !suppressed;
-      if (mode !== 'detail' || detailOptions?.modal !== true) bar.hidden = false;
-      back.hidden = !useContext;
-      more.hidden = true;
-      contextRow.hidden = !useContext;
-      quickRow.hidden = useContext;
-      if (useContext) {
-        contextRow.append(...views.map((group) => group.el));
-        const overflow = fitContext(views, false);
-        more.hidden = !overflow;
-        if (!overflow && mode === 'context') {
-          close(false);
-          contextRow.append(...views.map((group) => group.el));
+      strip.hidden = !expanded;
+      tools.hidden = expanded;
+      if (expanded) {
+        restoreButtons(new Set());
+        bar.hidden = false;
+        quickRow.hidden = true;
+        for (const parent of new Set(origins.values())) {
+          parent.hidden = ![...parent.children].some((child) => !(child as HTMLElement).hidden);
         }
-        if (!mode) fitContext(views, true);
-        else if (mode === 'detail') returnContext();
-      } else {
-        if (mode === 'context') close(false);
-        const quick = [...new Set(options.quick)]
-          .map((name) => buttons.find((b) => b.el.getAttribute('data-name') === name && !b.el.hidden))
-          .filter((button): button is ToolbarButton => button !== undefined);
-        const room = rowRoom(quickRow);
-        let used = 0;
-        for (const button of quick) {
-          quickRow.append(button.el);
-          const width = widthOf(button.el);
-          const needed = width + (used > 0 ? gapOf(quickRow) : 0);
-          if (used + needed <= room) used += needed;
-          else origins.get(button.el)?.append(button.el);
+        labels();
+        restoreFocus(surface);
+        return;
+      }
+      quickRow.hidden = false;
+      const quick = [...new Set(options.quick)]
+        .map((name) => buttons.find((b) => b.el.getAttribute('data-name') === name && !b.el.hidden))
+        .filter((button): button is ToolbarButton => button !== undefined);
+      const room = rowRoom(quickRow);
+      const kept: HTMLElement[] = [];
+      let used = 0;
+      for (const button of quick) {
+        if (button.el.parentElement !== quickRow) quickRow.append(button.el);
+        const width = widthOf(button.el);
+        const needed = width + (used > 0 ? gapOf(quickRow) : 0);
+        if (used + needed <= room) {
+          used += needed;
+          kept.push(button.el);
         }
       }
+      restoreButtons(new Set(kept));
+      arrange(quickRow, kept);
       if (mode && mode !== 'detail') renderMenu();
       labels();
       position();
-      if (restore && owner.activeElement !== restore)
-        focusQuiet(restore.isConnected && !restore.closest('[hidden], .nabi-compact-source') ? restore : tools);
+      restoreFocus(tools);
     } finally {
       painting = false;
     }
   }
   function position(): void {
-    if (dead) return;
+    if (dead || expanded) return;
     const state = viewport?.read();
-    const threshold = parseFloat(view?.getComputedStyle(probe).width ?? '') || 576;
-    mobile = !!surface && (owner.documentElement.clientWidth || view?.innerWidth || 1024) < threshold;
-    const focused = owner.activeElement;
-    active = !!surface && (surface === focused || surface.contains(focused) || root.contains(focused) || !!mode);
-    const rect = (surface ?? root).getBoundingClientRect();
-    const room = state?.height ?? view?.innerHeight ?? 700;
-    const barHeight = 3 * unit();
-    const nextDocked = mobile && active && rect.width > 0;
-    const isInput = mode === 'detail' && detailOptions?.modal === true;
-    const pending = !!(mobile && mode && !isInput && state?.keyboardOpen);
+    const visible = visibleViewportRect(owner);
+    const room = visible.bottom - visible.top;
+    const barHeight = 2.25 * unit();
+    const isInput = mode === 'detail' && detailOptions?.className === 'nabi-prompt';
+    bar.hidden = !!(mobile && isInput);
+    const row = root.getBoundingClientRect();
+    const anchor = chrome.getBoundingClientRect();
+    toolbox.style.setProperty('--nabi-toolbox-top', `${anchor.bottom - row.top}px`);
+    toolbox.style.setProperty('--nabi-toolbox-bottom', `${row.bottom - anchor.top}px`);
+    const top = visible.top;
+    if (mode && anchor.width > 0 && (anchor.bottom <= top || anchor.top >= top + room)) {
+      close(false);
+      return;
+    }
+    const below = Math.max(0, top + room - anchor.bottom - 8);
+    const above = Math.max(0, anchor.top - top - 8);
+    const flip = !(mobile && isInput) && below < 320 && above > below;
+    const available = flip ? above : below;
     toolbox.classList.toggle('nabi-toolbox-mobile', mobile);
     const contentBoxes = Array.from(body.children, (child) => child.getBoundingClientRect());
     const contentHeight = contentBoxes.length
@@ -538,41 +552,19 @@ export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
     const toolboxStyle = view?.getComputedStyle(toolbox);
     const borderHeight = length(toolboxStyle?.borderTopWidth) + length(toolboxStyle?.borderBottomWidth);
     const panelHeight =
-      mode && !isInput && !pending
+      mode && !isInput
         ? Math.min(
             contentHeight > 0 ? contentHeight + bodyPadding + borderHeight : 280,
             state?.lastKeyboardHeight || 280,
             Math.max(96, room - 3 * barHeight),
+            available,
           )
         : 0;
     toolbox.classList.toggle('nabi-toolbox-input', mobile && isInput);
-    toolbox.classList.toggle('nabi-toolbox-waiting', pending);
-    if (nextDocked) {
-      const top = (state?.top ?? 0) + room - barHeight - panelHeight;
-      const left = Math.max(state?.left ?? 0, rect.left);
-      const right = Math.min(rect.right, (state?.left ?? 0) + (state?.width ?? view?.innerWidth ?? rect.width));
-      const width = Math.max(0, right - left);
-      chrome.setAttribute('data-nabi-docked', 'true');
-      chrome.style.setProperty('--nabi-dock-top', `${Math.max(state?.top ?? 0, top)}px`);
-      chrome.style.setProperty('--nabi-dock-left', `${left}px`);
-      chrome.style.setProperty('--nabi-dock-width', `${width}px`);
-      toolbox.style.setProperty('--nabi-toolbox-height', `${panelHeight}px`);
-      placeholder.hidden = false;
-      if (!placeholder.parentNode) chrome.before(placeholder);
-    } else {
-      chrome.removeAttribute('data-nabi-docked');
-      for (const key of ['--nabi-dock-top', '--nabi-dock-left', '--nabi-dock-width']) chrome.style.removeProperty(key);
-      placeholder.hidden = true;
-    }
-    bar.hidden = !!(mobile && isInput);
+    toolbox.style.setProperty('--nabi-toolbox-height', `${panelHeight}px`);
     toolbox.classList.toggle('nabi-toolbox-inline', mobile && isInput);
-    const anchor = root.getBoundingClientRect();
-    const below = Math.max(0, (state?.top ?? 0) + room - anchor.bottom - 8);
-    const above = Math.max(0, anchor.top - (state?.top ?? 0) - 8);
-    const flip = !mobile && below < 320 && above > below;
     toolbox.classList.toggle('nabi-toolbox-above', flip);
-    if (mode && !pending && !(mobile && isInput))
-      toolbox.style.maxHeight = `${Math.max(96, mobile ? room - 96 : flip ? above : below)}px`;
+    if (mode && !(mobile && isInput)) toolbox.style.maxHeight = `${available}px`;
     else toolbox.style.removeProperty('max-height');
   }
   const schedule = (): void => {
@@ -593,16 +585,21 @@ export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
     life.add(
       registerToolbox(root, {
         open: () => {
-          if (mode !== 'all') open('all');
+          if (mode !== 'all') open();
           else keyboard.focusFirst();
         },
         close: (restore = true) => close(restore),
-        active: () => mode !== null,
+        active: () => navigating || mode !== null,
       }),
     );
     life.add(() => copy.dispose());
     life.add(() => lease.dispose());
     life.add(() => chromeLease.dispose());
+    life.add(() => expandedKeyboard?.unmount());
+    life.add(() => releasePanelHost?.());
+    life.add(() => releaseContextPanelHost?.());
+    life.add(() => contextTooltip?.unmount());
+    life.add(() => contextKeyboard?.unmount());
     life.add(() => {
       for (const button of viewButtons.values()) button.dispose();
       viewButtons.clear();
@@ -610,43 +607,37 @@ export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
     lease.className('nabi-compact-row', true);
     chromeLease.className('nabi-compact', true);
     life.add(() => {
-      returnContext();
       contextLease?.dispose();
       for (const [el, parent] of origins) parent.append(el);
       strip.hidden = hadStripHidden;
     });
     strip.hidden = true;
-    if (tools.hasAttribute('data-nabi-compact')) life.add(wireIconButton(tools, () => open('all')));
+    if (tools.hasAttribute('data-nabi-compact')) life.add(wireIconButton(tools, open));
     tools.setAttribute('data-nabi-compact', 'true');
     tools.classList.add('nabi-compact-tools');
-    bar.append(tools, more, back, quickRow, contextRow, viewRow);
+    bar.append(tools, quickRow, viewRow);
     root.prepend(bar);
     root.append(probe, toolbox);
     toolbox.append(body);
     toolbox.hidden = true;
-    placeholder.hidden = true;
     life.add(() => {
       bar.remove();
       toolbox.remove();
       probe.remove();
-      placeholder.remove();
     });
-    life.add(registerPanelHost(root, hostPanel));
+    releasePanelHost = registerPanelHost(root, hostPanel);
     const onOutside = (event: Event): void => {
       const target = event.target as Node | null;
-      if (mode && target && !root.contains(target) && !toolbox.contains(target)) close(false);
+      if (navigating && target && !chrome.contains(target)) navigating = false;
+      if (mode && target && !root.contains(target) && !context?.root.contains(target)) close(false);
     };
     const onKey = (event: Event): void => {
       const key = event as KeyboardEvent;
-      if (key.key === 'Escape' && root.contains(key.target as Node) && (mode || !back.hidden)) {
+      if (expanded) return;
+      if (key.key === 'Escape' && root.contains(key.target as Node) && mode) {
         key.preventDefault();
         key.stopPropagation();
-        if (mode) close(true);
-        else {
-          suppressed = true;
-          refresh();
-          focusQuiet(surface);
-        }
+        close(true);
       }
     };
     owner.addEventListener('pointerdown', onOutside, true);
@@ -665,19 +656,26 @@ export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
     const Observer = view?.ResizeObserver;
     const observer = Observer ? new Observer(refresh) : null;
     observer?.observe(root);
+    observer?.observe(probe);
+    if (chrome !== root) observer?.observe(chrome);
     life.add(() => observer?.disconnect());
+    const Mutation = view?.MutationObserver;
+    const fullscreenObserver = Mutation
+      ? new Mutation(() => {
+          if (expanded !== (!isNarrow() || shell?.classList.contains('is-fullscreen'))) refresh();
+        })
+      : null;
+    if (shell) fullscreenObserver?.observe(shell, { attributes: true, attributeFilter: ['class'] });
+    life.add(() => fullscreenObserver?.disconnect());
     const result: CompactToolbar = {
       refresh,
       close,
-      keepsFocus: () => mode !== null && detailOptions?.modal !== true,
+      keepsFocus: () => navigating || (mode !== null && detailOptions?.className !== 'nabi-prompt'),
       unmount: () => {
         if (dead) return;
         close(false);
         dead = true;
         life.dispose();
-        chrome.removeAttribute('data-nabi-docked');
-        for (const key of ['--nabi-dock-top', '--nabi-dock-left', '--nabi-dock-width'])
-          chrome.style.removeProperty(key);
       },
     };
     const binding: ContextOwner = { toolbar: result, connect };

@@ -37,6 +37,12 @@ These options do not collapse into one global switch:
 
 Enable all relevant gates for a local preview workflow. A normal server upload returning HTTPS needs none of them.
 
+## Host image picker
+
+`mountToolbar({ panels: { img: renderer } })` replaces the image URL prompt with host UI; it does not replace URL validation or implement file transfer. The renderer can load a media library or call the host's uploader, then use `context.run('insertImage', { src: url })`. `insertImage` accepts `src` and optional `w`; it does not take an `alt` command argument. Image-node repair and the relevant local-URL gates still apply. Validate uploaded files on the server as described below.
+
+Forward the panel's `signal` to asynchronous work and release host resources through the returned disposer or `onDispose()`. Closing the panel aborts the signal. A late `run()` after closure returns `false`; a document changed since panel opening also prevents applying a command to the stale selection. See `api-reference.md` for the complete panel lifecycle contract.
+
 ## HTML output
 
 Builders do not need to concatenate tags. `HtmlContext` centralizes:

@@ -23,6 +23,32 @@ const selected = wings().use('img', {
 
 这个 wing 只是把地址插入文档，并不会上传文件。要把文件发送到服务器，请连接[上传 wing](/zh/wing/etc/upload)。
 
+## 连接图片选择器
+
+通过 `mountToolbar()` 的 `panels.img`，可以将图片按钮默认的 URL 输入窗口替换为服务自己的图片选择器。键名使用工具栏槽位名称；未指定的工具保留默认输入窗口。
+
+```ts
+import { mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  panels: {
+    img: ({ root, signal, run }) =>
+      mountMyImagePicker(root, {
+        signal,
+        onSelect: (url: string) => run('insertImage', { src: url }),
+      }),
+  },
+})
+```
+
+`mountMyImagePicker` 是由服务自行实现的函数。它在传入的 `root` 中同步创建所需 UI，并返回清理函数。加载图片列表或上传等异步任务应接入 `signal`，并将选中的图片 URL 传给 `onSelect`。此 API 不传输文件，图片 URL 仍遵循现有的允许规则。
+
+关闭窗口或卸载工具栏时，`signal` 会中止，清理函数也会被调用。`run()` 关闭窗口，并在窗口打开时记录的选区上执行一次命令。如果窗口已经关闭，或者打开后文档内容发生了变化，则返回 `false`，不执行命令。
+
 ## CSS 样式
 
 用 `.nabi-content img` 设置图片样式。保持保存的宽度和对齐方式不变，只改变边框或阴影等视觉细节。

@@ -6,6 +6,7 @@
 import type { CommandHand } from '../../editor/index.js';
 import { make } from './dom.js';
 import { iconHtml } from '../../style/icon.js';
+import { isIos } from '../band.js';
 
 export interface IconButtonSpec {
   // data-name — 힌트·시험이 버튼을 찾는 손잡이.
@@ -43,7 +44,7 @@ export function iconButton(owner: Document, spec: IconButtonSpec): HTMLButtonEle
     'data-nabi-tip': spec.label,
   }) as HTMLButtonElement;
 
-  if (spec.swatch) button.style.background = spec.swatch;
+  if (spec.swatch) button.style.setProperty('--nabi-swatch-color', spec.swatch);
   else if (spec.icon || spec.svg)
     button.innerHTML = iconHtml(spec.iconKey ?? spec.name, spec.icon, spec.svg, spec.strokeWidth);
   else button.textContent = spec.text ?? spec.label;
@@ -58,6 +59,7 @@ export function wireIconButton(button: HTMLElement, press: (by: CommandHand) => 
   // 겨눔을 지키는 mousedown 억제가 브라우저 :active도 함께 죽여 눌린 티가 안 나므로, 누른 티(.nabi-tap)를 직접 낸다.
   // Suppressing mousedown to protect the caret also kills the browser's :active, so pressed feedback (.nabi-tap) is drawn manually instead.
   const releaseMouse = suppressMousedownTap(button);
+  let releaseTouch = (): void => {};
   const onClick = (event: MouseEvent): void => {
     event.preventDefault();
     // 손 판정은 detail 하나다 — 키보드가 만든 클릭(Enter/Space·el.click())은 0이고 진짜 포인터는 1 이상이다.
@@ -65,8 +67,10 @@ export function wireIconButton(button: HTMLElement, press: (by: CommandHand) => 
     press(event.detail === 0 ? 'keyboard' : 'pointer');
   };
   try {
+    releaseTouch = wireTouchTap(button, press);
     button.addEventListener('click', onClick);
   } catch (error) {
+    releaseTouch();
     releaseMouse();
     throw error;
   }
@@ -74,9 +78,72 @@ export function wireIconButton(button: HTMLElement, press: (by: CommandHand) => 
   return () => {
     if (!active) return;
     active = false;
+    releaseTouch();
     releaseMouse();
     button.removeEventListener('click', onClick);
   };
+}
+
+function wireTouchTap(button: HTMLElement, press: (by: CommandHand) => void): () => void {
+  const owner = button.ownerDocument;
+  const navigator = owner.defaultView?.navigator;
+  if (!navigator || !isIos(navigator.userAgent, navigator.platform ?? '', navigator.maxTouchPoints ?? 0))
+    return () => {};
+
+  let start: { id: number; x: number; y: number; time: number } | null = null;
+  const clear = (): void => {
+    start = null;
+  };
+  const onStart = (event: TouchEvent): void => {
+    clear();
+    if (event.touches.length !== 1 || button.matches(':disabled, [aria-disabled="true"]')) return;
+    const touch = event.touches[0]!;
+    start = { id: touch.identifier, x: touch.clientX, y: touch.clientY, time: event.timeStamp };
+  };
+  const matches = (touch: Touch): boolean =>
+    start !== null &&
+    touch.identifier === start.id &&
+    Math.hypot(touch.clientX - start.x, touch.clientY - start.y) <= 10;
+  const onMove = (event: TouchEvent): void => {
+    if (event.touches.length !== 1 || !matches(event.touches[0]!)) clear();
+  };
+  const onEnd = (event: TouchEvent): void => {
+    const touch = event.changedTouches[0];
+    const valid =
+      start !== null &&
+      event.touches.length === 0 &&
+      event.changedTouches.length === 1 &&
+      touch !== undefined &&
+      matches(touch) &&
+      event.timeStamp - start.time < 500;
+    clear();
+    if (!valid || !touch || !event.cancelable || event.defaultPrevented || !button.isConnected) return;
+    if (button.matches(':disabled, [aria-disabled="true"]')) return;
+    const hit = owner.elementFromPoint(touch.clientX, touch.clientY);
+    if (!hit || !button.contains(hit)) return;
+    // iOS 선택 메뉴가 합성 클릭을 삼킬 수 있어 완료된 탭을 직접 한 번 처리한다.
+    // iOS selection menus can consume the synthetic click; cancel it and handle the completed tap once.
+    event.preventDefault();
+    tap(button);
+    press('pointer');
+  };
+  const release = (): void => {
+    clear();
+    button.removeEventListener('touchstart', onStart);
+    button.removeEventListener('touchmove', onMove);
+    button.removeEventListener('touchend', onEnd);
+    button.removeEventListener('touchcancel', clear);
+  };
+  try {
+    button.addEventListener('touchstart', onStart, { passive: true });
+    button.addEventListener('touchmove', onMove, { passive: true });
+    button.addEventListener('touchend', onEnd, { passive: false });
+    button.addEventListener('touchcancel', clear);
+  } catch (error) {
+    release();
+    throw error;
+  }
+  return release;
 }
 
 export function suppressMousedownTap(element: HTMLElement): () => void {

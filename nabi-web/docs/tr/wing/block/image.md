@@ -23,6 +23,32 @@ const selected = wings().use('img', {
 
 Bu wing belgeye bir adres ekler; dosya yüklemez. Dosyaları sunucuya göndermek için [upload wing](/tr/wing/etc/upload) bağlayın.
 
+## Görsel seçici bağlama
+
+Görsel düğmesinin varsayılan URL giriş penceresini hizmetinizin görsel seçicisiyle değiştirmek için `mountToolbar()` içinde `panels.img` kullanın. Anahtarlar araç çubuğu yuvası adlarıdır; belirtilmeyen araçlar varsayılan pencerelerini kullanmaya devam eder.
+
+```ts
+import { mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  panels: {
+    img: ({ root, signal, run }) =>
+      mountMyImagePicker(root, {
+        signal,
+        onSelect: (url: string) => run('insertImage', { src: url }),
+      }),
+  },
+})
+```
+
+`mountMyImagePicker`, hizmetinizde uyguladığınız bir işlevdir. Verilen `root` içinde arayüzünüzü eşzamanlı olarak oluşturur ve bir temizleme işlevi döndürür. Görsel listesini yükleme veya dosya yükleme gibi eşzamansız işlemlere `signal` bağlayın ve seçilen görselin URL’sini `onSelect` işlevine iletin. Bu API dosya aktarmaz; mevcut görsel URL izin kuralları geçerliliğini korur.
+
+Panel kapatıldığında veya araç çubuğu kaldırıldığında `signal` iptal edilir ve temizleme işlevi çağrılır. `run()` paneli kapatır ve açılırken kaydedilen seçime komutu bir kez uygular. Panel zaten kapalıysa veya açıldıktan sonra belge içeriği değiştiyse komutu çalıştırmadan `false` döndürür.
+
 ## CSS stilleri
 
 Görselleri `.nabi-content img` ile biçimlendirin. Saklanan genişliği ve hizalamayı bozmadan yalnızca kenarlık veya gölge gibi görsel ayrıntıları değiştirin.

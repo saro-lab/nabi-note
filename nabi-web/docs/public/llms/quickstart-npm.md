@@ -59,11 +59,35 @@ const toolbar = mountToolbar({
 
 Do not set `contenteditable` yourself. `mountSurface()` sets it and adds `.nabi-editing`. Give every active surface, toolbar, context toolbar, and standalone diff its own separate, non-overlapping root. A duplicate root or an active ancestor and descendant overlap throws. After the owning mount unmounts, the other root can be mounted. Mount roots should otherwise start without host-owned child DOM. Matching direct groups from `renderToolbarHtml()` are the package-owned SSR toolbar exception. The host supplies `.nabi`, `.nabi-toolbar`, and `.nabi-content` placement classes.
 
-`layout: 'compact'` is the default: quick tools and selection tools share one row, and the Tools palette shows available commands together in their original wing groups. `quick` lists toolbar slot names in priority order. Use `layout: 'wrap'` to retain the previous wrapping toolbar. Compact mobile docking follows the viewport breakpoint, so a narrow desktop column stays at the top. See `styling.md` for layout and keyboard details.
+`layout: 'compact'` is the default: desktop shows all main-toolbar commands, wrapping like fullscreen, while mobile keeps quick tools in a single row and puts the full command set in the Tools palette. The viewport width and `--nabi-mobile-breakpoint` determine this switch, even when the desktop editor itself is narrow. Available object properties appear automatically below the main toolbar. `quick` lists toolbar slot names in priority order for the mobile compact row. Use `layout: 'wrap'` for the explicit wrapping main toolbar. The toolbar and property row stay sticky together at the top within their own editor on desktop and mobile, and scroll out of view with that editor. See `styling.md` for dimensions, layout, and keyboard details.
 
 The browser factory wires its internal `DOMParser` adapter automatically, so `setHtml()`, HTML files, and HTML paste need no parser option.
 
 `undoLimit` defaults to 200 and accepts integers of 1 or greater. `typingMergeMs` defaults to 1000 milliseconds; set it to 0 to keep every insertion as a separate undo step. Invalid values throw during editor creation. `onError` receives isolated command, repair, normalization, listener, and host callback failures.
+
+## Replace the image URL prompt with host UI
+
+Supply `panels` when mounting the toolbar. Its keys are toolbar slot names; `img` replaces the image button's default URL prompt. Omitted slots keep their default behavior.
+
+```ts
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  panels: {
+    img: ({ root, signal, run }) =>
+      mountMyImagePicker(root, {
+        signal,
+        onSelect: (url: string) => run('insertImage', { src: url }),
+      }),
+  },
+});
+```
+
+`mountMyImagePicker` is supplied by your application, not NABI NOTE. It synchronously renders DOM or a framework component inside the given `root` and returns a cleanup function. Forward `signal` to asynchronous image-list or upload requests, and send the selected image URL to `onSelect`. The renderer itself must not be `async`. For effects that need cleanup if rendering throws midway, use the context's `onDispose()` as soon as each effect starts.
+
+The package manages panel positioning, closing, focus, and teardown. Closing or unmounting aborts the signal and calls cleanup. `run()` closes the panel and applies one command at the selection captured when it opened; a closed panel or changed document returns `false` without insertion. The image wing must be registered, and its URL policy is unchanged. This API does not transfer files. See `api-reference.md` for `ToolbarPanelContext`, and `io-security.md` for URL and upload boundaries.
 
 ## Change the UI language without resetting editing state
 
@@ -166,9 +190,9 @@ const view = mountViewTools({
 });
 ```
 
-The context toolbar follows the compact toolbar mounted for the same `nabi`; do not give it a separate layout option. Keep the toolbar and context roots as siblings. View controls mounted inside the shared `toolbarChrome` wrapper stay visible in the compact row, subject to their individual visibility options. When context controls do not all fit, the highlighted Object properties down-chevron appears immediately after Tools and opens the full context panel. The full palette contains registered wing buttons only, with no duplicate view/context-entry controls or added undo/redo buttons. Without a compact toolbar, the context and view mounts retain their standalone placement.
+The context toolbar follows the compact toolbar mounted for the same `nabi`; do not give it a separate layout option. Keep the toolbar and context roots as siblings. Available object properties appear automatically in the context root below the main toolbar, take up layout space, and wrap on desktop and mobile. Both rows move together inside the shared `toolbarChrome` wrapper. The desktop main toolbar shows all available commands; mobile keeps quick actions in its main row. View controls remain visible, subject to their individual visibility options. There is no Object properties entry button or back-to-tools button. The mobile full palette contains registered wing buttons only, with no duplicate view controls or added undo/redo buttons. Without a compact toolbar, the context and view mounts retain their standalone placement.
 
-`mountHints()` makes double-Shift open the compact palette. Tab/Shift+Tab cycle groups, arrow keys move between icons, Enter/Space activate, and Escape returns to editing. The former letter badges are no longer used. See `styling.md` for wrapping and visual-row navigation rules.
+`mountHints()` makes double-Shift open the mobile compact palette or focus the visible toolbar on desktop and in fullscreen. Tab/Shift+Tab cycle groups, arrow keys move between icons, Enter/Space activate, and Escape returns to editing. The former letter badges are no longer used. See `styling.md` for wrapping and visual-row navigation rules.
 
 Pass `surface` to toolbar-like mounts. It scopes keyboard accelerators and focus restoration, which is required when multiple editors share a page.
 

@@ -29,15 +29,21 @@ Use this file as a router. Read only the document that owns your question.
 - Use `nabi-note/viewer` for optional behavior on published HTML.
 - Use `nabi-note/diff` for comparing two stored documents.
 - Load `nabi-note/nabi.css` on editor and published pages unless all required sheets are injected.
-- Toolbars default to a compact single row. Use `layout: 'wrap'` for the previous wrapping layout; see `llms/styling.md`.
-- The Tools palette shows commands together in their original wing groups. With `mountHints()`, double-Shift opens keyboard navigation: Tab changes groups and arrow keys move between icons; letter badges are no longer used.
-- Every compact toolbar and palette item, including color swatches, has a floating tooltip under `body` to avoid clipping. Tooltips show actual accelerators and double-key gestures; Tools shows Shift Shift. Swatches do not enlarge on hover and use border feedback. See `llms/styling.md`.
-- Connected preview/fullscreen controls stay on the compact toolbar. The highlighted Object properties down-chevron appears immediately after Tools only when the current context controls do not all fit in the row. Its localized label uses the existing `toolsContext` key.
-- The full palette contains registered wing buttons only, without duplicate view or context-entry buttons or added undo/redo controls. The full palette has zero padding/gaps; Object properties has separate padding and group spacing. Desktop toolbar icons use 14px at the default root font size while its buttons stay 44px; mobile icons and touch targets retain their size. See `llms/styling.md`.
-- Narrow UI starts strictly below `36rem`; override `--nabi-mobile-breakpoint` in CSS. Mobile docking uses viewport width, not only a narrow editor container (see `llms/styling.md`).
+- Use `mountToolbar({ panels: { img: renderImagePicker } })` to replace the default image URL prompt with host UI. The renderer receives a dedicated root, abort signal, cleanup registration, and `run()` for one command at the opening selection; omitted slots keep their default behavior. See `llms/api-reference.md` and `llms/quickstart-npm.md`.
+- The default `layout: 'compact'` shows all main-toolbar commands on desktop, wrapping like fullscreen, and uses a compact single row on mobile. Available object properties appear automatically in a wrapping row below it; both rows take up space and move together. Fullscreen expands the complete main toolbar at every width. Exiting restores the viewport-appropriate layout. Use `layout: 'wrap'` for the explicit wrapping layout; see `llms/styling.md`.
+- The mobile Tools palette shows commands together in their original wing groups. With `mountHints()`, double-Shift opens keyboard navigation in that palette, or in the visible toolbar on desktop and in fullscreen: Tab changes groups and arrow keys move between icons; letter badges are no longer used.
+- Every compact toolbar and palette item, including color swatches, has a floating tooltip under `body` to avoid clipping. Tooltips show actual accelerators and double-key gestures; Tools shows Shift Shift. Selected toolbar and property controls use a subtle accent-tinted background without an underline or selection border. Swatches retain their actual color and do not enlarge on hover. See `llms/styling.md`.
+- Mobile quick actions and connected preview/fullscreen controls stay in the main toolbar while object properties are visible below. Desktop shows the complete main toolbar without a Tools entry button. There is no Object properties entry button or back-to-tools button; their `toolsContext` and `toolsBack` locale keys are removed.
+- The full palette contains registered wing buttons only, without duplicate view controls or added undo/redo controls. The full palette has zero padding/gaps; the property row has separate padding and group spacing. Toolbar buttons use 32px and icons use 14px on desktop and mobile at the default root font size. The mobile compact row is 36px high; property swatches, inputs, and range controls are 28px high. See `llms/styling.md`.
+- Narrow UI starts strictly below `36rem`; override `--nabi-mobile-breakpoint` in CSS. The default toolbar expands based on viewport width, so a narrow desktop editor still shows all tools. Toolbars stay sticky at the top within their own editor on desktop and mobile, and leave view when that editor scrolls past (see `llms/styling.md`).
+- Mobile Tools and selection/menu panels open immediately in the available space around the toolbar and its property row and move focus into the panel, without waiting for the keyboard to close. The property row itself stays in normal flow. `mountSticky()` keeps tracking viewport offsets during keyboard closure so the first tap also works after scrolling. See `llms/styling.md`.
+- Keyboard opening preserves an already visible caret below a pinned toolbar. Viewport position changes alone do not restart correction after a user scroll. Focusing or navigating tool panels scrolls within the tool area without moving the outer page.
+- Updating an already focused property control preserves its focus after refresh instead of returning to the document, avoiding unwanted keyboard reopening and caret scrolling.
+- On iOS, icon buttons handle a completed short, single-touch tap directly and cancel its compatibility click. The touchend handler does not turn scrolling, multitouch, or long presses into command taps; native document selection menus remain available. See `llms/styling.md`.
 - Store `nabi.getJson()` or `nabi.getHtml()`. Never store `getEditorHtml()`. HTML output and clipboard fragments protect leading spaces, including partial selections; see `llms/document-model.md`.
 - Treat HTML, JSON, paste data, command args, and custom filter output as untrusted input.
 - Use `NabiOptions.onError` for isolated command and callback failure reporting.
+- Tool input prompts (image, YouTube, link, and object properties such as code language) use plain nonmodal panels, without a full-page scrim, blur, or inert background. Preview, lightbox, and full dialogs keep their separate modal layer.
 - Built-in notices and input prompts use polite localized wording; see `llms/quickstart-npm.md` for locale configuration.
 - For live language switching, share `createLocale()` across the editor and mounts, then call `locale.setLocale(code)`; see `llms/quickstart-npm.md`.
 - Configure bounded undo with `undoLimit`; set `typingMergeMs` to 0 to disable typing coalescing.
@@ -45,7 +51,7 @@ Use this file as a router. Read only the document that owns your question.
 
 ## Package facts
 
-- Package contract documented here: 1.2.0 (working version; not a publication claim).
+- Package contract documented here: 1.3.0 (working version; not a publication claim).
 - Runtime dependencies: zero.
 - Node.js for package tooling and SSR: 20 or newer.
 - Declared browser baseline: Chrome and Edge 120, Firefox 120, Safari 17.

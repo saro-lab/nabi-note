@@ -1,4 +1,66 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
+import type { ContextToolbar, Nabi, Toolbar, Wing } from '../../src/index.js';
+
+const entry = `/@fs${new URL('../../src/index.ts', import.meta.url).pathname}`;
+
+interface FullscreenState {
+  readonly nabi: Nabi;
+  readonly toolbar: Toolbar;
+  readonly context: ContextToolbar;
+}
+
+async function setupToolbar(page: Page, fontSizeMenu = false): Promise<void> {
+  await page.goto('/');
+  await page.evaluate(
+    async ({ entry, fontSizeMenu }) => {
+      const api = await import(/* @vite-ignore */ entry);
+      document.documentElement.style.fontSize = '16px';
+      document.body.style.cssText = 'margin:0;padding:0;';
+      document.body.innerHTML =
+        '<div id="fullscreen-editor" class="nabi" style="width:532px;max-width:100%;border:0;padding:0;margin:0">' +
+        '<div class="nabi-toolbar"><div id="fullscreen-toolbar"></div><div id="fullscreen-context"></div><div id="fullscreen-tools"></div></div>' +
+        '<div id="fullscreen-surface" class="nabi-content"></div></div>';
+      const wings = api.defaultWings.map((wing: Wing) =>
+        fontSizeMenu && wing.w === 'fs'
+          ? {
+              ...wing,
+              button: {
+                ...wing.button,
+                action: {
+                  kind: 'menu',
+                  command: 'setFontSize',
+                  argKey: 'v',
+                  values: [{ value: 'lg', label: { en: 'Large' } }],
+                },
+              },
+            }
+          : wing,
+      );
+      const { nabi, registry } = api.createNabiWith(wings, {
+        locale: 'en',
+        doc: [
+          { w: 'img', a: { src: '/nabi-note.svg', w: '100' } },
+          { w: 'p', ch: ['one two three'] },
+          ...Array.from({ length: 40 }, (_, at) => ({ w: 'p', ch: [`Paragraph ${at + 1}`] })),
+        ],
+      });
+      api.injectSheets(document, api.collectSheets(registry, api.CORE_CSS));
+      const surface = document.getElementById('fullscreen-surface')!;
+      const common = { nabi, registry, locale: 'en', surface };
+      api.mountSurface({ ...common, root: surface });
+      const toolbar = api.mountToolbar({ ...common, root: document.getElementById('fullscreen-toolbar')! });
+      const context = api.mountContextToolbar({ ...common, root: document.getElementById('fullscreen-context')! });
+      api.mountViewTools({
+        ...common,
+        root: document.getElementById('fullscreen-editor')!,
+        container: document.getElementById('fullscreen-tools')!,
+      });
+      nabi.select({ anchor: { path: [0], offset: 0 }, focus: { path: [0], offset: 1 } });
+      (globalThis as unknown as { fullscreenTest: FullscreenState }).fullscreenTest = { nabi, toolbar, context };
+    },
+    { entry, fontSizeMenu },
+  );
+}
 
 async function enterFullscreen(root: Locator): Promise<void> {
   await root.locator('.nabi-compact-bar [data-name="fullscreen"]').click();
@@ -105,4 +167,145 @@ test('fullscreen backgrounds inherit overrides and long paper scrolls in both th
   });
   await expect(root).toHaveCSS('background-color', 'rgb(51, 68, 85)');
   await expect(surface).toHaveCSS('background-color', 'rgb(34, 34, 34)');
+});
+
+for (const width of [1280, 390]) {
+  test(`fullscreen keeps all tools and selected object properties visible at the top at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await setupToolbar(page);
+    const root = page.locator('#fullscreen-editor');
+    const chrome = root.locator('.nabi-toolbar');
+    const toolbar = page.locator('#fullscreen-toolbar');
+    const context = page.locator('#fullscreen-context');
+    const bar = toolbar.locator('.nabi-compact-bar');
+    if (width < 576) await expect(bar.locator('[data-name="tools"]')).toBeVisible();
+    else await expect(toolbar.locator('.nabi-strip')).toBeVisible();
+    await enterFullscreen(root);
+    await expect(chrome).toHaveClass(/nabi-expanded/);
+    await expect(toolbar.locator('.nabi-strip')).toBeVisible();
+    await expect(context).toBeVisible();
+    await expect(bar.locator('[data-name="tools"]')).toBeHidden();
+    await expect(bar.locator('[data-name="context-tools"]')).toHaveCount(0);
+    await expect(context.locator('input[type="range"]')).toBeVisible();
+    await expect(context.locator('[data-name="view"]')).toBeVisible();
+
+    const tools = await page.evaluate(() => {
+      const { toolbar, context } = (globalThis as unknown as { fullscreenTest: FullscreenState }).fullscreenTest;
+      const chrome = document.querySelector('#fullscreen-editor .nabi-toolbar')!.getBoundingClientRect();
+      const buttons = toolbar.buttons.filter((button) => !button.el.hidden).map((button) => button.el);
+      const properties = context.groups().flatMap((group) => [...group.el.children] as HTMLElement[]);
+      return {
+        buttonCount: buttons.length,
+        propertyCount: properties.length,
+        clipped: [...buttons, ...properties]
+          .filter((el) => {
+            const box = el.getBoundingClientRect();
+            return (
+              box.width <= 0 ||
+              box.height <= 0 ||
+              box.left < chrome.left - 1 ||
+              box.right > chrome.right + 1 ||
+              box.top < chrome.top - 1 ||
+              box.bottom > chrome.bottom + 1
+            );
+          })
+          .map((el) => el.getAttribute('data-name') ?? el.className),
+      };
+    });
+    expect(tools.buttonCount).toBeGreaterThan(10);
+    expect(tools.propertyCount).toBeGreaterThan(1);
+    expect(tools.clipped).toEqual([]);
+    expect(await toolbar.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+    expect(await context.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+    const beforeScroll = (await chrome.boundingBox())!;
+    expect(beforeScroll.y).toBeCloseTo(0, 1);
+    const properties = (await context.boundingBox())!;
+    const general = (await toolbar.boundingBox())!;
+    expect(properties.y).toBeGreaterThanOrEqual(general.y + general.height - 1);
+    if (width === 390) expect(general.height).toBeGreaterThan(36);
+
+    await root.evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
+    expect(await root.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await expect.poll(async () => (await chrome.boundingBox())!.y).toBeCloseTo(0, 1);
+    expect((await chrome.boundingBox())!.height).toBeCloseTo(beforeScroll.height, 1);
+    await expect(context.locator('input[type="range"]')).toBeInViewport();
+    await expect(context.locator('[data-name="view"]')).toBeInViewport();
+
+    await bar.locator('[data-name="fullscreen"]').click();
+    await expect(root).not.toHaveClass(/is-fullscreen/);
+    if (width < 576) {
+      await expect(chrome).not.toHaveClass(/nabi-expanded/);
+      await expect(toolbar.locator('.nabi-strip')).toBeHidden();
+    } else {
+      await expect(chrome).toHaveClass(/nabi-expanded/);
+      await expect(toolbar.locator('.nabi-strip')).toBeVisible();
+    }
+    await expect(context).toBeVisible();
+    await expect(context).toHaveClass(/nabi-compact-context/);
+    await expect(context.locator('input[type="range"]')).toBeVisible();
+    if (width < 576) {
+      await expect(bar.locator('[data-name="tools"]')).toBeVisible();
+      await expect(bar.locator('.nabi-compact-quick')).toBeVisible();
+      await expect.poll(async () => (await bar.boundingBox())!.height).toBeCloseTo(36, 1);
+    } else {
+      await expect(bar.locator('[data-name="tools"]')).toBeHidden();
+    }
+  });
+}
+
+test('fullscreen tools remain usable across object and text selections', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await setupToolbar(page, true);
+  const root = page.locator('#fullscreen-editor');
+  const toolbar = page.locator('#fullscreen-toolbar');
+  const context = page.locator('#fullscreen-context');
+  const surface = page.locator('#fullscreen-surface');
+  await enterFullscreen(root);
+  await context.locator('input[type="range"]').press('Home');
+  await expect(surface.locator('img').first()).toHaveAttribute('data-nabi-width', '30');
+  await expect(toolbar.locator('.nabi-strip')).toBeVisible();
+  await expect(context.locator('[data-name="view"]')).toBeVisible();
+
+  await page.evaluate(() => {
+    const { nabi } = (globalThis as unknown as { fullscreenTest: FullscreenState }).fullscreenTest;
+    nabi.select({ anchor: { path: [1], offset: 4 }, focus: { path: [1], offset: 7 } });
+    document.getElementById('fullscreen-surface')!.focus();
+  });
+  await expect(context).toBeHidden();
+  await toolbar.locator('.nabi-strip [data-name="b"]').click();
+  await expect(surface.locator('b')).toHaveText('two');
+  await page.evaluate(() => {
+    const { nabi } = (globalThis as unknown as { fullscreenTest: FullscreenState }).fullscreenTest;
+    nabi.select({ anchor: { path: [1], offset: 5 }, focus: { path: [1], offset: 5 } });
+  });
+  await expect(toolbar.locator('.nabi-strip [data-name="b"]')).toHaveAttribute('aria-pressed', 'true');
+  await toolbar.locator('.nabi-strip [data-name="fs"]').click();
+  const picker = page.locator('.nabi-panel:visible');
+  await expect(picker).toBeVisible();
+  await expect(picker.locator('button').first()).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(picker).toHaveCount(0);
+  await expect(root).toHaveClass(/is-fullscreen/);
+  await toolbar.locator('.nabi-strip [data-name="table"]').click();
+  await expect(picker.locator('.nabi-grid')).toBeVisible();
+  await expect(picker).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(picker).toHaveCount(0);
+  await expect(root).toHaveClass(/is-fullscreen/);
+
+  await page.evaluate(() => {
+    const { nabi } = (globalThis as unknown as { fullscreenTest: FullscreenState }).fullscreenTest;
+    nabi.select({ anchor: { path: [0], offset: 0 }, focus: { path: [0], offset: 1 } });
+  });
+  await expect(context.locator('input[type="range"]')).toBeVisible();
+  await expect(context.locator('input[type="range"]')).toHaveValue('0');
+  await expect(toolbar.locator('.nabi-strip')).toBeVisible();
+  await surface.press('Escape');
+  await expect(root).not.toHaveClass(/is-fullscreen/);
+  await expect(toolbar.locator('.nabi-strip')).toBeVisible();
+  await expect(toolbar.locator('.nabi-compact-bar [data-name="tools"]')).toBeHidden();
 });

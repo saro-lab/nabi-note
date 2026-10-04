@@ -23,6 +23,32 @@ const selected = wings().use('img', {
 
 이 wing은 주소를 문서에 넣는 기능이며 파일 전송은 하지 않습니다. 파일을 서버로 보내려면 [업로드 wing](/ko/wing/etc/upload)을 연결합니다.
 
+## 이미지 선택창 연결하기
+
+`mountToolbar()`의 `panels.img`로 이미지 버튼의 기본 URL 입력창을 서비스의 이미지 선택창으로 바꿀 수 있습니다. 키는 툴바 슬롯 이름이며, 생략한 도구는 기존 입력창을 사용합니다.
+
+```ts
+import { mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  panels: {
+    img: ({ root, signal, run }) =>
+      mountMyImagePicker(root, {
+        signal,
+        onSelect: (url: string) => run('insertImage', { src: url }),
+      }),
+  },
+})
+```
+
+`mountMyImagePicker`는 서비스에서 구현하는 함수입니다. 전달받은 `root`에 원하는 UI를 동기적으로 만들고 해제 함수를 반환합니다. 이미지 목록 조회·업로드 같은 비동기 작업에는 `signal`을 연결하고, 고른 이미지 URL을 `onSelect`에 넘깁니다. 이 API는 파일을 전송하지 않으며, URL에는 기존 이미지 허용 규칙이 적용됩니다.
+
+창을 닫거나 툴바를 해제하면 `signal`이 중단되고 해제 함수가 실행됩니다. `run()`은 창을 닫고 열 당시 선택에 명령을 한 번 적용합니다. 이미 창이 닫혔거나 열린 뒤 문서 내용이 바뀌었다면 `false`를 반환하고 명령을 실행하지 않습니다.
+
 ## CSS 스타일
 
 이미지는 `.nabi-content img`로 꾸밉니다. 저장된 폭과 정렬은 그대로 두고 테두리나 그림자처럼 모양만 바꾸세요.

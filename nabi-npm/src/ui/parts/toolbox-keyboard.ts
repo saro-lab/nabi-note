@@ -44,7 +44,6 @@ export function mountToolboxKeyboard(root: HTMLElement): ToolboxKeyboard {
         !el.hidden &&
         !el.hasAttribute('inert') &&
         el.getAttribute('aria-hidden') !== 'true' &&
-        !el.classList.contains('nabi-compact-source') &&
         style?.display !== 'none' &&
         style?.visibility !== 'hidden' &&
         style?.visibility !== 'collapse' &&
@@ -59,7 +58,25 @@ export function mountToolboxKeyboard(root: HTMLElement): ToolboxKeyboard {
   const focus = (button: HTMLElement | undefined): boolean => {
     if (disposed || !button) return false;
     button.focus({ preventScroll: true });
-    button.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    for (let element = button.parentElement; element && root.contains(element); element = element.parentElement) {
+      const style = owner.defaultView?.getComputedStyle(element);
+      const box = button.getBoundingClientRect();
+      const frame = element.getBoundingClientRect();
+      const nearest = (start: number, end: number, low: number, high: number): number => {
+        if (start < low && end > high) return 0;
+        if (start < low) return start - low;
+        if (end > high) return end - high;
+        return 0;
+      };
+      if (element.scrollHeight > element.clientHeight && /auto|scroll/.test(style?.overflowY ?? '')) {
+        const top = frame.top + element.clientTop;
+        element.scrollTop += nearest(box.top, box.bottom, top, top + element.clientHeight);
+      }
+      if (element.scrollWidth > element.clientWidth && /auto|scroll/.test(style?.overflowX ?? '')) {
+        const left = frame.left + element.clientLeft;
+        element.scrollLeft += nearest(box.left, box.right, left, left + element.clientWidth);
+      }
+    }
     return owner.activeElement === button;
   };
   const groupOf = (button: HTMLElement): HTMLElement => {
@@ -79,6 +96,7 @@ export function mountToolboxKeyboard(root: HTMLElement): ToolboxKeyboard {
       return;
     const target = event.target as Element | null;
     if (!target || target.nodeType !== 1 || target.closest(inputs)) return;
+    if (event.key === 'Tab' && target.closest('.nabi-custom-panel-content')) return;
     const current = target.closest<HTMLElement>(controls);
     if (
       current &&

@@ -6,7 +6,6 @@
 import { make } from './dom.js';
 import { suppressMousedownTap } from './button.js';
 import { openPanel, type Panel, type PanelOptions } from './panel.js';
-import { openScrim } from './scrim.js';
 import { localeDirection, type Translator } from '../../locale/index.js';
 import { Translations } from './translation.js';
 
@@ -48,21 +47,20 @@ export function promptValid(fields: readonly PromptField[], values: Readonly<Rec
 export function openPrompt(owner: Document, options: PromptOptions): Panel {
   const copy = options.translator ? new Translations(options.translator) : null;
   let cleanup = (): void => {};
-  let hosted = false;
   const panel = openPanel(owner, {
     ...options,
     className: 'nabi-prompt',
-    modal: true,
-    restore: null,
+    modal: false,
+    restore: options.restore ?? options.anchor,
     onClose: () => {
       copy?.dispose();
       cleanup();
-      if (hosted) options.onClose?.();
+      options.onClose?.();
     },
   });
-  hosted = panel.root.hasAttribute('data-nabi-hosted');
+  panel.root.setAttribute('role', 'dialog');
   const inputs: HTMLInputElement[] = [];
-  let close = (): void => panel.close();
+  const close = (): void => panel.close();
 
   try {
     // 한 줄이다. 칸 위에 이름표를 세우지 않는다 — 값 하나(주소)를 받자고 뜨는 판이라, 이름표를 세우면 판만 두 배로 커지고 말하는 것은 그대로다. 이름은 placeholder가 진다.
@@ -194,34 +192,8 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
           .join(', ') || options.okLabel;
       panel.root.setAttribute('aria-label', name);
     }
-    if (hosted) {
-      (inputs[0] ?? ok).focus();
-      return panel;
-    }
-    // openPanel은 처음에 anchor를 기준으로 잰다 — 모달 층에 들어가면 그 좌표계가 뷰포트로 바뀌므로, 잰 위치를 그대로 고정 배치로 옮겨 쓴다.
-    // openPanel first measures against its anchor; once it enters the modal layer, that coordinate system becomes the viewport, so the measured position is retained as a fixed position.
-    const box = panel.root.getBoundingClientRect();
-    panel.root.style.position = 'fixed';
-    panel.root.style.left = `${Math.round(box.left)}px`;
-    panel.root.style.top = `${Math.round(box.top)}px`;
-    let scrim: ReturnType<typeof openScrim>;
-    try {
-      scrim = openScrim(owner, {
-        card: panel.root,
-        restore: options.restore ?? options.anchor,
-        initialFocus: false,
-        onClose: () => {
-          panel.close();
-          options.onClose?.();
-        },
-      });
-    } catch (error) {
-      panel.close();
-      throw error;
-    }
-    close = (): void => scrim.close();
     (inputs[0] ?? ok).focus();
-    return { root: panel.root, close, reposition: panel.reposition };
+    return panel;
   } catch (error) {
     try {
       close();

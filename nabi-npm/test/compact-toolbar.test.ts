@@ -11,6 +11,7 @@ import {
   mountToolbar,
   mountViewTools,
   renderToolbarHtml,
+  setFullscreen,
   simpleMark,
   toolbarSlots,
   type ContextToolbar,
@@ -37,6 +38,7 @@ interface FixtureOptions {
   readonly ssr?: boolean;
   readonly contextFirst?: boolean;
   readonly width?: number;
+  readonly viewportWidth?: number;
 }
 
 function fixture(options: FixtureOptions = {}) {
@@ -45,6 +47,9 @@ function fixture(options: FixtureOptions = {}) {
     { url: 'https://example.test', pretendToBeVisual: true },
   );
   const owner = dom.window.document;
+  let viewportWidth = options.viewportWidth ?? 390;
+  Object.defineProperty(dom.window, 'innerWidth', { get: () => viewportWidth });
+  Object.defineProperty(owner.documentElement, 'clientWidth', { get: () => viewportWidth });
   const el = (id: string): HTMLElement => owner.getElementById(id)!;
   const locale = createLocale('en');
   const calls: string[] = [];
@@ -100,6 +105,10 @@ function fixture(options: FixtureOptions = {}) {
     before,
     mountContext,
     menu,
+    setViewportWidth(next: number) {
+      viewportWidth = next;
+      toolbar.refresh();
+    },
     setWidth(next: number) {
       width = next;
       toolbar.refresh();
@@ -261,18 +270,26 @@ for (const contextFirst of [false, true]) {
   const context = f.mountContext();
   const controls = context.buttons();
   assert.ok(controls.length > 0);
-  const active = f.el('toolbar').querySelector('.nabi-compact-context');
-  assert.ok(active, 'context registration switches the compact row in either mount order');
+  const active = f.el('context');
   assert.ok(
-    controls.some((button) => active.contains(button)),
-    'context reuses live control nodes',
+    active.classList.contains('nabi-compact-context'),
+    'context stays below the main row in either mount order',
   );
-  assert.ok(f.el('toolbar').querySelector('[data-name="tools"]'), 'all-tools remains reachable in context mode');
+  assert.ok(
+    controls.every((button) => active.contains(button)),
+    'context keeps its live control nodes',
+  );
+  assert.equal(active.hidden, false);
+  assert.equal(f.el('toolbar').querySelector<HTMLElement>('.nabi-compact-quick')!.hidden, false);
+  assert.equal(f.el('toolbar').querySelector('[data-name="context-tools"]'), null);
+  assert.equal(f.el('toolbar').querySelector('[data-name="tools-back"]'), null);
+  assert.ok(f.el('toolbar').querySelector('[data-name="tools"]'), 'all-tools remains reachable with properties');
   f.toolbar.unmount();
   assert.ok(
-    controls.every((button) => f.el('context').contains(button)),
-    'unmount returns context controls to their owner',
+    controls.every((button) => active.contains(button)),
+    'unmount preserves controls in their owner',
   );
+  assert.equal(active.classList.contains('nabi-compact-context'), false);
   assert.equal(context.buttons().length, controls.length, 'standalone context survives compact toolbar teardown');
   f.dispose();
 }
@@ -286,67 +303,103 @@ for (const contextFirst of [false, true]) {
   const context = f.mountContext();
   const groups = context.groups();
   const nodes = groups.flatMap((group) => [...group.el.children] as HTMLElement[]);
-  const row = f.el('toolbar').querySelector('.nabi-compact-context')!;
-  const more = named(f.el('toolbar'), 'context-tools');
+  const row = f.el('context');
   assert.ok(groups.length >= 2, 'nested formatting supplies multiple context groups');
-  assert.ok(
-    groups.every((group) => row.contains(group.el)),
-    'every fitting context group shares the row',
-  );
+  assert.ok(groups.every((group) => row.contains(group.el)));
   assert.ok(nodes.every((node) => !node.hidden));
-  assert.equal(more.hidden, true, 'object properties is absent when every control fits');
-  f.setWidth(320);
-  assert.equal(more.hidden, false, 'object properties appears only when controls overflow');
-  assert.equal(more.getAttribute('aria-label'), 'Object properties');
-  assert.equal(named(f.el('toolbar'), 'tools').nextElementSibling, more, 'properties follows all-tools');
-  assert.ok(
-    nodes.some((node) => node.hidden),
-    'the narrow row folds some controls',
-  );
-  more.click();
-  const panel = f.el('toolbar').querySelector<HTMLElement>('.nabi-toolbox')!;
-  assert.equal(panel.hidden, false);
-  assert.ok(
-    nodes.every((node) => panel.contains(node) && !node.hidden),
-    'the panel restores every live control',
-  );
+  for (const width of [320, 1200, 320]) {
+    f.setWidth(width);
+    assert.equal(row.hidden, false, 'property controls appear automatically at every width');
+    assert.ok(
+      nodes.every((node) => row.contains(node) && !node.hidden),
+      'resizing keeps every property visible',
+    );
+    assert.equal(f.el('toolbar').querySelector('[data-name="context-tools"]'), null);
+    assert.equal(f.el('toolbar').querySelector<HTMLElement>('.nabi-compact-quick')!.hidden, false);
+  }
   f.locale.setLocale('ko');
-  assert.equal(more.getAttribute('aria-label'), '객체 속성');
-  assert.ok(
-    nodes.every((node) => panel.contains(node) && !node.hidden),
-    'locale repaint preserves visible controls',
-  );
-  f.setWidth(1200);
-  assert.equal(more.hidden, true, 'growing the editor removes the overflow entry while its panel is open');
-  assert.equal(panel.hidden, true, 'an unnecessary context panel closes when every control fits');
   assert.ok(
     nodes.every((node) => row.contains(node) && !node.hidden),
-    'resizing restores all fitting controls',
+    'locale repaint preserves visible controls',
+  );
+  const panel = f.menu();
+  assert.equal(panel.hidden, false);
+  assert.ok(
+    nodes.every((node) => row.contains(node)),
+    'opening Tools leaves object properties in their own row',
   );
   f.dispose();
 }
 
 {
-  const f = fixture({ width: 320, doc: [{ w: 'img', a: { src: '/image.png', alt: 'image' } }] });
+  const f = fixture({
+    width: 320,
+    doc: [
+      { w: 'img', a: { src: '/image.png', alt: 'image' } },
+      { w: 'p', ch: [{ w: 'fs', a: { v: 'lg' }, ch: ['formatted'] }] },
+      { w: 'p', ch: ['plain'] },
+    ],
+  });
   const context = f.mountContext();
+  const row = f.el('context');
   const stale = context.buttons().find((button) => button.dataset.name === 'view');
   assert.ok(stale);
-  const more = named(f.el('toolbar'), 'context-tools');
-  assert.equal(more.hidden, false);
-  more.click();
-  const panel = f.el('toolbar').querySelector<HTMLElement>('.nabi-toolbox')!;
-  assert.equal(panel.hidden, false);
-  assert.ok(panel.contains(stale));
-  f.nabi.setJson([{ w: 'p', ch: ['replacement'] }]);
+  assert.equal(row.hidden, false);
+  assert.ok(row.contains(stale));
+  f.nabi.select({ anchor: { path: [1], offset: 2 }, focus: { path: [1], offset: 2 } });
+  assert.equal(row.hidden, false, 'switching to formatting immediately replaces the object controls');
+  assert.equal(row.contains(stale), false);
+  assert.ok(context.groups().length > 0);
+  f.nabi.select({ anchor: { path: [2], offset: 2 }, focus: { path: [2], offset: 2 } });
   assert.equal(context.groups().length, 0);
-  assert.equal(panel.hidden, true, 'removing the selected object closes its properties panel');
-  assert.equal(more.hidden, true);
+  assert.equal(row.hidden, true, 'a plain-text selection removes the property row');
   assert.equal(f.el('toolbar').querySelector<HTMLElement>('.nabi-compact-quick')!.hidden, false);
-  assert.equal(named(f.el('toolbar'), 'tools').getAttribute('aria-expanded'), 'false');
+  f.nabi.setJson([{ w: 'p', ch: ['replacement'] }]);
   stale.click();
-  assert.equal(f.owner.querySelector('.nabi-lightbox'), null, 'a moved control cannot act on an invalidated target');
+  assert.equal(f.owner.querySelector('.nabi-lightbox'), null, 'a stale control cannot act on an invalidated target');
   assert.deepEqual(f.nabi.getJson(), [{ w: 'p', ch: ['replacement'] }]);
   f.dispose();
+}
+
+for (const coordinates of ['layout', 'visual'] as const) {
+  for (const occlusion of ['none', 'toolbar', 'keyboard'] as const) {
+    const f = fixture({ doc: [{ w: 'p', a: { h: 1 }, ch: ['heading'] }] });
+    f.mountContext();
+    const offset = 200;
+    const origin = coordinates === 'layout' ? offset : 0;
+    const top = origin + (occlusion === 'toolbar' ? 80 : occlusion === 'keyboard' ? 450 : 300);
+    const rect = (top: number, height: number): DOMRect => new f.dom.window.DOMRect(0, top, 100, height);
+    const originalRect = f.dom.window.HTMLElement.prototype.getBoundingClientRect;
+    f.dom.window.HTMLElement.prototype.getBoundingClientRect = function () {
+      return this.style.position === 'fixed' ? rect(origin - offset, 1) : originalRect.call(this);
+    };
+    f.el('chrome').getBoundingClientRect = () => rect(origin, 100);
+    f.dom.window.Range.prototype.getBoundingClientRect = () => rect(top, 20);
+    Object.defineProperty(f.dom.window, 'visualViewport', {
+      value: { height: 462, offsetTop: offset },
+      configurable: true,
+    });
+    const pushed: number[] = [];
+    f.dom.window.scrollBy = (options: ScrollToOptions | number = {}) => {
+      assert.equal(typeof options, 'object');
+      pushed.push((options as ScrollToOptions).top ?? 0);
+    };
+    f.el('surface').focus();
+    f.nabi.select({ anchor: { path: [0], offset: 2 }, focus: { path: [0], offset: 2 } });
+    const button = named(f.el('context'), 'level:2');
+    const down = new f.dom.window.MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    button.dispatchEvent(down);
+    assert.equal(down.defaultPrevented, true, 'pointer property controls retain the existing editor focus');
+    pointer(f, button);
+    assert.equal(f.owner.activeElement, f.el('surface'));
+    assert.deepEqual(f.nabi.getJson(), [{ w: 'p', a: { h: 2 }, ch: ['heading'] }]);
+    assert.deepEqual(
+      pushed,
+      occlusion === 'none' ? [] : [occlusion === 'toolbar' ? -40 : 28],
+      `${coordinates} client coordinates only correct a caret covered by the ${occlusion}`,
+    );
+    f.dispose();
+  }
 }
 
 {
@@ -383,4 +436,140 @@ for (const contextFirst of [false, true]) {
   f.dispose();
 }
 
-console.log('compact toolbar: SSR, quick tools, complete menu, pointer/keyboard, context, locale and cleanup passed');
+{
+  const f = fixture({ viewportWidth: 1280, width: 320, quick: ['b'], ssr: true });
+  const context = f.mountContext();
+  const strip = f.el('toolbar').querySelector<HTMLElement>('.nabi-strip')!;
+  const quick = f.el('toolbar').querySelector<HTMLElement>('.nabi-compact-quick')!;
+  const sources = f.toolbar.buttons.map((button) => button.el);
+  assert.equal(strip.hidden, false, 'desktop shows all tools even inside a narrow editor');
+  assert.equal(quick.hidden, true);
+  assert.equal(named(f.el('toolbar'), 'tools').hidden, true);
+  assert.ok(sources.every((button) => strip.contains(button)));
+  f.setViewportWidth(575);
+  assert.equal(strip.hidden, true, 'mobile returns to the compact row below the breakpoint');
+  assert.equal(quick.hidden, false);
+  assert.equal(named(f.el('toolbar'), 'tools').hidden, false);
+  f.setViewportWidth(576);
+  assert.equal(strip.hidden, false, 'the breakpoint itself uses the complete toolbar');
+  assert.equal(named(f.el('toolbar'), 'tools').hidden, true);
+  assert.ok(sources.every((button) => strip.contains(button) && f.before.get(button.dataset.name!) === button));
+  assert.equal(context.groups().length, 0);
+  f.dispose();
+}
+
+{
+  const f = fixture({ width: 320, ssr: true, quick: ['b'] });
+  const strip = f.el('toolbar').querySelector<HTMLElement>('.nabi-strip')!;
+  const bar = f.el('toolbar').querySelector<HTMLElement>('.nabi-compact-bar')!;
+  const sources = f.toolbar.buttons.map((button) => button.el);
+  f.nabi.select({ anchor: { path: [0], offset: 1 }, focus: { path: [0], offset: 3 } });
+  const selection = f.nabi.getSelection();
+  const panel = f.menu();
+  named(bar, 'fullscreen').click();
+  assert.equal(f.el('app').classList.contains('is-fullscreen'), true);
+  assert.equal(f.el('chrome').classList.contains('nabi-expanded'), true);
+  assert.equal(strip.hidden, false, 'fullscreen reveals the complete command strip even at narrow widths');
+  assert.equal(panel.hidden, true, 'entering fullscreen closes the folded command palette');
+  assert.ok(
+    sources.every((button) => strip.contains(button)),
+    'fullscreen reuses every original command button',
+  );
+  for (const button of sources) {
+    assert.equal(button, f.before.get(button.dataset.name!));
+    assert.ok(button.hidden || !button.closest('[hidden]'), `${button.dataset.name} is not folded`);
+  }
+  assert.equal(named(bar, 'tools').hidden, true);
+  assert.equal(bar.querySelector('[data-name="context-tools"]'), null);
+  assert.equal(bar.querySelector('[data-name="tools-back"]'), null);
+  assert.equal(named(bar, 'fullscreen').closest('[hidden]'), null, 'fullscreen exit stays reachable');
+  assert.equal(named(bar, 'preview').closest('[hidden]'), null, 'preview stays reachable');
+  assert.deepEqual(f.nabi.getSelection(), selection, 'entering fullscreen preserves the document selection');
+  pointer(f, named(strip, customName));
+  assert.deepEqual(f.nabi.getJson(), [{ w: 'p', ch: ['t', { w: 'exCompactTestMark', ch: ['ex'] }, 't'] }]);
+  assert.equal(f.nabi.undo(), true);
+  named(bar, 'fullscreen').click();
+  assert.equal(f.el('chrome').classList.contains('nabi-expanded'), false);
+  assert.equal(strip.hidden, true, 'exiting fullscreen restores the folded command source');
+  assert.equal(named(bar, 'tools').hidden, false);
+  assert.ok(named(bar, 'b').closest('.nabi-compact-quick'), 'exiting restores the configured quick commands');
+  assert.deepEqual(f.nabi.getSelection(), selection, 'exiting fullscreen preserves the document selection');
+  f.dispose();
+}
+
+for (const contextFirst of [false, true]) {
+  const f = fixture({ width: 320, doc: [{ w: 'img', a: { src: '/image.png', alt: 'image' } }], contextFirst });
+  const context = f.mountContext();
+  const groups = context.groups();
+  const nodes = groups.flatMap((group) => [...group.el.children] as HTMLElement[]);
+  assert.ok(
+    nodes.every((node) => !node.closest('[hidden]')),
+    'narrow compact mode shows all object properties',
+  );
+  const panel = f.menu();
+  setFullscreen(f.el('app'), true);
+  await Promise.resolve();
+  assert.equal(f.el('chrome').classList.contains('nabi-expanded'), true, 'direct fullscreen changes are observed');
+  assert.equal(panel.hidden, true);
+  assert.equal(f.el('context').classList.contains('nabi-compact-context'), true);
+  assert.ok(
+    groups.every((group) => f.el('context').contains(group.el)),
+    'fullscreen restores live context groups',
+  );
+  assert.ok(
+    nodes.every((node) => !node.closest('[hidden]')),
+    'all object properties are visible in fullscreen',
+  );
+  setFullscreen(f.el('app'), false);
+  await Promise.resolve();
+  assert.equal(f.el('chrome').classList.contains('nabi-expanded'), false);
+  assert.ok(groups.every((group) => group.el.closest('.nabi-compact-context')));
+  assert.ok(
+    nodes.every((node) => !node.closest('[hidden]')),
+    'exiting keeps every property visible below the compact row',
+  );
+  setFullscreen(f.el('app'), true);
+  await Promise.resolve();
+  f.toolbar.unmount();
+  assert.equal(f.el('chrome').classList.contains('nabi-expanded'), false, 'unmount releases expanded chrome state');
+  assert.equal(f.el('context').classList.contains('nabi-compact-context'), false);
+  assert.ok(nodes.every((node) => f.el('context').contains(node) && !node.hidden));
+  assert.equal(context.groups().length, groups.length, 'standalone object properties survive fullscreen teardown');
+  setFullscreen(f.el('app'), false);
+  await Promise.resolve();
+  assert.equal(f.el('toolbar').querySelector('.nabi-compact-bar'), null, 'unmounted observers do not rebuild controls');
+  f.dispose();
+}
+
+{
+  const f = fixture({ quick: ['b'] });
+  const hints = mountHints({ toolbar: f.toolbar, root: f.el('chrome'), surface: f.el('surface') });
+  setFullscreen(f.el('app'), true);
+  await Promise.resolve();
+  f.el('surface').focus();
+  const selection = f.nabi.getSelection();
+  const key = (key: string, code: string): void => {
+    f.owner.activeElement?.dispatchEvent(
+      new f.dom.window.KeyboardEvent('keydown', { key, code, bubbles: true, cancelable: true }),
+    );
+  };
+  key('Shift', 'ShiftLeft');
+  key('Shift', 'ShiftLeft');
+  assert.equal(hints.active(), true, 'double Shift starts fullscreen toolbar navigation');
+  assert.ok(f.el('chrome').contains(f.owner.activeElement));
+  assert.equal(f.owner.activeElement?.closest('[hidden], .nabi-toolbox'), null, 'keyboard entry uses visible controls');
+  assert.equal(f.el('toolbar').querySelector<HTMLElement>('.nabi-toolbox')!.hidden, true);
+  const first = f.owner.activeElement;
+  key('ArrowRight', 'ArrowRight');
+  assert.notEqual(f.owner.activeElement, first, 'arrow keys navigate the expanded toolbar');
+  hints.hide();
+  assert.equal(hints.active(), false);
+  assert.equal(f.owner.activeElement, f.el('surface'), 'closing fullscreen navigation restores editor focus');
+  assert.deepEqual(f.nabi.getSelection(), selection);
+  hints.unmount();
+  f.dispose();
+}
+
+console.log(
+  'compact toolbar: SSR, quick tools, complete menu, pointer/keyboard, context, fullscreen, locale and cleanup passed',
+);

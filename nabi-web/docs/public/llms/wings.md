@@ -59,6 +59,8 @@ A heading remains a `p` tree node. Heading, alignment, and drop cap are not sepa
 
 New images default to width 60 and centered wrapper alignment. New YouTube objects default to width 70 and centered wrapper alignment. Object alignment belongs to the wrapper paragraph, not the object.
 
+The image button's default URL prompt can be replaced with host UI through `mountToolbar({ panels: { img: renderer } })`. This is a toolbar mount option, not an image-wing option. Use the renderer context's `run('insertImage', { src: url })` to insert the selected URL at the opening selection. URL policy remains unchanged, and the hook does not upload files. See `quickstart-npm.md` and `api-reference.md`.
+
 ## Tools
 
 | `w` | Export | Host wiring |

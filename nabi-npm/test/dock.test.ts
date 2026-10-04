@@ -1,7 +1,5 @@
 import { JSDOM } from 'jsdom';
-import { bandFix, bandWalk, dockBandOf } from '../src/ui/band.js';
-import { dockViewportRect, watchDockViewport, type DockViewportState } from '../src/ui/dock.js';
-import { mountSticky } from '../src/ui/sticky.js';
+import { visibleViewportRect, watchDockViewport, type DockViewportState } from '../src/ui/dock.js';
 import { done, eq, ok } from './net.js';
 
 function fixture(touch = true) {
@@ -96,7 +94,7 @@ function fixture(touch = true) {
   f.resize({ height: 406, width: 195, scale: 2, offsetTop: 100 });
   ok('dock - pinch zoom으로 줄어든 visual viewport는 키보드가 아니다', !f.viewport.read().keyboardOpen);
   eq(
-    'dock - 도킹 좌표에는 실제 visual viewport 값을 준다',
+    'dock - 도구판 좌표에는 실제 visual viewport 값을 준다',
     [f.viewport.read().top, f.viewport.read().height, f.viewport.read().width],
     [100, 406, 195],
   );
@@ -183,68 +181,14 @@ function fixture(touch = true) {
   const f = fixture();
   f.resize({ height: 462, offsetTop: 200 });
   const before = f.owner.body.childElementCount;
-  eq('dock rect - Android client 좌표계', dockViewportRect(f.owner), { top: 200, bottom: 662 });
+  eq('visible viewport - Android client 좌표계', visibleViewportRect(f.owner), { top: 200, bottom: 662 });
   const original = f.dom.window.HTMLElement.prototype.getBoundingClientRect;
   f.dom.window.HTMLElement.prototype.getBoundingClientRect = function () {
     return { top: this.style.position === 'fixed' ? -200 : 0 } as DOMRect;
   };
-  eq('dock rect - iOS client 좌표계', dockViewportRect(f.owner), { top: 0, bottom: 462 });
-  eq('dock rect - 측정 표식은 남기지 않는다', f.owner.body.childElementCount, before);
+  eq('visible viewport - iOS client 좌표계', visibleViewportRect(f.owner), { top: 0, bottom: 462 });
+  eq('visible viewport - 측정 표식은 남기지 않는다', f.owner.body.childElementCount, before);
   f.dom.window.HTMLElement.prototype.getBoundingClientRect = original;
-  f.finish();
-}
-
-{
-  const viewport = { top: 100, bottom: 500 };
-  eq('dock band - 하단 툴바 위까지만 편집한다', dockBandOf(452, viewport), { top: 100, bottom: 452 });
-  eq('dock band - 뷰포트 밖 툴바는 음수 높이를 만들지 않는다', dockBandOf(50, viewport), { top: 100, bottom: 100 });
-  eq('dock band - 툴바가 없으면 뷰포트를 쓴다', dockBandOf(null, viewport), viewport);
-  let caret = { top: 440, bottom: 460 };
-  const band = dockBandOf(452, viewport);
-  const moved = bandWalk(
-    3,
-    () => ({ caret, band, limit: 400 }),
-    (delta) => {
-      caret = { top: caret.top - delta, bottom: caret.bottom - delta };
-      return delta;
-    },
-  );
-  eq('dock band - 하단에 가려진 caret을 필요한 만큼 올린다', moved, 28);
-  eq('dock band - 보인 뒤에는 다시 밀지 않는다', bandFix(caret, band, 400), 0);
-}
-
-{
-  const f = fixture();
-  f.resize({ height: 400 }, { height: 400 });
-  const frame = f.owner.getElementById('frame') as HTMLElement;
-  const chrome = f.owner.getElementById('chrome') as HTMLElement;
-  frame.style.overflowY = 'auto';
-  Object.defineProperty(frame, 'scrollHeight', { value: 1000 });
-  Object.defineProperty(frame, 'clientHeight', { value: 200 });
-  chrome.setAttribute('data-nabi-docked', 'true');
-  chrome.getBoundingClientRect = () => ({ top: 352, bottom: 400, height: 48 }) as DOMRect;
-  f.surface.textContent = '문장';
-  const range = f.owner.createRange();
-  range.selectNodeContents(f.surface);
-  range.collapse(false);
-  range.getBoundingClientRect = () =>
-    ({ top: 350 - frame.scrollTop, bottom: 370 - frame.scrollTop, height: 20 }) as DOMRect;
-  f.owner.getSelection()!.addRange(range);
-  let windowPushes = 0;
-  f.dom.window.scrollBy = () => {
-    windowPushes += 1;
-  };
-  Object.defineProperty(f.dom.window.navigator, 'userAgent', { value: 'iPhone' });
-  const sticky = mountSticky({
-    root: frame,
-    surface: f.surface,
-    chrome,
-    settle: { busy: () => false, onSettle: () => () => {}, afterViewport: (fn) => fn(), unmount: () => {} },
-  });
-  sticky.aim();
-  eq('dock sticky - iOS도 하단 툴바가 가린 caret을 안쪽 스크롤로 보여 준다', frame.scrollTop, 38);
-  eq('dock sticky - 안쪽 스크롤로 해결되면 페이지를 밀지 않는다', windowPushes, 0);
-  sticky.unmount();
   f.finish();
 }
 

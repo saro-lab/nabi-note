@@ -206,21 +206,49 @@ File/history utility exports:
 | `mountViewTools` | `nabi, surface, root, container` | buttons/unmount |
 | `mountUploadView` | `nabi, surface` | start/progress/settle/done/unmount |
 
-Important optional toolbar inputs: `surface`, `locale`, `translator`, `groups`, `layout`, `quick`, `settle`, `onFiles`, `onHost`, `file`, and `accelerators`.
+Important optional toolbar inputs: `surface`, `locale`, `translator`, `groups`, `layout`, `quick`, `panels`, `settle`, `onFiles`, `onHost`, `file`, and `accelerators`.
 
-`ToolbarOptions.layout?: 'compact' | 'wrap'` defaults to `'compact'`. `quick?: readonly string[]` defaults to `['b', 'i', 'tc', 'fs']` and identifies `ToolbarSlot.name` values in priority order. Compact layout uses one row and keeps overflow commands in the full Tools palette. That palette displays available commands together in their original wing groups, without category tabs. `layout: 'wrap'` keeps the previous toolbar layout.
+`ToolbarOptions.layout?: 'compact' | 'wrap'` defaults to `'compact'`. `quick?: readonly string[]` defaults to `['b', 'i', 'tc', 'fs']` and identifies `ToolbarSlot.name` values in priority order. The default layout shows every available main-toolbar command on desktop, wrapping like fullscreen. Below `--nabi-mobile-breakpoint`, based on viewport width rather than editor width, it uses one mobile main-toolbar row and keeps overflow commands in the full Tools palette. `quick` configures only that mobile row. The palette displays available commands together in their original wing groups, without category tabs. `layout: 'wrap'` keeps the previous explicit main-toolbar layout. Toolbar buttons use `2rem` and icons use `.875rem` on desktop and mobile; see `styling.md` for dimensions and fullscreen behavior.
 
-A context toolbar mounted for the same `nabi` joins the compact toolbar and displays its controls in that row. If they do not all fit, a highlighted Object properties down-chevron appears immediately after Tools and opens the full context panel; it is hidden when all controls fit. The localized label uses the unchanged `toolsContext` dictionary key. `ContextToolbarOptions` has no `layout` option; standalone context toolbars retain their previous behavior. Preview/fullscreen buttons from `mountViewTools()` stay visible in the compact row when its `container` is the same `.nabi-toolbar` wrapper, subject to `showPreview` and `showFullscreen`. The full palette contains registered wing buttons only, without duplicate view controls, an extra context-tools entry, or added undo/redo buttons. The compact row also adds no undo/redo buttons; editor undo/redo APIs and shortcuts are unchanged.
+A context toolbar mounted for the same `nabi` joins the default layout and automatically shows available property controls in its dedicated root below the main toolbar. The property row takes up layout space, wraps on desktop and mobile, and moves with the main toolbar inside their shared `.nabi-toolbar` wrapper. Mobile quick actions remain in the main row; desktop shows all available commands. There is no Object properties entry button or back-to-tools button; their `toolsContext` and `toolsBack` locale keys are removed. `ContextToolbarOptions` has no `layout` option; standalone context toolbars retain their previous placement with the shared smaller controls. Preview/fullscreen buttons from `mountViewTools()` stay visible in the main toolbar when its `container` is the same `.nabi-toolbar` wrapper, subject to `showPreview` and `showFullscreen`. The mobile full palette contains registered wing buttons only, without duplicate view controls or added undo/redo buttons. The main toolbar also adds no undo/redo buttons; editor undo/redo APIs and shortcuts are unchanged.
 
-When several compact toolbars share one `nabi`, the most recently mounted toolbar hosts the most recently mounted context toolbar. Earlier toolbars retain their quick commands and Tools palettes. Unmounting the current host restores the previous connection.
+When several compact toolbars share one `nabi`, the most recently mounted toolbar connects to the most recently mounted context toolbar for styling and mobile hosted property prompts. The context root stays in its original DOM location; use sibling roots in the same toolbar wrapper to keep them together. Earlier toolbars retain their own viewport-appropriate commands and mobile Tools palettes. Unmounting the current host restores the previous connection.
 
-`Toolbar.buttons` includes commands in a closed Tools palette. `ToolbarButton.el.hidden` describes current selection validity, not overflow placement; an ancestor hides commands that are currently offscreen. Registered accelerators remain available for valid overflow commands. See `styling.md` for mobile docking, dimensions, and keyboard behavior.
+`Toolbar.buttons` includes commands in a closed Tools palette. `ToolbarButton.el.hidden` describes current selection validity, not overflow placement; an ancestor hides commands that are currently offscreen. Registered accelerators remain available for valid overflow commands. See `styling.md` for top sticky placement, dimensions, and keyboard behavior.
 
-`mountHints()` retains its public name and enables double-Shift entry into keyboard navigation. In compact layout this opens the full Tools palette; in `wrap` layout it focuses the first available toolbar button. Tab/Shift+Tab cycle group starts, Left/Right cycle icons, Up/Down choose the nearest column in adjacent rendered rows, Enter/Space activate, and Escape returns to editing. Inputs and editable fields retain their normal key behavior, and events already handled by specialized pickers are not intercepted. On desktop and mobile, commands in an open non-input palette retain palette focus. Letter badges and letter-based command lookup are removed. The legacy `shortcut` declaration remains validated compatibility metadata; `accelerator` and `doubleKeys` keep their separate behavior.
+`mountHints()` retains its public name and enables double-Shift entry into keyboard navigation. In mobile compact layout outside fullscreen this opens the full Tools palette; on desktop, in fullscreen, or in `wrap` layout it focuses the first available visible toolbar button. Tab/Shift+Tab cycle group starts, Left/Right cycle icons, Up/Down choose the nearest column in adjacent rendered rows, Enter/Space activate, and Escape returns to editing. Inputs and editable fields retain their normal key behavior, and events already handled by specialized pickers are not intercepted. On desktop and mobile, commands in an open non-input palette retain palette focus. Letter badges and letter-based command lookup are removed. The legacy `shortcut` declaration remains validated compatibility metadata; `accelerator` and `doubleKeys` keep their separate behavior.
 
-`Hints.active()` reflects the open compact panel, including pointer-opened panels, or the active keyboard session for `wrap`. `Hints.hide()` closes that interaction and restores surface focus. Outside interaction and unmounting close without focus restoration. See `styling.md` for navigation scope and IME handling.
+`Hints.active()` reflects the open mobile compact panel, including pointer-opened panels, or the active keyboard session for expanded desktop, fullscreen, and `wrap` layouts. `Hints.hide()` closes that interaction and restores surface focus. Outside interaction and unmounting close without focus restoration. See `styling.md` for navigation scope and IME handling.
 
 `ToolbarButton.press(by?: 'keyboard' | 'pointer')` defaults to `'keyboard'` and returns whether the action reached a command, panel, or host handler. Pass `'pointer'` when forwarding a pointer action through a custom control. `accelerate()` uses the button's accelerator-specific action when one is declared.
+
+### Host-rendered toolbar panels
+
+`ToolbarOptions.panels?: Readonly<Record<string, ToolbarPanelRenderer>>` replaces a tool's normal action with host-rendered panel content. Keys are `ToolbarSlot.name` values, such as `img` or a named button's `wing:name`. Omitted slots keep their normal behavior. The override applies to toolbar and palette buttons, `ToolbarButton.press()`, and the default accelerator action. A separate `WingButton.accelerated` declaration retains its explicit action. This is a browser mount option, not an option for `renderToolbarHtml()` or the image wing factory.
+
+```ts
+interface ToolbarPanelContext {
+  readonly root: HTMLElement;
+  readonly anchor: HTMLElement;
+  readonly nabi: Nabi;
+  readonly translator: Translator;
+  readonly signal: AbortSignal;
+  close(): void;
+  reposition(): void;
+  run(command: string, args?: CommandArgs, by?: CommandHand): boolean;
+  onDispose(dispose: () => void): void;
+}
+
+type ToolbarPanelRenderer = (context: ToolbarPanelContext) => void | (() => void);
+```
+
+The renderer synchronously adds arbitrary host UI inside its dedicated `root`; it must not return a promise. The package owns the outer panel, its placement, focus, Escape/outside closing, and responsive teardown. Use `signal` for asynchronous work started by the renderer. Content resize triggers repositioning when `ResizeObserver` is available; call `reposition()` when an explicit refresh is needed. Do not replace the toolbar mount root or move the outer panel.
+
+Return a disposer for normal teardown, or call `onDispose()` immediately after side effects that need cleanup even if rendering later throws. Each registered function runs once, including when the same function is both registered and returned. Registering after closure disposes immediately. Closing the panel, opening another tool, changing compact/expanded mode, or unmounting aborts `signal` and runs cleanup. Renderer errors close the panel before being rethrown; cleanup failures are isolated.
+
+`run()` closes the panel, restores surface focus and the selection captured at opening, then calls `nabi.applyCommand()`. It is one-shot even if the command fails. `by` defaults to `'keyboard'`; pass `'pointer'` when forwarding a pointer choice. A closed panel, an inactive toolbar, or document content that changed since opening returns `false` without applying the command; selection-only changes can be restored. Check the return value if the host needs to report that a choice was not inserted. Native URL validation still applies, and this hook does not upload files. See `quickstart-npm.md` for an image-picker example.
+
+### Mount ownership and overlays
 
 Surface, toolbar, context-toolbar, and standalone-diff mounts require distinct dedicated roots. Do not place arbitrary host-owned child DOM inside those roots. A toolbar may instead receive matching direct groups produced by `renderToolbarHtml()`; those groups are package-owned pre-rendered UI that the mount wires, replaces when mismatched, and removes on teardown.
 
@@ -236,6 +264,8 @@ Overlay/panel functions:
 - `openPanel(owner, { anchor, className?, restore?, onClose? })`;
 - `openPrompt(owner, { anchor, fields, okLabel, onSubmit, ... })`;
 - `watchSettle(owner, { surface?, quietMs? })`.
+
+`openPanel()` and `openPrompt()` are tool layers without a page backdrop. Prompts retain input validation, submission, Escape/outside dismissal, and focus restoration; they do not make the rest of the page inert. Preview, lightbox, save, history, and choice dialogs use a separate full-page modal layer.
 
 Fullscreen exports: `FULLSCREEN_CLASS`, `isFullscreen`, and `setFullscreen`. UI constants: `TOOLBAR_GROUPS`.
 
@@ -412,7 +442,7 @@ The root entry exports these public type names. Earlier sections and the topic d
 - Tree and editor: `AttrValue`, `Attrs`, `ElementNode`, `NabiNode`, `NabiDoc`, `Position`, `Selection`, `EditEnv`, `Command`, `CommandArgs`, `CommandHand`, `CommandOutcome`, `Nabi`, `NabiOptions`, `NabiChange`, `Ask`, `ChooseOption`, `Toast`, `ToastLevel`.
 - HTML and IO: `HtmlAttrs`, `HtmlBuilder`, `HtmlBuilders`, `HtmlContext`, `StoredHtmlOptions`, `ClipFile`, `PasteData`, `PasteCandidate`, `DocSource`, `IoFilter`, `MdContext`, `MdBuilder`, `MdBuilders`, `FileStore`, `NabiFileBody`, `NabiFileText`.
 - Surface and persistence mounts: `EditSurfacePort`, `Surface`, `SurfaceActions`, `SurfaceOptions`, `FileMount`, `FileMountOptions`, `SaveFormat`, `UploadMount`, `UploadOptions`, `UploadTask`, `Uploader`, `HistoryMount`, `HistoryMountOptions`, `HistoryRecord`, `HistoryStorage`, `HistoryView`.
-- UI: `Toolbar`, `ToolbarButton`, `ToolbarOptions`, `ContextGroupView`, `ContextToolbar`, `ContextToolbarOptions`, `HintOptions`, `Hints`, `PickedMark`, `PickedMarkOptions`, `Sticky`, `StickyOptions`, `ViewTools`, `ViewToolsOptions`, `PreviewOptions`, `LightboxOptions`, `Overlay`, `UploadView`, `UploadViewOptions`, `ChoosePanelOptions`, `HistoryPanelOptions`, `SavePanelOptions`, `Panel`, `PanelOptions`, `PromptField`, `PromptOptions`, `Settle`, `SettleOptions`, `ToolbarHtmlOptions`, `ToolbarSlot`, `ViewToolsVisibility`, `ViewToolsHtmlOptions`.
+- UI: `Toolbar`, `ToolbarButton`, `ToolbarOptions`, `ToolbarPanelContext`, `ToolbarPanelRenderer`, `ContextGroupView`, `ContextToolbar`, `ContextToolbarOptions`, `HintOptions`, `Hints`, `PickedMark`, `PickedMarkOptions`, `Sticky`, `StickyOptions`, `ViewTools`, `ViewToolsOptions`, `PreviewOptions`, `LightboxOptions`, `Overlay`, `UploadView`, `UploadViewOptions`, `ChoosePanelOptions`, `HistoryPanelOptions`, `SavePanelOptions`, `Panel`, `PanelOptions`, `PromptField`, `PromptOptions`, `Settle`, `SettleOptions`, `ToolbarHtmlOptions`, `ToolbarSlot`, `ViewToolsVisibility`, `ViewToolsHtmlOptions`.
 - Upload and code data: `UploadFile`, `UploadItem`, `UploadLimits`, `UploadReject`, `CodeDialect`, `CodeHighlighter`, `CodeToken`.
 - Locale: `Dictionary`, `LocaleText`, `Translator`, `LocaleInput`, `LocaleSource`, `LocaleController`.
 

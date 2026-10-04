@@ -7,6 +7,34 @@ Dates use Korea Standard Time (KST).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-04
+
+### Added
+
+- Added the `panels` option to `mountToolbar()` and the `ToolbarPanelContext` and `ToolbarPanelRenderer` types. Map toolbar slot names, such as `panels.img`, to replace default prompts with your service's image picker or another custom UI. The package manages panel placement, closing, and teardown; the host receives a dedicated `root`, an abort signal, cleanup registration, and a one-shot `run()` that restores the opening selection before applying a command. If the document changes while the panel is open, the old selection is not reused. Added usage guidance to the public API documentation and the image guide in every web documentation locale.
+
+### Changed
+
+- Restored the mobile toolbar to a sticky position at the top of the editor. Selection/menu panels open from the toolbar, while text-input prompts continue to replace the toolbar row.
+- Removed the Object properties entry button, back-to-tools button, and their localized labels. On desktop and mobile, available properties appear automatically below the main toolbar. Property controls wrap to fit the screen, take up layout space without covering the document, and move with the toolbar. Mobile quick actions and preview/fullscreen buttons remain in the main toolbar.
+- The default toolbar now shows all commands on desktop outside fullscreen too, while mobile retains the compact row. The switch uses viewport width and `--nabi-mobile-breakpoint`, rather than editor width. Fullscreen shows all tools above object properties at every viewport width. Both areas stay pinned together and wrap as needed. Exiting fullscreen keeps the expanded desktop layout and restores the compact mobile row.
+- Unified desktop and mobile toolbar, palette, and property controls at smaller sizes. At the default root font size, regular buttons are 32px, icons are 14px, and the mobile compact toolbar is 36px high. Connected property swatches, inputs, and sliders are 28px; mobile input text stays at 16px.
+- Unified selected toolbar, palette, and property controls and selected choice/save rows with a subtle accent-tinted background instead of an underline or blue border. The background mixes 12% accent with the light or dark theme background. Color swatches preserve their 20px painted area and show selection on the surrounding 28px button. Keyboard focus on buttons and sliders uses a distinct 20% background; focused inputs use the 12% background and retain their neutral border.
+- Updated package and web-documentation development and build dependencies: ESLint, TypeScript ESLint, jsdom, Vite, Shiki, Node.js types, and Wrangler. Moved the documentation site's Vue from the 3.6 prerelease to stable 3.5.43. Kept TypeScript and the VitePress line that supports the current Vite 8 configuration.
+
+- Separated image, YouTube, link, and object-property prompts such as code language from full-page modals. They now open as plain tool panels like the table picker, without background blur, a page scrim, or blocking the rest of the editor. Removed the full-page shadow from narrow tool panels as well. Preview, lightbox, save, and other full-page dialogs retain their separate modal layer.
+
+### Fixed
+
+- Confined each sticky toolbar to its own editor when multiple editors share a page. Scrolling past an editor moves its toolbar out of view with it.
+- Fixed mobile Tools panels staying hidden when tapped with the keyboard open. Panels open immediately in the available space around the toolbar and property row, and focus moves into the panel.
+- Fixed mobile tool panels closing on the first tap after scrolling the toolbar into its sticky position. Moving focus from the editor to a panel preserves toolbar placement until the keyboard actually closes.
+- Fixed page jumps when the mobile keyboard opens after tapping a long document and an already visible caret was pulled toward the toolbar. Caret correction now records the initial viewport, respects fixed-header spacing, and does not restart from viewport position changes alone after a user scroll.
+- Fixed opening a tool panel or navigating its tools with arrow keys scrolling the outer page. Necessary scrolling stays within the tool area.
+- Fixed changing a property input or slider returning focus to the document, which could reopen the mobile keyboard or move the page. An already focused property control retains focus when its controls refresh.
+- Fixed object property buttons unnecessarily scrolling the page to reveal an already visible caret when the mobile keyboard had shifted the visible viewport. Caret correction now uses the viewport's actual position.
+- iOS tool buttons now activate when a short single-touch tap ends, accommodating Safari text-selection menus that consume the first click. The following compatibility click is canceled to prevent duplicate activation. The added touchend handler does not turn scrolling, multitouch, or long presses into command taps, and the document retains its native selection menu. Toolbar layout measurements also avoid unnecessary button moves so a click is not lost during a press.
+
 ## [1.2.0] - 2026-10-04
 
 ### Added
@@ -62,6 +90,7 @@ Dates use Korea Standard Time (KST).
 - First stable release.
 
 [Unreleased]: https://github.com/saro-lab/nabi-note
+[1.3.0]: https://www.npmjs.com/package/nabi-note/v/1.3.0
 [1.2.0]: https://www.npmjs.com/package/nabi-note/v/1.2.0
 [1.1.2]: https://www.npmjs.com/package/nabi-note/v/1.1.2
 [1.1.1]: https://www.npmjs.com/package/nabi-note/v/1.1.1

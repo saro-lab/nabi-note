@@ -89,36 +89,37 @@ test('viewport, open table picker, and context controls share the breakpoint', a
   await setup(page);
   const root = page.locator('#mobile-a');
   const row = root.locator('.nabi-toolbar-row');
-  await root.locator('.nabi-compact-bar > [data-name="tools"]').click();
-  await root.locator('.nabi-toolbox [data-name="table"]').click();
+  await root.locator('.nabi-strip [data-name="table"]').click();
   const panel = root.locator('.nabi-panel');
-  await expect(panel).toHaveClass(/nabi-hosted-panel/);
-  await expect(panel).toHaveCSS('position', 'static');
+  await expect(panel).not.toHaveClass(/nabi-hosted-panel/);
+  await expect(panel).toHaveCSS('position', 'absolute');
   await expect(panel.locator('.nabi-cell:visible')).toHaveCount(64);
   await root.evaluate((el) => {
     el.style.setProperty('--nabi-mobile-breakpoint', '40rem');
   });
   await expect(row).toHaveClass(/nabi-narrow/);
   await expect(root.locator('.nabi-context')).toHaveClass(/nabi-narrow/);
-  await expect(panel).toHaveCSS('position', 'static');
+  await expect(panel).toHaveCSS('position', 'fixed');
   await expect(panel.locator('.nabi-cell:visible')).toHaveCount(25);
   await root.evaluate((el) => {
     el.style.setProperty('--nabi-mobile-breakpoint', '36rem');
   });
-  await expect(panel).toHaveClass(/nabi-hosted-panel/);
-  await expect(panel).toHaveCSS('position', 'static');
+  await expect(panel).toHaveCSS('position', 'absolute');
   await expect(panel.locator('.nabi-cell:visible')).toHaveCount(64);
   await page.setViewportSize({ width: 575, height: 800 });
   await expect(row).toHaveClass(/nabi-narrow/);
+  await expect(panel).toHaveCount(0);
+  await root.locator('.nabi-compact-bar > [data-name="tools"]').click();
+  await root.locator('.nabi-toolbox [data-name="table"]').click();
+  await expect(panel).toHaveClass(/nabi-hosted-panel/);
   await expect(panel).toHaveCSS('position', 'static');
   await expect(panel.locator('.nabi-cell:visible')).toHaveCount(25);
   await page.setViewportSize({ width: 576, height: 800 });
   await expect(row).not.toHaveClass(/nabi-narrow/);
-  await expect(panel).toHaveClass(/nabi-hosted-panel/);
-  await expect(panel).toHaveCSS('position', 'static');
+  await expect(panel).toHaveCount(0);
 });
 
-test('modal prompts keep the editor breakpoint after moving to body and clean up', async ({ page }) => {
+test('standalone prompts keep the editor breakpoint without a screen backdrop and clean up', async ({ page }) => {
   await setup(page);
   const root = page.locator('#mobile-a');
   const probeCount = await root.locator('span[aria-hidden="true"]').count();
@@ -134,13 +135,15 @@ test('modal prompts keep the editor breakpoint after moving to body and clean up
       onSubmit: () => {},
     });
   }, entry);
-  const prompt = page.locator('.nabi-scrim .nabi-prompt');
+  const prompt = root.locator('.nabi-prompt');
   await expect(prompt).toHaveCSS('flex-wrap', 'nowrap');
+  await expect(page.locator('.nabi-scrim, [inert]')).toHaveCount(0);
   await root.evaluate((el) => {
     el.style.setProperty('--nabi-mobile-breakpoint', '40rem');
   });
   await expect(prompt).toHaveClass(/nabi-narrow/);
   await expect(prompt).toHaveCSS('flex-wrap', 'wrap');
+  expect(await prompt.evaluate((el) => getComputedStyle(el).boxShadow)).not.toMatch(/100vmax|[1-9]\d{3,}px/);
   await expect(prompt.locator('input')).toHaveCSS('font-size', '16px');
   await root.evaluate((el) => {
     el.style.setProperty('--nabi-mobile-breakpoint', '36rem');

@@ -324,7 +324,7 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
   };
 
   const onKey = (event: Event): void => {
-    if ((event as KeyboardEvent).key !== 'Escape') return;
+    if (event.defaultPrevented || (event as KeyboardEvent).key !== 'Escape') return;
     const target = event.target;
     if (target === null || typeof (target as Node).nodeType !== 'number' || !ownsGestureRoot(root, target, surface))
       return;

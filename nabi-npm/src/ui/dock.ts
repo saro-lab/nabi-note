@@ -30,7 +30,7 @@ export interface DockViewport {
 const positive = (value: number | undefined): number =>
   value !== undefined && Number.isFinite(value) ? Math.max(0, value) : 0;
 
-export function dockViewportRect(owner: Document): Rect {
+export function visibleViewportRect(owner: Document): Rect {
   const view = owner.defaultView;
   const visual = view?.visualViewport;
   const height = positive(visual?.height ?? view?.innerHeight ?? owner.documentElement.clientHeight);
@@ -155,7 +155,7 @@ export function watchDockViewport(options: DockViewportOptions): DockViewport {
     const active = owner.activeElement;
     if (active === surface || (active !== null && surface.contains(active))) (active as HTMLElement).blur();
     if (disposed || pendingPanel !== panel || composing) return;
-    focusQuiet(panel);
+    if (!panel.contains(owner.activeElement)) focusQuiet(panel);
     update();
   };
   const cancelPanel = (): void => {

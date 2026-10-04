@@ -6,8 +6,6 @@ import {
   REVEAL_STEPS,
   bandFix,
   bandOf,
-  bandWalk,
-  dockBandOf,
   isIos,
   placeWalk,
   revealFix,
@@ -18,7 +16,6 @@ import {
 } from './band.js';
 import { watchSettle, type Settle } from './parts/settle.js';
 import { HostElementLease } from '../lifecycle.js';
-import { dockViewportRect } from './dock.js';
 
 export const KEYBOARD_TOP_VAR = '--nabi-keyboard-top';
 export const KEYBOARD_BOTTOM_VAR = '--nabi-keyboard-bottom';
@@ -76,7 +73,6 @@ export function mountSticky(options: StickyOptions): Sticky {
   const ownSettle = suppliedSettle === undefined;
   let unmounted = false;
   const styles = new HostElementLease(root);
-  const docked = (): boolean => chrome?.getAttribute?.('data-nabi-docked') === 'true';
   let ios: boolean;
   try {
     ios =
@@ -124,6 +120,7 @@ export function mountSticky(options: StickyOptions): Sticky {
   let seenHeight = 0;
   let sighted = false;
   let ruler = 0;
+  let rulerOffset = -1;
 
   // 우리가 민 뒤의 scrollY를 적어 두고 그와 다른 자리에서 온 스크롤만 사람 것으로 센다 — 애매하면 사람 쪽으로 친다
   // We record scrollY after our own pushes; a scroll from elsewhere counts as the user's — ambiguous cases favor the user
@@ -154,9 +151,33 @@ export function mountSticky(options: StickyOptions): Sticky {
   // If a push leaves the caret-band gap unchanged (toolbar scrolling alongside the caret), remember that gap and stop pushing for it — learned once per session
   let stuck = Number.NaN;
 
+  let following = false;
+  const stopViewport = (): void => {
+    if (!following) return;
+    following = false;
+    view?.visualViewport?.removeEventListener('resize', follow);
+    view?.visualViewport?.removeEventListener('scroll', follow);
+  };
+
   const follow = (): void => {
     if (!view) return;
     const visual = view.visualViewport;
+    const top = visual ? visual.offsetTop : 0;
+    const bottom = visual ? Math.max(0, view.innerHeight - (visual.offsetTop + visual.height)) : 0;
+
+    writeVar(KEYBOARD_TOP_VAR, top);
+    writeVar(KEYBOARD_BOTTOM_VAR, bottom);
+    if (top !== rulerOffset) {
+      rulerOffset = top;
+      ruler = probeTop(top);
+    }
+    // 도구판으로 포커스가 옮겨도 키보드가 닫힐 때까지 툴바 위치는 유지한다.
+    // Keep the toolbar aligned until the keyboard closes, even after focus moves into a panel.
+    if (!watching) {
+      if (top <= 0 && bottom <= 0) stopViewport();
+      return;
+    }
+
     // 자국은 뷰포트의 키(height)가 실제로 달라진 때만 찍는다 — 매 호출마다 찍으면 손가락 스크롤도 영영 사람 것으로 안 세어져 무한 루프가 난다
     // We mark this only when the viewport's height actually changes; marking on every call meant a finger-scroll never counted as the user's, causing an infinite loop
     const seeing = Math.round(visual ? visual.height : view.innerHeight);
@@ -164,12 +185,6 @@ export function mountSticky(options: StickyOptions): Sticky {
       viewHeight = seeing;
       viewAt = Date.now();
     }
-    const top = visual ? visual.offsetTop : 0;
-    const bottom = visual ? Math.max(0, view.innerHeight - (visual.offsetTop + visual.height)) : 0;
-
-    writeVar(KEYBOARD_TOP_VAR, top);
-    writeVar(KEYBOARD_BOTTOM_VAR, bottom);
-
     const height = chrome ? Math.round(chrome.getBoundingClientRect().height) : 0;
     if (height !== barHeight) {
       barHeight = height;
@@ -180,16 +195,17 @@ export function mountSticky(options: StickyOptions): Sticky {
     // The toolbar relocating to the window top can cover the caret too, so we step here, but not below the threshold (address-bar collapse)
     const jump = Math.max(KEYBOARD_JUMP, owner.documentElement.clientHeight * KEYBOARD_RATIO);
     const big = sighted
-      ? Math.abs(Math.round(top) - seenTop) >= jump || Math.abs(seeing - seenHeight) >= jump
-      : seeing < owner.documentElement.clientHeight - 1;
+      ? Math.abs(seeing - seenHeight) >= jump || (armed && Math.abs(Math.round(top) - seenTop) >= jump)
+      : owner.documentElement.clientHeight - seeing >= jump;
+    if (!sighted || big) {
+      seenTop = Math.round(top);
+      seenHeight = seeing;
+    }
     sighted = true;
     if (!big) return;
 
-    seenTop = Math.round(top);
-    seenHeight = seeing;
     armed = true;
     stuck = Number.NaN;
-    ruler = probeTop(top);
 
     if (!scrolling()) afterEdit('view');
     afterQuiet();
@@ -220,13 +236,13 @@ export function mountSticky(options: StickyOptions): Sticky {
     selection.addRange(range);
   };
 
-  const bandNow = (): { readonly band: Band; readonly aim: Band; readonly limit: number } | null => {
+  const bandNow = (): {
+    readonly band: Band;
+    readonly aim: Band;
+    readonly limit: number;
+    readonly gap: number;
+  } | null => {
     if (!view) return null;
-    if (docked()) {
-      const viewport = dockViewportRect(owner);
-      const band = dockBandOf(chrome?.getBoundingClientRect().top ?? null, viewport);
-      return { band, aim: band, limit: viewport.bottom - viewport.top };
-    }
     const visual = view.visualViewport;
     // ruler + offsetTop으로 보이는 창을 캐럿·크롬의 rect와 같은 좌표계로 옮긴다 — {0, height}만 쓰면 안드로이드에서 띠가 뒤집힌다
     // Adding `ruler` aligns the visual viewport to the caret/chrome rect's coordinate system; using {0, height} alone flips the band on Android
@@ -241,40 +257,19 @@ export function mountSticky(options: StickyOptions): Sticky {
     // 과녁 띠는 툴바가 창 맨 위에 붙었을 때의 키만 쓴다 — 지금 툴바 위치가 흔들려도 과녁은 안 흔들린다
     // The aim band uses only the height as if the toolbar were pinned to the top, so it doesn't wobble with the toolbar's current position
     const aimTop = viewport.top + (chromeBox ? chromeBox.height : 0);
+    const inset = chrome ? parseFloat(view.getComputedStyle?.(chrome).top ?? '') || 0 : 0;
+    const pinnedTop = Math.max(viewport.top, ruler + inset);
     return {
       band: bandOf(usable, viewport),
       aim: { top: aimTop, bottom: viewport.bottom },
       limit: viewport.bottom - viewport.top,
+      gap: chromeBox ? Math.max(0, chromeBox.top - pinnedTop) : 0,
     };
-  };
-
-  const pushDock = (delta: number): number => {
-    if (!view) return 0;
-    let remaining = delta;
-    for (
-      let element: HTMLElement | null = surface;
-      element && element !== owner.body && element !== owner.documentElement;
-      element = element.parentElement
-    ) {
-      if (Math.abs(remaining) < 1) break;
-      if (element.scrollHeight <= element.clientHeight) continue;
-      if (!/(auto|scroll)/.test(view.getComputedStyle(element).overflowY)) continue;
-      const before = element.scrollTop;
-      element.scrollTop += remaining;
-      remaining -= element.scrollTop - before;
-    }
-    if (Math.abs(remaining) >= 1) {
-      const before = view.scrollY;
-      view.scrollBy({ top: remaining, behavior: 'auto' });
-      mine = view.scrollY;
-      remaining -= view.scrollY - before;
-    }
-    return delta - remaining;
   };
 
   const measure = (): void => {
     if (!view) return;
-    if (ios && !docked()) {
+    if (ios) {
       reAim();
       return;
     }
@@ -283,8 +278,7 @@ export function mountSticky(options: StickyOptions): Sticky {
     if (!caret || !now) return;
     const delta = bandFix(caret, now.band, now.limit);
     if (delta === 0) return;
-    if (docked()) pushDock(delta);
-    else view.scrollBy({ top: delta, behavior: 'auto' });
+    view.scrollBy({ top: delta, behavior: 'auto' });
   };
 
   const aim = (): void => {
@@ -320,26 +314,14 @@ export function mountSticky(options: StickyOptions): Sticky {
       const caret = caretRect();
       const now = bandNow();
       if (!caret || !now) return null;
-      return { caret, band: now.aim, limit: now.limit };
+      return { caret, band: now.aim, limit: Math.min(now.limit, now.gap) };
     };
     const push = (delta: number): number => {
-      if (docked()) return pushDock(delta);
       const before = window_.scrollY;
       window_.scrollBy({ top: delta, behavior: 'auto' });
       mine = window_.scrollY;
       return window_.scrollY - before;
     };
-    if (docked()) {
-      if (by === 'view' && !armed) return;
-      const seen = look();
-      if (!seen || Math.abs(bandFix(seen.caret, seen.band, seen.limit)) < TINY_FIX) return;
-      bandWalk(by === 'view' ? KEYBOARD_STEPS : REVEAL_STEPS, look, push);
-      if (closing) {
-        closing = false;
-        armed = false;
-      }
-      return;
-    }
     // 편집 문은 키보드 유무와 무관하게 위 변만 본다 — 아래 변까지 보면 편집마다 사람이 굴려 내린 화면을 도로 끌어올린다
     // The edit door only checks the top edge regardless of the keyboard; also checking the bottom would pull back a scroll the user made on every keystroke
     if (by !== 'view') {
@@ -365,8 +347,8 @@ export function mountSticky(options: StickyOptions): Sticky {
       if (last) armed = false;
       return;
     }
-    // 먼저 가림·창 밖을 최소로 고치고, 그다음 툴바를 창 맨 위로 붙여 빈자리를 걷어낸다 — 밀고 다시 재는 두 걸음이다
-    // First fix any covering/off-screen minimally, then pin the toolbar to the window top to remove empty space — two measure-push-remeasure steps
+    // 이미 붙은 툴바 아래의 캐럿은 제자리에 둔다 — 툴바 위에 남은 빈자리만 걷어낸다.
+    // Leave a visible caret below a pinned toolbar in place; only close the remaining gap above the toolbar.
     underWalk(KEYBOARD_STEPS, look, push);
     placeWalk(KEYBOARD_STEPS, lookAim, push);
     if (last) armed = false;
@@ -438,8 +420,11 @@ export function mountSticky(options: StickyOptions): Sticky {
     armed = true;
     stuck = Number.NaN;
     follow();
-    view?.visualViewport?.addEventListener('resize', follow);
-    view?.visualViewport?.addEventListener('scroll', follow);
+    if (!following) {
+      following = true;
+      view?.visualViewport?.addEventListener('resize', follow);
+      view?.visualViewport?.addEventListener('scroll', follow);
+    }
     view?.addEventListener('pointerdown', takeOver, { passive: true });
     view?.addEventListener('scroll', onScroll, { passive: true });
     const Observer = (
@@ -456,15 +441,11 @@ export function mountSticky(options: StickyOptions): Sticky {
     watching = false;
     if (frame !== 0) view?.cancelAnimationFrame(frame);
     frame = 0;
-    view?.visualViewport?.removeEventListener('resize', follow);
-    view?.visualViewport?.removeEventListener('scroll', follow);
     view?.removeEventListener('pointerdown', takeOver);
     view?.removeEventListener('scroll', onScroll);
     watcher?.disconnect();
     watcher = null;
     seenBar = -1;
-    writeVar(KEYBOARD_TOP_VAR, 0);
-    writeVar(KEYBOARD_BOTTOM_VAR, 0);
     writeVar(BAR_HEIGHT_VAR, 0);
     barHeight = 0;
     seenTop = 0;
@@ -475,6 +456,7 @@ export function mountSticky(options: StickyOptions): Sticky {
     armed = false;
     closing = false;
     stuck = Number.NaN;
+    if (!unmounted) follow();
   };
 
   try {
@@ -485,6 +467,9 @@ export function mountSticky(options: StickyOptions): Sticky {
     unmounted = true;
     try {
       stop();
+    } catch {}
+    try {
+      stopViewport();
     } catch {}
     try {
       stopChange?.();
@@ -512,6 +497,7 @@ export function mountSticky(options: StickyOptions): Sticky {
       if (unmounted) return;
       unmounted = true;
       stop();
+      stopViewport();
       stopChange?.();
       surface.removeEventListener('focus', start);
       surface.removeEventListener('blur', stop);

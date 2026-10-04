@@ -13,6 +13,7 @@ import { iconButton, setPressed, suppressMousedownTap, wireIconButton } from './
 import { TOOLBAR_GROUPS as GROUP_ORDER, renderToolbarHtml, toolbarSlots } from '../wing/toolbar-html.js';
 import { openPanel, type Panel } from './parts/panel.js';
 import { openPrompt } from './parts/prompt.js';
+import { openToolbarPanel, type ToolbarPanelRenderer } from './parts/toolbar-panel.js';
 import { watchSettle, type Settle } from './parts/settle.js';
 import { mountToast, type ToastMount } from './toast.js';
 import { openChoosePanel } from './choose.js';
@@ -38,6 +39,7 @@ export { TOOLBAR_GROUPS } from '../wing/toolbar-html.js';
 export interface ToolbarOptions {
   readonly layout?: 'compact' | 'wrap';
   readonly quick?: readonly string[];
+  readonly panels?: Readonly<Record<string, ToolbarPanelRenderer>>;
   readonly nabi: Nabi;
   readonly registry: Registry;
   readonly root: HTMLElement;
@@ -145,6 +147,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     const buttons: ToolbarButton[] = [];
     const groups = new Map<string, HTMLElement>();
     let picker: Panel | null = null;
+    let closingPicker = false;
     let filePicker: Disposer | null = null;
     let pendingVisibility = false;
     let unmounted = false;
@@ -157,10 +160,18 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     attributes.className('nabi-toolbar-row', true);
 
     const closePicker = (): void => {
-      picker?.close();
+      if (closingPicker) return;
+      const current = picker;
       picker = null;
-      filePicker?.();
+      const currentFile = filePicker;
       filePicker = null;
+      closingPicker = true;
+      try {
+        current?.close();
+        currentFile?.();
+      } finally {
+        closingPicker = false;
+      }
     };
     lifecycle.add(closePicker);
 
@@ -216,6 +227,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
         labels.button(button, label, choice.swatch || choice.icon || choice.svg ? undefined : label);
         panel.root.append(button);
       }
+      if (root.closest('.nabi-expanded')) focusQuiet(panel.root.querySelector('button') ?? panel.root);
     };
 
     // 격자 — 행·열 두 수를 한 몸짓으로 (표 삽입).
@@ -336,20 +348,50 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     };
 
     const fire = (wing: Wing, button: HTMLButtonElement, decl?: WingButton, by?: CommandHand): boolean => {
-      if (unmounted || unmounting) return false;
+      if (unmounted || unmounting || closingPicker) return false;
       const action = (decl ?? wing.button)?.action;
-      return action ? act(wing, button, action, by) : false;
+      return action ? act(wing, button, action, by, true) : false;
     };
 
     // 선언 하나를 실제로 돌린다 — 누름과 가속키가 같은 문을 지난다(답만 다를 수 있다). by는 부른 손이다 — 커맨드로 바로 가는 갈래(mark·command)만 문에 실어 보낸다. 판을 여는 갈래는 안 싣는다: 그 안에서 고르는 몸짓이 제 손을 새로 밝힌다. 답은 닿았는가다 — 가속키가 키를 삼킬지를 이것으로 가른다.
     // Actually runs a declaration — a press and an accelerator pass through the same door (only their return value can differ). `by` is the triggering hand, carried only for kinds that go straight to a command (mark, command); kinds that open a panel don't carry it, since the gesture inside the panel reveals its own hand. The return value means "did this reach anything" (`actionReaches`), which decides whether an accelerator swallows the key.
-    const act = (wing: Wing, button: HTMLButtonElement, action: WingAction, by?: CommandHand): boolean => {
-      if (unmounted || unmounting) return false;
+    const act = (
+      wing: Wing,
+      button: HTMLButtonElement,
+      action: WingAction,
+      by?: CommandHand,
+      custom = false,
+    ): boolean => {
+      if (unmounted || unmounting || closingPicker) return false;
       // 같은 버튼을 다시 누르면 열린 판이 닫힌다.
       // Pressing the same button again closes whatever panel is open.
       const wasOpen = button.getAttribute('aria-expanded') === 'true';
       closePicker();
+      if (unmounted || unmounting) return false;
       if (wasOpen) return true;
+      const name = button.getAttribute('data-name') ?? wing.w;
+      const render = custom && Object.hasOwn(options.panels ?? {}, name) ? options.panels?.[name] : undefined;
+      if (render) {
+        openToolbarPanel({
+          nabi,
+          anchor: button,
+          translator: t,
+          render,
+          active: () => !unmounted && !unmounting,
+          closeForRun: (panel) => {
+            if (picker === panel) closePicker();
+            else panel.close();
+          },
+          ...(options.surface ? { surface: options.surface } : {}),
+          onOpen: (panel) => {
+            picker = panel;
+          },
+          onClose: (panel) => {
+            if (picker === panel) picker = null;
+          },
+        });
+        return true;
+      }
       switch (action.kind) {
         case 'mark':
           run('toggleMark', { mark: markNode(wing.w) }, by);
@@ -535,6 +577,13 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     const onKey = (event: Event): void => {
       const key = event as KeyboardEvent;
       if (!(key.metaKey || key.ctrlKey) || key.altKey) return;
+      const target = key.target as Element | null;
+      if (
+        target?.nodeType === 1 &&
+        target.closest('.nabi-custom-panel-content') &&
+        target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')
+      )
+        return;
       if (!ownsKey({ surface: options.surface ?? null, root }, key.target)) return;
       if (options.surface && !ownsGestureRoot(root, key.target, options.surface)) return;
       const want = `mod+${key.key.toLowerCase()}`;
@@ -579,6 +628,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
         buttons,
         translator: t,
         quick: options.quick ?? ['b', 'i', 'tc', 'fs'],
+        onLayoutChange: closePicker,
         ...(options.surface ? { surface: options.surface } : {}),
       });
       lifecycle.add(() => compact?.unmount());

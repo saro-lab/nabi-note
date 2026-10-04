@@ -18,7 +18,7 @@ import { openLightbox } from './overlay.js';
 import type { Overlay } from './overlay.js';
 import { watchNarrow } from './narrow.js';
 import { compactKeepsFocus, refreshCompactContext, registerCompactContext } from './compact.js';
-import { dockViewportRect } from './dock.js';
+import { visibleViewportRect } from './dock.js';
 import { claimMountRoot, DisposerStack, HostElementBaseline, HostElementLease } from '../lifecycle.js';
 
 export interface ContextToolbarOptions {
@@ -102,11 +102,15 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
     let panel: Panel | null = null;
     let lightbox: Overlay | null = null;
     let generation = 0;
+    const closeFloating = (): void => {
+      panel?.close();
+      panel = null;
+    };
     lifecycle.add(() => {
       for (const view of views) view.el.remove();
       views = [];
     });
-    lifecycle.add(registerCompactContext(nabi, { root, groups: () => views }));
+    lifecycle.add(registerCompactContext(nabi, { root, groups: () => views, close: () => closeFloating() }));
 
     attributes.className('nabi-context', true);
     // 한 줄 모드 — 줄 자체가 flex 그릇이라 툴바처럼 감쌀 것 없이 제가 구른다.
@@ -114,10 +118,6 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
     const stopNarrow = watchNarrow(root);
     lifecycle.add(stopNarrow);
 
-    const closeFloating = (): void => {
-      panel?.close();
-      panel = null;
-    };
     lifecycle.add(() => {
       closeFloating();
       lightbox?.close();
@@ -148,26 +148,30 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
       if (!box) return;
       const chrome = root.closest('.nabi-toolbar');
       const chromeBox = chrome?.getBoundingClientRect();
-      const docked = chrome?.getAttribute('data-nabi-docked') === 'true';
-      const visual = view.visualViewport;
-      const viewport: Rect = docked
-        ? dockViewportRect(owner)
-        : { top: 0, bottom: visual ? visual.height : view.innerHeight };
-      const band =
-        docked && chromeBox
-          ? { top: viewport.top, bottom: Math.max(viewport.top, Math.min(viewport.bottom, chromeBox.top)) }
-          : bandOf(chromeBox?.bottom ?? null, viewport);
+      const viewport = visibleViewportRect(owner);
+      const band = bandOf(chromeBox?.bottom ?? null, viewport);
       const delta = bandFix(box, band, viewport.bottom - viewport.top);
       if (delta !== 0) view.scrollBy({ top: delta, behavior: 'auto' });
     };
 
     const run = (command: string, args?: Readonly<Record<string, unknown>>): void => {
       if (unmounted) return;
-      // 도구판이 열린 동안은 본문 포커스를 되찾아 키보드를 다시 열지 않는다.
-      // Keep focus in an open tool panel so the surface does not reopen the keyboard.
-      const keepsFocus = compactKeepsFocus(nabi);
+      const active = owner.activeElement;
+      const group = views.find((view) => active !== null && view.el.contains(active));
+      const name = group ? active?.getAttribute('data-name') : null;
+      // 속성 입력 뒤에는 같은 컨트롤에 남아 본문의 모바일 키보드를 다시 열지 않는다.
+      // Stay on the same property control after an edit instead of reopening the surface's mobile keyboard.
+      const keepsFocus = compactKeepsFocus(nabi) || name != null;
       if (!keepsFocus) focusQuiet(options.surface);
       nabi.applyCommand(command, args ?? {});
+      if (name != null && group) {
+        const next = views.find((view) => view.w === group.w && view.node._id === group.node._id);
+        focusQuiet(
+          [...(next?.el.querySelectorAll<HTMLElement>('[data-name]') ?? [])].find(
+            (control) => control.getAttribute('data-name') === name,
+          ),
+        );
+      }
       if (!keepsFocus) reveal();
     };
 

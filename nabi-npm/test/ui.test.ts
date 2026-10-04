@@ -663,15 +663,13 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
   {
     const hover = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-btn:hover {'));
     const hoverBody = hover.slice(0, hover.indexOf('}'));
-    ok(
-      'CSS: 툴바 hover는 바탕을 칠하지 않고 색만 바꾼다',
-      /color:\s*var\(--nabi-accent\)/.test(hoverBody) && !/background:/.test(hoverBody),
-    );
+    ok('CSS: 툴바 hover는 은은한 배경으로 보인다', /background-color:\s*var\(--nabi-soft\)/.test(hoverBody));
     const on = CORE_CSS.slice(CORE_CSS.indexOf('.nabi-btn.on, .nabi-btn.on:hover {'));
     const onBody = on.slice(0, on.indexOf('}'));
     ok(
-      'CSS: 파일 아이콘의 선택 상태도 배경과 밑줄로 보인다',
-      /background:\s*var\(--nabi-soft\)/.test(onBody) && /box-shadow:\s*inset/.test(onBody),
+      'CSS: 선택 상태는 연한 강조색 배경으로 보인다',
+      /background:\s*color-mix\(in srgb, var\(--nabi-accent\) 12%, var\(--nabi-bg\)\)/.test(onBody) &&
+        /box-shadow:\s*none/.test(onBody),
     );
     const tap = CORE_CSS.slice(CORE_CSS.indexOf('@keyframes nabi-tap'));
     ok('CSS: 누름 반응은 아래로 내려갔다 돌아온다', /translateY\(2px\)/.test(tap.slice(0, tap.indexOf('\n}'))));
@@ -815,23 +813,24 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     }
   }
 
-  // 상황 줄이 손가락에 닿는다 — 접혀 쌓인 두 줄이 한 표적이 되면 안 된다. 판정은 폭이 아니라 겨눔의 굵기(pointer: coarse)가 먼저다.
-  // The context bar stays touch-reachable — two stacked wrapped rows must not become one target. The check is pointer coarseness, not viewport width.
+  // 작은 속성 도구도 줄 사이 간격과 모바일 입력 글자 크기는 유지한다.
+  // Small property controls retain row spacing and the mobile input font size.
   {
     const touch = CORE_CSS.slice(CORE_CSS.indexOf('@media (pointer: coarse)'));
     ok('CSS: 상황 줄에 손가락 분기가 있다', touch.startsWith('@media (pointer: coarse)'));
     const branch = touch.slice(0, touch.indexOf('\n}'));
     ok('CSS: 그 분기가 접힌 줄에 세로 틈을 준다', /\.nabi-context\s*\{[^}]*gap:\s*\.25rem/.test(branch));
     ok(
-      'CSS: 그 분기의 줄 높이가 공개 touch 크기 토큰을 쓴다',
-      /\.nabi-ctx-group\s*\{[^}]*min-block-size:\s*var\(--nabi-touch-control-size\)/.test(branch),
+      'CSS: 그 분기의 줄 높이가 일반 도구 크기 토큰을 쓴다',
+      /\.nabi-ctx-group\s*\{[^}]*min-block-size:\s*var\(--nabi-control-size\)/.test(branch),
     );
     // 줄바꿈은 그룹 안에서도 일어난다(표는 단추가 열 개다) — 그 줄 사이는 그룹의 세로 gap 이 잡는다.
     // Wrapping can happen inside a group too (a table has ten buttons) — the group's own vertical gap handles the space between those lines.
     ok('CSS: 그룹 안에서 접힌 줄도 벌어진다', /\.nabi-ctx-group\s*\{[^}]*gap:\s*\.25rem\s+\.1875rem/.test(branch));
-    ok('CSS: 그 분기에서 단추가 커진다', /\.nabi-context \.nabi-btn\s*\{[^}]*block-size:\s*2\.5rem/.test(branch));
-    // 눈금(글자 크기) 손잡이가 작아 상자째 세워야 닿는다.
-    // The font-size range's handle is small enough that the whole box must grow to stay reachable.
+    ok(
+      'CSS: 손가락 기기도 같은 작은 단추를 쓴다',
+      /\.nabi-context \.nabi-btn\s*\{[^}]*block-size:\s*2rem/.test(branch),
+    );
     // 손가락 기기에서 적는 칸의 글자는 16px 아래로 안 내린다 — iOS 의 자동 확대 방아쇠다. 막는 길(user-scalable=no)은 안 쓴다.
     // On touch devices an input field's font stays at 16px or above — iOS's auto-zoom trigger. Blocking that trigger (user-scalable=no) isn't used.
     ok(
@@ -843,7 +842,10 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
       'CSS: 확대를 막는 길은 안 쓴다',
       !/user-scalable\s*[:=]|maximum-scale\s*[:=]/.test(CORE_CSS.replace(/\/\*[\s\S]*?\*\//g, '')),
     );
-    ok('CSS: 그 분기에서 눈금도 커진다', /\.nabi-context \.nabi-range\s*\{[^}]*block-size:\s*2\.5rem/.test(branch));
+    ok(
+      'CSS: 손가락 기기도 같은 작은 눈금을 쓴다',
+      /\.nabi-context \.nabi-range\s*\{[^}]*block-size:\s*1\.75rem/.test(branch),
+    );
   }
 
   // 편집 화면의 정렬 표식 — 정렬 동작은 편집기에 안 붙으므로 그림 하나가 "이 표는 발행되면 정렬된다"를 말한다.
@@ -899,21 +901,15 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     ok('CSS: 이름은 굵지 않다', /font-weight:\s*400/.test(rowBody));
     ok('CSS: 이름은 작다', /font-size:\s*\.6\d*rem/.test(rowBody));
 
-    // 판 안쪽에는 아무 칠도 없다 — 옵션 칸은 늘 맨바탕이고, 겨눔도 테두리 하나로만 말한다.
-    // No fill inside the dialog — option cells stay plain, and selection is expressed with a border alone.
     ok('CSS: 옵션 칸은 맨바탕이다', /background:\s*none/.test(rowBody));
 
-    // 겨눈 자리의 테두리는 표 칸을 고를 때와 같은 토큰이다 — "골랐다" 는 말을 한 색으로 한다.
-    // The selected border uses the same token as selecting a table cell — one color says "selected" everywhere.
     const aimed = CORE_CSS.slice(
       CORE_CSS.indexOf('.nabi-choose-row[aria-selected="true"], .nabi-save-row[aria-selected="true"] {'),
     );
     const aimedBody = aimed.slice(0, aimed.indexOf('}'));
     ok('CSS: 겨눔 표식도 두 판이 한 규칙이다', aimedBody.length > 0);
-    ok('CSS: 겨눈 자리는 표 선택과 같은 색을 두른다', /border-color:\s*var\(--nabi-accent\)/.test(aimedBody));
-    // 두르기만 한다 — 겨눴다고 칸을 칠하지 않는다.
-    // Outline only — selection never fills the cell.
-    ok('CSS: 겨눈 자리에도 채움색이 없다', !/background/.test(aimedBody));
+    ok('CSS: 겨눈 자리에 선택 테두리를 더하지 않는다', !/border-color:/.test(aimedBody));
+    ok('CSS: 겨눈 자리는 연한 강조색 배경으로 구분한다', /background:\s*color-mix\(/.test(aimedBody));
     // 호버로 칠하는 길도 없다 — 겨눔은 aria-selected 하나뿐이다(저장 판도 같다: 옛 호버 칠이 이 라운드에 걷혔다).
     // No hover fill either — selection is expressed by aria-selected alone (same for the save dialog: an old hover fill was removed this round).
     ok('CSS: 옵션 칸에 호버 칠이 없다', !CORE_CSS.includes('.nabi-choose-row:hover'));
@@ -2106,6 +2102,7 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     // `position:fixed; top:0` 인 표식의 client top — 아이폰(미는 방식)은 −337, 안드로이드·데스크톱은 0.
     // The client top of a position:fixed; top:0 probe — iPhone (pushing mode): -337, Android/desktop: 0.
     readonly fixedTop?: number;
+    readonly stickyInset?: number;
     readonly caretDoc?: number; // 캐럿 윗변의 문서 자리
     readonly caretHeight?: number;
     readonly scrollY?: number;
@@ -2121,6 +2118,7 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     let scrollY = options.scrollY ?? 0;
     const maxScroll = options.maxScroll ?? 100000;
     let keyboard = 0;
+    let viewportOffset = options.vvOffsetTop ?? 0;
     let moved = 0; // 우리가 민 총량 — 그물이 보는 그 값이다
 
     const frames = new Map<number, () => void>();
@@ -2157,7 +2155,7 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
 
     const visual = {
       get offsetTop() {
-        return keyboard > 0 ? (options.vvOffsetTop ?? 0) : 0;
+        return keyboard > 0 ? viewportOffset : 0;
       },
       get height() {
         return innerHeight - keyboard;
@@ -2175,6 +2173,7 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
         return scrollY;
       },
       navigator: { userAgent: 'net', platform: 'Net', maxTouchPoints: 0 },
+      getComputedStyle: () => ({ top: `${options.stickyInset ?? 0}px` }),
       scrollBy: (opts: { top: number }) => {
         const before = scrollY;
         scrollY = Math.min(maxScroll, Math.max(0, scrollY + opts.top));
@@ -2234,6 +2233,7 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     const root = {
       ownerDocument: owner,
       style: {
+        getPropertyValue: (name: string) => vars.get(name) ?? '',
         setProperty: (name: string, value: string) => void vars.set(name, value),
         removeProperty: (name: string) => void vars.delete(name),
       },
@@ -2324,6 +2324,10 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
         keyboard = px;
         fire(vvListeners, 'resize');
       },
+      pan: (top: number) => {
+        viewportOffset = top;
+        fire(vvListeners, 'scroll');
+      },
       // 툴바의 키를 조용히 갈아 끼운다 — 관찰자는 안 깨운다(옛 판이 쓰던 그 문).
       // Swaps the toolbar's height silently — doesn't wake the observer (the door the old code used).
       bar: (px: number) => void (bar = px),
@@ -2362,6 +2366,8 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
         for (const fn of run) fn();
       },
       pending: () => frames.size,
+      style: (name: string) => vars.get(name),
+      viewportListeners: () => [...vvListeners.values()].reduce((total, listeners) => total + listeners.size, 0),
     };
   }
 
@@ -2375,6 +2381,59 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     const until = Date.now() + ms;
     while (Date.now() < until);
   };
+
+  {
+    const w = makeWorld({ bar: 48, caretDoc: 2250, scrollY: 2000 });
+    w.focus();
+    w.keyboard(435);
+    w.frame();
+    w.quiet();
+    w.frame();
+    eq('긴 문서에서 키보드가 열려도 이미 보이는 캐럿은 제자리에 둔다', w.scrollY, 2000);
+    w.sticky.unmount();
+  }
+
+  {
+    const w = makeWorld({ bar: 48, caretDoc: 1800, scrollY: 2000 });
+    w.focus();
+    w.keyboard(0);
+    w.frame();
+    w.quiet();
+    w.frame();
+    eq('포커스 직후 같은 뷰포트 사건을 키보드 급변으로 오인하지 않는다', w.moved, 0);
+    w.sticky.unmount();
+  }
+
+  {
+    const w = makeWorld({ bar: 48, stickTop: 64, stickyInset: 64, caretDoc: 2250, scrollY: 2000 });
+    w.focus();
+    w.keyboard(435);
+    w.frame();
+    w.quiet();
+    w.frame();
+    eq('고정 헤더 아래에 붙은 툴바 여백을 없애려고 화면을 밀지 않는다', w.moved, 0);
+    w.sticky.unmount();
+  }
+
+  {
+    const w = makeWorld({ bar: 48, caretDoc: 2250, scrollY: 2000 });
+    w.focus();
+    for (const height of [60, 110, 180, 260, 435]) {
+      w.keyboard(height);
+      w.frame();
+    }
+    w.quiet();
+    w.frame();
+    w.touch();
+    w.browserScroll(2600);
+    w.resetMoved();
+    w.pan(200);
+    w.frame();
+    w.quiet();
+    w.frame();
+    eq('사용자 스크롤 뒤 뷰포트 위치만 움직여도 캐럿 보정을 다시 켜지 않는다', w.moved, 0);
+    w.sticky.unmount();
+  }
 
   // --- 규칙 2. 편집은 위 변만 본다 — 키보드가 선 채 타이핑해도 우리가 민 총량이 0 -------------
   {
@@ -2502,7 +2561,7 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     w.keyboard(435);
     w.frame();
     eq('툴바가 창 맨 위에 붙는다', w.chrome().top, 0);
-    eq('캐럿이 그 아래 한 줄 자리에 선다', round(w.caret().top), 188 + 19);
+    eq('툴바가 붙는 데 필요한 거리만 움직여 캐럿을 보존한다', round(w.caret().top), 220);
   }
 
   // --- 옛 재현 둘이 그대로 고쳐진다(데스크톱 — 키보드가 없다) ------------------------------------
@@ -2547,6 +2606,48 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
     w.quiet();
     w.frame();
     eq('겨눔이 빠진 뒤에는 아무것도 안 민다', w.moved, 0);
+    w.sticky.unmount();
+  }
+
+  {
+    const w = makeWorld({ innerHeight: 812, vvOffsetTop: 100, caretDoc: 500 });
+    w.focus();
+    w.keyboard(435);
+    w.blur();
+    w.resetMoved();
+    eq('도구판으로 포커스를 옮겨도 키보드 위쪽 위치를 유지한다', w.style('--nabi-keyboard-top'), '100px');
+    eq('키보드가 닫히기 전에는 아래쪽 간격도 유지한다', w.style('--nabi-keyboard-bottom'), '335px');
+    eq('포커스가 빠지면 캐럿용 툴바 높이는 지운다', w.style('--nabi-bar-height'), undefined);
+    eq('키보드가 닫히는 동안 뷰포트 추적을 유지한다', w.viewportListeners(), 2);
+    w.keyboard(300);
+    w.frame();
+    w.quiet();
+    w.frame();
+    eq('포커스가 빠져도 줄어드는 키보드 간격을 따라간다', w.style('--nabi-keyboard-bottom'), '200px');
+    eq('뷰포트를 따라가도 캐럿용 툴바 높이는 다시 쓰지 않는다', w.style('--nabi-bar-height'), undefined);
+    eq('도구판에 포커스가 있는 동안 캐럿으로 화면을 밀지 않는다', w.moved, 0);
+    w.keyboard(0);
+    eq('키보드가 실제로 닫히면 위쪽 위치를 지운다', w.style('--nabi-keyboard-top'), undefined);
+    eq('키보드가 실제로 닫히면 아래쪽 간격을 지운다', w.style('--nabi-keyboard-bottom'), undefined);
+    eq('포커스와 키보드가 모두 없으면 뷰포트 추적을 끝낸다', w.viewportListeners(), 0);
+    w.keyboard(435);
+    eq('추적 종료 뒤 다른 입력의 키보드를 따라가지 않는다', w.style('--nabi-keyboard-top'), undefined);
+    w.focus();
+    eq('편집기로 돌아오면 현재 키보드 위치를 다시 읽는다', w.style('--nabi-keyboard-top'), '100px');
+    w.blur();
+    w.sticky.unmount();
+    eq('키보드가 열린 채 해제해도 남은 뷰포트 추적을 정리한다', w.viewportListeners(), 0);
+    eq('해제하면 유지하던 키보드 위치도 지운다', w.style('--nabi-keyboard-top'), undefined);
+    w.keyboard(300);
+    eq('해제 뒤 뷰포트 사건이 스타일을 다시 만들지 않는다', w.style('--nabi-keyboard-bottom'), undefined);
+  }
+
+  {
+    const w = makeWorld();
+    w.focus();
+    w.blur();
+    eq('키보드가 없으면 포커스가 빠질 때 뷰포트 추적도 바로 끝낸다', w.viewportListeners(), 0);
+    eq('키보드가 없는 포커스 해제는 스타일을 남기지 않는다', w.style('--nabi-bar-height'), undefined);
     w.sticky.unmount();
   }
 
@@ -2820,7 +2921,7 @@ function press(json: unknown[], sel: Selection, armed?: PressEnv['armed']): Pres
       `gap=${round(w.caret().top - w.band().top)}`,
     );
     w.resetMoved();
-    w.growBar(260); // 상황 줄이 뒤늦게 선다 — 툴바가 188 → 260 으로 자란다
+    w.growBar(350);
     w.frame();
     eq('자리잡기가 끝난 뒤에는 툴바가 자라도 안 민다', w.moved, 0);
 

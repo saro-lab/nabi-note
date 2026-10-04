@@ -75,8 +75,8 @@ export interface PanelOptions {
   // Where focus goes after closing (the edit surface).
   readonly restore?: HTMLElement | null;
   readonly onClose?: () => void;
-  // 켜면 판의 자리 잡기만 쓰고 문서 모달 층은 부르는 쪽이 대신 맡는다(prompt가 쓴다).
-  // When set, only the panel's positioning is used; the caller supplies its own document modal layer (used by prompt).
+  // 켜면 판의 자리 잡기만 쓰고 문서 모달 층은 부르는 쪽이 대신 맡는다.
+  // When set, only the panel's positioning is used; the caller supplies its own document modal layer.
   readonly modal?: boolean;
 }
 

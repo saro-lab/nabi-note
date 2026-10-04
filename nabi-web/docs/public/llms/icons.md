@@ -50,7 +50,7 @@ Changing the theme class or a CSS variable updates existing icons without rebuil
 
 Panels mounted under `body` copy icon variables and the color scheme from their source surface. Class/style/theme changes on the source or its ancestors, stylesheet DOM updates/loading, and window resizing refresh open panels. Each panel follows its own editor; closing disconnects observers and listeners. Direct CSSOM `insertRule()` calls without a DOM change do not trigger panel synchronization. Keep editor icon variables on the editor or a shared ancestor, not only a toolbar child. For standalone viewer/diff, place the theme on their container or its ancestor.
 
-Compact toolbar placement does not change existing wing, context, or view icon keys. The full Tools palette displays the original wing-group icons together without category tabs or group borders. Connected preview/fullscreen controls stay visible in the main row; theme them with the same `view-*` keys. Desktop palette controls use smaller icons, while mobile controls retain their touch target size.
+The default toolbar's expanded desktop and compact mobile placement does not change existing wing, context, or view icon keys. The mobile full Tools palette displays the original wing-group icons together without category tabs or group borders. Connected preview/fullscreen controls stay visible in the main toolbar; theme them with the same `view-*` keys. Toolbar, palette, and property controls use `.875rem` icons and `2rem` regular buttons on desktop and mobile (14px and 32px at the default root font size).
 
 ## Hide preview or fullscreen
 

@@ -106,7 +106,7 @@ const toolbarHtml = renderToolbarHtml({
 const viewToolsHtml = renderViewToolsHtml({ locale: 'en' });
 ```
 
-`layout` defaults to `'compact'`; use `'wrap'` for the previous layout. `quick` takes toolbar slot names in priority order and defaults to `['b', 'i', 'tc', 'fs']`. A server cannot know the final container width, active selection, or software keyboard. The browser adjusts the compact row, menu placement, and mobile docking after mounting.
+`layout` defaults to `'compact'`; use `'wrap'` for the previous explicit layout. `quick` takes toolbar slot names in priority order and defaults to `['b', 'i', 'tc', 'fs']`. It configures the mobile compact row; desktop shows every available main-toolbar command, wrapping like fullscreen. A server cannot know the final viewport width, container width, active selection, or software keyboard. After mounting, the browser expands the default toolbar when the viewport reaches `--nabi-mobile-breakpoint` and uses the compact row below it. Property controls appear automatically below the main toolbar when available. Both rows stay sticky together within their own editor on desktop and mobile.
 
 Toolbar HTML no longer includes the old letter-badge attributes or letter-shortcut tooltip suffixes. Keyboard palette navigation is wired after mounting; keep server and browser package versions aligned.
 

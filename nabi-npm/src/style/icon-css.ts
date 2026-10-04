@@ -24,6 +24,6 @@ ${scopes}[data-nabi-theme="light"] { ${defaults(false)} }
 }
 .nabi-icon-legacy > svg { inline-size:100%; block-size:100%; }
 .nabi-choose-icon .nabi-icon,.nabi-save-icon .nabi-icon { inline-size:24px;block-size:24px; }
-.nabi-btn:hover,.nabi-btn.nabi-kbd { background-color:var(--nabi-soft); }
-.nabi-btn:focus-visible { outline:2px solid var(--nabi-accent);outline-offset:1px; }
+.nabi-btn:hover { background-color:var(--nabi-soft); }
+.nabi-btn.nabi-kbd,.nabi-btn:focus-visible { outline:none;background:color-mix(in srgb,var(--nabi-accent) 20%,var(--nabi-bg)); }
 `;

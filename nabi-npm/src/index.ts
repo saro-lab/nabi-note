@@ -110,6 +110,8 @@ export type {
   Toolbar,
   ToolbarButton,
   ToolbarOptions,
+  ToolbarPanelContext,
+  ToolbarPanelRenderer,
   UploadView,
   UploadViewOptions,
   ViewTools,
