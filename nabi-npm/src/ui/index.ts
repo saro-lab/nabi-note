@@ -45,7 +45,7 @@ export { PANEL_EDGE, PANEL_GAP, edgeShift, openPanel, panelShift } from './parts
 export type { Panel, PanelBox, PanelOptions } from './parts/panel.js';
 export { openPrompt, promptValid } from './parts/prompt.js';
 export type { PromptField, PromptOptions } from './parts/prompt.js';
-export type { ToolbarPanelContext, ToolbarPanelRenderer } from './parts/toolbar-panel.js';
+export type { ToolbarPanelContext, ToolbarPanelOptions, ToolbarPanelRenderer } from './parts/toolbar-panel.js';
 
 export { TOAST_FADE_MS, mountToast, toastOrder, toastOverflow } from './toast.js';
 export type { ToastMount, ToastMountOptions, ToastSlot } from './toast.js';

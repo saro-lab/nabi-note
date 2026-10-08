@@ -7,6 +7,13 @@
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-07
+
+### Added
+
+- `mountToolbar()`의 `panels`에 `{ mode, render }` 설정과 `ToolbarPanelOptions` 타입을 추가했습니다. `modal`은 전체 화면 반투명 배경 위에 창을 열고, `inline`은 PC에서 도구 버튼 근처에 열며 모바일에서는 전체 화면으로 표시합니다. 두 모드 모두 빈 영역만 제공하므로 콜백에서 HTML이나 프레임워크 UI를 넣을 수 있습니다. 기존 함수형 렌더러의 동작은 유지합니다. 공개 AI 문서와 모든 웹 문서 로케일의 이미지 가이드에 두 모드와 콜백 사용 예제를 반영했습니다.
+- 패널 콜백에 `insertImage(src, by?)`를 추가했습니다. 직접 만든 닫기 버튼은 `close()`에, 이미지 선택은 `insertImage()`에 연결할 수 있습니다. 이미지 삽입은 창을 닫고 열 때의 선택 위치를 복원하며, 닫힌 창이나 내용이 바뀐 문서에는 삽입하지 않습니다. 모달의 포커스 제한과 배경 비활성화, 모바일 화면 크기 대응, 해제 시 정리를 함께 처리합니다.
+
 ## [1.3.0] - 2026-10-04
 
 ### Added
@@ -90,6 +97,7 @@
 - 정식 버전을 출시했습니다.
 
 [Unreleased]: https://github.com/saro-lab/nabi-note
+[1.3.1]: https://www.npmjs.com/package/nabi-note/v/1.3.1
 [1.3.0]: https://www.npmjs.com/package/nabi-note/v/1.3.0
 [1.2.0]: https://www.npmjs.com/package/nabi-note/v/1.2.0
 [1.1.2]: https://www.npmjs.com/package/nabi-note/v/1.1.2

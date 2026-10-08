@@ -13,7 +13,7 @@ import { iconButton, setPressed, suppressMousedownTap, wireIconButton } from './
 import { TOOLBAR_GROUPS as GROUP_ORDER, renderToolbarHtml, toolbarSlots } from '../wing/toolbar-html.js';
 import { openPanel, type Panel } from './parts/panel.js';
 import { openPrompt } from './parts/prompt.js';
-import { openToolbarPanel, type ToolbarPanelRenderer } from './parts/toolbar-panel.js';
+import { openToolbarPanel, type ToolbarPanelOptions, type ToolbarPanelRenderer } from './parts/toolbar-panel.js';
 import { watchSettle, type Settle } from './parts/settle.js';
 import { mountToast, type ToastMount } from './toast.js';
 import { openChoosePanel } from './choose.js';
@@ -39,7 +39,7 @@ export { TOOLBAR_GROUPS } from '../wing/toolbar-html.js';
 export interface ToolbarOptions {
   readonly layout?: 'compact' | 'wrap';
   readonly quick?: readonly string[];
-  readonly panels?: Readonly<Record<string, ToolbarPanelRenderer>>;
+  readonly panels?: Readonly<Record<string, ToolbarPanelRenderer | ToolbarPanelOptions>>;
   readonly nabi: Nabi;
   readonly registry: Registry;
   readonly root: HTMLElement;
@@ -370,13 +370,14 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
       if (unmounted || unmounting) return false;
       if (wasOpen) return true;
       const name = button.getAttribute('data-name') ?? wing.w;
-      const render = custom && Object.hasOwn(options.panels ?? {}, name) ? options.panels?.[name] : undefined;
-      if (render) {
+      const customPanel = custom && Object.hasOwn(options.panels ?? {}, name) ? options.panels?.[name] : undefined;
+      if (customPanel) {
+        if (typeof customPanel !== 'function') compact?.close(false);
         openToolbarPanel({
           nabi,
           anchor: button,
           translator: t,
-          render,
+          ...(typeof customPanel === 'function' ? { render: customPanel } : customPanel),
           active: () => !unmounted && !unmounting,
           closeForRun: (panel) => {
             if (picker === panel) closePicker();

@@ -27,6 +27,10 @@ const selected = wings().use('img', {
 
 `mountToolbar()` の `panels.img` で、画像ボタンの既定の URL 入力画面をサービス独自の画像選択画面に置き換えられます。キーにはツールバーのスロット名を使い、指定しなかったツールは既定の入力画面を使います。
 
+`mode: 'modal'` は画面全体を覆う半透明の背景の上にウィンドウを開きます。`mode: 'inline'` は PC ではツールボタンの近くに開き、モバイルでは全画面で表示します。モバイル表示かどうかは画面幅と `--nabi-mobile-breakpoint` で判定し、`inline` の画面を開いたままこの境界を越えると閉じます。
+
+どちらのモードも空の `root` だけを用意し、タイトル・入力欄・ボタンは作りません。`render` で任意の HTML や UI を追加し、閉じるボタンを `close()` に、画像の選択を `insertImage(url, 'pointer')` に接続します。従来の関数形式の設定（`img: renderer`）は表示方法を維持します。
+
 ```ts
 import { mountToolbar } from 'nabi-note'
 
@@ -36,16 +40,22 @@ const toolbar = mountToolbar({
   root: toolbarRoot,
   surface: content,
   panels: {
-    img: ({ root, signal, run }) =>
-      mountMyImagePicker(root, {
-        signal,
-        onSelect: (url: string) => run('insertImage', { src: url }),
-      }),
+    img: {
+      mode: 'inline',
+      render: ({ root, signal, close, insertImage }) =>
+        mountMyImagePicker(root, {
+          signal,
+          onClose: close,
+          onSelect: (url: string) => insertImage(url, 'pointer'),
+        }),
+    },
   },
 })
 ```
 
 `mountMyImagePicker` はサービス側で実装する関数です。渡された `root` 内に任意の UI を同期的に作成し、後片付け用の関数を返します。画像一覧の取得やアップロードなどの非同期処理には `signal` を接続し、選択した画像の URL を `onSelect` に渡します。この API はファイルを転送せず、画像 URL には既存の許可ルールが適用されます。
+
+`insertImage(src, by?)` は `run('insertImage', { src }, by)` と同じで、戻り値と選択の復元規則も共通です。`by` を省略すると `'keyboard'` を使います。`render` を `async` 関数にしないでください。
 
 画面を閉じるかツールバーをアンマウントすると、`signal` が中断され、後片付け用の関数が呼ばれます。`run()` は画面を閉じ、開いた時点の選択範囲にコマンドを一度適用します。すでに閉じている場合や、開いた後に文書の内容が変わった場合は、コマンドを実行せず `false` を返します。
 

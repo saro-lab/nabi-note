@@ -111,6 +111,7 @@ export type {
   ToolbarButton,
   ToolbarOptions,
   ToolbarPanelContext,
+  ToolbarPanelOptions,
   ToolbarPanelRenderer,
   UploadView,
   UploadViewOptions,

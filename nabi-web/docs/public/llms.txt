@@ -29,7 +29,7 @@ Use this file as a router. Read only the document that owns your question.
 - Use `nabi-note/viewer` for optional behavior on published HTML.
 - Use `nabi-note/diff` for comparing two stored documents.
 - Load `nabi-note/nabi.css` on editor and published pages unless all required sheets are injected.
-- Use `mountToolbar({ panels: { img: renderImagePicker } })` to replace the default image URL prompt with host UI. The renderer receives a dedicated root, abort signal, cleanup registration, and `run()` for one command at the opening selection; omitted slots keep their default behavior. See `llms/api-reference.md` and `llms/quickstart-npm.md`.
+- Use `mountToolbar({ panels: { img: { mode: 'inline', render: renderImagePicker } } })` to replace the default image URL prompt with host UI. Choose `modal` for a window on a full-page translucent backdrop, or `inline` for an anchored desktop panel that fills the screen on mobile. Both start empty. The renderer receives a dedicated root, abort signal, cleanup registration, `close()`, `insertImage(src)`, and `run()` for one command at the opening selection; function-only renderers keep their previous placement; omitted slots keep their default behavior. See `llms/api-reference.md` and `llms/quickstart-npm.md`.
 - The default `layout: 'compact'` shows all main-toolbar commands on desktop, wrapping like fullscreen, and uses a compact single row on mobile. Available object properties appear automatically in a wrapping row below it; both rows take up space and move together. Fullscreen expands the complete main toolbar at every width. Exiting restores the viewport-appropriate layout. Use `layout: 'wrap'` for the explicit wrapping layout; see `llms/styling.md`.
 - The mobile Tools palette shows commands together in their original wing groups. With `mountHints()`, double-Shift opens keyboard navigation in that palette, or in the visible toolbar on desktop and in fullscreen: Tab changes groups and arrow keys move between icons; letter badges are no longer used.
 - Every compact toolbar and palette item, including color swatches, has a floating tooltip under `body` to avoid clipping. Tooltips show actual accelerators and double-key gestures; Tools shows Shift Shift. Selected toolbar and property controls use a subtle accent-tinted background without an underline or selection border. Swatches retain their actual color and do not enlarge on hover. See `llms/styling.md`.
@@ -43,7 +43,7 @@ Use this file as a router. Read only the document that owns your question.
 - Store `nabi.getJson()` or `nabi.getHtml()`. Never store `getEditorHtml()`. HTML output and clipboard fragments protect leading spaces, including partial selections; see `llms/document-model.md`.
 - Treat HTML, JSON, paste data, command args, and custom filter output as untrusted input.
 - Use `NabiOptions.onError` for isolated command and callback failure reporting.
-- Tool input prompts (image, YouTube, link, and object properties such as code language) use plain nonmodal panels, without a full-page scrim, blur, or inert background. Preview, lightbox, and full dialogs keep their separate modal layer.
+- Default tool input prompts (image, YouTube, link, and object properties such as code language) use plain nonmodal panels, without a full-page scrim, blur, or inert background. Preview, lightbox, and full dialogs keep their separate modal layer.
 - Built-in notices and input prompts use polite localized wording; see `llms/quickstart-npm.md` for locale configuration.
 - For live language switching, share `createLocale()` across the editor and mounts, then call `locale.setLocale(code)`; see `llms/quickstart-npm.md`.
 - Configure bounded undo with `undoLimit`; set `typingMergeMs` to 0 to disable typing coalescing.
@@ -51,7 +51,7 @@ Use this file as a router. Read only the document that owns your question.
 
 ## Package facts
 
-- Package contract documented here: 1.3.0 (working version; not a publication claim).
+- Package contract documented here: 1.3.1 (working version; not a publication claim).
 - Runtime dependencies: zero.
 - Node.js for package tooling and SSR: 20 or newer.
 - Declared browser baseline: Chrome and Edge 120, Firefox 120, Safari 17.

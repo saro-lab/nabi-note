@@ -334,7 +334,7 @@ export const CORE_CSS = `${ICON_CSS}
 .nabi-field { display: flex; align-items: center; gap: 6px; }
 .nabi-field > span { font-size: 11px; color: var(--nabi-muted); min-inline-size: 44px; }
 
-.nabi-panel.nabi-narrow, .nabi-narrow .nabi-panel {
+.nabi-panel.nabi-narrow:not(.nabi-custom-panel-inline), .nabi-narrow .nabi-panel:not(.nabi-custom-panel-inline) {
   position: fixed !important;
   inset-inline: 5vw !important;
   inset-block-start: var(--nabi-panel-mid, 50%) !important;
@@ -544,6 +544,7 @@ export const CORE_CSS = `${ICON_CSS}
 .nabi-toolbox .nabi-hosted-panel > .nabi-input { flex: 1 1 8rem; inline-size: 0; }
 .nabi-toolbox .nabi-hosted-panel > .nabi-readout { flex: 1 1 100%; }
 .nabi-custom-panel-content { flex: 1 1 100%; min-inline-size: 0; }
+.nabi-custom-panel-inline { min-inline-size: min(20rem, 80vw); min-block-size: 10rem; max-block-size: 80dvh; overflow: auto; }
 .nabi-toolbox .nabi-btn {
   block-size: 2rem; min-block-size: 2rem; min-inline-size: 2rem;
 }
@@ -962,6 +963,10 @@ export const CORE_CSS = `${ICON_CSS}
   overflow: auto; outline: none;
 }
 .nabi-preview { min-block-size: min(50dvh, 100%); }
+.nabi-custom-scrim { box-sizing: border-box; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.nabi-custom-panel-modal { box-sizing: border-box; inline-size: 40rem; min-block-size: min(20rem, 100%); }
+.nabi-custom-fullscreen { padding: 0; }
+.nabi-custom-fullscreen > .nabi-custom-panel-modal { inline-size: 100%; block-size: 100%; border: 0; border-radius: 0; }
 /* 반투명 동그라미 하나만 남긴다 — 제목 줄을 없애 카드 전체를 내용이 그대로 쓴다
    Just a translucent circle; removing the title row lets the content use the whole card */
 .nabi-close {

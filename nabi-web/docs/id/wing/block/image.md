@@ -27,6 +27,10 @@ Wing ini menyisipkan alamat ke dalam dokumen; wing ini tidak mengunggah berkas. 
 
 Gunakan `panels.img` di `mountToolbar()` untuk mengganti dialog URL bawaan tombol gambar dengan pemilih gambar layanan Anda. Kunci adalah nama slot toolbar; alat yang tidak dicantumkan tetap menggunakan dialog bawaannya.
 
+`mode: 'modal'` membuka jendela di atas latar semitransparan yang menutupi seluruh halaman. `mode: 'inline'` membuka panel di dekat tombol alat pada desktop dan memenuhi layar pada perangkat seluler. Lebar viewport dan `--nabi-mobile-breakpoint` menentukan tampilan seluler; jika ambang ini dilintasi saat panel `inline` terbuka, panel akan ditutup.
+
+Kedua mode hanya menyediakan `root` kosong, tanpa judul, kolom masukan, atau tombol. Tambahkan HTML atau UI Anda dalam `render`, hubungkan tombol tutup ke `close()`, dan pemilihan gambar ke `insertImage(url, 'pointer')`. Konfigurasi berbentuk fungsi yang sudah ada (`img: renderer`) mempertahankan perilaku tampilannya.
+
 ```ts
 import { mountToolbar } from 'nabi-note'
 
@@ -36,16 +40,22 @@ const toolbar = mountToolbar({
   root: toolbarRoot,
   surface: content,
   panels: {
-    img: ({ root, signal, run }) =>
-      mountMyImagePicker(root, {
-        signal,
-        onSelect: (url: string) => run('insertImage', { src: url }),
-      }),
+    img: {
+      mode: 'inline',
+      render: ({ root, signal, close, insertImage }) =>
+        mountMyImagePicker(root, {
+          signal,
+          onClose: close,
+          onSelect: (url: string) => insertImage(url, 'pointer'),
+        }),
+    },
   },
 })
 ```
 
 `mountMyImagePicker` adalah fungsi yang Anda implementasikan di layanan Anda. Fungsi ini membuat UI secara sinkron di dalam `root` yang diberikan dan mengembalikan fungsi pembersihan. Hubungkan `signal` ke pekerjaan asinkron seperti memuat daftar gambar atau mengunggah, lalu teruskan URL gambar yang dipilih ke `onSelect`. API ini tidak mengirim berkas; aturan URL gambar yang sudah ada tetap berlaku.
+
+`insertImage(src, by?)` setara dengan `run('insertImage', { src }, by)`, termasuk nilai kembalian dan aturan pemulihan seleksi. Jika `by` tidak diberikan, `'keyboard'` digunakan. Jangan jadikan `render` sebagai fungsi `async`.
 
 Menutup panel atau melepas toolbar membatalkan `signal` dan memanggil fungsi pembersihan. `run()` menutup panel dan menerapkan perintah satu kali pada pilihan yang disimpan saat panel dibuka. Jika panel sudah ditutup atau isi dokumen berubah sejak dibuka, fungsi ini mengembalikan `false` tanpa menjalankan perintah.
 

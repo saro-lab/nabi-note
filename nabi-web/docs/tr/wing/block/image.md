@@ -27,6 +27,10 @@ Bu wing belgeye bir adres ekler; dosya yüklemez. Dosyaları sunucuya göndermek
 
 Görsel düğmesinin varsayılan URL giriş penceresini hizmetinizin görsel seçicisiyle değiştirmek için `mountToolbar()` içinde `panels.img` kullanın. Anahtarlar araç çubuğu yuvası adlarıdır; belirtilmeyen araçlar varsayılan pencerelerini kullanmaya devam eder.
 
+`mode: 'modal'`, tüm sayfayı kaplayan yarı saydam bir arka plan üzerinde pencere açar. `mode: 'inline'`, masaüstünde araç düğmesinin yakınında, mobilde ise tam ekran açılır. Mobil görünüm, görüntü alanının genişliği ve `--nabi-mobile-breakpoint` ile belirlenir; açık bir `inline` paneli bu eşik geçildiğinde kapanır.
+
+Her iki mod da yalnızca boş bir `root` sağlar; başlık, giriş alanı veya düğme oluşturmaz. HTML veya arayüzünüzü `render` içinde ekleyin, kapatma düğmesini `close()` işlevine, görsel seçimini ise `insertImage(url, 'pointer')` işlevine bağlayın. Mevcut işlev biçimindeki ayarlar (`img: renderer`) görüntülenme davranışını korur.
+
 ```ts
 import { mountToolbar } from 'nabi-note'
 
@@ -36,16 +40,22 @@ const toolbar = mountToolbar({
   root: toolbarRoot,
   surface: content,
   panels: {
-    img: ({ root, signal, run }) =>
-      mountMyImagePicker(root, {
-        signal,
-        onSelect: (url: string) => run('insertImage', { src: url }),
-      }),
+    img: {
+      mode: 'inline',
+      render: ({ root, signal, close, insertImage }) =>
+        mountMyImagePicker(root, {
+          signal,
+          onClose: close,
+          onSelect: (url: string) => insertImage(url, 'pointer'),
+        }),
+    },
   },
 })
 ```
 
 `mountMyImagePicker`, hizmetinizde uyguladığınız bir işlevdir. Verilen `root` içinde arayüzünüzü eşzamanlı olarak oluşturur ve bir temizleme işlevi döndürür. Görsel listesini yükleme veya dosya yükleme gibi eşzamansız işlemlere `signal` bağlayın ve seçilen görselin URL’sini `onSelect` işlevine iletin. Bu API dosya aktarmaz; mevcut görsel URL izin kuralları geçerliliğini korur.
+
+`insertImage(src, by?)`, dönüş değeri ve seçimi geri yükleme kuralları dahil olmak üzere `run('insertImage', { src }, by)` ile aynıdır. `by` belirtilmezse `'keyboard'` kullanılır. `render` işlevini `async` olarak tanımlamayın.
 
 Panel kapatıldığında veya araç çubuğu kaldırıldığında `signal` iptal edilir ve temizleme işlevi çağrılır. `run()` paneli kapatır ve açılırken kaydedilen seçime komutu bir kez uygular. Panel zaten kapalıysa veya açıldıktan sonra belge içeriği değiştiyse komutu çalıştırmadan `false` döndürür.
 

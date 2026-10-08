@@ -27,6 +27,10 @@ Dieser Wing fügt eine Adresse in das Dokument ein; er lädt keine Dateien hoch.
 
 Mit `panels.img` in `mountToolbar()` ersetzen Sie den standardmäßigen URL-Dialog der Bildschaltfläche durch die Bildauswahl Ihres Dienstes. Die Schlüssel sind Namen von Toolbar-Slots; nicht angegebene Werkzeuge behalten ihre Standarddialoge.
 
+`mode: 'modal'` öffnet ein Fenster über einem halbtransparenten Hintergrund, der die gesamte Seite bedeckt. `mode: 'inline'` öffnet es auf dem Desktop nahe der Werkzeugschaltfläche und auf Mobilgeräten im Vollbild. Die Viewportbreite und `--nabi-mobile-breakpoint` bestimmen die mobile Darstellung; wird diese Grenze bei geöffnetem `inline`-Panel überschritten, schließt sich das Panel.
+
+Beide Modi stellen nur ein leeres `root` bereit, ohne Titel, Eingabefelder oder Schaltflächen. Fügen Sie Ihr HTML oder Ihre UI in `render` hinzu, verbinden Sie die Schließen-Schaltfläche mit `close()` und die Bildauswahl mit `insertImage(url, 'pointer')`. Bestehende Funktionseinträge (`img: renderer`) behalten ihre bisherige Darstellung.
+
 ```ts
 import { mountToolbar } from 'nabi-note'
 
@@ -36,16 +40,22 @@ const toolbar = mountToolbar({
   root: toolbarRoot,
   surface: content,
   panels: {
-    img: ({ root, signal, run }) =>
-      mountMyImagePicker(root, {
-        signal,
-        onSelect: (url: string) => run('insertImage', { src: url }),
-      }),
+    img: {
+      mode: 'inline',
+      render: ({ root, signal, close, insertImage }) =>
+        mountMyImagePicker(root, {
+          signal,
+          onClose: close,
+          onSelect: (url: string) => insertImage(url, 'pointer'),
+        }),
+    },
   },
 })
 ```
 
 `mountMyImagePicker` implementieren Sie in Ihrem Dienst. Die Funktion erstellt Ihre UI synchron im übergebenen `root` und gibt eine Aufräumfunktion zurück. Verbinden Sie `signal` mit asynchronen Vorgängen wie dem Laden einer Bilderliste oder einem Upload und übergeben Sie die ausgewählte Bild-URL an `onSelect`. Diese API überträgt keine Dateien; die bisherigen Regeln für Bild-URLs gelten weiterhin.
+
+`insertImage(src, by?)` entspricht `run('insertImage', { src }, by)`, einschließlich Rückgabewert und Regeln zur Wiederherstellung der Auswahl. Ohne `by` wird `'keyboard'` verwendet. Definieren Sie `render` nicht als `async`-Funktion.
 
 Beim Schließen des Panels oder Entfernen der Toolbar wird `signal` abgebrochen und die Aufräumfunktion aufgerufen. `run()` schließt das Panel und führt einen Befehl einmal an der beim Öffnen erfassten Auswahl aus. Ist das Panel bereits geschlossen oder wurde der Dokumentinhalt seit dem Öffnen geändert, gibt es `false` zurück, ohne den Befehl auszuführen.
 

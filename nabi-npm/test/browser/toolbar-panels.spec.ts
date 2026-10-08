@@ -12,7 +12,7 @@ interface PanelState {
   current: ToolbarPanelContext | null;
 }
 
-async function setup(page: Page, custom = true): Promise<void> {
+async function setup(page: Page, custom = true, mode?: 'modal' | 'inline'): Promise<void> {
   await page.route('**/owned.svg', (route) =>
     route.fulfill({
       contentType: 'image/svg+xml',
@@ -21,7 +21,7 @@ async function setup(page: Page, custom = true): Promise<void> {
   );
   await page.goto('/');
   await page.evaluate(
-    async ({ entry, custom }) => {
+    async ({ entry, custom, mode }) => {
       const api = await import(/* @vite-ignore */ entry);
       document.documentElement.style.fontSize = '16px';
       document.body.style.cssText = 'margin:0;padding:0;min-height:1200px';
@@ -63,7 +63,7 @@ async function setup(page: Page, custom = true): Promise<void> {
           '<div data-testid="extra-results"></div>' +
           '<button data-testid="close-images" type="button" tabindex="0" style="min-height:28px">Close images</button>';
         root.querySelector('[data-testid="owned-image"]')!.addEventListener('click', () => {
-          results.push(context.run('insertImage', { src: '/owned.svg' }, 'pointer'));
+          results.push(context.insertImage('/owned.svg', 'pointer'));
         });
         root.querySelector('[data-testid="other-image"]')!.addEventListener('click', () => {
           results.push(context.run('insertImage', { src: '/other.svg' }, 'pointer'));
@@ -78,7 +78,7 @@ async function setup(page: Page, custom = true): Promise<void> {
         ...common,
         root,
         quick: ['b'],
-        ...(custom ? { panels: { img: render } } : {}),
+        ...(custom ? { panels: { img: mode ? { mode, render } : render } } : {}),
       });
       api.mountContextToolbar({ ...common, root: document.getElementById('panel-context')! });
       api.mountViewTools({
@@ -97,7 +97,7 @@ async function setup(page: Page, custom = true): Promise<void> {
       surface.focus({ preventScroll: true });
       nabi.select({ anchor: { path: [0], offset: 3 }, focus: { path: [0], offset: 3 } });
     },
-    { entry, custom },
+    { entry, custom, mode },
   );
 }
 
@@ -312,3 +312,109 @@ for (const width of [1280, 390]) {
     });
   });
 }
+
+for (const mode of ['modal', 'inline'] as const) {
+  for (const width of [1280, 390]) {
+    test.describe(`${mode} image panel at ${width}px`, () => {
+      test.use({ viewport: { width, height: 844 }, hasTouch: true });
+      test('uses the requested frame, traps modal focus, and inserts through the callback', async ({ page }) => {
+        await setup(page, true, mode);
+        await openImages(page, width === 390);
+        const panel = page.locator('.nabi-custom-panel');
+        const modal = mode === 'modal' || width === 390;
+        await expect(panel).toBeVisible();
+        await expect(page.locator('.nabi-scrim')).toHaveCount(modal ? 1 : 0);
+        await expect(page.locator('.nabi-prompt')).toHaveCount(0);
+        const bounds = (await panel.boundingBox())!;
+        if (mode === 'inline' && width === 390) {
+          expect(bounds.x).toBe(0);
+          expect(bounds.y).toBe(0);
+          expect(bounds.width).toBe(width);
+          expect(bounds.height).toBe(844);
+          await expect(page.locator('.nabi-toolbox')).toBeHidden();
+        } else if (mode === 'modal') {
+          expect(bounds.x).toBeGreaterThan(0);
+          expect(bounds.y).toBeGreaterThan(0);
+          await expect(page.locator('.nabi-scrim')).toHaveCSS('backdrop-filter', 'none');
+        } else {
+          const button = (await page.locator('#panel-toolbar .nabi-strip [data-name="img"]').boundingBox())!;
+          expect(bounds.y).toBeGreaterThanOrEqual(button.y + button.height);
+        }
+        if (modal) {
+          await expect(panel).toHaveAttribute('aria-modal', 'true');
+          await page.getByTestId('close-images').focus();
+          await page.keyboard.press('Tab');
+          await expect(page.getByRole('textbox', { name: 'Search recent images' })).toBeFocused();
+          await page.keyboard.press('Shift+Tab');
+          await expect(page.getByTestId('close-images')).toBeFocused();
+        }
+        await activate(page.getByTestId('owned-image'), width === 390);
+        await expect(panel).toHaveCount(0);
+        await expect(page.locator('#panel-surface img')).toHaveAttribute('src', '/owned.svg');
+        await expect(page.locator('[inert]')).toHaveCount(0);
+        expect(await events(page)).toEqual(['open:1', 'abort:1', 'returned:1', 'dispose:1']);
+      });
+      test('supports host close and Escape inside editor fullscreen', async ({ page }) => {
+        await setup(page, true, mode);
+        await openImages(page, width === 390);
+        await activate(page.getByTestId('close-images'), width === 390);
+        await expect(page.locator('.nabi-custom-panel')).toHaveCount(0);
+        await activate(page.locator('.nabi-compact-bar [data-name="fullscreen"]'), width === 390);
+        await openImages(page, width === 390);
+        await page.keyboard.press('Escape');
+        await expect(page.locator('.nabi-custom-panel')).toHaveCount(0);
+        await expect(page.locator('#panel-editor')).toHaveClass(/is-fullscreen/);
+        await expect(page.locator('[inert]')).toHaveCount(0);
+      });
+    });
+  }
+}
+
+test('inline mode respects the viewport breakpoint in a narrow wrap toolbar', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 844 });
+  await setup(page, true, 'inline');
+  await page.evaluate(async (entry) => {
+    const api = await import(/* @vite-ignore */ entry);
+    const state = (globalThis as unknown as { panelTest: PanelState }).panelTest;
+    state.toolbar.unmount();
+    const editor = document.getElementById('panel-editor')!;
+    editor.style.width = '360px';
+    const registry = api.createNabiWith(api.defaultWings).registry;
+    const toolbar = api.mountToolbar({
+      nabi: state.nabi,
+      registry,
+      root: document.getElementById('panel-toolbar')!,
+      surface: document.getElementById('panel-surface')!,
+      layout: 'wrap',
+      panels: {
+        img: {
+          mode: 'inline',
+          render(context: ToolbarPanelContext) {
+            state.current = context;
+          },
+        },
+      },
+    });
+    toolbar.buttons.find((button: { w: string }) => button.w === 'img')!.press();
+    Object.assign(state, { toolbar });
+  }, entry);
+  const panel = page.locator('.nabi-custom-panel');
+  await expect(panel).toBeVisible();
+  await expect(panel).toHaveCSS('position', 'absolute');
+  await expect(page.locator('.nabi-scrim')).toHaveCount(0);
+  expect((await panel.boundingBox())!.height).toBeGreaterThan(100);
+  await page.locator('#panel-editor').evaluate((editor) => {
+    editor.style.setProperty('--nabi-mobile-breakpoint', '1400px');
+  });
+  await expect(panel).toHaveCount(0);
+  await page.evaluate(() => {
+    (globalThis as unknown as { panelTest: PanelState }).panelTest.toolbar.buttons
+      .find((button) => button.w === 'img')!
+      .press();
+  });
+  await expect(page.locator('.nabi-custom-fullscreen')).toBeVisible();
+  expect((await panel.boundingBox())!.width).toBe(1280);
+  await page.setViewportSize({ width: 1440, height: 844 });
+  await expect(panel).toHaveCount(0);
+  await expect(page.locator('[inert]')).toHaveCount(0);
+});

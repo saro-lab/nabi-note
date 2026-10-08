@@ -27,6 +27,10 @@ This wing inserts an address into the document; it does not upload files. To sen
 
 Use `mountToolbar()` with `panels.img` to replace the image button's default URL prompt with your service's image picker. Keys are toolbar slot names; omitted tools retain their default prompts.
 
+`mode: 'modal'` opens a window over a full-page translucent backdrop. `mode: 'inline'` opens near the tool button on desktop and fills the screen on mobile. Mobile behavior is determined by viewport width and `--nabi-mobile-breakpoint`; crossing that threshold while an `inline` panel is open closes it.
+
+Both modes provide only an empty `root`, with no title, inputs, or buttons. Add your HTML or UI in `render`, connect the close button to `close()`, and connect image selection to `insertImage(url, 'pointer')`. Existing function entries (`img: renderer`) retain their display behavior.
+
 ```ts
 import { mountToolbar } from 'nabi-note'
 
@@ -36,16 +40,22 @@ const toolbar = mountToolbar({
   root: toolbarRoot,
   surface: content,
   panels: {
-    img: ({ root, signal, run }) =>
-      mountMyImagePicker(root, {
-        signal,
-        onSelect: (url: string) => run('insertImage', { src: url }),
-      }),
+    img: {
+      mode: 'inline',
+      render: ({ root, signal, close, insertImage }) =>
+        mountMyImagePicker(root, {
+          signal,
+          onClose: close,
+          onSelect: (url: string) => insertImage(url, 'pointer'),
+        }),
+    },
   },
 })
 ```
 
 `mountMyImagePicker` is a function you implement in your service. It synchronously creates your UI inside the supplied `root` and returns a cleanup function. Connect `signal` to asynchronous work such as loading an image list or uploading, and pass the selected image URL to `onSelect`. This API does not transfer files; the existing image URL policy still applies.
+
+`insertImage(src, by?)` is equivalent to `run('insertImage', { src }, by)`, including its return value and selection restoration rules. Omitting `by` uses `'keyboard'`. Do not make `render` an `async` function.
 
 Closing the panel or unmounting the toolbar aborts `signal` and calls the cleanup function. `run()` closes the panel and applies a command once at the selection captured when it opened. If the panel is already closed or the document content has changed since it opened, it returns `false` without executing the command.
 

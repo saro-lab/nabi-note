@@ -226,4 +226,95 @@ for (const reason of ['toggle', 'other-tool', 'escape', 'outside', 'resize', 'un
   f.dispose();
 }
 
+for (const mode of ['modal', 'inline'] as const) {
+  for (const mobile of [false, true]) {
+    let panel!: ToolbarPanelContext;
+    let cleaned = 0;
+    const f = fixture(
+      {
+        img: {
+          mode,
+          render(context) {
+            panel = context;
+            assert.equal(context.root.childElementCount, 0, 'host starts with an empty content root');
+            return () => {
+              cleaned += 1;
+            };
+          },
+        },
+      },
+      mobile,
+    );
+    const point = { path: [1], offset: 0 };
+    f.nabi.select({ anchor: point, focus: point });
+    f.press();
+    const modal = mode === 'modal' || mobile;
+    assert.equal(!!f.owner.querySelector('.nabi-scrim'), modal);
+    assert.equal(!!f.owner.querySelector('[aria-modal="true"]'), modal);
+    assert.equal(!!f.owner.querySelector('.nabi-custom-fullscreen'), mode === 'inline' && mobile);
+    assert.equal(f.surfaceRoot.closest('.nabi')!.hasAttribute('inert'), modal);
+    assert.equal(f.owner.querySelector('.nabi-prompt'), null);
+    assert.equal(panel.root.querySelector('button, input'), null);
+    f.nabi.select({ anchor: { path: [0], offset: 0 }, focus: { path: [0], offset: 0 } });
+    const { insertImage } = panel;
+    assert.equal(insertImage('/selected.png', 'pointer'), true);
+    const html = f.nabi.getHtml();
+    assert.ok(html.indexOf('target') < html.indexOf('<img') && html.indexOf('<img') < html.indexOf('last'));
+    assert.equal(cleaned, 1);
+    assert.equal(panel.signal.aborted, true);
+    assert.equal(insertImage('/duplicate.png'), false);
+    assert.equal(f.owner.querySelector('.nabi-scrim, [inert]'), null);
+    assert.equal(f.owner.activeElement, f.surfaceRoot);
+    f.press();
+    const { close } = panel;
+    close();
+    close();
+    assert.equal(cleaned, 2);
+    assert.equal(insertImage('/late.png'), false);
+    f.press();
+    f.nabi.setJson([{ w: 'p', ch: ['changed'] }]);
+    assert.equal(panel.insertImage('/stale.png'), false);
+    f.press();
+    assert.equal(panel.insertImage('javascript:alert(1)'), false);
+    assert.equal(f.nabi.getHtml().includes('<img'), false);
+    f.dispose();
+  }
+}
+
+for (const mode of ['modal', 'inline'] as const) {
+  for (const reason of ['escape', 'outside', 'unmount', 'error'] as const) {
+    let panel!: ToolbarPanelContext;
+    let cleaned = 0;
+    const f = fixture(
+      {
+        img: {
+          mode,
+          render(context) {
+            panel = context;
+            context.onDispose(() => {
+              cleaned += 1;
+            });
+            if (reason === 'error') throw new Error('render failed');
+          },
+        },
+      },
+      true,
+    );
+    if (reason === 'error') assert.throws(() => f.press(), /render failed/);
+    else {
+      f.press();
+      if (reason === 'escape')
+        panel.root.dispatchEvent(new f.dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      if (reason === 'outside')
+        f.owner.querySelector('.nabi-scrim')!.dispatchEvent(new f.dom.window.Event('pointerdown', { bubbles: true }));
+      if (reason === 'unmount') f.toolbar.unmount();
+    }
+    assert.equal(panel.signal.aborted, true);
+    assert.equal(cleaned, 1);
+    assert.equal(f.owner.querySelector('.nabi-scrim, .nabi-custom-panel, [inert]'), null);
+    assert.equal(panel.insertImage('/late.png'), false);
+    f.dispose();
+  }
+}
+
 console.log('toolbar panels: defaults, SSR, insertion, cancellation, rollback and host focus passed');

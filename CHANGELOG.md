@@ -7,6 +7,13 @@ Dates use Korea Standard Time (KST).
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-07
+
+### Added
+
+- Added `{ mode, render }` configuration and the `ToolbarPanelOptions` type to `mountToolbar()` panels. `modal` opens a window over a full-page translucent backdrop; `inline` opens near the tool button on desktop and fills the screen on mobile. Both modes provide an empty content root for callback-rendered HTML or framework UI. Existing function renderers retain their behavior. Updated the public AI documentation and the image guide in every web documentation locale with both modes and callback examples.
+- Added `insertImage(src, by?)` to the panel callback context. Connect custom close buttons to `close()` and image selection to `insertImage()`. Insertion closes the panel and restores its opening selection; closed panels and changed documents reject insertion. Modal focus containment, inert backgrounds, mobile viewport sizing, and teardown are handled by the package.
+
 ## [1.3.0] - 2026-10-04
 
 ### Added
@@ -90,6 +97,7 @@ Dates use Korea Standard Time (KST).
 - First stable release.
 
 [Unreleased]: https://github.com/saro-lab/nabi-note
+[1.3.1]: https://www.npmjs.com/package/nabi-note/v/1.3.1
 [1.3.0]: https://www.npmjs.com/package/nabi-note/v/1.3.0
 [1.2.0]: https://www.npmjs.com/package/nabi-note/v/1.2.0
 [1.1.2]: https://www.npmjs.com/package/nabi-note/v/1.1.2

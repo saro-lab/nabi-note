@@ -89,9 +89,9 @@ For complete assembly and IO examples, read `quickstart-npm.md`.
 
 For 1.1.0 and later builds, keep the same package version for JS, CSS, and `dist/icons/`. Manual hosting must copy the icons directory beside `nabi.css`; the local CDN demo already includes it. Keep `dist/browser/` relative to `dist/icons/` when using runtime CSS injection with the IIFE. The pinned 1.0.0 examples above describe the earlier baseline; icon themes and individual `showPreview`/`showFullscreen` options require 1.1.0 or later. See `icons.md`.
 
-## Compact layout in 1.3.0 builds
+## Toolbar configuration in 1.3.1 builds
 
-The pinned 1.0.0 examples above describe the earlier published baseline. To use the 1.3.0 toolbar contract, load a matching 1.3.0 JavaScript/CSS build from your own build or an available package version. This document does not claim that 1.3.0 has been published to a CDN.
+The pinned 1.0.0 examples above describe the earlier published baseline. To use the 1.3.1 toolbar contract, load a matching 1.3.1 JavaScript/CSS build from your own build or an available package version. This document does not claim that 1.3.1 has been published to a CDN.
 
 ```js
 const toolbar = N.mountToolbar({
@@ -110,6 +110,28 @@ Compact is the default. On desktop it shows all main-toolbar commands and wraps 
 With `N.mountHints({ toolbar, root: document.querySelector('#editor'), surface: content })`, double-Shift opens the mobile compact palette or focuses the visible toolbar on desktop and in fullscreen. Tab/Shift+Tab cycle groups, arrow keys move between icons, Enter/Space activate, and Escape returns to editing. Letter badges are no longer used; see `styling.md` for the complete navigation rules.
 
 The toolbar stays sticky at the top within its own editor on desktop and mobile, and scrolls out of view with that editor. Mobile selection/menu panels open from the toolbar within the available viewport space, while text-input prompts replace the toolbar row. See `styling.md` for the breakpoint, viewport, and physical-device IME validation limits.
+
+## Custom image panels in 1.3.1 builds
+
+When mounting the toolbar above, add `panels` to its options:
+
+```js
+panels: {
+  img: {
+    mode: 'inline',
+    render: ({ root, signal, close, insertImage }) =>
+      mountMyImagePicker(root, {
+        signal,
+        onClose: close,
+        onSelect: (url) => insertImage(url, 'pointer')
+      })
+  }
+}
+```
+
+`mountMyImagePicker` is your own synchronous renderer; it fills the empty `root` with HTML or framework UI and returns a cleanup function. Use `modal` for a window over a full-page translucent backdrop, or `inline` for a panel near the tool button on desktop that fills the screen on mobile. Viewport width and `--nabi-mobile-breakpoint` determine mobile behavior. No title, URL input, or buttons are generated. Function-only entries keep their previous display behavior.
+
+Connect custom controls to `close()` and `insertImage(url)`. Insertion closes the panel and uses the opening selection; a closed panel or changed document returns `false`. Use `signal` for asynchronous requests started inside the renderer, and do not make `render` itself async. See `quickstart-npm.md` and `api-reference.md` for cleanup and the full callback contract.
 
 ## Live language changes
 

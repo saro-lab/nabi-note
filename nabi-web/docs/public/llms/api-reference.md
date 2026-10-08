@@ -224,7 +224,7 @@ When several compact toolbars share one `nabi`, the most recently mounted toolba
 
 ### Host-rendered toolbar panels
 
-`ToolbarOptions.panels?: Readonly<Record<string, ToolbarPanelRenderer>>` replaces a tool's normal action with host-rendered panel content. Keys are `ToolbarSlot.name` values, such as `img` or a named button's `wing:name`. Omitted slots keep their normal behavior. The override applies to toolbar and palette buttons, `ToolbarButton.press()`, and the default accelerator action. A separate `WingButton.accelerated` declaration retains its explicit action. This is a browser mount option, not an option for `renderToolbarHtml()` or the image wing factory.
+`ToolbarOptions.panels?: Readonly<Record<string, ToolbarPanelRenderer | ToolbarPanelOptions>>` replaces a tool's normal action with host-rendered panel content. Keys are `ToolbarSlot.name` values, such as `img` or a named button's `wing:name`. Omitted slots keep their normal behavior. The override applies to toolbar and palette buttons, `ToolbarButton.press()`, and the default accelerator action. A separate `WingButton.accelerated` declaration retains its explicit action. This is a browser mount option, not an option for `renderToolbarHtml()` or the image wing factory.
 
 ```ts
 interface ToolbarPanelContext {
@@ -236,15 +236,25 @@ interface ToolbarPanelContext {
   close(): void;
   reposition(): void;
   run(command: string, args?: CommandArgs, by?: CommandHand): boolean;
+  insertImage(src: string, by?: CommandHand): boolean;
   onDispose(dispose: () => void): void;
 }
 
 type ToolbarPanelRenderer = (context: ToolbarPanelContext) => void | (() => void);
+
+interface ToolbarPanelOptions {
+  readonly mode: 'modal' | 'inline';
+  readonly render: ToolbarPanelRenderer;
+}
 ```
+
+An object entry selects `mode: 'modal'` for a centered window over a full-page translucent backdrop at every width, or `mode: 'inline'` for an anchored desktop panel and a fullscreen mobile dialog. Mobile uses viewport width below `--nabi-mobile-breakpoint`, even in a narrow desktop editor or editor fullscreen. An inline panel closes when it crosses the mobile breakpoint; reopen to use the new presentation. Both modes start with an empty content root: no title, close button, URL field, or submit button is generated. Connect host controls to `close()` and `insertImage(src, by?)`. Modal presentations contain focus, make the background inert, and follow the visual viewport when a keyboard changes the available area. A function entry keeps its previous floating/hosted placement.
 
 The renderer synchronously adds arbitrary host UI inside its dedicated `root`; it must not return a promise. The package owns the outer panel, its placement, focus, Escape/outside closing, and responsive teardown. Use `signal` for asynchronous work started by the renderer. Content resize triggers repositioning when `ResizeObserver` is available; call `reposition()` when an explicit refresh is needed. Do not replace the toolbar mount root or move the outer panel.
 
 Return a disposer for normal teardown, or call `onDispose()` immediately after side effects that need cleanup even if rendering later throws. Each registered function runs once, including when the same function is both registered and returned. Registering after closure disposes immediately. Closing the panel, opening another tool, changing compact/expanded mode, or unmounting aborts `signal` and runs cleanup. Renderer errors close the panel before being rethrown; cleanup failures are isolated.
+
+`insertImage(src, by?)` is a shortcut for `run('insertImage', { src }, by)` and shares its return value, one-shot behavior, URL validation, and saved-selection checks. Use `run()` directly for additional command arguments such as image width.
 
 `run()` closes the panel, restores surface focus and the selection captured at opening, then calls `nabi.applyCommand()`. It is one-shot even if the command fails. `by` defaults to `'keyboard'`; pass `'pointer'` when forwarding a pointer choice. A closed panel, an inactive toolbar, or document content that changed since opening returns `false` without applying the command; selection-only changes can be restored. Check the return value if the host needs to report that a choice was not inserted. Native URL validation still applies, and this hook does not upload files. See `quickstart-npm.md` for an image-picker example.
 
@@ -442,7 +452,7 @@ The root entry exports these public type names. Earlier sections and the topic d
 - Tree and editor: `AttrValue`, `Attrs`, `ElementNode`, `NabiNode`, `NabiDoc`, `Position`, `Selection`, `EditEnv`, `Command`, `CommandArgs`, `CommandHand`, `CommandOutcome`, `Nabi`, `NabiOptions`, `NabiChange`, `Ask`, `ChooseOption`, `Toast`, `ToastLevel`.
 - HTML and IO: `HtmlAttrs`, `HtmlBuilder`, `HtmlBuilders`, `HtmlContext`, `StoredHtmlOptions`, `ClipFile`, `PasteData`, `PasteCandidate`, `DocSource`, `IoFilter`, `MdContext`, `MdBuilder`, `MdBuilders`, `FileStore`, `NabiFileBody`, `NabiFileText`.
 - Surface and persistence mounts: `EditSurfacePort`, `Surface`, `SurfaceActions`, `SurfaceOptions`, `FileMount`, `FileMountOptions`, `SaveFormat`, `UploadMount`, `UploadOptions`, `UploadTask`, `Uploader`, `HistoryMount`, `HistoryMountOptions`, `HistoryRecord`, `HistoryStorage`, `HistoryView`.
-- UI: `Toolbar`, `ToolbarButton`, `ToolbarOptions`, `ToolbarPanelContext`, `ToolbarPanelRenderer`, `ContextGroupView`, `ContextToolbar`, `ContextToolbarOptions`, `HintOptions`, `Hints`, `PickedMark`, `PickedMarkOptions`, `Sticky`, `StickyOptions`, `ViewTools`, `ViewToolsOptions`, `PreviewOptions`, `LightboxOptions`, `Overlay`, `UploadView`, `UploadViewOptions`, `ChoosePanelOptions`, `HistoryPanelOptions`, `SavePanelOptions`, `Panel`, `PanelOptions`, `PromptField`, `PromptOptions`, `Settle`, `SettleOptions`, `ToolbarHtmlOptions`, `ToolbarSlot`, `ViewToolsVisibility`, `ViewToolsHtmlOptions`.
+- UI: `Toolbar`, `ToolbarButton`, `ToolbarOptions`, `ToolbarPanelContext`, `ToolbarPanelOptions`, `ToolbarPanelRenderer`, `ContextGroupView`, `ContextToolbar`, `ContextToolbarOptions`, `HintOptions`, `Hints`, `PickedMark`, `PickedMarkOptions`, `Sticky`, `StickyOptions`, `ViewTools`, `ViewToolsOptions`, `PreviewOptions`, `LightboxOptions`, `Overlay`, `UploadView`, `UploadViewOptions`, `ChoosePanelOptions`, `HistoryPanelOptions`, `SavePanelOptions`, `Panel`, `PanelOptions`, `PromptField`, `PromptOptions`, `Settle`, `SettleOptions`, `ToolbarHtmlOptions`, `ToolbarSlot`, `ViewToolsVisibility`, `ViewToolsHtmlOptions`.
 - Upload and code data: `UploadFile`, `UploadItem`, `UploadLimits`, `UploadReject`, `CodeDialect`, `CodeHighlighter`, `CodeToken`.
 - Locale: `Dictionary`, `LocaleText`, `Translator`, `LocaleInput`, `LocaleSource`, `LocaleController`.
 

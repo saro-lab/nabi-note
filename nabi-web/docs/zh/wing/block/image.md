@@ -27,6 +27,10 @@ const selected = wings().use('img', {
 
 通过 `mountToolbar()` 的 `panels.img`，可以将图片按钮默认的 URL 输入窗口替换为服务自己的图片选择器。键名使用工具栏槽位名称；未指定的工具保留默认输入窗口。
 
+`mode: 'modal'` 在覆盖整个屏幕的半透明背景上打开窗口。`mode: 'inline'` 在桌面端的工具按钮附近打开，在移动端则全屏显示。是否采用移动端显示由视口宽度和 `--nabi-mobile-breakpoint` 决定；如果打开的 `inline` 面板跨越该阈值，面板会关闭。
+
+两种模式都只提供空的 `root`，不创建标题、输入框或按钮。在 `render` 中加入所需的 HTML 或 UI，将关闭按钮连接到 `close()`，将图片选择连接到 `insertImage(url, 'pointer')`。原有的函数形式配置（`img: renderer`）保持原来的显示方式。
+
 ```ts
 import { mountToolbar } from 'nabi-note'
 
@@ -36,16 +40,22 @@ const toolbar = mountToolbar({
   root: toolbarRoot,
   surface: content,
   panels: {
-    img: ({ root, signal, run }) =>
-      mountMyImagePicker(root, {
-        signal,
-        onSelect: (url: string) => run('insertImage', { src: url }),
-      }),
+    img: {
+      mode: 'inline',
+      render: ({ root, signal, close, insertImage }) =>
+        mountMyImagePicker(root, {
+          signal,
+          onClose: close,
+          onSelect: (url: string) => insertImage(url, 'pointer'),
+        }),
+    },
   },
 })
 ```
 
 `mountMyImagePicker` 是由服务自行实现的函数。它在传入的 `root` 中同步创建所需 UI，并返回清理函数。加载图片列表或上传等异步任务应接入 `signal`，并将选中的图片 URL 传给 `onSelect`。此 API 不传输文件，图片 URL 仍遵循现有的允许规则。
+
+`insertImage(src, by?)` 等同于 `run('insertImage', { src }, by)`，返回值和选区恢复规则也相同。省略 `by` 时使用 `'keyboard'`。请勿将 `render` 写成 `async` 函数。
 
 关闭窗口或卸载工具栏时，`signal` 会中止，清理函数也会被调用。`run()` 关闭窗口，并在窗口打开时记录的选区上执行一次命令。如果窗口已经关闭，或者打开后文档内容发生了变化，则返回 `false`，不执行命令。
 

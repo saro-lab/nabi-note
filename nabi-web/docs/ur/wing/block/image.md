@@ -27,6 +27,10 @@ const selected = wings().use('img', {
 
 تصویر کے بٹن کی پہلے سے طے شدہ URL درج کرنے والی ونڈو کو اپنی سروس کی تصویر منتخب کرنے والی ونڈو سے بدلنے کے لیے `mountToolbar()` میں `panels.img` استعمال کریں۔ کلیدیں ٹول بار کے سلاٹ نام ہیں؛ جن ٹولز کو درج نہیں کیا گیا وہ اپنی پہلے سے طے شدہ ونڈوز برقرار رکھتے ہیں۔
 
+`mode: 'modal'` پوری اسکرین کو ڈھانپنے والے نیم شفاف پس منظر پر ونڈو کھولتا ہے۔ `mode: 'inline'` کمپیوٹر پر ٹول کے بٹن کے قریب اور موبائل پر پوری اسکرین میں کھلتا ہے۔ موبائل انداز کا تعین اسکرین کی چوڑائی اور `--nabi-mobile-breakpoint` سے ہوتا ہے؛ کھلا ہوا `inline` پینل اس حد کو عبور کرنے پر بند ہو جاتا ہے۔
+
+دونوں انداز صرف خالی `root` دیتے ہیں، عنوان، ان پٹ خانے یا بٹن نہیں بناتے۔ `render` میں اپنا HTML یا UI شامل کریں، بند کرنے کا بٹن `close()` سے اور تصویر کا انتخاب `insertImage(url, 'pointer')` سے جوڑیں۔ موجودہ فنکشن والی ترتیبات (`img: renderer`) اپنے سابقہ انداز میں دکھائی جاتی ہیں۔
+
 ```ts
 import { mountToolbar } from 'nabi-note'
 
@@ -36,16 +40,22 @@ const toolbar = mountToolbar({
   root: toolbarRoot,
   surface: content,
   panels: {
-    img: ({ root, signal, run }) =>
-      mountMyImagePicker(root, {
-        signal,
-        onSelect: (url: string) => run('insertImage', { src: url }),
-      }),
+    img: {
+      mode: 'inline',
+      render: ({ root, signal, close, insertImage }) =>
+        mountMyImagePicker(root, {
+          signal,
+          onClose: close,
+          onSelect: (url: string) => insertImage(url, 'pointer'),
+        }),
+    },
   },
 })
 ```
 
 `mountMyImagePicker` ایک فنکشن ہے جسے آپ اپنی سروس میں بناتے ہیں۔ یہ دیے گئے `root` میں آپ کا UI ہم وقت طور پر بناتا ہے اور صفائی کا فنکشن واپس کرتا ہے۔ تصاویر کی فہرست حاصل کرنے یا اپ لوڈ جیسے غیر ہم وقت کاموں سے `signal` جوڑیں اور منتخب تصویر کا URL، `onSelect` کو دیں۔ یہ API فائلیں منتقل نہیں کرتا؛ تصاویر کے URL کی اجازت کے موجودہ اصول لاگو رہتے ہیں۔
+
+`insertImage(src, by?)`، `run('insertImage', { src }, by)` کے برابر ہے، بشمول واپس آنے والی قدر اور انتخاب بحال کرنے کے اصول۔ `by` نہ دینے پر `'keyboard'` استعمال ہوتا ہے۔ `render` کو `async` فنکشن نہ بنائیں۔
 
 ونڈو بند کرنے یا ٹول بار ہٹانے پر `signal` منسوخ ہوتا ہے اور صفائی کا فنکشن چلتا ہے۔ `run()` ونڈو بند کرتا ہے اور کھلنے کے وقت محفوظ کیے گئے انتخاب پر کمانڈ ایک بار لاگو کرتا ہے۔ اگر ونڈو پہلے ہی بند ہو یا کھلنے کے بعد دستاویز کا مواد بدل گیا ہو تو کمانڈ چلائے بغیر `false` واپس کرتا ہے۔
 

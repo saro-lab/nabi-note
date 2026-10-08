@@ -19,7 +19,7 @@
     "@shikijs/langs": "^4.5.0",
     "@shikijs/themes": "^4.5.0",
     "minisearch": "^7.2.0",
-    "nabi-note": "file:nabi-note-1.3.0.tgz",
+    "nabi-note": "file:nabi-note-1.3.1.tgz",
     "shiki": "^4.5.0"
   },
   "devDependencies": {

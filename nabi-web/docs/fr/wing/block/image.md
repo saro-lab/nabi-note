@@ -27,6 +27,10 @@ Cette wing insère une adresse dans le document ; elle ne téléverse pas de fic
 
 Utilisez `panels.img` avec `mountToolbar()` pour remplacer la saisie d’URL par défaut du bouton image par le sélecteur d’images de votre service. Les clés sont les noms des emplacements de la barre d’outils ; les outils omis conservent leur fenêtre de saisie par défaut.
 
+`mode: 'modal'` ouvre une fenêtre sur un fond translucide couvrant toute la page. `mode: 'inline'` l’ouvre près du bouton de l’outil sur ordinateur et en plein écran sur mobile. La largeur de la fenêtre et `--nabi-mobile-breakpoint` déterminent l’affichage mobile ; si ce seuil est franchi alors qu’un panneau `inline` est ouvert, le panneau se ferme.
+
+Les deux modes fournissent uniquement un `root` vide, sans titre, champ de saisie ni bouton. Ajoutez votre HTML ou votre interface dans `render`, reliez le bouton de fermeture à `close()` et la sélection d’image à `insertImage(url, 'pointer')`. Les entrées sous forme de fonction (`img: renderer`) conservent leur mode d’affichage.
+
 ```ts
 import { mountToolbar } from 'nabi-note'
 
@@ -36,16 +40,22 @@ const toolbar = mountToolbar({
   root: toolbarRoot,
   surface: content,
   panels: {
-    img: ({ root, signal, run }) =>
-      mountMyImagePicker(root, {
-        signal,
-        onSelect: (url: string) => run('insertImage', { src: url }),
-      }),
+    img: {
+      mode: 'inline',
+      render: ({ root, signal, close, insertImage }) =>
+        mountMyImagePicker(root, {
+          signal,
+          onClose: close,
+          onSelect: (url: string) => insertImage(url, 'pointer'),
+        }),
+    },
   },
 })
 ```
 
 `mountMyImagePicker` est une fonction à implémenter dans votre service. Elle crée votre interface de façon synchrone dans le `root` fourni et renvoie une fonction de nettoyage. Reliez `signal` aux tâches asynchrones telles que le chargement d’une liste d’images ou le téléversement, puis transmettez l’URL de l’image choisie à `onSelect`. Cette API ne transfère pas de fichiers ; les règles existantes sur les URL d’images restent applicables.
+
+`insertImage(src, by?)` équivaut à `run('insertImage', { src }, by)`, y compris la valeur de retour et les règles de restauration de la sélection. Si `by` est omis, `'keyboard'` est utilisé. Ne définissez pas `render` comme une fonction `async`.
 
 Fermer le panneau ou démonter la barre d’outils interrompt `signal` et appelle la fonction de nettoyage. `run()` ferme le panneau et applique une commande une seule fois à la sélection enregistrée à son ouverture. Si le panneau est déjà fermé ou si le contenu du document a changé depuis son ouverture, il renvoie `false` sans exécuter la commande.
 

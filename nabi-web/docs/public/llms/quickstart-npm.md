@@ -76,18 +76,24 @@ const toolbar = mountToolbar({
   root: toolbarRoot,
   surface: content,
   panels: {
-    img: ({ root, signal, run }) =>
-      mountMyImagePicker(root, {
-        signal,
-        onSelect: (url: string) => run('insertImage', { src: url }),
-      }),
+    img: {
+      mode: 'inline',
+      render: ({ root, signal, close, insertImage }) =>
+        mountMyImagePicker(root, {
+          signal,
+          onClose: close,
+          onSelect: (url: string) => insertImage(url, 'pointer'),
+        }),
+    },
   },
 });
 ```
 
+Use `mode: 'modal'` for a window over a full-page translucent backdrop, or `mode: 'inline'` for a panel near the desktop tool button that fills the screen on mobile. Both modes provide an empty root with no built-in controls. Mobile behavior uses viewport width and `--nabi-mobile-breakpoint`; an open inline panel closes when that threshold is crossed. Function-only entries (`img: renderer`) retain their previous placement.
+
 `mountMyImagePicker` is supplied by your application, not NABI NOTE. It synchronously renders DOM or a framework component inside the given `root` and returns a cleanup function. Forward `signal` to asynchronous image-list or upload requests, and send the selected image URL to `onSelect`. The renderer itself must not be `async`. For effects that need cleanup if rendering throws midway, use the context's `onDispose()` as soon as each effect starts.
 
-The package manages panel positioning, closing, focus, and teardown. Closing or unmounting aborts the signal and calls cleanup. `run()` closes the panel and applies one command at the selection captured when it opened; a closed panel or changed document returns `false` without insertion. The image wing must be registered, and its URL policy is unchanged. This API does not transfer files. See `api-reference.md` for `ToolbarPanelContext`, and `io-security.md` for URL and upload boundaries.
+The package manages panel positioning, closing, focus, and teardown. Closing or unmounting aborts the signal and calls cleanup. `insertImage()` (or the generic `run()`) closes the panel and applies one command at the selection captured when it opened; a closed panel or changed document returns `false` without insertion. The image wing must be registered, and its URL policy is unchanged. This API does not transfer files. See `api-reference.md` for `ToolbarPanelContext`, and `io-security.md` for URL and upload boundaries.
 
 ## Change the UI language without resetting editing state
 

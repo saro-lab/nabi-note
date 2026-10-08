@@ -6,6 +6,7 @@ import { focusQuiet, make } from './dom.js';
 import { openPanel, type Panel } from './panel.js';
 import { mountToolboxKeyboard } from './toolbox-keyboard.js';
 import { Translations } from './translation.js';
+import { openToolbarPanelFrame } from './toolbar-panel-frame.js';
 
 export interface ToolbarPanelContext {
   readonly root: HTMLElement;
@@ -16,24 +17,31 @@ export interface ToolbarPanelContext {
   close(): void;
   reposition(): void;
   run(command: string, args?: CommandArgs, by?: CommandHand): boolean;
+  insertImage(src: string, by?: CommandHand): boolean;
   onDispose(dispose: Disposer): void;
 }
 
 export type ToolbarPanelRenderer = (context: ToolbarPanelContext) => void | Disposer;
 
-interface ToolbarPanelOptions {
+export interface ToolbarPanelOptions {
+  readonly mode: 'modal' | 'inline';
+  readonly render: ToolbarPanelRenderer;
+}
+
+interface OpenToolbarPanelOptions {
   readonly nabi: Nabi;
   readonly anchor: HTMLElement;
   readonly surface?: HTMLElement;
   readonly translator: Translator;
   readonly render: ToolbarPanelRenderer;
+  readonly mode?: ToolbarPanelOptions['mode'];
   readonly active: () => boolean;
   readonly closeForRun: (panel: Panel) => void;
   readonly onOpen: (panel: Panel) => void;
   readonly onClose: (panel: Panel) => void;
 }
 
-export function openToolbarPanel(options: ToolbarPanelOptions): void {
+export function openToolbarPanel(options: OpenToolbarPanelOptions): void {
   const { nabi, anchor, translator } = options;
   const owner = anchor.ownerDocument;
   const life = new DisposerStack();
@@ -67,12 +75,13 @@ export function openToolbarPanel(options: ToolbarPanelOptions): void {
     },
   };
   try {
-    panel = openPanel(owner, {
+    const frame = {
       anchor,
       className: 'nabi-custom-panel',
       restore: options.surface ?? null,
       onClose: finish,
-    });
+    };
+    panel = options.mode ? openToolbarPanelFrame(owner, frame, options.mode) : openPanel(owner, frame);
     if (closed) return;
     // 포커스가 떠날 때 IME 조합이 확정되므로 그 뒤의 문서와 선택을 보관한다.
     // Leaving the surface commits IME composition, so capture the document and selection afterward.
@@ -107,6 +116,19 @@ export function openToolbarPanel(options: ToolbarPanelOptions): void {
         } catch {}
       } else life.add(dispose);
     };
+    const run = (command: string, args?: CommandArgs, by?: CommandHand): boolean => {
+      if (closed || closing || !options.active()) return false;
+      options.closeForRun(instance);
+      // 문서가 바뀌면 같은 경로도 다른 글을 가리킬 수 있어 예전 선택을 되살리지 않는다.
+      // After an edit, the same path can target different text, so an old selection must not be restored.
+      if (!options.active() || hostOf(nabi).doc() !== doc) return false;
+      focusQuiet(options.surface);
+      if (hostOf(nabi).doc() !== doc) return false;
+      nabi.select(selection);
+      if (!options.active() || hostOf(nabi).doc() !== doc) return false;
+      if (!sameSelection(nabi.getSelection(), selection)) return false;
+      return nabi.applyCommand(command, args, by);
+    };
     const dispose = options.render({
       root,
       anchor,
@@ -115,19 +137,8 @@ export function openToolbarPanel(options: ToolbarPanelOptions): void {
       signal: controller.signal,
       close: () => instance.close(),
       reposition: () => instance.reposition(),
-      run(command, args, by) {
-        if (closed || closing || !options.active()) return false;
-        options.closeForRun(instance);
-        // 문서가 바뀌면 같은 경로도 다른 글을 가리킬 수 있어 예전 선택을 되살리지 않는다.
-        // After an edit, the same path can target different text, so an old selection must not be restored.
-        if (!options.active() || hostOf(nabi).doc() !== doc) return false;
-        focusQuiet(options.surface);
-        if (hostOf(nabi).doc() !== doc) return false;
-        nabi.select(selection);
-        if (!options.active() || hostOf(nabi).doc() !== doc) return false;
-        if (!sameSelection(nabi.getSelection(), selection)) return false;
-        return nabi.applyCommand(command, args, by);
-      },
+      run,
+      insertImage: (src, by) => run('insertImage', { src }, by),
       onDispose,
     });
     if (dispose !== undefined) {
