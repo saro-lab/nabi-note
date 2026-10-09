@@ -4,8 +4,13 @@ import { make } from './dom.js';
 import { openPanel, type Panel, type PanelOptions } from './panel.js';
 import { openScrim } from './scrim.js';
 
-export function openToolbarPanelFrame(owner: Document, options: PanelOptions, mode: 'modal' | 'inline'): Panel {
-  if (mode !== 'modal' && mode !== 'inline') throw new TypeError('Unknown toolbar panel mode');
+export function openToolbarPanelFrame(
+  owner: Document,
+  options: PanelOptions,
+  mode: 'modal' | 'inline' | 'mobile-modal',
+): Panel {
+  if (mode !== 'modal' && mode !== 'inline' && mode !== 'mobile-modal')
+    throw new TypeError('Unknown toolbar panel mode');
   const life = new DisposerStack();
   const view = owner.defaultView;
   const visual = view?.visualViewport;
@@ -32,7 +37,7 @@ export function openToolbarPanelFrame(owner: Document, options: PanelOptions, mo
     const mobile = narrow();
     const refresh = (): void => {
       if (closed) return;
-      if (mode === 'inline' && narrow() !== mobile) panel?.close();
+      if (mode !== 'modal' && narrow() !== mobile) panel?.close();
       else panel?.reposition();
     };
     view?.addEventListener('resize', refresh);
@@ -42,14 +47,15 @@ export function openToolbarPanelFrame(owner: Document, options: PanelOptions, mo
       life.add(() => observer.disconnect());
       observer.observe(probe);
     }
-    if (mode === 'inline' && !mobile) {
+    if (mode !== 'modal' && !mobile) {
       panel = openPanel(owner, {
         ...options,
-        className: `${options.className ?? ''} nabi-custom-panel-inline`,
+        className: `${options.className ?? ''}${mode === 'inline' ? ' nabi-custom-panel-inline' : ''}`,
         onClose: finish,
       });
     } else {
       const root = make(owner, 'div', `nabi-card ${options.className ?? ''} nabi-custom-panel-modal`);
+      if (mode === 'mobile-modal') root.classList.add('nabi-narrow');
       const expanded = options.anchor.getAttribute('aria-expanded');
       life.add(() => {
         if (expanded === null) options.anchor.removeAttribute('aria-expanded');

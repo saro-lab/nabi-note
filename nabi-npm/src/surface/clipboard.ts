@@ -13,6 +13,7 @@ import {
 } from '../doc/index.js';
 import { ordered, type Selection } from '../caret/index.js';
 import { isElement, isWrapper, type ElementNode, type NabiDoc, type NabiNode } from '../schema/index.js';
+import { tableClipboardOf } from '../wings/table/clipboard.js';
 
 const samePath = (a: readonly number[], b: readonly number[]): boolean =>
   a.length === b.length && a.every((value, index) => value === b[index]);
@@ -24,6 +25,8 @@ const copyElement = (node: ElementNode, ch: readonly NabiNode[]): ElementNode =>
 });
 
 export function clipboardBodyOf(doc: NabiDoc, selection: Selection, env: EditEnv): readonly ElementNode[] {
+  const table = tableClipboardOf(doc, selection);
+  if (table) return table.body;
   const [start, end] = ordered(selection);
   if (comparePositions(start, end) === 0) return [];
   const terminal = terminalOf(env);

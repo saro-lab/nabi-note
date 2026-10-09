@@ -14,6 +14,7 @@ import { TOOLBAR_GROUPS as GROUP_ORDER, renderToolbarHtml, toolbarSlots } from '
 import { openPanel, type Panel } from './parts/panel.js';
 import { openPrompt } from './parts/prompt.js';
 import { openToolbarPanel, type ToolbarPanelOptions, type ToolbarPanelRenderer } from './parts/toolbar-panel.js';
+import { openToolbarPanelFrame } from './parts/toolbar-panel-frame.js';
 import { watchSettle, type Settle } from './parts/settle.js';
 import { mountToast, type ToastMount } from './toast.js';
 import { openChoosePanel } from './choose.js';
@@ -232,11 +233,18 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
 
     // 격자 — 행·열 두 수를 한 몸짓으로 (표 삽입).
     const openGrid = (anchor: HTMLButtonElement, action: Extract<WingAction, { kind: 'grid' }>): void => {
+      compact?.close(false);
       const max = action.max ?? 8;
       const labels = new Translations(t);
-      const panel = openPanel(owner, { anchor, restore: options.surface ?? null, onClose: () => labels.dispose() });
+      const panel = openToolbarPanelFrame(
+        owner,
+        { anchor, className: 'nabi-grid-panel', restore: options.surface ?? null, onClose: () => labels.dispose() },
+        'mobile-modal',
+      );
       picker = panel;
       labels.attribute(panel.root, 'dir', () => localeDirection(t.locale));
+      labels.attribute(panel.root, 'aria-label', () => anchor.getAttribute('aria-label') ?? '');
+      const limit = panel.root.classList.contains('nabi-narrow') ? Math.min(max, 5) : max;
       const grid = make(owner, 'div', 'nabi-grid');
       grid.style.gridTemplateColumns = `repeat(${max}, auto)`;
       const readout = make(owner, 'div', 'nabi-readout');
@@ -257,6 +265,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
         const r = Math.floor(i / max) + 1;
         const c = (i % max) + 1;
         const cell = make(owner, 'button', 'nabi-cell', { type: 'button', tabindex: '-1' }) as HTMLButtonElement;
+        labels.attribute(cell, 'aria-label', () => t.t('gridSize', { rows: r, cols: c }));
         suppressMousedownTap(cell);
         cell.addEventListener('mouseenter', () => {
           rows = r;
@@ -272,8 +281,8 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
       panel.root.addEventListener('keydown', (event) => {
         const key = (event as KeyboardEvent).key;
         const step = (dr: number, dc: number): void => {
-          rows = Math.min(max, Math.max(1, rows + dr));
-          cols = Math.min(max, Math.max(1, cols + dc));
+          rows = Math.min(limit, Math.max(1, rows + dr));
+          cols = Math.min(limit, Math.max(1, cols + dc));
           paint();
         };
         if (key === 'ArrowDown') step(1, 0);
@@ -287,7 +296,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
       });
 
       labels.add(paint);
-      panel.root.focus();
+      focusQuiet(panel.root);
     };
 
     // 물어보기 — 주소·이름을 받아 커맨드 하나.

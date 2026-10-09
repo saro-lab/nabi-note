@@ -37,10 +37,12 @@ Use this file as a router. Read only the document that owns your question.
 - The full palette contains registered wing buttons only, without duplicate view controls or added undo/redo controls. The full palette has zero padding/gaps; the property row has separate padding and group spacing. Toolbar buttons use 32px and icons use 14px on desktop and mobile at the default root font size. The mobile compact row is 36px high; property swatches, inputs, and range controls are 28px high. See `llms/styling.md`.
 - Narrow UI starts strictly below `36rem`; override `--nabi-mobile-breakpoint` in CSS. The default toolbar expands based on viewport width, so a narrow desktop editor still shows all tools. Toolbars stay sticky at the top within their own editor on desktop and mobile, and leave view when that editor scrolls past (see `llms/styling.md`).
 - Mobile Tools and selection/menu panels open immediately in the available space around the toolbar and its property row and move focus into the panel, without waiting for the keyboard to close. The property row itself stays in normal flow. `mountSticky()` keeps tracking viewport offsets during keyboard closure so the first tap also works after scrolling. See `llms/styling.md`.
+- The table size picker is a mobile exception: it closes the Tools palette and opens a centered layer over a translucent backdrop, following the visual viewport. Selecting a size inserts one table and closes the picker; outside interaction or Escape cancels it. Desktop keeps an anchored picker. See `llms/wings.md` and `llms/styling.md`.
 - Keyboard opening preserves an already visible caret below a pinned toolbar. Viewport position changes alone do not restart correction after a user scroll. Focusing or navigating tool panels scrolls within the tool area without moving the outer page.
 - Updating an already focused property control preserves its focus after refresh instead of returning to the document, avoiding unwanted keyboard reopening and caret scrolling.
 - On iOS, icon buttons handle a completed short, single-touch tap directly and cancel its compatibility click. The touchend handler does not turn scrolling, multitouch, or long presses into command taps; native document selection menus remain available. See `llms/styling.md`.
 - Store `nabi.getJson()` or `nabi.getHtml()`. Never store `getEditorHtml()`. HTML output and clipboard fragments protect leading spaces, including partial selections; see `llms/document-model.md`.
+- Table cell-range copy/cut uses the highlighted rectangle, including its final cell, instead of the linear DOM range. Internal clipboard data and HTML retain empty cells, spans, and inline formatting; plain text contains only the selected cells, separated by tabs and newlines. Cut clears only those cells and is one undo step. See `llms/io-security.md`.
 - Treat HTML, JSON, paste data, command args, and custom filter output as untrusted input.
 - Use `NabiOptions.onError` for isolated command and callback failure reporting.
 - Default tool input prompts (image, YouTube, link, and object properties such as code language) use plain nonmodal panels, without a full-page scrim, blur, or inert background. Preview, lightbox, and full dialogs keep their separate modal layer.
@@ -51,7 +53,7 @@ Use this file as a router. Read only the document that owns your question.
 
 ## Package facts
 
-- Package contract documented here: 1.3.1 (working version; not a publication claim).
+- Package contract documented here: 1.3.2 (working version; not a publication claim).
 - Runtime dependencies: zero.
 - Node.js for package tooling and SSR: 20 or newer.
 - Declared browser baseline: Chrome and Edge 120, Firefox 120, Safari 17.

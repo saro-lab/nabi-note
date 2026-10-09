@@ -965,6 +965,7 @@ export const CORE_CSS = `${ICON_CSS}
 .nabi-preview { min-block-size: min(50dvh, 100%); }
 .nabi-custom-scrim { box-sizing: border-box; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .nabi-custom-panel-modal { box-sizing: border-box; inline-size: 40rem; min-block-size: min(20rem, 100%); }
+.nabi-grid-panel.nabi-custom-panel-modal { inline-size: fit-content; min-block-size: 0; padding: .75rem; }
 .nabi-custom-fullscreen { padding: 0; }
 .nabi-custom-fullscreen > .nabi-custom-panel-modal { inline-size: 100%; block-size: 100%; border: 0; border-radius: 0; }
 /* 반투명 동그라미 하나만 남긴다 — 제목 줄을 없애 카드 전체를 내용이 그대로 쓴다

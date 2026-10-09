@@ -18,7 +18,6 @@ import {
   $columnGapWidths,
   SPAN_COL,
   SPAN_ROW,
-  boxBetween,
   cellCovering,
   cellGrid,
   cellsInBox,
@@ -32,6 +31,8 @@ import {
   type TableGrid,
 } from './grid.js';
 import { emptyCell, emptyCells, headerCell } from './helpers.js';
+import { cellCtxOf, selectionBox, type CellCtx } from './selection.js';
+export { selectionBox } from './selection.js';
 export const TH = 'th';
 export const SORTABLE = 'sort';
 function rebuilt(node: ElementNode, ch: readonly NabiNode[]): ElementNode {
@@ -174,29 +175,6 @@ export function repairTable(table: ElementNode): ElementNode {
   return padded ? rebuilt(clamped, ch) : clamped;
 }
 
-interface CellCtx {
-  readonly tablePath: readonly number[];
-  readonly table: ElementNode;
-  readonly grid: TableGrid;
-  readonly cell: GridCell;
-}
-
-function cellCtxOf(doc: readonly ElementNode[], pos: Position): CellCtx | null {
-  for (let depth = pos.path.length; depth >= 1; depth -= 1) {
-    const at = pos.path.slice(0, depth);
-    const node = nodeAt(doc, at);
-    if (!node || node.w !== 'table') continue;
-    const trIndex = pos.path[depth];
-    const tdIndex = pos.path[depth + 1];
-    if (trIndex === undefined || tdIndex === undefined) return null;
-    const grid = cellGrid(node);
-    const cell = grid.cells.find((item) => item.trIndex === trIndex && item.tdIndex === tdIndex);
-    if (!cell) return null;
-    return { tablePath: at, table: node, grid, cell };
-  }
-  return null;
-}
-
 // 칸의 문단 첫 자리 — repair가 "칸 = 문단 하나"를 보장하므로 문단 인덱스는 0이다.
 // A cell's first paragraph position — always index 0, since repair guarantees "one cell = one paragraph".
 function caretInCell(tablePath: readonly number[], cell: GridCell, offset = 0): Position {
@@ -325,35 +303,6 @@ function deleteColumnAt(table: ElementNode, line: number): ElementNode | null {
     if (item.colSpan === 1) return null;
     return withSpans(item.cell, item.colSpan - 1, item.rowSpan);
   });
-}
-
-// 선택이 걸친 두 칸 — 같은 표 안일 때만.
-// The two cells a selection spans — only when both sit in the same table.
-function cellsOfSelection(
-  doc: readonly ElementNode[],
-  sel: Selection,
-): { readonly ctx: CellCtx; readonly other: GridCell } | null {
-  const [start, end] = ordered(sel);
-  const a = cellCtxOf(doc, start);
-  const b = cellCtxOf(doc, end);
-  if (!a || !b) return null;
-  if (a.tablePath.length !== b.tablePath.length || !a.tablePath.every((v, i) => v === b.tablePath[i])) return null;
-  // 격자는 호출마다 새로 지어지므로 칸 노드 참조로 같음을 판정한다.
-  // The grid is rebuilt on every call, so equality is checked by cell node reference, not grid identity.
-  if (a.cell.cell === b.cell.cell) return null;
-  return { ctx: a, other: b.cell };
-}
-
-// 병합 상자의 칸들 — 화면 칠(부속)과 병합 커맨드가 같은 판정을 쓴다.
-// The cells of a merge box — the on-screen paint (attach) and the merge command share this exact same test.
-export function selectionBox(
-  doc: readonly ElementNode[],
-  sel: Selection,
-): { readonly tablePath: readonly number[]; readonly box: GridBox; readonly cells: readonly GridCell[] } | null {
-  const found = cellsOfSelection(doc, sel);
-  if (!found) return null;
-  const box = boxBetween(found.ctx.grid, found.ctx.cell, found.other);
-  return { tablePath: found.ctx.tablePath, box, cells: cellsInBox(found.ctx.grid, box) };
 }
 
 // 상자의 칸들을 왼쪽 위 칸 하나로 — 글은 라인으로 이어 남는다.

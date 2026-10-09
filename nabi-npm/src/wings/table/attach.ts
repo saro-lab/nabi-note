@@ -6,7 +6,7 @@
 import { isCollapsed } from '../../caret/index.js';
 import type { Attach } from '../../wing/index.js';
 import type { Position } from '../../doc/index.js';
-import { selectionBox } from './table.js';
+import { selectionBox } from './selection.js';
 
 // 편집 화면 전용 표식 — 트리·저장 HTML 어디에도 안 실린다(칠은 redraw마다 다시 선다).
 // An editor-screen-only flag — never lands in the tree or saved HTML; repainted fresh on every redraw.

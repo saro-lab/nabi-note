@@ -7,7 +7,8 @@ import { caretAt, isCollapsed, ordered, sameSelection, selectObject, type Select
 import { localeDirection, localeValue, makeTranslator } from '../locale/index.js';
 import { hostOf, type Nabi, type NabiChange } from '../editor/index.js';
 import type { Registry } from '../wing/index.js';
-import { FILLER_ATTR, renderEditorHtml, renderParagraphHtml, type HtmlOptions } from '../html/index.js';
+import { FILLER_ATTR, renderEditorHtml, renderHtml, renderParagraphHtml, type HtmlOptions } from '../html/index.js';
+import { cutTableSelection, tableClipboardOf } from '../wings/table/clipboard.js';
 import type { IoFilter } from '../io/index.js';
 import { makeSurfaceActions, type SurfaceActions } from './actions.js';
 import { diffPlain, holderTextOf } from './text.js';
@@ -973,19 +974,23 @@ export function mountSurface(options: SurfaceOptions): Surface {
       if (!root.contains(range.commonAncestorContainer)) return;
       const cutting = ev.type === 'cut';
       if (cutting) ev.preventDefault();
-      const html = clipHtmlOf(range, root, owner);
+      const table = tableClipboardOf(doc(), nabi.getSelection());
+      const html = table ? renderHtml(table.body, htmlOptions) : clipHtmlOf(range, root, owner);
       const cd = ev.clipboardData;
       if (!cd) return;
       // 맨 글자는 Selection.toString()이 먼저다(블록 사이 줄바꿈은 그것만 안다) — user-select:none이 걸린 봉해진 첨부에서는 그게 빈 글자라 CSS를 안 보는 Range.toString()으로 받친다
       // Plain text prefers Selection.toString() (only it knows about newlines between blocks); over a sealed attachment with user-select:none it comes back empty, so Range.toString() (which ignores CSS) backs it up
-      const plain = s.toString() || range.toString();
-      const body = $toJson(clipboardBodyOf(doc(), nabi.getSelection(), env));
+      const plain = table?.plain ?? (s.toString() || range.toString());
+      const body = $toJson(table?.body ?? clipboardBodyOf(doc(), nabi.getSelection(), env));
       const written = loadClipboard(cd, body, html, plain);
       if (!written) return;
       if (!cutting) ev.preventDefault();
       // preventDefault를 했으니 브라우저의 deleteByCut이 안 온다 — 지우는 것도 우리 몫이다
       // Having called preventDefault, the browser's deleteByCut never fires, so deletion is our responsibility too
-      if (cutting) nabi.applyCommand('deleteRange');
+      if (cutting) {
+        if (table) hostOf(nabi).applyRaw(cutTableSelection, 'deleteRange');
+        else nabi.applyCommand('deleteRange');
+      }
     };
 
     const onDrop = (ev: DragEvent): void => {

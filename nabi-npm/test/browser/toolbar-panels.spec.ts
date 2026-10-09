@@ -144,6 +144,100 @@ for (const width of [1280, 390]) {
       await expect(page.locator('.nabi-prompt')).toHaveCount(0);
     });
 
+    async function openTable(page: Page): Promise<void> {
+      const tools = page.locator('#panel-toolbar [data-name="tools"]');
+      if (await tools.isVisible()) {
+        await activate(tools, mobile);
+        await activate(page.locator('.nabi-toolbox-icons [data-name="table"]'), mobile);
+      } else await activate(page.locator('#panel-toolbar .nabi-strip [data-name="table"]'), mobile);
+    }
+
+    test('table size selection inserts once and dismisses the picker', async ({ page }) => {
+      await setup(page, false);
+      await openTable(page);
+      const panel = page.locator('.nabi-grid-panel');
+      await expect(panel).toBeVisible();
+      await expect(panel).toBeFocused();
+      await expect(panel.locator('.nabi-cell:visible')).toHaveCount(mobile ? 25 : 64);
+      if (mobile) {
+        await expect(panel).toHaveAttribute('aria-modal', 'true');
+        await expect(page.locator('.nabi-toolbox')).toBeHidden();
+        const box = (await panel.boundingBox())!;
+        expect(box.x + box.width / 2).toBeCloseTo(width / 2, 0);
+        expect(box.y + box.height / 2).toBeCloseTo(844 / 2, 0);
+      } else await expect(page.locator('.nabi-scrim')).toHaveCount(0);
+
+      await activate(panel.locator('.nabi-cell').nth(10), mobile);
+      await expect(panel).toHaveCount(0);
+      await expect(page.locator('.nabi-scrim, [inert]')).toHaveCount(0);
+      const table = page.locator('#panel-surface table');
+      await expect(table).toHaveCount(1);
+      await expect(table.locator('tr')).toHaveCount(2);
+      await expect(table.locator('tr').first().locator('th, td')).toHaveCount(3);
+      await expect(page.locator('#panel-surface')).toBeFocused();
+      const html = await page.evaluate(() =>
+        (globalThis as unknown as { panelTest: PanelState }).panelTest.nabi.getHtml(),
+      );
+      expect(html.indexOf('one')).toBeLessThan(html.indexOf('<table'));
+      expect(html.indexOf('<table')).toBeLessThan(html.indexOf('another paragraph'));
+    });
+
+    test('table picker cancels cleanly and closes after keyboard selection', async ({ page }) => {
+      await setup(page, false);
+      const panel = page.locator('.nabi-grid-panel');
+      await openTable(page);
+      await page.keyboard.press('Escape');
+      await expect(panel).toHaveCount(0);
+      await expect(page.locator('.nabi-scrim, [inert]')).toHaveCount(0);
+      await expect(page.locator('#panel-surface table')).toHaveCount(0);
+      await openTable(page);
+      if (mobile) await page.locator('.nabi-scrim').tap({ position: { x: 5, y: 800 } });
+      else await page.locator('#outside-panel').click();
+      await expect(panel).toHaveCount(0);
+      await expect(page.locator('#panel-surface table')).toHaveCount(0);
+      await openTable(page);
+      for (let i = 0; i < 8; i += 1) {
+        await page.keyboard.press('ArrowDown');
+        await page.keyboard.press('ArrowRight');
+      }
+      await page.keyboard.press('Enter');
+      await expect(panel).toHaveCount(0);
+      await expect(page.locator('.nabi-scrim, [inert]')).toHaveCount(0);
+      const table = page.locator('#panel-surface table');
+      await expect(table).toHaveCount(1);
+      await expect(table.locator('tr')).toHaveCount(mobile ? 5 : 8);
+      await expect(table.locator('tr').first().locator('th, td')).toHaveCount(mobile ? 5 : 8);
+    });
+
+    if (mobile) {
+      test('table layer follows the viewport in fullscreen and cleans up on resize and unmount', async ({ page }) => {
+        await setup(page, false);
+        await activate(page.locator('.nabi-compact-bar [data-name="fullscreen"]'), true);
+        await openTable(page);
+        const panel = page.locator('.nabi-grid-panel');
+        await expect(panel).toHaveAttribute('aria-modal', 'true');
+        await page.setViewportSize({ width: 390, height: 600 });
+        await expect
+          .poll(async () => {
+            const box = (await panel.boundingBox())!;
+            return Math.abs(box.y + box.height / 2 - 300);
+          })
+          .toBeLessThan(1);
+        await page.keyboard.press('Escape');
+        await expect(panel).toHaveCount(0);
+        await expect(page.locator('#panel-editor')).toHaveClass(/is-fullscreen/);
+        await openTable(page);
+        await page.setViewportSize({ width: 800, height: 600 });
+        await expect(panel).toHaveCount(0);
+        await expect(page.locator('.nabi-scrim, [inert]')).toHaveCount(0);
+        await page.setViewportSize({ width: 390, height: 844 });
+        await openTable(page);
+        await page.evaluate(() => (globalThis as unknown as { panelTest: PanelState }).panelTest.toolbar.unmount());
+        await expect(panel).toHaveCount(0);
+        await expect(page.locator('.nabi-scrim, [inert]')).toHaveCount(0);
+      });
+    }
+
     test('YouTube and link prompts leave the page interactive and dismiss on outside input', async ({ page }) => {
       await setup(page, false);
       await page.evaluate(() => {

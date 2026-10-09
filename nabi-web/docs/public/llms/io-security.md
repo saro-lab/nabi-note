@@ -83,6 +83,8 @@ Dropping the subtree prevents script/style text from reappearing as document tex
 
 Clipboard custom data uses `application/vnd.nabi.tree+json` with the exact envelope `{ version: 1, body: [...] }`. Copy and cut attempt custom MIME, `text/html`, and `text/plain` independently. Paste priority is valid supported custom data, safe built-in HTML, then plain text. Every candidate is normalized and validated. A host filter cannot shadow the reserved built-in IDs `nabi`, `html`, `markdown`, or `text`.
 
+When a selection spans different cells in the same table, copy and cut use the same rectangle as the highlighted cell selection, including any merged cells that expand that rectangle. They do not copy intervening cells outside the rectangle or omit the final cell. Custom data and HTML preserve the selected rows, empty cells, header cells, spans, and inline formatting. Plain text separates the selected cells with tabs and rows with newlines. Cut clears only selected cell contents, preserves table structure and other cells, and restores the contents in one undo step. Failed clipboard writes do not clear the source. Partial text selections within one cell retain ordinary text-selection behavior.
+
 For ordinary non-HTML input where multiple custom candidates apply, `ask.choose` or the bound choose UI selects a positional index. An invalid index cancels. Markdown is offered only when the text looks like Markdown and registered wings can represent at least one detected construct.
 
 A paste containing any text HTML/plain data is treated as content paste. Its files do not go to `fileSink`. File-only paste and drop may go to `fileSink`.

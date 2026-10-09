@@ -49,6 +49,10 @@ A heading remains a `p` tree node. Heading, alignment, and drop cap are not sepa
 
 `tableWings` is an array containing the assembled table wing. Code coloring can be replaced with `{ ...codeWing, attach: makeCodeAttach({ highlight, version }) }`. The token DOM is transient and composition-aware.
 
+Below the viewport's `--nabi-mobile-breakpoint`, the table button closes the Tools palette and opens a centered size picker over a translucent backdrop. It follows the visual viewport and shows a 5x5 grid with touch-sized cells, including in fullscreen and `layout: 'wrap'`. Selecting a size inserts one table at the current editing selection and closes the picker. Escape or an outside interaction cancels without inserting. Arrow keys stay within the visible grid; Enter or Space confirms. Desktop keeps its existing nonmodal picker.
+
+Copying a cell range uses its highlighted rectangle, including merged-cell expansion, in every clipboard format. Internal data and HTML preserve the cropped table structure and formatting; plain text contains only the selected cell contents. Cutting the range clears only those cells and supports one-step undo. A text selection inside a single cell keeps ordinary text-copy behavior. See `io-security.md`.
+
 ## Void objects
 
 | `w` | Export | Notes |

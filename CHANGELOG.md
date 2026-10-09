@@ -7,6 +7,18 @@ Dates use Korea Standard Time (KST).
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-10-10
+
+### Changed
+
+- On mobile, the table wing opens its size picker in the center of the screen over a translucent backdrop. Selecting a size inserts the table and closes the picker; tapping outside or pressing Escape cancels it.
+
+### Fixed
+
+- Fixed the mobile table size picker remaining open after a size was selected.
+- Fixed partial table copies including unselected cells and omitting the final selected cell. Internal data, HTML, and plain text now follow the highlighted rectangle. Internal data and HTML preserve empty cells, merges, header cells, and formatting; plain text separates the selected cell contents with tabs and newlines.
+- Fixed cutting a table cell range to clear only the selected cell contents while preserving the table structure and other cells. One undo step restores the contents, and failed clipboard writes leave the source intact.
+
 ## [1.3.1] - 2026-10-07
 
 ### Added
@@ -97,6 +109,7 @@ Dates use Korea Standard Time (KST).
 - First stable release.
 
 [Unreleased]: https://github.com/saro-lab/nabi-note
+[1.3.2]: https://www.npmjs.com/package/nabi-note/v/1.3.2
 [1.3.1]: https://www.npmjs.com/package/nabi-note/v/1.3.1
 [1.3.0]: https://www.npmjs.com/package/nabi-note/v/1.3.0
 [1.2.0]: https://www.npmjs.com/package/nabi-note/v/1.2.0
