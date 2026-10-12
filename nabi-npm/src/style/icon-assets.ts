@@ -159,6 +159,14 @@ export const ICON_ASSETS: Readonly<Record<string, readonly [string, string]>> = 
     new URL('./icons/quote-quote.svg?no-inline', import.meta.url).href,
     new URL('./icons/quote-quote-dark.svg?no-inline', import.meta.url).href,
   ],
+  'float-float': [
+    new URL('./icons/float-float.svg?no-inline', import.meta.url).href,
+    new URL('./icons/float-float-dark.svg?no-inline', import.meta.url).href,
+  ],
+  'float-unwrap': [
+    new URL('./icons/float-unwrap.svg?no-inline', import.meta.url).href,
+    new URL('./icons/float-unwrap-dark.svg?no-inline', import.meta.url).href,
+  ],
   'sort-ascending': [
     new URL('./icons/sort-ascending.svg?no-inline', import.meta.url).href,
     new URL('./icons/sort-ascending-dark.svg?no-inline', import.meta.url).href,

@@ -68,6 +68,8 @@ HTML input requires global `DOMParser`. Without it, HTML input returns `null`. J
 
 Use the same registry that owns the documents.
 
+With `floatWing` and its CSS loaded, float regions keep their stored side and maximum width relative to each comparison pane. Each float row contains its full height, so the following block starts below it instead of wrapping beside it. This isolation is diff-only; stored rendering and preview retain normal text flow around the float. Side/width-only changes still count as changed blocks, even without a character highlight.
+
 ### Pure comparison model
 
 ```ts

@@ -36,6 +36,7 @@ const BUILTIN_ATTRS: Readonly<Record<string, ReadonlySet<string>>> = {
   tl: new Set(),
   tli: new Set(['ck']),
   quote: new Set(),
+  float: new Set(['side', 'w']),
   details: new Set(['o']),
   summary: new Set(),
   code: new Set(['lang']),

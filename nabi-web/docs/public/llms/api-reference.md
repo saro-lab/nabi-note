@@ -322,7 +322,7 @@ Catalog exports:
 
 - marks: `boldWing`, `italicWing`, `underlineWing`, `strikeWing`, `superscriptWing`, `subscriptWing`, `simpleMarkWings`;
 - value marks: `typefaceWing`, `fontSizeWing`, `textColorWing`, `highlightWing`, `valueMarkWings`, `makeTypefaceWing`, `makeFontSizeWing`, `makeTextColorWing`, `makeHighlightWing`, and `TYPEFACES`, `FONT_SIZES`, `TEXT_COLORS`, `HIGHLIGHT_COLORS`;
-- inline/block: `linkWing`, `headingWing`, `alignWing`, `dropCapWing`, `paragraphAttrWings`, `bulletListWing`, `orderedListWing`, `taskListWing`, `listWings`, `quoteWing`, `detailsWing`, `codeWing`, `dividerWing`, `tableWings`;
+- inline/block: `linkWing`, `headingWing`, `alignWing`, `dropCapWing`, `paragraphAttrWings`, `bulletListWing`, `orderedListWing`, `taskListWing`, `listWings`, `quoteWing`, `floatWing`, `FLOAT_WIDTHS`, `detailsWing`, `codeWing`, `dividerWing`, `tableWings`;
 - media/tools: `imageWing`, `youtubeWing`, `uploadWing`, `saveFileWing`, `openFileWing`, `localHistoryWing`, `diffWing`, `clearFormatWing`;
 - groups: `defaultWings`, `fileWings`;
 - picker: `wings`, `wingNames`.
@@ -377,6 +377,8 @@ Root-exported types include:
 Tree values: `P`, `BR`, `isElement`, `isText`.
 
 ## Wing declaration types
+
+`Wing.scopedCommands?: readonly string[]` opts a block container into relative child-document execution for selected wing commands. See `custom-wing.md`. Float commands and stored attributes are documented in `wings.md`.
 
 Root-exported wing types include:
 

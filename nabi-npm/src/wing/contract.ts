@@ -308,6 +308,7 @@ export interface Wing {
   // 커맨드 조각 — 코어 내장 위에 얹힌다. 이름은 동사+목적어 카멜(등록 검사).
   // Commands layered on top of the core built-ins; names must be verb+object camelCase (checked at registration).
   readonly commands?: Readonly<Record<string, Command>>;
+  readonly scopedCommands?: readonly string[];
 
   // 조립 — 노드를 세우는 wing(mark·void·container)은 필수, parts도 각자 필수(등록 검사).
   // Builder; required for wings that erect a node (mark, void, container), and required per part too.

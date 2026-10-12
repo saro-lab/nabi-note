@@ -60,6 +60,7 @@ interface Wing {
   readonly currentValue?: (node: ElementNode) => string | undefined;
 
   readonly commands?: Readonly<Record<string, Command>>;
+  readonly scopedCommands?: readonly string[];
   readonly onKey?: OnKey;
   readonly escapeKeys?: readonly string[];
   readonly doubleKeys?: Readonly<Record<string, string>>;
@@ -123,6 +124,12 @@ const setFlag: Command = (doc, selection, args, env) => {
 - Do not access the DOM from a command.
 - Command names must be lower camel case with at least a verb and object, such as `insertNote`.
 - Two wings may not own the same command.
+
+### Commands scoped to a block container
+
+A `container` with `holds: 'blocks'` may declare `scopedCommands` containing wing command names. When both selection endpoints are inside the same nearest declaring container, the registry runs those commands on that container's child document with relative selection paths, then restores the outer document and absolute selection paths. If only one endpoint is inside, or they are in different scopes, the command is rejected. Outside such a container, the original command runs unchanged. Core commands cannot be scoped this way.
+
+Names must follow the command naming rule. Missing commands are ignored so an optional image or table wing is not required just because its insertion command is listed. Only list commands whose arguments and results use the supplied child document; do not list commands expecting absolute document paths or whole-document replacement. Parts do not declare independent scopes. The built-in float uses this for block insertion/conversion and upload commits.
 
 ## HTML and import
 

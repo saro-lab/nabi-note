@@ -17,6 +17,7 @@ import { linkWing } from './link/link.js';
 import { alignWing, dropCapWing, headingWing } from './attrs/attrs.js';
 import { bulletListWing, orderedListWing, taskListWing } from './list/list.js';
 import { quoteWing } from './quote/quote.js';
+import { floatWing } from './float/float.js';
 import { detailsWing } from './details/details.js';
 import { codeWing } from './code/code.js';
 import { dividerWing } from './hr/hr.js';
@@ -54,6 +55,7 @@ const CATALOG = [
   { w: 'ol', wing: orderedListWing },
   { w: 'tl', wing: taskListWing },
   { w: 'quote', wing: quoteWing },
+  { w: 'float', wing: floatWing },
   { w: 'details', wing: detailsWing },
   { w: 'code', wing: codeWing },
   { w: 'hr', wing: dividerWing },

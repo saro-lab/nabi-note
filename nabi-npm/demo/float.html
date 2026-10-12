@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>플로트 영역 · NABI NOTE</title>
+    <link rel="stylesheet" href="./float.css" />
+  </head>
+  <body>
+    <main>
+      <header class="page-header">
+        <a href="./">NABI NOTE</a>
+        <h1>플로트 영역</h1>
+        <p>영역 안의 글을 눌러 직접 편집하고, 속성 도구에서 좌우와 최대 너비를 바꿔 보세요.</p>
+        <div class="controls">
+          <button id="narrow" type="button" aria-pressed="false">좁은 본문</button>
+          <button id="theme" type="button" aria-pressed="false">어두운 테마</button>
+          <button id="reset" type="button">예시 다시 불러오기</button>
+          <button id="baseline" type="button">현재 문서를 비교 기준으로</button>
+        </div>
+      </header>
+      <section aria-labelledby="edit-title">
+        <h2 id="edit-title">편집</h2>
+        <div class="document-width">
+          <div id="app" class="nabi">
+            <div id="chrome" class="nabi-toolbar">
+              <div class="nabi-toolbar-row">
+                <div id="toolbar"></div>
+                <div id="tools" class="nabi-tools"></div>
+              </div>
+              <div id="context" class="nabi-context" hidden></div>
+            </div>
+            <div
+              id="content"
+              class="nabi-content"
+              contenteditable="true"
+              spellcheck="false"
+              aria-label="플로트 예시 편집"
+            ></div>
+          </div>
+        </div>
+      </section>
+      <section aria-labelledby="read-title">
+        <h2 id="read-title">실제 미리보기</h2>
+        <p class="caption">편집 내용이 바로 반영됩니다. 점선 없이 글이 영역을 감쌉니다.</p>
+        <div class="document-width"><article id="reader" class="nabi-content"></article></div>
+      </section>
+      <section aria-labelledby="diff-title">
+        <h2 id="diff-title">변경 비교</h2>
+        <p class="caption" id="baseline-label">
+          왼쪽 30%였던 예시와 현재 문서를 비교합니다. 다음 문단은 영역 아래에서 시작합니다.
+        </p>
+        <div id="comparison"></div>
+      </section>
+    </main>
+    <script type="module" src="./float.ts"></script>
+  </body>
+</html>

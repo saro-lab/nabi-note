@@ -34,6 +34,7 @@ export { linkWing } from './link/link.js';
 export { alignWing, dropCapWing, headingWing, paragraphAttrWings } from './attrs/attrs.js';
 export { bulletListWing, listWings, orderedListWing, taskListWing } from './list/list.js';
 export { quoteWing } from './quote/quote.js';
+export { floatWing, FLOAT_WIDTHS } from './float/float.js';
 export { detailsWing } from './details/details.js';
 export { codeWing } from './code/code.js';
 export { dividerWing } from './hr/hr.js';

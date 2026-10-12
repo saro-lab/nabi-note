@@ -7,6 +7,15 @@ Dates use Korea Standard Time (KST).
 
 ## [Unreleased]
 
+Planned version: **1.4.0**. This version has not been released; further changes will continue to be recorded in this section.
+
+### Added
+
+- Added float regions (`floatWing`) whose text, images, and tables can be edited directly in the same editor. Regions support left/right placement and maximum widths of 20, 30, 40, or 50 percent, defaulting to right at 40 percent.
+- Added left/right controls, a maximum-width slider, and a float-with-X unwrap icon to the float context toolbar. The unwrap icon sits directly beside the width readout. Selected paragraphs can be wrapped in a region or unwrapped while preserving their contents in the document. Changes support undo and redo.
+- Added dotted region outlines that appear only while editing. In reader and preview views, following paragraphs flow beside the region. Diff preserves each region's left/right placement and maximum width while starting the next block below it. Narrow document containers and print use a single column.
+- Added `Wing.scopedCommands` to run selected block-container commands against their child document. Block insertion, uploads, and conversions stay inside floats. JSON and HTML save/load preserve region contents, placement, and width.
+
 ## [1.3.2] - 2026-10-10
 
 ### Changed

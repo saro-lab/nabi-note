@@ -89,9 +89,9 @@ For complete assembly and IO examples, read `quickstart-npm.md`.
 
 For 1.1.0 and later builds, keep the same package version for JS, CSS, and `dist/icons/`. Manual hosting must copy the icons directory beside `nabi.css`; the local CDN demo already includes it. Keep `dist/browser/` relative to `dist/icons/` when using runtime CSS injection with the IIFE. The pinned 1.0.0 examples above describe the earlier baseline; icon themes and individual `showPreview`/`showFullscreen` options require 1.1.0 or later. See `icons.md`.
 
-## Toolbar configuration in 1.3.2 builds
+## Toolbar configuration in 1.4.0 builds
 
-The pinned 1.0.0 examples above describe the earlier published baseline. To use the 1.3.2 toolbar contract, load a matching 1.3.2 JavaScript/CSS build from your own build or an available package version. This document does not claim that 1.3.2 has been published to a CDN.
+The pinned 1.0.0 examples above describe the earlier published baseline. To use the 1.4.0 toolbar contract, load a matching 1.4.0 JavaScript/CSS build from your own build or an available package version. 1.4.0 is an unreleased working version. Use your local build until it is published; this document does not claim CDN availability.
 
 ```js
 const toolbar = N.mountToolbar({
@@ -111,7 +111,7 @@ With `N.mountHints({ toolbar, root: document.querySelector('#editor'), surface: 
 
 The toolbar stays sticky at the top within its own editor on desktop and mobile, and scrolls out of view with that editor. Mobile selection/menu panels open from the toolbar within the available viewport space, while text-input prompts replace the toolbar row. The table size picker instead opens in a centered layer over a translucent backdrop and closes after a size is selected. See `styling.md` for the breakpoint, viewport, and physical-device IME validation limits.
 
-## Custom image panels in 1.3.2 builds
+## Custom image panels in 1.4.0 builds
 
 When mounting the toolbar above, add `panels` to its options:
 

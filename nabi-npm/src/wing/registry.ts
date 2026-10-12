@@ -16,6 +16,7 @@ import {
 } from '../editor/index.js';
 import { $builtinAttrTypes, $closeBuiltinAttrs, $closeKnownTypes, $isBuiltinWing } from '../schema/env.js';
 import { erectsNode, type Attach, type InputRule, type StructureDecl, type Wing } from './contract.js';
+import { scopeBlockCommand } from './scope.js';
 
 // 커맨드 이름 규칙 — 동사+목적어 카멜. 낱말 하나(`merge`)나 대문자 시작은 죽는다.
 // Command naming rule: verb+object camelCase; a single word (`merge`) or a capitalized start fails.
@@ -44,6 +45,7 @@ const OFFICIAL_WINGS = new Set([
   'ol',
   'tl',
   'quote',
+  'float',
   'details',
   'code',
   'hr',
@@ -185,6 +187,15 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     };
     if (wing.attrs !== undefined) stringList('attrs', wing.attrs);
     if (wing.boolAttrs !== undefined) stringList('boolAttrs', wing.boolAttrs);
+    if (wing.scopedCommands !== undefined) {
+      stringList('scopedCommands', wing.scopedCommands);
+      if (wing.place !== 'container' || wing.holds !== 'blocks')
+        fail(`"${wing.w}" 의 scopedCommands 는 blocks container에만 지정할 수 있습니다`);
+      for (const name of wing.scopedCommands) {
+        if (!COMMAND_NAME.test(name) || CORE_COMMAND_NAMES.has(name))
+          fail(`"${wing.w}" 의 scopedCommands 에 잘못된 wing command "${name}" 가 있습니다`);
+      }
+    }
     if (wing.clearable !== undefined && typeof wing.clearable !== 'boolean')
       fail(`"${wing.w}" 의 clearable 은 true/false여야 합니다`);
     if (wing.clearable !== undefined && wing.place !== 'mark' && wing.place !== 'attr') {
@@ -427,6 +438,11 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
   for (const [key, name] of doubles) {
     if (!commands[name] && !CORE_COMMAND_NAMES.has(name))
       fail(`연타 키 "${key}" 가 없는 커맨드 "${name}" 를 참조합니다`);
+  }
+
+  for (const [name, command] of Object.entries(commands)) {
+    const scopes = wings.filter((wing) => wing.scopedCommands?.includes(name)).map((wing) => wing.w);
+    if (scopes.length > 0) commands[name] = scopeBlockCommand(command, new Set(scopes));
   }
 
   const referencedCommand = (action: unknown): string | null => {

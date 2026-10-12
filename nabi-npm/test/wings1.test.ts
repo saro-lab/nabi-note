@@ -68,6 +68,7 @@ eq(
 eq('lumps 접힘 — 물건 전부 (병합 묶음: 표·이미지·유튜브 포함)', [...env.lumps].sort(), [
   'code',
   'details',
+  'float',
   'hr',
   'img',
   'ol',
@@ -996,7 +997,7 @@ for (const fam of FAMILIES) {
 // 선언 하나가 세 자리에서 함께 선다: 노출(ui)·커맨드(doc·정렬 wing)·고치(cocoon).
 // One declaration governs three places together: exposure (ui), commands (doc, align wing), and repair (cocoon).
 {
-  eq('noAlign 접힘 — 코드 상자 하나', [...(env.noAlign ?? [])], ['code']);
+  eq('noAlign 접힘 — 플로트와 코드', [...(env.noAlign ?? [])], ['float', 'code']);
   eq('다른 물건은 안 든다 — 표는 여전히 정렬을 받는다', env.noAlign?.has('table') ?? false, false);
 }
 {
