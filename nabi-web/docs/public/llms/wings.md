@@ -35,6 +35,10 @@ With `mountHints()`, tapping Shift twice opens the compact Tools palette. Tab ch
 
 A heading remains a `p` tree node. Heading, alignment, and drop cap are not separate block node types.
 
+Inside a table cell, alignment targets the current inner paragraph or selected image wrapper. A rectangular cell selection aligns every eligible paragraph and object wrapper in the selected cells, skipping objects that declare `noAlign`, such as code. The main toolbar aligns the table's outer wrapper when the whole table object is selected with its wrapper range `0..1` or when a collapsed caret is at either wrapper boundary (`0` or `1`). Boundary carets show the dashed table outline and remain collapsed after alignment. A range crossing between a cell and content outside that table cannot change paragraph attributes.
+
+Headings and drop caps target inner text paragraphs. Header cells (`td.a.th === 1`) do not accept headings; mixed cell selections skip header paragraphs when applying headings. Toolbar visibility, pressed values, and heading property controls use the same paragraph targets as these commands. Mixed values do not report a single active value. Table and float insertion controls remain hidden anywhere inside a cell, including nested lists and objects; block insertion controls also hide when the selection crosses cell boundaries.
+
 ## Containers
 
 | `w` | Export | Notes |
@@ -54,6 +58,32 @@ Below the viewport's `--nabi-mobile-breakpoint`, the table button closes the Too
 
 Copying a cell range uses its highlighted rectangle, including merged-cell expansion, in every clipboard format. Internal data and HTML preserve the cropped table structure and formatting; plain text contains only the selected cell contents. Cutting the range clears only those cells and supports one-step undo. A text selection inside a single cell keeps ordinary text-copy behavior. See `io-security.md`.
 
+### Table cell editing
+
+Cells contain multiple paragraphs and built-in blocks, including images, lists, quotes, code, details, dividers, and video. Nested tables and floats are not allowed. JSON, HTML, and paste normalization unwrap those prohibited descendants while preserving their content in order. Ordinary cells permit headings; header cells remove heading attributes recursively while preserving text and other formatting.
+
+- Block insertion and conversion stay within the current cell. Commands crossing cell boundaries are rejected.
+- Enter creates a paragraph; Shift+Enter inserts a line break. List and code handlers keep their own Enter and Tab behavior. Tab/Shift+Tab in ordinary cell content moves between cells, using the first/last actual editable holder. Deletion does not merge neighboring cells or pull cell contents into an outside paragraph.
+- Heading and drop cap target eligible inner paragraphs. Heading is unavailable in header cells.
+- Horizontal alignment targets the current inner paragraph or object wrapper. A rectangular cell selection applies alignment to every eligible inner paragraph and object in the selected cells, including images. Code remains unaligned.
+- `selectTable()` selects the table's wrapper range 0..1. The table property row provides this action. Table alignment is available for that exact object selection and for a collapsed caret at either table wrapper boundary, never for a caret inside a cell or a selection spanning the table and other blocks.
+- Cell merge preserves child blocks in row order. Split retains those blocks in the origin cell and creates empty paragraphs in the other cells.
+- Simple uncolored single-paragraph cells can use pipe-table Markdown. Multi-block, structured, or colored cells use HTML fallback to preserve their content.
+
+### Table cell backgrounds
+
+`setCellColor({ bg })` accepts `yellow|green|cyan|pink|purple|orange`; pass `bg: ''` to clear the background. Missing and other values are rejected. The table property row exposes named pale swatches and a Default control. Repeating the current value is a no-op.
+
+- Store the name in `td.a.bg`. Unknown stored values are removed during normalization. Header cells still use `td` with `a.th: 1`.
+- A caret or text selection inside one cell targets that whole cell. A selection spanning cells targets the same merged-cell-expanded rectangle as cell copy/merge. The selection remains intact and the operation is one undo step.
+- Whole-table object selections, selections crossing a table boundary, and selections spanning different tables cannot change cell colors; the property controls are hidden for those selections.
+- A uniform selection shows its common value, including Default. A mixed selection shows no single selected swatch.
+- A custom background overrides the header background. Clearing it restores the header background on header cells and the uncolored background on other cells.
+- Merge keeps the top-left cell's background. Split copies the merged background to the newly created cells. New rows, columns, and repair-generated cells start without a background; an expanded merged cell retains its color.
+- Clearing/cutting content and `clearFormat` preserve cell backgrounds. The dedicated Default control removes the background.
+- HTML preserves the name as `data-nabi-cell-color` on `td` or `th`. Arbitrary external background styles are not imported. Colored tables use the HTML fallback for Markdown export, preserving the color metadata.
+- Clipboard JSON/HTML, SSR, preview, viewer, and diff preserve the same cell attributes. A background-only change counts as a document change in diff. See `styling.md` for theme tokens.
+
 ### Float regions
 
 `floatWing` is included in `defaultWings`, `all()`, and `allBasic()`. Use `wings().use('float')` or a direct array containing `floatWing` to opt in explicitly. `FLOAT_WIDTHS` exports the allowed numeric widths.
@@ -68,7 +98,7 @@ Stored shape:
 - `setFloatSide({ side })` accepts `left|right`. `setFloatWidth({ w })` accepts 20, 30, 40, or 50 (numbers or numeric strings). Invalid command values are rejected. Repeating the current value does not change the document.
 - `unwrapFloat()` replaces the wrapper with its child blocks, preserving content. Each command is undoable.
 - Normalization repairs missing/invalid stored attributes to right/40, provides an empty paragraph when necessary, and unwraps nested float descendants without losing their content.
-- Internal image/video/table/divider insertion, upload commits, and list/quote/details/code conversion operate within the float using `Wing.scopedCommands`. A selection crossing that scope boundary is rejected for these commands. Existing operations outside floats retain their behavior.
+- Internal image/video/table/divider insertion, upload commits, and list/quote/details/code conversion operate within the float using `Wing.scopedCommands`. A selection crossing that scope boundary is rejected for these commands. Pasting text, rich fragments, or a single table/image into an inner paragraph also stays inside the float and supports undo. Existing operations outside floats retain their behavior.
 - The context toolbar shows left/right controls, a four-step maximum-width range, and a float-with-X unwrap icon directly beside the width readout. The icon retains the localized unwrap label for tooltips and accessibility; its theme key is `context-float-unwrap`. A range gesture commits on change, not every intermediate input event.
 - HTML uses `div[data-nabi-float="left|right"][data-nabi-float-width]` inside the standard object paragraph wrapper. The importer recognizes only this marker, not arbitrary external float styles. Markdown uses the HTML fallback.
 - Load the same registry and wing CSS for editor, stored rendering, SSR, preview, and diff. Older/missing-wing importers can unwrap the unknown region and discard its attributes; update readers before storing the new word.

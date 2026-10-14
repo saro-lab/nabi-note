@@ -111,7 +111,7 @@ const at = (path: readonly number[], offset: number): Selection => caretAt({ pat
       ],
     },
   ]);
-  tick(100);
+  tick(180);
   actions.enter(); // 빠른 두 번째 — 흔적을 걷고 나간다
   eq('빠른 이중 엔터 = 인용 탈출', nabi.getJson(), [
     { w: 'p', ch: [{ w: 'quote', ch: [{ w: 'p', ch: ['x'] }] }] },
@@ -124,7 +124,7 @@ const at = (path: readonly number[], offset: number): Selection => caretAt({ pat
   const { nabi, actions } = rig([{ w: 'p', ch: [{ w: 'quote', ch: [{ w: 'p', ch: ['x'] }] }] }]);
   nabi.select(at([0, 0, 0], 1));
   actions.enter();
-  tick(2_000);
+  tick(181);
   actions.enter(); // 느린 두 번째 — 탈출이 아니라 그냥 분할이다
   eq('느린 두 번째 엔터는 안 나간다', nabi.getJson(), [
     {

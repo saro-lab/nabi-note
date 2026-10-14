@@ -969,12 +969,12 @@ export function mountSurface(options: SurfaceOptions): Surface {
         return;
       }
       const s = domSelection();
-      if (!s || s.rangeCount === 0 || s.isCollapsed) return;
+      const table = tableClipboardOf(doc(), nabi.getSelection());
+      if (!s || s.rangeCount === 0 || (s.isCollapsed && !table)) return;
       const range = s.getRangeAt(0);
       if (!root.contains(range.commonAncestorContainer)) return;
       const cutting = ev.type === 'cut';
       if (cutting) ev.preventDefault();
-      const table = tableClipboardOf(doc(), nabi.getSelection());
       const html = table ? renderHtml(table.body, htmlOptions) : clipHtmlOf(range, root, owner);
       const cd = ev.clipboardData;
       if (!cd) return;

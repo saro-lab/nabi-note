@@ -1,20 +1,35 @@
 import { caretAt, type Selection } from '../../caret/index.js';
-import { nodeAt, replaceAt } from '../../doc/index.js';
+import { deleteRange, nodeAt, replaceAt } from '../../doc/index.js';
 import type { Command } from '../../editor/index.js';
 import { isElement, type ElementNode, type NabiDoc, type NabiNode } from '../../schema/index.js';
 import { mapCells } from './grid.js';
-import { selectionBox } from './selection.js';
+import { selectionBox, tableWrapperOf } from './selection.js';
 
 function textOf(node: NabiNode): string {
   if (typeof node === 'string') return node;
   if (node.w === 'br') return '\n';
-  return node.ch.map(textOf).join('');
+  if (node.w === 'img') return typeof node.a?.['src'] === 'string' ? node.a['src'] : '';
+  if (node.w === 'youtube')
+    return typeof node.a?.['v'] === 'string' ? `https://www.youtube.com/watch?v=${node.a['v']}` : '';
+  const blocks = ['td', 'ul', 'ol', 'tl', 'li', 'oli', 'tli', 'quote', 'details'].includes(node.w);
+  return node.ch.map(textOf).join(blocks ? '\n' : '');
 }
 
 export function tableClipboardOf(
   doc: NabiDoc,
   selection: Selection,
 ): { readonly body: readonly ElementNode[]; readonly plain: string } | null {
+  const whole = tableWrapperOf(doc, selection);
+  if (whole) {
+    const table = whole.node.ch[0] as ElementNode;
+    return {
+      body: [whole.node],
+      plain: table.ch
+        .filter(isElement)
+        .map((row) => row.ch.map(textOf).join('\t'))
+        .join('\n'),
+    };
+  }
   const selected = selectionBox(doc, selection);
   if (!selected) return null;
   const table = nodeAt(doc, selected.tablePath);
@@ -35,7 +50,16 @@ export function tableClipboardOf(
   };
 }
 
-export const cutTableSelection: Command = (doc, selection) => {
+export const cutTableSelection: Command = (doc, selection, _args, env) => {
+  const whole = tableWrapperOf(doc, selection);
+  if (whole) {
+    const removed = deleteRange(
+      doc,
+      { anchor: { path: whole.path, offset: 0 }, focus: { path: whole.path, offset: 1 } },
+      env,
+    );
+    return { doc: removed.doc, selection: caretAt(removed.caret) };
+  }
   const selected = selectionBox(doc, selection);
   if (!selected) return null;
   const table = nodeAt(doc, selected.tablePath);
@@ -46,7 +70,7 @@ export const cutTableSelection: Command = (doc, selection) => {
     if (!cells.has(item.cell)) return item.cell;
     return {
       ...item.cell,
-      ch: item.cell.ch.map((paragraph) => (isElement(paragraph) ? { ...paragraph, ch: [] } : paragraph)),
+      ch: [{ w: 'p', ch: [] }],
     };
   });
   return {

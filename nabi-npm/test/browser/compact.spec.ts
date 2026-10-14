@@ -104,6 +104,62 @@ async function setup(
   );
 }
 
+for (const width of [1280, 390, 320]) {
+  test(`toolbar group separators follow visible groups without overflowing at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await setup(page);
+    for (const locale of ['en', 'ar']) {
+      await page.evaluate((locale) => {
+        const state = (globalThis as unknown as { compactTest: BrowserState }).compactTest;
+        state.locale.setLocale(locale);
+        state.nabi.setJson([
+          { w: 'p', ch: [{ w: 'tf', a: { v: 'serif' }, ch: [{ w: 'fs', a: { v: 'lg' }, ch: ['text'] }] }] },
+        ]);
+        state.nabi.select({ anchor: { path: [0], offset: 1 }, focus: { path: [0], offset: 1 } });
+      }, locale);
+      if (width < 576) await page.locator('#compact-toolbar [data-name="tools"]').click();
+      const groupRoot = width < 576 ? '.nabi-toolbox-icons' : '#compact-toolbar .nabi-strip';
+      const selector = width < 576 ? '.nabi-toolbox-group' : '.nabi-group';
+      const inspect = async (root: string, selector: string) =>
+        page.locator(root).evaluate((element, selector) => {
+          const groups = [...element.querySelectorAll<HTMLElement>(selector)].filter(
+            (group) => group.getClientRects().length > 0,
+          );
+          return groups.map((group) => {
+            const style = getComputedStyle(group, '::before');
+            return { content: style.content, width: style.borderInlineStartWidth };
+          });
+        }, selector);
+      const separators = await inspect(groupRoot, selector);
+      expect(separators.length).toBeGreaterThan(2);
+      expect(separators[0]!.content).toBe('none');
+      expect(separators.slice(1).every((separator) => separator.content === '""' && separator.width === '1px')).toBe(
+        true,
+      );
+      const properties = await inspect('#compact-context', '.nabi-ctx-group');
+      expect(properties.length).toBe(2);
+      expect(properties[0]!.content).toBe('none');
+      expect(properties[1]).toEqual({ content: '""', width: '1px' });
+      const container = width < 576 ? '.nabi-toolbox-body' : '#compact-toolbar';
+      expect(
+        await page.locator(container).evaluate((element) => element.scrollWidth - element.clientWidth),
+      ).toBeLessThanOrEqual(1);
+      if (width < 576) await page.keyboard.press('Escape');
+      await page.evaluate(() => {
+        const { nabi } = (globalThis as unknown as { compactTest: BrowserState }).compactTest;
+        nabi.setJson([{ w: 'img', a: { src: '/nabi-note.svg' } }]);
+      });
+      if (width < 576) await page.locator('#compact-toolbar [data-name="tools"]').click();
+      const imageGroups = await inspect(groupRoot, selector);
+      expect(imageGroups[0]!.content).toBe('none');
+      expect(imageGroups.slice(1).every((separator) => separator.content === '""' && separator.width === '1px')).toBe(
+        true,
+      );
+      if (width < 576) await page.keyboard.press('Escape');
+    }
+  });
+}
+
 for (const width of [1280, 390]) {
   test(`object properties appear below the main toolbar and disappear for plain text at ${width}px`, async ({
     page,

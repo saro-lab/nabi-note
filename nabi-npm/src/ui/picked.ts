@@ -30,19 +30,22 @@ export function mountPickedMark(options: PickedMarkOptions): PickedMark {
     marked = null;
   };
 
-  // 지금 골라진 물건의 키 — 래퍼문단을 통째로 덮은 선택일 때만 답한다. 캐럿이 모서리에 붙어 있기만 한 것은 고른 것이 아니다(0~1이 아니라 0~0이거나 1~1이다).
-  // The key of whatever is currently picked — answers only when the selection covers the whole wrapper paragraph. A caret merely touching an edge doesn't count (that's 0-0 or 1-1, not 0-1).
+  // 표는 래퍼문단 앞뒤의 캐럿에도 표식을 보여 준다.
+  // Tables also show the marker for a caret at either wrapper boundary.
   const pickedKey = (): string | null => {
     const sel = nabi.getSelection();
     const [start, end] = ordered(sel);
-    if (start.path.length !== 1 || end.path.length !== 1 || start.path[0] !== end.path[0]) return null;
-    if (start.offset !== 0 || end.offset !== 1) return null;
+    if (start.path.length !== end.path.length || start.path.some((value, index) => value !== end.path[index]))
+      return null;
 
     const doc = hostOf(nabi).doc();
     const top = nodeAt(doc, start.path);
     if (!top || !isWrapper(top, hostOf(nabi).env)) return null;
     const lump = top.ch[0];
     if (!isElement(lump) || typeof lump._id !== 'string') return null;
+    const whole = start.offset === 0 && end.offset === 1;
+    const tableEdge = lump.w === 'table' && start.offset === end.offset && (start.offset === 0 || start.offset === 1);
+    if (!whole && !tableEdge) return null;
     return lump._id;
   };
 

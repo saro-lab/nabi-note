@@ -1,5 +1,5 @@
-import type { ElementNode } from '../../schema/index.js';
-import { nodeAt, type Position } from '../../doc/index.js';
+import { isElement, isWrapper, type ElementNode } from '../../schema/index.js';
+import { holderLength, holders, nodeAt, type EditEnv, type HolderAt, type Position } from '../../doc/index.js';
 import { ordered, type Selection } from '../../caret/index.js';
 import { boxBetween, cellGrid, cellsInBox, type GridBox, type GridCell, type TableGrid } from './grid.js';
 
@@ -8,6 +8,35 @@ export interface CellCtx {
   readonly table: ElementNode;
   readonly grid: TableGrid;
   readonly cell: GridCell;
+}
+
+export function tableWrapperOf(doc: readonly ElementNode[], selection: Selection): HolderAt | null {
+  const [start, end] = ordered(selection);
+  if (start.path.length !== end.path.length || start.path.some((value, index) => value !== end.path[index]))
+    return null;
+  if ((start.offset !== 0 && start.offset !== 1) || (end.offset !== 0 && end.offset !== 1)) return null;
+  const node = nodeAt(doc, start.path);
+  const item = node?.ch[0];
+  return node?.w === 'p' && node.ch.length === 1 && isElement(item) && item.w === 'table'
+    ? { path: start.path, node }
+    : null;
+}
+
+export function cellPath(tablePath: readonly number[], cell: GridCell): readonly number[] {
+  return [...tablePath, cell.trIndex, cell.tdIndex];
+}
+
+export function cellBoundary(tablePath: readonly number[], cell: GridCell, env: EditEnv, end = false): Position {
+  const candidates = holders([cell.cell], env).filter(({ node }) => {
+    if (!isWrapper(node, env)) return true;
+    const child = node.ch[0];
+    return isElement(child) && env.voids.has(child.w);
+  });
+  const found = end ? candidates[candidates.length - 1] : candidates[0];
+  const base = cellPath(tablePath, cell);
+  return found
+    ? { path: [...base, ...found.path.slice(1)], offset: end ? holderLength(found.node, env) : 0 }
+    : { path: [...base, 0], offset: 0 };
 }
 
 export function cellCtxOf(doc: readonly ElementNode[], pos: Position): CellCtx | null {

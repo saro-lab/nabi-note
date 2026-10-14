@@ -35,6 +35,7 @@ interface FixtureOptions {
   readonly wings?: readonly Wing[];
   readonly layout?: 'compact' | 'wrap';
   readonly quick?: readonly string[];
+  readonly groups?: readonly string[];
   readonly ssr?: boolean;
   readonly contextFirst?: boolean;
   readonly width?: number;
@@ -71,6 +72,7 @@ function fixture(options: FixtureOptions = {}) {
   const presentation = {
     ...(options.layout ? { layout: options.layout } : {}),
     ...(options.quick ? { quick: options.quick } : {}),
+    ...(options.groups ? { groups: options.groups } : {}),
   };
   if (options.ssr) el('toolbar').innerHTML = renderToolbarHtml({ registry: editor.registry, locale, ...presentation });
   const before = new Map(
@@ -133,6 +135,64 @@ function named(root: ParentNode, name: string): HTMLButtonElement {
 
 function pointer(f: ReturnType<typeof fixture>, button: HTMLButtonElement): void {
   button.dispatchEvent(new f.dom.window.MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+}
+
+{
+  const f = fixture({ ssr: true, viewportWidth: 1280 });
+  const groupOrder = (root: ParentNode, selector: string): string[] =>
+    [...root.querySelectorAll<HTMLElement>(selector)].map((group) => group.dataset.group!);
+  const expected = [
+    'heading',
+    'font',
+    'emphasis',
+    'script',
+    'color',
+    'clear',
+    'align',
+    'list',
+    'link',
+    'media',
+    'structure',
+    'container',
+    'file',
+    'custom',
+  ];
+  assert.deepEqual(groupOrder(f.el('toolbar'), '.nabi-strip > .nabi-group'), expected);
+  assert.deepEqual([...new Set(f.toolbar.buttons.map((button) => button.group))], expected);
+  for (const button of f.toolbar.buttons)
+    assert.equal(button.el, f.before.get(button.el.dataset.name!), 'default group order reuses SSR buttons');
+  f.setViewportWidth(390);
+  assert.deepEqual(
+    groupOrder(f.menu(), '.nabi-toolbox-group'),
+    expected,
+    'the full mobile palette follows the main groups',
+  );
+  f.dispose();
+}
+
+{
+  const f = fixture({ ssr: true, groups: ['custom', 'list', 'emphasis'] });
+  assert.deepEqual(
+    [...new Set(f.toolbar.buttons.map((button) => button.group))].slice(0, 3),
+    ['custom', 'list', 'emphasis'],
+    'host group order takes priority over the defaults',
+  );
+  assert.deepEqual(
+    f.toolbar.buttons.filter((button) => button.group === 'file').map((button) => button.w),
+    ['save', 'open', 'localHistory', 'diff'],
+    'display grouping does not reorder registered buttons within a group',
+  );
+  const slots = toolbarSlots(f.registry, makeTranslator(f.locale), ['custom', 'list', 'emphasis']);
+  slots.forEach((slot, index) => {
+    assert.equal(f.toolbar.buttons[index]!.el, f.before.get(slot.name), 'custom groups preserve SSR command wiring');
+    assert.equal(f.toolbar.buttons[index]!.el.dataset.name, slot.name);
+  });
+  const menu = f.menu();
+  assert.deepEqual(
+    [...menu.querySelectorAll<HTMLElement>('.nabi-toolbox-group')].slice(0, 3).map((group) => group.dataset.group),
+    ['custom', 'list', 'emphasis'],
+  );
+  f.dispose();
 }
 
 {

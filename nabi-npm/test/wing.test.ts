@@ -185,6 +185,50 @@ throws(
 );
 throws('부품에 partHtml 이 없으면 죽는다', () => makeRegistry([{ ...bullet, partHtml: {} } as Wing]), 'partHtml');
 throws(
+  'inline holder는 isolating일 수 없다',
+  () => makeRegistry([{ ...quote, holds: 'inline', isolating: true }]),
+  'isolating',
+);
+throws('mark는 isolating일 수 없다', () => makeRegistry([{ ...bold, isolating: true }]), 'isolating');
+throws(
+  'isolating은 boolean이어야 한다',
+  () => makeRegistry([{ ...quote, isolating: 1 } as unknown as Wing]),
+  'isolating',
+);
+throws(
+  'inline part는 isolating일 수 없다',
+  () => makeRegistry([{ ...table, parts: { td: { holds: 'inline', isolating: true } } }]),
+  'isolating',
+);
+throws(
+  'inline part는 scopedCommands를 쓸 수 없다',
+  () => makeRegistry([{ ...table, parts: { td: { holds: 'inline', scopedCommands: ['insertImage'] } } }]),
+  'scopedCommands',
+);
+for (const name of ['insertText', 'invalid', 'WrongName']) {
+  throws(
+    `part scope가 잘못된 명령을 거부한다: ${name}`,
+    () => makeRegistry([{ ...table, parts: { td: { holds: 'blocks', scopedCommands: [name] } } }]),
+    'scopedCommands',
+  );
+}
+ok(
+  'wing과 part의 isolating을 환경에 보존한다',
+  (() => {
+    const registry = makeRegistry([
+      { ...quote, isolating: true },
+      {
+        ...table,
+        parts: {
+          tr: { holds: 'blocks' },
+          td: { holds: 'blocks', isolating: true, scopedCommands: ['insertOptionalObject'] },
+        },
+      },
+    ]);
+    return registry.env.isolating?.has('quote') === true && registry.env.isolating.has('td');
+  })(),
+);
+throws(
   '컨테이너 아닌 wing 의 parts 는 죽는다',
   () => makeRegistry([{ ...bold, parts: { x: { holds: 'blocks' } } } as Wing]),
   '컨테이너에만',

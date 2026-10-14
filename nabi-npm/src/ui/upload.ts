@@ -1,9 +1,11 @@
 import { Translations } from './parts/translation.js';
 import type { LocaleInput } from '../locale/index.js';
 import { iconHtml } from '../style/icon.js';
-// 자리표시자는 문서(나비트리)에 안 들어간다 — 화면 DOM에만 살아, 재그리기가 지우면 onChange 뒤에 순서대로 다시 꽂는다. 상자는 캐럿이 든 최상위 블록 바로 뒤에 흐름 안의 형제로 서고, 진행률은 값 하나(--nabi-per)가 숫자와 격자를 함께 몬다.
-// The placeholder never enters the document (the NABI TREE) — it lives only in the screen DOM, and a redraw that wipes it gets it re-inserted in order after onChange. It sits as a flow sibling right after the block the caret was in when the file arrived, and progress is driven by one value (--nabi-per) that both the number and tile grid read.
+// 자리표시자는 문서에 저장하지 않고 시작 문단 뒤에 둔다. 셀에서 시작하면 그 셀 안에만 둔다.
+// Placeholders stay outside the document model, after the starting paragraph and inside its cell when present.
 import { hostOf, type Nabi } from '../editor/index.js';
+import { ordered } from '../caret/index.js';
+import { isolationPath, nodeAt } from '../doc/index.js';
 import type { Translator } from '../locale/index.js';
 import { makeTranslator } from '../locale/index.js';
 import type { StartedTask, UploadMount } from '../surface/index.js';
@@ -28,8 +30,8 @@ const TILE_MAX = 16;
 const TILE_SPAN = 25;
 
 export interface UploadViewOptions {
-  // 편집 표면 — 상자가 이 안에, 최상위 블록의 형제로 선다.
-  // The edit surface — the box is placed inside it, as a sibling of the top-level block.
+  // 편집 표면 — 상자는 시작한 편집 범위 안에 놓는다.
+  // The edit surface; placeholders stay in the editing scope where the upload started.
   readonly nabi: Nabi;
   readonly surface: HTMLElement;
   // 취소 단추가 부를 곳. 없으면 단추를 안 그린다.
@@ -73,17 +75,20 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
 
   let boxes: Box[] = [];
   let anchorKey: string | null = null;
+  let scopeKey: string | null = null;
   let running = false;
 
   // --- 자리 잡기 -------------------------------------------------------------------------------
 
-  // 캐럿이 든 최상위 블록의 키 — 파일을 넘겨받던 그 순간의 자리다.
-  // The key of the top-level block holding the caret — captured at the instant the file arrived.
+  // 파일을 받은 순간의 문단과 편집 범위를 기억한다.
+  // Capture the paragraph and editing scope when the files arrive.
   const anchorNow = (): string | null => {
-    const top = hostOf(nabi).doc()[nabi.getSelection().focus.path[0] ?? -1];
-    if (top && typeof top._id === 'string') return top._id;
-    const last = hostOf(nabi).doc()[hostOf(nabi).doc().length - 1];
-    return last && typeof last._id === 'string' ? last._id : null;
+    const host = hostOf(nabi);
+    const [, end] = ordered(nabi.getSelection());
+    const scope = isolationPath(host.doc(), end.path, host.env);
+    const path = end.path.slice(0, (scope?.length ?? 0) + 1);
+    scopeKey = scope ? (nodeAt(host.doc(), scope)?._id ?? null) : null;
+    return nodeAt(host.doc(), path)?._id ?? null;
   };
 
   // 재그리기가 상자를 지웠으면 다시 꽂는다 — 순서대로, 그 자리에.
@@ -92,12 +97,12 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
     let anchor: Element | null = anchorKey
       ? surface.querySelector(`[data-key="${anchorKey.replace(/["\\]/g, '\\$&')}"]`)
       : null;
-    if (anchor && anchor.parentElement !== surface) anchor = null;
+    const parent = scopeKey ? surface.querySelector(`[data-key="${scopeKey.replace(/["\\]/g, '\\$&')}"]`) : surface;
+    if (!parent || !anchor || anchor.parentElement !== parent) return;
 
     for (const box of boxes) {
       if (!box.el.isConnected) {
-        if (anchor) anchor.insertAdjacentElement('afterend', box.el);
-        else surface.append(box.el);
+        anchor.insertAdjacentElement('afterend', box.el);
       }
       anchor = box.el;
     }

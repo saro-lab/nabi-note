@@ -163,3 +163,56 @@ for (const format of ['custom', 'html', 'plain']) {
     expect(text).toBe('2C');
   });
 }
+
+for (const offset of [0, 1]) {
+  test(`cuts the outlined table at boundary ${offset} and pastes it inside a float`, async ({ page }) => {
+    const result = await page.evaluate((offset) => {
+      const nabi = (globalThis as unknown as { nabi: Nabi }).nabi;
+      const root = document.querySelector<HTMLElement>('#content')!;
+      const original = nabi.getJson();
+      const table = (original as readonly unknown[])[0];
+      const floating = {
+        w: 'p',
+        ch: [{ w: 'float', a: { side: 'left', w: 30 }, ch: [{ w: 'p', ch: [] }] }],
+      };
+      nabi.setJson([table, floating, { w: 'p', ch: ['outside'] }]);
+      root.focus();
+      nabi.select({ anchor: { path: [0], offset }, focus: { path: [0], offset } });
+      const outlined = root.querySelector('table')?.hasAttribute('data-nabi-picked');
+      const transfer = new DataTransfer();
+      root.dispatchEvent(new ClipboardEvent('cut', { clipboardData: transfer, bubbles: true, cancelable: true }));
+      const afterCut = nabi.getJson();
+      const tablesAfterCut = root.querySelectorAll('table').length;
+      nabi.select({ anchor: { path: [0, 0, 0], offset: 0 }, focus: { path: [0, 0, 0], offset: 0 } });
+      root.dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }));
+      const afterPaste = nabi.getJson();
+      const tablesInFloat = root.querySelectorAll('[data-nabi-float] table').length;
+      nabi.undo();
+      const undoPaste = nabi.getJson();
+      nabi.undo();
+      const undoCut = nabi.getJson();
+      return { outlined, table, floating, tablesAfterCut, tablesInFloat, afterCut, afterPaste, undoPaste, undoCut };
+    }, offset);
+    expect(result.outlined).toBe(true);
+    expect(result.tablesAfterCut).toBe(0);
+    expect(result.tablesInFloat).toBe(1);
+    expect(result.afterCut).toEqual([result.floating, { w: 'p', ch: ['outside'] }]);
+    expect(result.afterPaste).toEqual([
+      { w: 'p', ch: [{ w: 'float', a: { side: 'left', w: 30 }, ch: [result.table] }] },
+      { w: 'p', ch: ['outside'] },
+    ]);
+    expect(result.undoPaste).toEqual(result.afterCut);
+    expect(result.undoCut).toEqual([result.table, result.floating, { w: 'p', ch: ['outside'] }]);
+  });
+}
+
+test('the native cut shortcut cuts an outlined table with a collapsed caret', async ({ page }) => {
+  await page.evaluate(() => {
+    const nabi = (globalThis as unknown as { nabi: Nabi }).nabi;
+    document.querySelector<HTMLElement>('#content')!.focus();
+    nabi.select({ anchor: { path: [0], offset: 1 }, focus: { path: [0], offset: 1 } });
+  });
+  await expect(page.locator('#content table')).toHaveAttribute('data-nabi-picked', '');
+  await page.keyboard.press('ControlOrMeta+x');
+  await expect(page.locator('#content table')).toHaveCount(0);
+});

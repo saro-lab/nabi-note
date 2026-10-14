@@ -47,6 +47,7 @@ interface Wing {
   readonly basic?: boolean;
   readonly holds?: 'blocks' | 'inline';
   readonly singleParagraph?: boolean;
+  readonly isolating?: boolean;
   readonly attrs?: readonly string[];
   readonly boolAttrs?: readonly string[];
   readonly clearable?: boolean;
@@ -95,6 +96,7 @@ interface Wing {
 - `tool`: creates no document node.
 - `parts` belongs only to a container. Every part needs a matching `partHtml`.
 - `singleParagraph` makes Enter insert a line rather than split structure.
+- `isolating` protects a block holder's editing boundary while allowing multiple paragraphs. It is available on a block container or a block-holding `StructureDecl` part. Backspace/Delete do not join its content with a neighboring scope.
 - `boolAttrs` retain numeric `1` only.
 - `allows` names the only child types. Disallowed wrappers are peeled while recoverable text remains.
 - `noAlign` is valid only on `void` or `container` objects.
@@ -129,7 +131,7 @@ const setFlag: Command = (doc, selection, args, env) => {
 
 A `container` with `holds: 'blocks'` may declare `scopedCommands` containing wing command names. When both selection endpoints are inside the same nearest declaring container, the registry runs those commands on that container's child document with relative selection paths, then restores the outer document and absolute selection paths. If only one endpoint is inside, or they are in different scopes, the command is rejected. Outside such a container, the original command runs unchanged. Core commands cannot be scoped this way.
 
-Names must follow the command naming rule. Missing commands are ignored so an optional image or table wing is not required just because its insertion command is listed. Only list commands whose arguments and results use the supplied child document; do not list commands expecting absolute document paths or whole-document replacement. Parts do not declare independent scopes. The built-in float uses this for block insertion/conversion and upload commits.
+Names must follow the command naming rule. Missing commands are ignored so an optional image or table wing is not required just because its insertion command is listed. Only list commands whose arguments and results use the supplied child document; do not list commands expecting absolute document paths or whole-document replacement. Block-holding `StructureDecl` parts can also declare `scopedCommands`. The built-in float and table cells use this for block insertion/conversion and upload commits.
 
 ## HTML and import
 
@@ -146,6 +148,8 @@ When `toMd` is absent, Markdown export falls back to the wing's generated HTML. 
 `inputRules` declare `space` or `enter` triggers and return a command name plus args. Registered rules are the only autoformat rules.
 
 `onKey` runs when the selection is owned by the wing. Return a command outcome or `null`.
+
+Inside an isolating holder, a `null` result passes to the next ancestor wing up to that holder. Each wing is visited once. This lets list/code indentation handle Tab before the cell's navigation handler. `KeyIntent.shift` distinguishes Shift+Enter from Enter.
 
 `attach(host)` is the only wing-level DOM lifecycle hook. It receives the surface root, editor, `pathOfKey()`, and the cleanup registration hook `onDispose()`; return a detach function. Use it for behavior that cannot be expressed as a pure command, such as table drag selection or code paint. Avoid changing composing DOM.
 

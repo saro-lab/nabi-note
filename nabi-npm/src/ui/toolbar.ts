@@ -3,6 +3,7 @@ import { Translations } from './parts/translation.js';
 // 등록된 wing의 button 선언을 읽어 버튼을 세우고, 캐럿이 움직일 때마다 눌림·노출을 다시 칠한다 — 판정은 press·visible의 순수 함수이고 이 파일엔 배선만 있다. 버튼이 하는 일도 짐작하지 않는다: wing이 button.action으로 말한 대로만 한다.
 // Reads registered wings' `button` declarations to build buttons and repaints pressed/visible state on every caret move — the actual logic lives in press's and visible's pure functions; this file is wiring only. It never guesses what a button does either, only what the wing's `button.action` declares.
 import { hostOf, type CommandHand, type Nabi } from '../editor/index.js';
+import { sameSelection } from '../caret/index.js';
 import type { Registry, Wing, WingAction, WingButton } from '../wing/index.js';
 import { localeDirection, makeTranslator, type Translator } from '../locale/index.js';
 import { markNode, pressedOf, pressedValue, type PressEnv } from './press.js';
@@ -301,6 +302,8 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
 
     // 물어보기 — 주소·이름을 받아 커맨드 하나.
     const openAsk = (wing: Wing, anchor: HTMLButtonElement, action: Extract<WingAction, { kind: 'prompt' }>): void => {
+      let stopWatch = (): void => {};
+      let changed = false;
       picker = openPrompt(owner, {
         anchor,
         restore: options.surface ?? null,
@@ -324,7 +327,28 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
             ...(field.validate ? { validate: field.validate } : {}),
           };
         }),
-        onSubmit: (values) => run(action.command, values),
+        onClose: () => stopWatch(),
+        onSubmit: (values) => {
+          if (unmounted || unmounting) return;
+          if (
+            changed ||
+            hostOf(nabi).doc() !== original ||
+            (!sameSelection(nabi.getSelection(), target) && !nabi.select(target)) ||
+            changed ||
+            hostOf(nabi).doc() !== original ||
+            !sameSelection(nabi.getSelection(), target)
+          ) {
+            closePicker();
+            hostOf(nabi).toast('warn', t.t('insert.changed'));
+            return;
+          }
+          run(action.command, values);
+        },
+      });
+      const target = nabi.getSelection();
+      const original = hostOf(nabi).doc();
+      stopWatch = nabi.onChange((change) => {
+        if (change.doc || change.loaded) changed = true;
       });
     };
 
@@ -333,27 +357,51 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     const openFiles = (action: Extract<WingAction, { kind: 'file' }>): void => {
       closePicker();
       let finished = false;
+      const target = nabi.getSelection();
+      const original = hostOf(nabi).doc();
+      let changed = false;
+      const stopWatch = nabi.onChange((change) => {
+        if (change.doc || change.loaded) changed = true;
+      });
       const dispose = openFilePicker(owner, {
         ...(action.accept !== undefined ? { accept: action.accept } : {}),
         multiple: action.multiple !== false,
         onFiles: (files) => {
           finished = true;
           filePicker = null;
+          stopWatch();
           focusQuiet(options.surface);
+          if (
+            changed ||
+            hostOf(nabi).doc() !== original ||
+            (!sameSelection(nabi.getSelection(), target) && !nabi.select(target)) ||
+            changed ||
+            hostOf(nabi).doc() !== original ||
+            !sameSelection(nabi.getSelection(), target)
+          ) {
+            if (files.length > 0) hostOf(nabi).toast('warn', t.t('upload.changed'));
+            return;
+          }
           if (files.length > 0) options.onFiles?.(files);
         },
         onCancel: () => {
           finished = true;
           filePicker = null;
+          stopWatch();
           if (!unmounting) focusQuiet(options.surface);
         },
         onError: () => {
           finished = true;
           filePicker = null;
+          stopWatch();
         },
       });
-      if (finished) dispose();
-      else filePicker = dispose;
+      const cleanup = (): void => {
+        stopWatch();
+        dispose();
+      };
+      if (finished) cleanup();
+      else filePicker = cleanup;
     };
 
     const fire = (wing: Wing, button: HTMLButtonElement, decl?: WingButton, by?: CommandHand): boolean => {
@@ -539,7 +587,8 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
     // 노출은 밀린다 — 숨고 뜨는 것이 줄을 다시 접어 글을 밀기 때문이다.
     // Visibility repaints are deferred — hiding/showing reflows the row and pushes text around.
     const paintVisibility = (): void => {
-      const reach = reachAt(hostOf(nabi).doc(), nabi.getSelection().focus, registry, hostOf(nabi).env);
+      const selection = nabi.getSelection();
+      const reach = reachAt(hostOf(nabi).doc(), selection.focus, registry, hostOf(nabi).env, selection);
       for (const button of buttons) {
         const wing = registry.wingOf(button.w);
         button.el.hidden = wing ? !visibleAt(reach, wing) : true;

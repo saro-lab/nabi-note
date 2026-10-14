@@ -47,7 +47,8 @@ const grid22 = (): ElementNode => p([el('table', [tr(td(['a']), td(['b'])), tr(t
 
 ok('표 wing 이 defaultWings 와 함께 등록된다', registry.wings.length === WINGS.length);
 ok('tr·td 는 표의 부품이다', registry.ownerOf('tr') === tableWing && registry.ownerOf('td') === tableWing);
-eq('td 는 문단 하나 고정이다', env.singleParagraph?.has('td'), true);
+eq('td 는 여러 문단을 허용한다', env.singleParagraph?.has('td') ?? false, false);
+eq('td 는 셀 경계를 보호한다', env.isolating?.has('td'), true);
 eq('제목 표식 th 는 불리언 attr 로 접힌다', env.boolAttrs.has('th'), true);
 eq('표는 물건(lump)이다', env.lumps.has('table'), true);
 ok(
@@ -216,9 +217,7 @@ eq('spanOf — 숫자도 받는다', spanOf(3), 3);
 {
   const messy = el('td', [p(['하나']), p(['둘'])]);
   const fixed = repairCell(messy);
-  eq('칸 속 문단 둘 — 라인으로 눌린 문단 하나', fixed.ch.length, 1);
-  const inner = fixed.ch[0];
-  ok('칸 문단에 라인이 섰다', isElement(inner) && inner.ch.some((n) => isElement(n) && n.w === 'br'));
+  eq('칸 속 문단 둘을 유지한다', fixed.ch, [p(['하나']), p(['둘'])]);
   ok('칸 repair 도 멱등이다(참조 유지)', repairCell(fixed) === fixed);
 }
 {
@@ -283,10 +282,7 @@ eq('spanOf — 숫자도 받는다', spanOf(3), 3);
   const table = (withImg[0] as ElementNode).ch[0] as ElementNode;
   const cell = cellGrid(table).cells[0]?.cell;
   const para = cell?.ch[0];
-  ok(
-    '칸 속 그림은 걷힌다(칸은 글줄)',
-    isElement(para) && para.ch.every((n) => typeof n === 'string' || (isElement(n) && n.w === 'br')),
-  );
+  ok('칸 속 그림은 보존된다', isElement(para) && para.ch.some((n) => isElement(n) && n.w === 'img'));
 }
 
 // --- HTML — th 왕복·횡스크롤 겉옷 --------------------------------------------------------------
@@ -518,13 +514,11 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   const g = cellGrid(table);
   eq('병합 — 칸 하나', g.cells.length, 1);
   eq('병합 — 2×2 를 덮는다', [g.cells[0]?.colSpan, g.cells[0]?.rowSpan], [2, 2]);
-  const merged = g.cells[0]?.cell.ch[0] as ElementNode;
   eq(
-    '병합 — 글이 라인으로 이어진다',
-    merged.ch.filter((n) => typeof n === 'string'),
-    ['a', 'b', 'c', 'd'],
+    '병합 — 문단과 내용 순서를 보존한다',
+    g.cells[0]?.cell.ch.map((node) => (isElement(node) ? node.ch : node)),
+    [['a'], ['b'], ['c'], ['d']],
   );
-  eq('병합 — 경계마다 라인 하나', merged.ch.filter((n) => isElement(n) && n.w === 'br').length, 3);
   caretExists('병합 뒤 캐럿 실재 (옛 mergeBox 버그)', nabi);
   eq('병합 칸의 눌림 표시', tableWing.currentValue?.(g.cells[0]?.cell as ElementNode), 'merged');
 
@@ -633,14 +627,17 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
     path: [0, 0, 0, 0, 0],
     offset: 1,
   });
-  eq('a1 에서 ↓ 는 같은 열의 아래 칸', arrow('down', a1)?.selection.focus, { path: [0, 0, 1, 0, 0], offset: 0 });
+  eq('a1 에서 ↓ 는 같은 열의 아래 칸', arrow('down', caretAt(at([0, 0, 0, 0, 0], 1)))?.selection.focus, {
+    path: [0, 0, 1, 0, 0],
+    offset: 0,
+  });
   eq('c(아래 줄) 에서 ↑ 는 같은 열의 위 칸', arrow('up', caretAt(at([0, 0, 1, 0, 0], 0)))?.selection.focus, {
     path: [0, 0, 0, 0, 0],
     offset: 0,
   });
   eq(
     '마지막 줄 첫 칸에서 ↓ 는 옆 칸이 아니라 표 뒤에 선다',
-    arrow('down', caretAt(at([0, 0, 1, 0, 0], 0)))?.selection.focus,
+    arrow('down', caretAt(at([0, 0, 1, 0, 0], 1)))?.selection.focus,
     {
       path: [0],
       offset: 1,
@@ -669,18 +666,12 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
   eq('칸 끝 Delete — 무변화', nabi.applyCommand('deleteForward'), false);
 }
 {
-  // 칸 안의 엔터는 분할이 아니라 라인이다 — td 는 singleParagraph라서.
-  // Enter inside a cell inserts a line, not a split — td is singleParagraph.
   const nabi = make([grid22()]);
   nabi.select(caretAt(at([0, 0, 0, 0, 0], 1)));
   nabi.applyCommand('splitParagraph');
   const cell = cellGrid((hostOf(nabi).doc()[0] as ElementNode).ch[0] as ElementNode).cells[0]?.cell;
-  const para = cell?.ch[0] as ElementNode;
-  ok(
-    '칸의 엔터는 분할이 아니라 라인이다',
-    para.ch.some((n) => isElement(n) && n.w === 'br'),
-  );
-  eq('칸은 여전히 문단 하나다', cell?.ch.length, 1);
+  eq('칸의 Enter는 문단을 나눈다', cell?.ch.length, 2);
+  eq('칸 내부 새 문단에 커서가 선다', nabi.getSelection().focus.path, [0, 0, 0, 0, 1]);
 }
 
 done('table');

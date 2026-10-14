@@ -4,6 +4,7 @@ import type { ElementNode, NabiDoc } from '../schema/index.js';
 import { nodeAt, type EditEnv } from '../doc/index.js';
 import { marksAt, ordered, type ArmedState, type Selection } from '../caret/index.js';
 import type { Registry, Wing } from '../wing/index.js';
+import { paragraphTargets } from '../wing/paragraph-target.js';
 
 export interface PressEnv {
   readonly doc: NabiDoc;
@@ -114,13 +115,10 @@ export function pressedOf(env: PressEnv, w: string): Pressed {
   }
 
   if (wing.place === 'attr') {
-    // 문단 속성은 선택 시작 문단이 겨눔이다 — doc의 setParagraphAttr와 같은 기준.
-    // A paragraph attr targets the selection's starting paragraph — same rule as doc's setParagraphAttr.
-    const [start] = ordered(env.sel);
-    const node = nodeAt(env.doc, [start.path[0] as number]);
-    if (!node) return OFF;
-    const value = wing.currentValue?.(node);
-    return value === undefined ? OFF : { on: true, value };
+    const targets = paragraphTargets(env.doc, env.sel, wing.attrKey ?? '', env.env);
+    const values = targets.map(({ node }) => wing.currentValue?.(node));
+    const value = values[0];
+    return value === undefined || values.some((other) => other !== value) ? OFF : { on: true, value };
   }
 
   // void·container — 캐럿을 품는 조상이 곧 눌림이다. 값은 그 조상들이 함께 답한다(표의 정렬 표식은 표에, 병합·제목은 칸에 산다 — 둘은 같은 줄의 단추다).

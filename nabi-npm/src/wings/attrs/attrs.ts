@@ -1,16 +1,8 @@
 // 정렬 wing의 w는 'align'이지만 attrKey는 'a' — 'a'는 링크 마크가 이미 노드 타입으로 쓴다.
 // The align wing's w is 'align' but its attrKey is 'a' — 'a' itself is taken by the link mark's node type.
-import { P, takesAlign, type AttrValue, type ElementNode, type NabiDoc } from '../../schema/index.js';
-import {
-  comparePositions,
-  holderLength,
-  holders,
-  nodeAt,
-  replaceAt,
-  setParagraphAttr,
-  type EditEnv,
-} from '../../doc/index.js';
-import { ordered, type Selection } from '../../caret/index.js';
+import { type AttrValue, type ElementNode } from '../../schema/index.js';
+import { nodeAt, replaceAt } from '../../doc/index.js';
+import { paragraphTargets } from '../../wing/paragraph-target.js';
 import type { Command } from '../../editor/index.js';
 import type { InputRule, Wing } from '../../wing/index.js';
 import type { LocaleText } from '../../locale/index.js';
@@ -119,47 +111,42 @@ const headingLevel = (n: number): LocaleText => ({
 const LEVELS: readonly AttrValue[] = [1, 2, 3, 4, 5, 6];
 const ALIGNS: readonly AttrValue[] = ['l', 'c', 'r'];
 
-// setParagraphAttr가 실제로 바꾸는 문단과 같은 목록이어야 토글 판정이 안 어긋난다.
-// Must match exactly what setParagraphAttr touches, or the toggle check would desync from the apply.
-function paragraphsIn(doc: NabiDoc, sel: Selection, env: EditEnv): ElementNode[] {
-  const [start, end] = ordered(sel);
-  const out: ElementNode[] = [];
-  if (comparePositions(start, end) === 0) {
-    const node = nodeAt(doc, start.path);
-    if (node && node.w === P) out.push(node);
-    return out;
-  }
-  for (const { path, node } of holders(doc, env)) {
-    if (node.w !== P) continue;
-    if (comparePositions({ path, offset: holderLength(node, env) }, start) < 0) continue;
-    if (comparePositions({ path, offset: 0 }, end) > 0) continue;
-    out.push(node);
-  }
-  return out;
-}
-
 // 첫 문단만 보고 토글하면 섞인 선택에서 뒤집힌다 — 전부 같은 값일 때만 해제한다.
 // Toggling off only when every selected paragraph already matches avoids flipping mixed selections.
 function toggledValue(now: readonly (AttrValue | undefined)[], value: AttrValue): AttrValue | null {
   return now.length > 0 && now.every((each) => each === value) ? null : value;
 }
 
-// 래퍼문단엔 정렬 말고 다른 속성이 못 얹히는 것은 doc 쪽이 지킨다(여기서 다시 안 막는다).
-// doc already guarantees wrapper paragraphs take no attr but align, so this doesn't recheck it.
 function attrCommand(key: string, parse: (raw: unknown) => AttrValue | null): Command {
   return (doc, sel, args, env) => {
     const raw = args['value'];
-    let next: AttrValue | null = null;
-    if (raw !== null) {
-      const value = parse(raw);
-      if (value === null) return null;
-      next = toggledValue(
-        paragraphsIn(doc, sel, env).map((node) => node.a?.[key]),
-        value,
-      );
+    const value = raw === null ? null : parse(raw);
+    if (raw !== null && value === null) return null;
+    const targets = paragraphTargets(doc, sel, key, env);
+    if (targets.length === 0) return null;
+    const next =
+      value === null
+        ? null
+        : toggledValue(
+            targets.map(({ node }) => node.a?.[key]),
+            value,
+          );
+    let out = doc;
+    for (const target of targets) {
+      const current = nodeAt(out, target.path);
+      if (!current || (current.a?.[key] ?? null) === next) continue;
+      const a: Record<string, AttrValue> = { ...(current.a ?? {}) };
+      if (next === null) delete a[key];
+      else a[key] = next;
+      const node: ElementNode = {
+        w: current.w,
+        ch: current.ch,
+        ...(Object.keys(a).length > 0 ? { a } : {}),
+        ...(current._id !== undefined ? { _id: current._id } : {}),
+      };
+      out = replaceAt(out, target.path, [node]);
     }
-    const r = setParagraphAttr(doc, { anchor: sel.anchor, focus: sel.focus }, key, next, env);
-    return { doc: r.doc, selection: { anchor: r.anchor ?? r.caret, focus: r.caret } };
+    return out === doc ? null : { doc: out, selection: sel };
   };
 }
 
@@ -258,59 +245,6 @@ export const headingWing: Wing = {
   styles: PARAGRAPH_CSS,
 };
 
-// 정렬은 최상위 문단의 것이다 — 캐럿이 표 칸 속이면 겨눔은 그 칸이 아니라 표를 감싼 래퍼문단이다.
-// 물건이 정렬을 마다하는 판정(`Wing.noAlign`)은 `takesAlign` 한 문이 답한다; 여기서 이름으로 안 가른다.
-// Alignment targets the top-level paragraph — if the caret sits in a table cell, the target is the table's wrapper paragraph, not the cell itself. Whether an object opts out (`Wing.noAlign`) is answered by the single `takesAlign` gate, not by name-checking here.
-const setAlign: Command = (doc, sel, args, env) => {
-  const raw = args['value'];
-  const value = raw === 'l' || raw === 'c' || raw === 'r' ? raw : null;
-  if (raw !== null && value === null) return null;
-
-  // 겨눔은 선택이 걸친 최상위 블록 전부다 — 표 칸 속 캐럿 하나는 그 표의 래퍼문단 하나로 접힌다.
-  // The target is every top-level block the selection spans; a single caret in a table cell collapses to that table's one wrapper paragraph.
-  const [start, end] = ordered(sel);
-  const from = start.path[0];
-  const to = end.path[0];
-  if (from === undefined || to === undefined) return null;
-
-  // 정렬을 마다한 물건의 래퍼문단은 겨눔에서 아예 빠진다 — 안 그러면 그 자리가 토글 셈을 흔든다.
-  // A wrapper paragraph whose object opted out of alignment is excluded from the target entirely, or it would skew the toggle count.
-  const tops: { index: number; node: ElementNode }[] = [];
-  for (let index = Math.min(from, to); index <= Math.max(from, to); index += 1) {
-    const node = doc[index];
-    if (node && node.w === P && takesAlign(node, env)) tops.push({ index, node });
-  }
-  if (tops.length === 0) return null; // 겨눌 문단이 없다 — 무변화 침묵
-
-  const next =
-    value === null
-      ? null
-      : toggledValue(
-          tops.map((top) => top.node.a?.['a']),
-          value,
-        );
-
-  let out = doc;
-  let moved = false;
-  for (const top of tops) {
-    const now = top.node.a?.['a'] ?? null;
-    if (now === next) continue; // 이미 그대로다
-    const a: Record<string, AttrValue> = { ...(top.node.a ?? {}) };
-    if (next === null) delete a['a'];
-    else a['a'] = next;
-    const node: ElementNode = {
-      w: P,
-      ch: top.node.ch,
-      ...(Object.keys(a).length > 0 ? { a } : {}),
-      ...(top.node._id !== undefined ? { _id: top.node._id } : {}),
-    };
-    out = replaceAt(out, [top.index], [node]);
-    moved = true;
-  }
-  if (!moved) return null; // 아무것도 안 바뀐다 — 무변화 침묵
-  return { doc: out, selection: sel };
-};
-
 export const alignWing: Wing = {
   w: 'align',
   place: 'attr',
@@ -322,7 +256,7 @@ export const alignWing: Wing = {
     const a = node.a?.['a'];
     return a === 'l' || a === 'c' || a === 'r' ? a : undefined;
   },
-  commands: { setAlign },
+  commands: { setAlign: attrCommand('a', (raw) => (raw === 'l' || raw === 'c' || raw === 'r' ? raw : null)) },
   // 셋이 줄에 나란히 선다 — 차림표로 접으면 지금 어느 쪽인지가 줄에서 안 보이게 된다.
   // All three sit in the row rather than collapsing into a menu, which would hide the current state.
   buttons: ALIGNS.map((value, at) => ({

@@ -5,6 +5,8 @@ import { holderLength, nodeAt, type EditEnv, type Position } from '../doc/index.
 import { marksAt, ordered, type Selection } from '../caret/index.js';
 import type { Registry, Wing } from '../wing/index.js';
 import { aimNode } from './press.js';
+import { $contextState, type $ContextState } from '../wing/context-state.js';
+import { paragraphTargets } from '../wing/paragraph-target.js';
 
 export interface ContextGroup {
   readonly wing: Wing;
@@ -14,6 +16,7 @@ export interface ContextGroup {
   // 이 wing이 소유한 조상 전부(안→밖) — 상태 토큰은 이 줄기 전체가 함께 답한다(표: 칸이 'merged th', 표가 'sort').
   // Every ancestor this wing owns, inside-out — the state token comes from the whole chain (a table's cell answers 'merged th', the table itself 'sort').
   readonly nodes: readonly ElementNode[];
+  readonly state?: $ContextState;
 }
 
 // 마크를 읽을 자리 — 접힌 캐럿이면 그 자리, 범위면 첫 글자의 끝(경계 정규화가 앞 글자를 따르므로 그래야 첫 글자의 마크가 나온다).
@@ -72,22 +75,21 @@ export function contextGroupsAt(
   const at = markReadPoint(doc, start, end, env);
   for (const mark of marksAt(doc, at, env)) offer(registry.ownerOf(mark.w), mark);
 
-  // 3. 문단 속성 — 겨눔은 선택 시작 문단이다(press의 attr 판정과 같은 기준). 값이 없는 wing은 건너뛴다.
-  // Paragraph-attr wings — targets the selection's starting paragraph (same rule as press's attr check); a wing with no value on it is skipped.
-  const top = nodeAt(doc, [start.path[0] as number]);
-  if (top) {
-    for (const wing of registry.wings) {
-      if (wing.place !== 'attr' || !wing.context) continue;
-      if (wing.currentValue?.(top) === undefined) continue;
-      offer(wing, top);
-    }
+  for (const wing of registry.wings) {
+    if (wing.place !== 'attr' || !wing.context) continue;
+    const targets = paragraphTargets(doc, sel, wing.attrKey ?? '', env);
+    const first = targets[0]?.node;
+    const value = first ? wing.currentValue?.(first) : undefined;
+    if (!first || value === undefined || targets.some(({ node }) => wing.currentValue?.(node) !== value)) continue;
+    offer(wing, first);
   }
 
   const groups: ContextGroup[] = [];
   for (const wing of order) {
     const nodes = candidates.get(wing) ?? [];
-    const node = aimNode(nodes, wing);
-    if (node) groups.push({ wing, node, nodes });
+    const state = $contextState(wing, doc, sel);
+    const node = state?.node ?? aimNode(nodes, wing);
+    if (node) groups.push({ wing, node, nodes, ...(state ? { state } : {}) });
   }
   return groups;
 }

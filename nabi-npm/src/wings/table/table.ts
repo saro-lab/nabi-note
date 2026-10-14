@@ -1,17 +1,15 @@
-// 표 wing — 064의 표 버그 다섯이 구조적으로 안 나는 표: 래퍼>table>tr>td>문단 하나(엔터=라인), 정렬·폭 attr 없음.
-// The table wing, structured so 064's five table bugs can't recur: wrapper>table>tr>td>one paragraph (Enter=line), no align/width attrs.
-//
-// repair는 들쭉 행·span 초과를 빈 칸으로 채워 직사각형화한다. 병합은 토글 하나(잡은 사각형↔풀기), 제목은 행·열 토글이다.
-// repair pads ragged rows and over-spanning cells into a rectangle. Merge is one toggle (box↔split); header is a row/column toggle.
 import { BR, P, isElement, type AttrValue, type ElementNode, type NabiNode } from '../../schema/index.js';
 import { $markBuiltinAttrOwner } from '../../schema/env.js';
-import { holderLength, nodeAt, replaceAt, holders, type EditEnv, type Position } from '../../doc/index.js';
+import { nodeAt, replaceAt, holders, type EditEnv, type Position } from '../../doc/index.js';
 import { caretAt, isCollapsed, ordered, type Selection } from '../../caret/index.js';
 import type { Command, CommandOutcome } from '../../editor/index.js';
 import type { HtmlBuilder, ParseElement } from '../../html/index.js';
 import type { MdBuilder } from '../../io/index.js';
 import type { KeyIntent, OnKey, Wing } from '../../wing/index.js';
 import { insertLump } from '../../wing/index.js';
+import { $setContextState } from '../../wing/context-state.js';
+import { $setParagraphTargets } from '../../wing/paragraph-target.js';
+import { tableParagraphTargets } from './paragraphs.js';
 import { exitWrapper } from '../../wing/ops.js';
 import type { LocaleText } from '../../locale/index.js';
 import {
@@ -31,7 +29,16 @@ import {
   type TableGrid,
 } from './grid.js';
 import { emptyCell, emptyCells, headerCell } from './helpers.js';
-import { cellCtxOf, selectionBox, type CellCtx } from './selection.js';
+import { cellBoundary, cellCtxOf, selectionBox, type CellCtx } from './selection.js';
+import {
+  CELL_COLOR_CHOICES,
+  CELL_COLOR_LABEL,
+  CELL_COLORS,
+  cellColor,
+  cellColorSelection,
+  setCellColor,
+  withCellColor,
+} from './color.js';
 export { selectionBox } from './selection.js';
 export const TH = 'th';
 export const SORTABLE = 'sort';
@@ -39,70 +46,32 @@ function rebuilt(node: ElementNode, ch: readonly NabiNode[]): ElementNode {
   return { w: node.w, ch, ...(node.a ? { a: node.a } : {}), ...(node._id !== undefined ? { _id: node._id } : {}) };
 }
 
-// 속이 이미 "문단 하나 + 깨끗한 인라인"인가 — 매 커맨드 cocoon 위에서 공짜여야 하므로 참이면 손대지 않는다.
-// Whether the content is already "one clean paragraph" — this must be free on every cocoon pass, so a true result changes nothing (structural sharing).
-function cleanInline(node: NabiNode): boolean {
-  if (typeof node === 'string') return true;
-  if (!isElement(node)) return false;
-  if (node.w === BR) return node.ch.length === 0;
-  if (node.w === P) return false; // 문단 속 문단 — 칸에서는 라인으로 눌러야 한다
-  if (node.ch.length === 0) return false; // 속 빈 엘리먼트(물건 류) — 인라인 자리가 아니다
-  return node.ch.every(cleanInline);
-}
-
-function cleanCell(cell: ElementNode): boolean {
-  if (cell.ch.length !== 1) return false;
-  const only = cell.ch[0];
-  return isElement(only) && only.w === P && only.ch.every(cleanInline);
-}
-
-// 속 어딘가에 문단이 사는가 — 마크(인라인)와 블록 껍데기(행·칸·중첩 표)를 가르는 판정.
-// Whether a paragraph lives anywhere inside — the test separating inline marks from block wrappers (rows, cells, nested tables).
-function hasParagraphInside(node: ElementNode): boolean {
-  return node.ch.some((child) => isElement(child) && (child.w === P || hasParagraphInside(child)));
-}
-
-// 블록들을 라인으로 눌러 한 문단의 인라인으로 만든다 — 마크는 남기고 블록 껍데기는 벗기며 경계마다 라인을 한 칸 둔다.
-// Flattens blocks into one paragraph's inline content by line — marks survive, block wrappers are stripped, and each boundary becomes a line break.
-function pressInline(nodes: readonly NabiNode[], out: NabiNode[], sep: { pending: boolean }): void {
-  const flush = (): void => {
-    if (sep.pending && out.length > 0) out.push({ w: BR, ch: [] });
-    sep.pending = false;
-  };
-  for (const node of nodes) {
-    if (typeof node === 'string') {
-      if (node === '') continue;
-      flush();
-      out.push(node);
-      continue;
+function cellContents(nodes: readonly NabiNode[], header: boolean): readonly NabiNode[] {
+  const next = nodes.flatMap((node): NabiNode[] => {
+    if (!isElement(node)) return [node];
+    if (node.w === 'table' || node.w === 'tr' || node.w === 'td' || node.w === 'float') {
+      return [...cellContents(node.ch, header)];
     }
-    if (!isElement(node)) continue;
-    if (node.w === BR) {
-      flush();
-      out.push({ w: BR, ch: [] });
-      continue;
+    const only = node.ch.length === 1 ? node.ch[0] : undefined;
+    if (node.w === P && isElement(only) && (only.w === 'table' || only.w === 'float')) {
+      return [...cellContents(only.ch, header)];
     }
-    if (node.w === P || hasParagraphInside(node)) {
-      // 블록 껍데기 — 벗기고, 앞뒤 경계를 라인으로 남긴다.
-      const before = out.length;
-      sep.pending = out.length > 0;
-      pressInline(node.ch, out, sep);
-      sep.pending = out.length > before || sep.pending;
-      continue;
-    }
-    if (node.ch.length === 0) continue; // 물건·빈 마크 — 칸의 인라인 자리에 못 선다
-    flush();
-    out.push(node); // 마크 — 속까지 깨끗한 인라인이다
-  }
+    const ch = cellContents(node.ch, header);
+    const changed = ch !== node.ch ? rebuilt(node, ch) : node;
+    if (!header || node.w !== P || node.a?.['h'] === undefined) return [changed];
+    const a = { ...changed.a };
+    delete a['h'];
+    const { a: _attrs, ...rest } = changed;
+    return [Object.keys(a).length > 0 ? { ...rest, a } : rest];
+  });
+  return next.length === nodes.length && next.every((node, i) => node === nodes[i]) ? nodes : next;
 }
 
 export function repairCell(cell: ElementNode): ElementNode {
-  if (cleanCell(cell)) return cell;
-  const inline: NabiNode[] = [];
-  pressInline(cell.ch, inline, { pending: false });
-  const first = cell.ch[0];
-  const paragraph: ElementNode = isElement(first) && first.w === P ? rebuilt(first, inline) : { w: P, ch: inline };
-  return rebuilt(cell, [paragraph]);
+  const colored = withCellColor(cell, cellColor(cell.a?.['bg']));
+  const ch = cellContents(colored.ch, colored.a?.[TH] === 1);
+  if (ch.length === 0) return rebuilt(colored, [{ w: P, ch: [] }]);
+  return ch === colored.ch ? colored : rebuilt(colored, ch);
 }
 
 function clampSpans(table: ElementNode): ElementNode {
@@ -139,10 +108,7 @@ export function repairTable(table: ElementNode): ElementNode {
   const rowsOnly = table.ch.map((child) => {
     if (isElement(child) && child.w === 'tr') return child;
     wrappedAny = true;
-    const pressed: NabiNode[] = [];
-    pressInline([child], pressed, { pending: false });
-    if (pressed.length === 0) return null;
-    return { w: 'tr', ch: [{ w: 'td', ch: [{ w: P, ch: pressed }] }] } as ElementNode;
+    return { w: 'tr', ch: [repairCell({ w: 'td', ch: [child] })] } as ElementNode;
   });
   const base = wrappedAny
     ? rebuilt(
@@ -173,12 +139,6 @@ export function repairTable(table: ElementNode): ElementNode {
     return rebuilt(child, [...child.ch, ...gaps.flatMap((width) => emptyCells(width, expand))]);
   });
   return padded ? rebuilt(clamped, ch) : clamped;
-}
-
-// 칸의 문단 첫 자리 — repair가 "칸 = 문단 하나"를 보장하므로 문단 인덱스는 0이다.
-// A cell's first paragraph position — always index 0, since repair guarantees "one cell = one paragraph".
-function caretInCell(tablePath: readonly number[], cell: GridCell, offset = 0): Position {
-  return { path: [...tablePath, cell.trIndex, cell.tdIndex, 0], offset };
 }
 
 // 격자 행 번호 → table.ch의 tr 인덱스.
@@ -305,23 +265,12 @@ function deleteColumnAt(table: ElementNode, line: number): ElementNode | null {
   });
 }
 
-// 상자의 칸들을 왼쪽 위 칸 하나로 — 글은 라인으로 이어 남는다.
-// Collapses every cell in the box into the top-left one — their text survives, joined by line breaks.
 function mergeBox(table: ElementNode, grid: TableGrid, box: GridBox): ElementNode {
   const origin = cellCovering(grid, box.top, box.left);
   if (!origin) return table;
   const inside = cellsInBox(grid, box);
-  const inline: NabiNode[] = [];
-  const sep = { pending: false };
-  for (const item of inside) {
-    const before = inline.length;
-    pressInline(item.cell.ch, inline, sep);
-    if (inline.length > before) sep.pending = true;
-  }
-  const originParagraph = origin.cell.ch[0];
-  const paragraph: ElementNode =
-    isElement(originParagraph) && originParagraph.w === P ? rebuilt(originParagraph, inline) : { w: P, ch: inline };
-  const merged = withSpans(rebuilt(origin.cell, [paragraph]), box.right - box.left + 1, box.bottom - box.top + 1);
+  const ch = inside.flatMap((item) => item.cell.ch);
+  const merged = withSpans(repairCell(rebuilt(origin.cell, ch)), box.right - box.left + 1, box.bottom - box.top + 1);
   const insideCells = new Set(inside.map((item) => item.cell));
   return mapCells(table, (item) => {
     if (item.cell === origin.cell) return merged;
@@ -338,7 +287,7 @@ function splitCell(table: ElementNode, target: GridCell): ElementNode {
       if (r === target.row && c === target.column) continue;
       const trIndex = trIndexOfRow(next, r);
       if (trIndex === null) continue;
-      next = insertCellInRow(next, trIndex, c, emptyCell());
+      next = insertCellInRow(next, trIndex, c, withCellColor(emptyCell(), cellColor(target.cell.a?.['bg'])));
     }
   }
   return next;
@@ -352,6 +301,7 @@ function settle(
   table: ElementNode,
   row: number,
   column: number,
+  env: EditEnv,
 ): CommandOutcome {
   const next = replaceAt(doc, tablePath, [table]);
   const landed = nodeAt(next, tablePath);
@@ -361,7 +311,7 @@ function settle(
   const c = Math.max(0, Math.min(column, grid.columns - 1));
   const cell = cellCovering(grid, r, c) ?? grid.cells[0];
   if (!cell) return { doc: next, selection: caretAt({ path: [tablePath[0] ?? 0], offset: 0 }) };
-  return { doc: next, selection: caretAt(caretInCell(tablePath, cell)) };
+  return { doc: next, selection: caretAt(cellBoundary(tablePath, cell, env)) };
 }
 
 // 래퍼문단(표)을 통째로 걷은 뒤의 답 — 마지막 행·열 삭제가 표 자체 삭제로 이어진다.
@@ -390,8 +340,9 @@ function removeWholeTable(
 const withCtx =
   (run: (ctx: CellCtx, doc: readonly ElementNode[], sel: Selection, env: EditEnv) => CommandOutcome | null): Command =>
   (doc, sel, _args, env) => {
+    const anchor = cellCtxOf(doc, sel.anchor);
     const ctx = cellCtxOf(doc, sel.focus);
-    if (!ctx) return null;
+    if (!anchor || !ctx || anchor.table !== ctx.table) return null;
     return run(ctx, doc, sel, env);
   };
 
@@ -402,9 +353,18 @@ const clampDim = (raw: unknown, fallback: number): number => {
 };
 
 const commands: Readonly<Record<string, Command>> = {
+  setCellColor,
+  selectTable(doc, sel) {
+    const anchor = cellCtxOf(doc, sel.anchor);
+    const focus = cellCtxOf(doc, sel.focus);
+    if (!anchor || !focus || anchor.table !== focus.table) return null;
+    const path = focus.tablePath.slice(0, -1);
+    return { doc, selection: { anchor: { path, offset: 0 }, focus: { path, offset: 1 } } };
+  },
   // 표 하나를 캐럿 자리에 세운다(빈 문단이면 교체) — 새 표의 첫 행은 예외 없이 제목 행이다(생성 길에만 선다, 들여오기는 아니다).
   // Stands up a table at the caret (replacing an empty paragraph) — the first row is always a header row, but only on creation, never on import.
   insertTable(doc, sel, args, env) {
+    if (cellCtxOf(doc, sel.anchor) || cellCtxOf(doc, sel.focus)) return null;
     const rows = clampDim(args['rows'], 3);
     const cols = clampDim(args['cols'], 3);
     const table: ElementNode = {
@@ -415,58 +375,59 @@ const commands: Readonly<Record<string, Command>> = {
       })),
     };
     const result = insertLump(doc, sel.focus, table, env);
-    const top = result.caret.path[0] as number;
-    return { doc: result.doc, selection: caretAt({ path: [top, 0, 0, 0, 0], offset: 0 }) };
+    return { doc: result.doc, selection: caretAt({ path: [...result.caret.path, 0, 0, 0, 0], offset: 0 }) };
   },
 
-  addRowAbove: withCtx((ctx, doc) =>
-    settle(doc, ctx.tablePath, insertRowAt(ctx.table, ctx.cell.row), ctx.cell.row + 1, ctx.cell.column),
+  addRowAbove: withCtx((ctx, doc, _sel, env) =>
+    settle(doc, ctx.tablePath, insertRowAt(ctx.table, ctx.cell.row), ctx.cell.row + 1, ctx.cell.column, env),
   ),
-  addRowBelow: withCtx((ctx, doc) =>
+  addRowBelow: withCtx((ctx, doc, _sel, env) =>
     settle(
       doc,
       ctx.tablePath,
       insertRowAt(ctx.table, ctx.cell.row + ctx.cell.rowSpan),
       ctx.cell.row + ctx.cell.rowSpan,
       ctx.cell.column,
+      env,
     ),
   ),
-  addColumnLeft: withCtx((ctx, doc) =>
-    settle(doc, ctx.tablePath, insertColumnAt(ctx.table, ctx.cell.column), ctx.cell.row, ctx.cell.column + 1),
+  addColumnLeft: withCtx((ctx, doc, _sel, env) =>
+    settle(doc, ctx.tablePath, insertColumnAt(ctx.table, ctx.cell.column), ctx.cell.row, ctx.cell.column + 1, env),
   ),
-  addColumnRight: withCtx((ctx, doc) =>
+  addColumnRight: withCtx((ctx, doc, _sel, env) =>
     settle(
       doc,
       ctx.tablePath,
       insertColumnAt(ctx.table, ctx.cell.column + ctx.cell.colSpan),
       ctx.cell.row,
       ctx.cell.column + ctx.cell.colSpan,
+      env,
     ),
   ),
   deleteRow: withCtx((ctx, doc, _sel, env) => {
     const next = deleteRowAt(ctx.table, ctx.cell.row);
     if (next === null) return removeWholeTable(doc, ctx.tablePath, env);
-    return settle(doc, ctx.tablePath, next, ctx.cell.row, ctx.cell.column);
+    return settle(doc, ctx.tablePath, next, ctx.cell.row, ctx.cell.column, env);
   }),
   deleteColumn: withCtx((ctx, doc, _sel, env) => {
     const next = deleteColumnAt(ctx.table, ctx.cell.column);
     if (next === null) return removeWholeTable(doc, ctx.tablePath, env);
-    return settle(doc, ctx.tablePath, next, ctx.cell.row, ctx.cell.column);
+    return settle(doc, ctx.tablePath, next, ctx.cell.row, ctx.cell.column, env);
   }),
 
   // 병합 토글 하나 — 방향은 안 묻는다(사각형을 잡은 것으로 이미 다 말했다). 병합 칸에 서면 눌린 채로 보이고, 다시 누르면 풀린다.
   // One merge toggle, no direction asked (the dragged rectangle already says everything) — showing pressed on a merged cell, pressing again splits it.
-  mergeCells(doc, sel, _args, _env) {
+  mergeCells(doc, sel, _args, env) {
     const boxed = selectionBox(doc, sel);
     if (boxed) {
       const ctx = cellCtxOf(doc, ordered(sel)[0]);
       if (!ctx) return null;
-      return settle(doc, boxed.tablePath, mergeBox(ctx.table, ctx.grid, boxed.box), boxed.box.top, boxed.box.left);
+      return settle(doc, boxed.tablePath, mergeBox(ctx.table, ctx.grid, boxed.box), boxed.box.top, boxed.box.left, env);
     }
     if (!isCollapsed(sel)) return null;
     const ctx = cellCtxOf(doc, sel.focus);
     if (!ctx || (ctx.cell.colSpan === 1 && ctx.cell.rowSpan === 1)) return null;
-    return settle(doc, ctx.tablePath, splitCell(ctx.table, ctx.cell), ctx.cell.row, ctx.cell.column);
+    return settle(doc, ctx.tablePath, splitCell(ctx.table, ctx.cell), ctx.cell.row, ctx.cell.column, env);
   },
 
   // 제목 행·열 토글 — 줄의 칸 전부가 제목이면 벗고, 아니면 입힌다.
@@ -477,7 +438,8 @@ const commands: Readonly<Record<string, Command>> = {
   // Toggles the flag that lets the viewer sort by clicking a header cell — without it, attachTableSort never attaches.
   toggleSortable(doc, sel) {
     const ctx = cellCtxOf(doc, ordered(sel)[0]);
-    if (!ctx) return null;
+    const end = cellCtxOf(doc, ordered(sel)[1]);
+    if (!ctx || !end || ctx.table !== end.table) return null;
     const on = ctx.table.a?.[SORTABLE] === 1;
     const a: Record<string, AttrValue> = { ...(ctx.table.a ?? {}) };
     if (on) delete a[SORTABLE];
@@ -495,13 +457,12 @@ const commands: Readonly<Record<string, Command>> = {
   // Deletes the table — removes it wrapper and all, seating an empty paragraph in its place.
   deleteTable(doc, sel) {
     const [start] = ordered(sel);
-    const top = start.path[0];
-    if (top === undefined) return null;
     const ctx = cellCtxOf(doc, start);
-    if (!ctx) return null;
+    const end = cellCtxOf(doc, ordered(sel)[1]);
+    if (!ctx || !end || ctx.table !== end.table) return null;
     const empty: ElementNode = { w: P, ch: [] };
-    const caret: Position = { path: [top], offset: 0 };
-    return { doc: replaceAt(doc, [top], [empty]), selection: caretAt(caret) };
+    const path = ctx.tablePath.slice(0, -1);
+    return { doc: replaceAt(doc, path, [empty]), selection: caretAt({ path, offset: 0 }) };
   },
 };
 
@@ -550,11 +511,6 @@ export function headerLineOf(
   return headerLine(ctx.grid, axis, axis === 'row' ? ctx.cell.row : ctx.cell.column);
 }
 
-// 화살표는 화면이 아니라 격자를 따라 움직인다 — 브라우저의 화면 좌표 기반 걸음은 칸 폭·병합이 섞이면 엉뚱한 칸으로 샌다.
-// Arrow keys walk the grid, not screen position — the browser's coordinate-based movement drifts to the wrong cell once widths and merges are involved.
-//
-// 칸 안에 갈 곳이 남았으면 우리 일이 아니다(null로 코어·브라우저에 넘긴다) — 칸 끝에 닿았을 때만 옆 칸으로 넘긴다.
-// If there's still room inside the cell, this isn't our concern (returns null to core/browser) — only reaching a cell's edge hands off to the neighbor.
 function arrowStep(
   intent: KeyIntent,
   doc: readonly ElementNode[],
@@ -564,56 +520,37 @@ function arrowStep(
   const ctx = cellCtxOf(doc, sel.focus);
   if (!ctx) return null;
   const dir = intent.dir;
-
-  const lengthAt = (pos: Position): number => {
-    const holder = nodeAt(doc, pos.path);
-    return holder ? holderLength(holder, env) : 0;
-  };
+  const back = dir === 'left' || dir === 'up';
+  const edge = cellBoundary(ctx.tablePath, ctx.cell, env, !back);
+  if (
+    sel.focus.offset !== edge.offset ||
+    sel.focus.path.length !== edge.path.length ||
+    !sel.focus.path.every((value, index) => value === edge.path[index])
+  )
+    return null;
 
   if (dir === 'left' || dir === 'right') {
-    const back = dir === 'left';
-    // 칸 안에 아직 갈 자리가 있다 — 글자 걸음이지 칸 걸음이 아니다.
-    if (back ? sel.focus.offset > 0 : sel.focus.offset < lengthAt(sel.focus)) return null;
     const next = stepCell(ctx.grid, ctx.cell, back ? -1 : 1);
-    if (!next) return null; // 표의 첫(끝) 칸 — 표 밖으로 나가는 것은 코어의 걸음이다
-    const head = caretInCell(ctx.tablePath, next);
-    // 왼쪽으로 넘어가면 그 칸의 끝에 선다 — 넘어간 자리가 곧 다음에 지울 자리다.
-    // Moving left lands at the target cell's end — the position you'd delete from next.
-    return { doc, selection: caretAt(back ? { ...head, offset: lengthAt(head) } : head) };
+    if (!next) return null;
+    return { doc, selection: caretAt(cellBoundary(ctx.tablePath, next, env, back)) };
   }
-
-  // 위·아래는 같은 열의 이웃 줄 — 병합 칸은 자기가 덮은 줄 전체가 자기 자리라, 덮은 만큼 건너뛰어야 제 아래 줄에 닿는다.
-  // Up/down moves to the neighboring line in the same column — a merged cell's whole span counts as its own, so it must skip past that span to reach the next real line.
-  const row = dir === 'up' ? ctx.cell.row - 1 : ctx.cell.row + ctx.cell.rowSpan;
-  if (row < 0 || row >= ctx.grid.rows) return exitWrapper(doc, ctx.tablePath, dir === 'up' ? 'up' : 'down');
+  const row = back ? ctx.cell.row - 1 : ctx.cell.row + ctx.cell.rowSpan;
+  if (row < 0 || row >= ctx.grid.rows) return exitWrapper(doc, ctx.tablePath, back ? 'up' : 'down');
   const next = cellCovering(ctx.grid, row, ctx.cell.column);
-  if (!next) return null;
-  return { doc, selection: caretAt(caretInCell(ctx.tablePath, next)) };
+  return next ? { doc, selection: caretAt(cellBoundary(ctx.tablePath, next, env)) } : null;
 }
 
 const onKey: OnKey = (intent, doc, sel, env, owner) => {
-  if (!isCollapsed(sel)) return null;
-  if (owner.node.w !== 'td') return null;
+  if (!isCollapsed(sel) || owner.node.w !== 'td') return null;
   if (intent.key === 'arrow') return arrowStep(intent, doc, sel, env);
-  if (intent.key !== 'tab' && intent.key !== 'shiftTab') return null; // 엔터=라인, 삭제는 코어의 것
-
+  if (intent.key !== 'tab' && intent.key !== 'shiftTab') return null;
   const ctx = cellCtxOf(doc, sel.focus);
   if (!ctx) return null;
-
-  if (intent.key === 'shiftTab') {
-    const prev = stepCell(ctx.grid, ctx.cell, -1);
-    if (!prev) return null; // 첫 칸 — pass (코어가 조용히 삼킨다)
-    return { doc: doc, selection: caretAt(caretInCell(ctx.tablePath, prev)) };
-  }
-
-  const next = stepCell(ctx.grid, ctx.cell, 1);
-  if (next) {
-    return { doc: doc, selection: caretAt(caretInCell(ctx.tablePath, next)) };
-  }
-  // 마지막 칸의 Tab은 아래에 새 행을 만들고 그 첫 칸으로 간다 — 무변화 답은 코어의 "스페이스 넷"으로 떨어지니 행 추가가 맞는 답이다.
-  // Tab at the last cell adds a new row and lands there — a no-op would fall through to core's "insert four spaces," so growing the table is the right answer.
-  const grown = insertRowAt(ctx.table, ctx.grid.rows);
-  return settle(doc, ctx.tablePath, grown, ctx.grid.rows, 0);
+  const back = intent.key === 'shiftTab';
+  const next = stepCell(ctx.grid, ctx.cell, back ? -1 : 1);
+  if (next) return { doc, selection: caretAt(cellBoundary(ctx.tablePath, next, env)) };
+  if (back) return null;
+  return settle(doc, ctx.tablePath, insertRowAt(ctx.table, ctx.grid.rows), ctx.grid.rows, 0, env);
 };
 
 const spanAttr = (value: AttrValue | undefined): string | undefined => {
@@ -636,6 +573,7 @@ const tdHtml: HtmlBuilder = (node, children, ctx) =>
   ctx.element(node.a?.[TH] === 1 ? 'th' : 'td', ctx.filled(children()), {
     colspan: spanAttr(node.a?.[SPAN_COL]),
     rowspan: spanAttr(node.a?.[SPAN_ROW]),
+    'data-nabi-cell-color': cellColor(node.a?.['bg']),
   });
 
 // 파이프 표는 md에서 격자 하나뿐이다 — 머리가 통째로 첫 줄, 병합 없음, 줄마다 칸 수 동일. 하나라도 어긋나면 html로 낸다.
@@ -649,6 +587,13 @@ function pipeable(node: ElementNode): boolean {
     else if (row.ch.length !== cols) return false;
     for (const cell of row.ch) {
       if (!isElement(cell) || cell.w !== 'td') return false;
+      if (cellColor(cell.a?.['bg']) !== undefined) return false;
+      const paragraph = cell.ch[0];
+      if (cell.ch.length !== 1 || !isElement(paragraph) || paragraph.w !== P || paragraph.a !== undefined) return false;
+      const inline = (node: NabiNode): boolean =>
+        typeof node === 'string' ||
+        (node.w !== P && node.w !== BR && node.w !== 'code' && node.ch.length > 0 && node.ch.every(inline));
+      if (!paragraph.ch.every(inline)) return false;
       if (spanOf(cell.a?.[SPAN_COL]) > 1 || spanOf(cell.a?.[SPAN_ROW]) > 1) return false;
       if ((cell.a?.[TH] === 1) !== (r === 0)) return false;
     }
@@ -678,8 +623,10 @@ function claim(el: ParseElement, inner: (block: boolean) => NabiNode[]): NabiNod
   if (el.tag === 'table' && el.attrs['data-nabi-sortable'] !== undefined) {
     return [{ w: 'table', a: { [SORTABLE]: 1 }, ch: inner(true) }];
   }
-  if (el.tag !== 'th') return null;
-  const a: Record<string, AttrValue> = { [TH]: 1 };
+  if (el.tag !== 'th' && el.tag !== 'td') return null;
+  const a: Record<string, AttrValue> = el.tag === 'th' ? { [TH]: 1 } : {};
+  const bg = cellColor(el.attrs['data-nabi-cell-color']);
+  if (bg !== undefined) a['bg'] = bg;
   const colspan = spanAttr(el.attrs['colspan']);
   const rowspan = spanAttr(el.attrs['rowspan']);
   if (colspan) a[SPAN_COL] = colspan;
@@ -893,11 +840,12 @@ const TABLE_CSS = `
   min-inline-size: 4rem;
 }
 .nabi-content th { background: var(--nabi-soft); font-weight: 650; }
+${CELL_COLORS.map((color) => `.nabi-content :is(td, th)[data-nabi-cell-color="${color}"] { background: var(--nabi-cell-${color}); }`).join('\n')}
 
 /* 드래그로 세운 칸 상자는 화면 전용 표식이다(트리·저장 HTML엔 안 실린다) — 이 규칙 없이는 표식만 붙고 안 그려진다. */
 /* The drag-selected cell box is a screen-only flag (never in the tree or saved HTML) — without this rule the flag attaches but nothing renders. */
 .nabi-content :is(td, th)[data-nabi-cell-selected] {
-  background: color-mix(in srgb, var(--nabi-accent) 14%, transparent);
+  outline: 2px solid var(--nabi-accent); outline-offset: -2px;
 }
 /* 상자가 선 표에서는 브라우저의 글 선택을 지운다 — 두 겹으로 칠해지면 어디까지가 상자인지
    안 읽힌다. 상자는 칸 단위이고 글 선택은 글자 단위라, 경계가 서로 어긋나 보인다.
@@ -959,7 +907,23 @@ export const tableWing: Wing = {
   allows: ['tr'],
   parts: {
     tr: { holds: 'blocks' },
-    td: { holds: 'blocks', singleParagraph: true, boolAttrs: [TH] },
+    td: {
+      holds: 'blocks',
+      isolating: true,
+      boolAttrs: [TH],
+      scopedCommands: [
+        'insertImage',
+        'commitUpload',
+        'insertYoutube',
+        'insertDivider',
+        'toggleQuote',
+        'toggleDetails',
+        'toggleCode',
+        'toggleBulletList',
+        'toggleOrderedList',
+        'toggleTaskList',
+      ],
+    },
   },
   toHtml: tableHtml,
   partHtml: { tr: trHtml, td: tdHtml },
@@ -994,6 +958,47 @@ export const tableWing: Wing = {
   context: {
     title: TABLE_NAME,
     controls: [
+      {
+        kind: 'button',
+        name: 'selectTable',
+        command: 'selectTable',
+        icon: TABLE_ICONS.grid,
+        label: {
+          ko: '표 전체 선택',
+          en: 'Select table',
+          zh: '选择整个表格',
+          hi: 'पूरी तालिका चुनें',
+          es: 'Seleccionar tabla',
+          ar: 'تحديد الجدول',
+          fr: 'Sélectionner le tableau',
+          bn: 'পুরো সারণি নির্বাচন করুন',
+          pt: 'Selecionar tabela',
+          ru: 'Выбрать таблицу',
+          id: 'Pilih tabel',
+          ur: 'پورا جدول منتخب کریں',
+          de: 'Tabelle auswählen',
+          ja: '表全体を選択',
+          fa: 'انتخاب جدول',
+          mr: 'संपूर्ण तक्ता निवडा',
+          vi: 'Chọn bảng',
+          te: 'మొత్తం పట్టికను ఎంచుకోండి',
+          ha: 'Zaɓi tebur',
+          tr: 'Tabloyu seç',
+          sw: 'Chagua jedwali',
+          ta: 'முழு அட்டவணையையும் தேர்ந்தெடு',
+          th: 'เลือกทั้งตาราง',
+          it: 'Seleziona tabella',
+        },
+      },
+      {
+        kind: 'select',
+        name: 'cellColor',
+        command: 'setCellColor',
+        argKey: 'bg',
+        attr: 'bg',
+        label: CELL_COLOR_LABEL,
+        values: CELL_COLOR_CHOICES,
+      },
       {
         kind: 'button',
         name: 'rowAbove',
@@ -1080,3 +1085,15 @@ export const tableWing: Wing = {
 };
 
 $markBuiltinAttrOwner(tableWing, ['table', 'tr', 'td']);
+$setParagraphTargets(tableWing, tableParagraphTargets);
+$setContextState(tableWing, (doc, selection) => {
+  const selected = cellColorSelection(doc, selection);
+  if (!selected) return { hidden: ['cellColor', 'selectTable'] };
+  const focus = cellCtxOf(doc, selection.focus);
+  const first = selected.cells[0]?.cell.a?.['bg'];
+  const common = selected.cells.every((item) => item.cell.a?.['bg'] === first);
+  return {
+    ...(focus ? { node: focus.cell.cell } : {}),
+    values: { cellColor: common ? (cellColor(first) ?? '') : undefined },
+  };
+});

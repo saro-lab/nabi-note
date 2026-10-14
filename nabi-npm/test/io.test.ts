@@ -649,18 +649,12 @@ function throws(name: string, fn: () => void, wants?: string): void {
     eq('host의 id=html 가짜 후보는 고정 HTML 경계를 가로채지 못한다', fakeHtmlHits, 0);
     eq('HTML build 실패의 다음 후보는 평문이다', broken.nabi.getJson(), [{ w: 'p', ch: ['PLAIN'] }]);
 
-    const tableDoc = [
-      {
-        w: 'p',
-        ch: [{ w: 'table', ch: [{ w: 'tr', ch: [{ w: 'td', ch: [{ w: 'p', ch: ['XYZ'] }] }] }] }],
-      },
-    ];
-    const atomic = rig(0, tableDoc);
+    const atomic = rig(0, [{ w: 'p', ch: [{ w: 'code', ch: ['XYZ'] }] }]);
     const selected = {
-      anchor: { path: [0, 0, 0, 0, 0], offset: 0 },
-      focus: { path: [0, 0, 0, 0, 0], offset: 3 },
+      anchor: { path: [0, 0], offset: 0 },
+      focus: { path: [0, 0], offset: 3 },
     };
-    ok('실패 원자성 준비 — 표 칸 범위를 고른다', atomic.nabi.select(selected));
+    ok('실패 원자성 준비 — 코드 글줄 범위를 고른다', atomic.nabi.select(selected));
     const beforeDoc = atomic.nabi.getJson();
     const beforeSelection = atomic.nabi.getSelection();
     const onlyLumps = encodeClipboardBody([
@@ -753,11 +747,8 @@ function throws(name: string, fn: () => void, wants?: string): void {
       },
       { w: 'p', ch: ['C'] },
     ];
-    ok(
-      'custom block container를 inline-only 표 칸에 붙인다',
-      flow(data({ custom: encodeClipboardBody(withEmpty) }), []),
-    );
-    eq('nested block holder의 문단 경계와 빈 holder는 각각 실제 br로 보존된다', target.nabi.getJson(), [
+    ok('custom block container를 표 칸에 붙인다', flow(data({ custom: encodeClipboardBody(withEmpty) }), []));
+    eq('nested block holder의 문단 경계와 빈 holder를 구조 그대로 보존한다', target.nabi.getJson(), [
       {
         w: 'p',
         ch: [
@@ -769,9 +760,7 @@ function throws(name: string, fn: () => void, wants?: string): void {
                 ch: [
                   {
                     w: 'td',
-                    ch: [
-                      { w: 'p', ch: ['A', { w: 'br', ch: [] }, { w: 'br', ch: [] }, 'B', { w: 'br', ch: [] }, 'C'] },
-                    ],
+                    ch: withEmpty,
                   },
                 ],
               },

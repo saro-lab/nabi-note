@@ -57,6 +57,7 @@ interface Draw {
   // 겨눔 하나가 아니라 소유 조상 줄기가 합쳐 답한 값 — 그룹마다 한 번만 읽어 컨트롤 전부가 나눠 쓴다.
   // The merged value from the ancestor chain, not just the target — read once per group and shared by every control in it.
   readonly value: string | undefined;
+  readonly values?: Readonly<Record<string, string | undefined>>;
   readonly t: Translator;
   readonly copy: Translations;
   // 그룹이 이미 자기 이름을 세웠는가 — 세웠으면 컨트롤은 이름표를 또 세우지 않는다.
@@ -332,7 +333,9 @@ function drawGroup(
   const buttons: HTMLButtonElement[] = [];
   // `visible` 이 아니라고 답한 컨트롤은 아예 없는 것으로 친다 — 이름표 판정도 남은 것만 본다.
   // Controls that report `visible: false` are treated as absent, so the label decision only sees what's left.
-  const controls = (wing.context?.controls ?? []).filter((control) => control.visible?.(node) !== false);
+  const controls = (wing.context?.controls ?? []).filter(
+    (control) => !group.state?.hidden?.includes(control.name) && control.visible?.(node) !== false,
+  );
   const title = wing.context?.title;
   const named = title !== undefined && wordless(controls);
   if (named && title) {
@@ -341,7 +344,17 @@ function drawGroup(
     el.append(tag);
   }
 
-  const draw: Draw = { owner, wing, node, value: stackValue(group.nodes, wing), t, copy, named, ...doors };
+  const draw: Draw = {
+    owner,
+    wing,
+    node,
+    value: stackValue(group.nodes, wing),
+    ...(group.state?.values ? { values: group.state.values } : {}),
+    t,
+    copy,
+    named,
+    ...doors,
+  };
   for (const control of controls) {
     const made = RENDERERS[control.kind](draw, control as never);
     el.append(...made.nodes);
@@ -414,7 +427,10 @@ const drawToggle: Renderer<'toggle'> = (draw, control) => {
 // 값 고르기 — 지금 값과 같은 칸이 눌린다.
 // A value picker — the cell matching the current value is pressed.
 const drawSelect: Renderer<'select'> = (draw, control) => {
-  const now = controlValueOf(draw.node, draw.value, control.attr);
+  const now =
+    draw.values !== undefined && Object.prototype.hasOwnProperty.call(draw.values, control.name)
+      ? draw.values?.[control.name]
+      : controlValueOf(draw.node, draw.value, control.attr);
   const buttons: HTMLButtonElement[] = [];
   const nodes: Node[] = control.values.length > 1 ? [...tagFor(draw, () => nameOf(draw, control))] : [];
   for (const choice of control.values) {
@@ -442,7 +458,7 @@ const drawSelect: Renderer<'select'> = (draw, control) => {
       choice.swatch || choice.icon || choice.svg ? undefined : label,
     );
     button.setAttribute('data-value', String(choice.value));
-    setPressed(button, hasToken(now, String(choice.value)));
+    setPressed(button, choice.value === '' ? now === '' : hasToken(now, String(choice.value)));
     buttons.push(button);
     nodes.push(button);
   }

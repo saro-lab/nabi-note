@@ -6,7 +6,7 @@
 import { isCollapsed } from '../../caret/index.js';
 import type { Attach } from '../../wing/index.js';
 import type { Position } from '../../doc/index.js';
-import { selectionBox } from './selection.js';
+import { cellBoundary, cellCtxOf, selectionBox } from './selection.js';
 
 // 편집 화면 전용 표식 — 트리·저장 HTML 어디에도 안 실린다(칠은 redraw마다 다시 선다).
 // An editor-screen-only flag — never lands in the tree or saved HTML; repainted fresh on every redraw.
@@ -15,7 +15,7 @@ export const CELL_SELECTED = 'data-nabi-cell-selected';
 // Marks the table currently holding a box selection — used to suppress the browser's own text selection meanwhile.
 export const CELL_BOXED = 'data-nabi-cell-boxed';
 
-export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey }) => {
+export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey, env }) => {
   let painted: Element[] = [];
   let boxedTable: Element | null = null;
 
@@ -56,11 +56,11 @@ export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey }) => {
     return key === null || key === '' ? null : key;
   };
 
-  // 칸 하나의 캐럿 자리 — 칸은 문단 하나만 품으므로(repair가 보장한다) 그 문단의 처음이다.
-  // One cell's caret position — a cell holds exactly one paragraph (repair guarantees it), so this is that paragraph's start.
   const caretInCell = (key: string): Position | null => {
     const path = pathOfKey(key);
-    return path ? { path: [...path, 0], offset: 0 } : null;
+    if (!path) return null;
+    const ctx = cellCtxOf(doc(), { path: [...path, 0], offset: 0 });
+    return ctx ? cellBoundary(ctx.tablePath, ctx.cell, env) : null;
   };
 
   let fromKey: string | null = null;

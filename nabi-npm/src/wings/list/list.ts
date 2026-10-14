@@ -375,6 +375,7 @@ function moveItems(doc: NabiDoc, sel: Selection, env: EditEnv, family: Family, b
 
 function listKeys(family: Family): OnKey {
   return (intent, doc, sel, env, owner) => {
+    if (intent.key === 'enter' && intent.shift) return null;
     if (owner.node.w !== family.item) return null;
     // 범위 위의 탭은 걸친 항목 전부의 것 — 코어에 흘려보내면 "탭 = 스페이스 넷" 규칙이 잡은 글을 갈아 버린다.
     // A tab over a range indents every touched item — letting it fall through to core would replace the selection with four spaces instead.

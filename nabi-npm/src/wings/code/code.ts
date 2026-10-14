@@ -329,7 +329,7 @@ const onKey: OnKey = (intent, doc, sel, _env, owner) => {
   const width = new Map<number, number>();
   for (const at of lines) width.set(at, intent.key === 'tab' ? INDENT.length : -trimWidth(cells, at));
   const moved = [...width.values()].some((n) => n !== 0);
-  if (!moved) return null; // 더 내어쓸 것이 없다 — 무변화 침묵
+  if (!moved) return { doc, selection: sel };
 
   const next = [...cells];
   for (const at of [...lines].reverse()) {

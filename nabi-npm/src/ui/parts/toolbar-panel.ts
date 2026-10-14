@@ -92,6 +92,12 @@ export function openToolbarPanel(options: OpenToolbarPanelOptions): void {
     }
     const selection = nabi.getSelection();
     const doc = hostOf(nabi).doc();
+    let changed = false;
+    life.add(
+      nabi.onChange((change) => {
+        if (change.doc || change.loaded) changed = true;
+      }),
+    );
     const root = make(owner, 'div', 'nabi-custom-panel-content');
     panel.root.append(root);
     const copy = new Translations(translator);
@@ -121,11 +127,16 @@ export function openToolbarPanel(options: OpenToolbarPanelOptions): void {
       options.closeForRun(instance);
       // 문서가 바뀌면 같은 경로도 다른 글을 가리킬 수 있어 예전 선택을 되살리지 않는다.
       // After an edit, the same path can target different text, so an old selection must not be restored.
-      if (!options.active() || hostOf(nabi).doc() !== doc) return false;
+      const changedTarget = (): boolean => {
+        if (!changed && hostOf(nabi).doc() === doc) return false;
+        hostOf(nabi).toast('warn', translator.t('insert.changed'));
+        return true;
+      };
+      if (!options.active() || changedTarget()) return false;
       focusQuiet(options.surface);
-      if (hostOf(nabi).doc() !== doc) return false;
+      if (changedTarget()) return false;
       nabi.select(selection);
-      if (!options.active() || hostOf(nabi).doc() !== doc) return false;
+      if (!options.active() || changedTarget()) return false;
       if (!sameSelection(nabi.getSelection(), selection)) return false;
       return nabi.applyCommand(command, args, by);
     };

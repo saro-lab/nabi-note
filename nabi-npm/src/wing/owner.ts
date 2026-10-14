@@ -1,7 +1,7 @@
 // 키 소유 판정 — 캐럿 자리를 품는 가장 안쪽 노드의 wing을 찾는다(문단이면 코어 = null).
 // Resolves key ownership by finding the innermost node's wing at the caret; a paragraph means the core owns it (null).
 import { P, type NabiDoc } from '../schema/index.js';
-import { documentIndex, type EditEnv } from '../doc/index.js';
+import { documentIndex, isolationPath, nodeAt, type EditEnv } from '../doc/index.js';
 import type { Selection } from '../caret/index.js';
 import type { CommandOutcome } from '../editor/index.js';
 import type { KeyIntent, OwnerAt, Wing } from './contract.js';
@@ -37,6 +37,18 @@ export function routeKey(
   registry: Registry,
 ): CommandOutcome | null {
   const found = keyOwnerAt(doc, sel, registry);
-  if (!found || !found.wing.onKey) return null;
-  return found.wing.onKey(intent, doc, sel, env, found.owner);
+  const boundary = isolationPath(doc, sel.focus.path, env);
+  if (!boundary) return found?.wing.onKey?.(intent, doc, sel, env, found.owner) ?? null;
+  const visited = new Set<Wing>();
+  for (let depth = sel.focus.path.length; depth >= boundary.length; depth -= 1) {
+    const path = sel.focus.path.slice(0, depth);
+    const node = nodeAt(doc, path);
+    if (!node || node.w === P) continue;
+    const wing = registry.ownerOf(node.w);
+    if (!wing || visited.has(wing)) continue;
+    visited.add(wing);
+    const result = wing.onKey?.(intent, doc, sel, env, { path, node });
+    if (result) return result;
+  }
+  return null;
 }

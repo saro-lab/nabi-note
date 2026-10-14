@@ -11,18 +11,18 @@ import { iconHtml } from '../style/icon.js';
 // 기본 그룹 순서 — 글에 가까운 것부터 문서 전체의 일까지, 워드·구글 문서의 관례를 따른다.
 // The default group order, from text-level formatting to whole-document actions, following Word/Google Docs convention.
 export const TOOLBAR_GROUPS: readonly string[] = [
-  'font',
   'heading',
+  'font',
   'emphasis',
   'script',
   'color',
-  'link',
+  'clear',
   'align',
   'list',
-  'structure',
+  'link',
   'media',
+  'structure',
   'container',
-  'clear',
   'file',
 ];
 
@@ -70,20 +70,15 @@ export function toolbarSlots(
   t: Translator,
   order: readonly string[] = TOOLBAR_GROUPS,
 ): readonly ToolbarSlot[] {
-  const wings = [...registry.wings].filter((wing) => wing.button || wing.buttons);
-  const rank = (wing: Wing): number => {
-    const at = order.indexOf(wing.buttons?.[0]?.group ?? wing.button?.group ?? '');
-    return at < 0 ? order.length : at;
-  };
-  wings.sort((a, b) => rank(a) - rank(b));
-
-  const slots: ToolbarSlot[] = [];
-  for (const wing of wings) {
+  const groups = new Map<string, ToolbarSlot[]>();
+  for (const name of order) groups.set(name, []);
+  for (const wing of registry.wings) {
     const decls = wing.buttons ?? (wing.button ? [wing.button] : []);
     for (const decl of decls) {
       const label = t.pick(decl.label, `wing.${wing.w}.${decl.name ?? ''}`);
       const twice = doubleKeyOf(wing, decl);
       const tip = decl.accelerator ? `${label} (Ctrl/Cmd+${decl.accelerator.slice(4).toUpperCase()})` : label;
+      const slots = groups.get(decl.group) ?? [];
       slots.push({
         wing,
         decl,
@@ -92,9 +87,10 @@ export function toolbarSlots(
         label,
         tip: twice ? t.t('twiceTail', { label: tip, key: twice }) : tip,
       });
+      groups.set(decl.group, slots);
     }
   }
-  return slots;
+  return [...groups.values()].flat();
 }
 
 // 이 모듈이 HTML로 만드는 값은 날개 선언과 사전의 말뿐이지만, 그래도 이스케이프는 한다 — 꺾쇠

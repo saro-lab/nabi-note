@@ -5,6 +5,7 @@ export {
   holderLength,
   holders,
   isHolder,
+  isolationPath,
   nodeAt,
   positionExists,
   replaceAt,

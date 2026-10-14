@@ -1,8 +1,22 @@
 // 노출 규칙은 선언에서만 나온다 — registry의 소유 판정과 wing의 allows·holds·place뿐, ui가 wing 이름을 알아보고 특례를 두는 자리는 없다. tool은 늘 보이고, mark는 순수 인라인 상자(코드) 안에서 숨고, attr는 래퍼문단엔 정렬만(물건이 noAlign이면 그마저 숨고) 나머지 문단 속성은 숨으며, void·container는 인라인 홀더 속엔 못 서고 allows 밖이면 숨는다.
 // Visibility is decided purely by declaration — registry ownership plus a wing's allows/holds/place, with no special-casing of wing names anywhere in ui. tool is always visible; mark hides inside a purely-inline box (code); attr shows only alignment on a wrapper paragraph (hidden too if the item declares noAlign), and hides other paragraph attrs entirely; void/container can't stand inside an inline holder and hides outside the parent's allows.
 import { isWrapper, takesAlign, type ElementNode, type NabiDoc } from '../schema/index.js';
-import { nodeAt, type EditEnv, type Position } from '../doc/index.js';
+import { isolationPath, nodeAt, type EditEnv, type Position } from '../doc/index.js';
+import type { Selection } from '../caret/index.js';
 import type { Registry, Wing } from '../wing/index.js';
+import { paragraphTargets } from '../wing/paragraph-target.js';
+
+const policies = new WeakMap<
+  ReachAt,
+  {
+    readonly doc: NabiDoc;
+    readonly selection: Selection;
+    readonly env: EditEnv;
+    readonly registry: Registry;
+    readonly scopes: readonly (readonly string[])[];
+    readonly crossesScope: boolean;
+  }
+>();
 
 export interface ReachAt {
   // 캐럿을 직접 든 홀더 (글 문단·표의 칸·코드 상자…).
@@ -30,7 +44,7 @@ export interface ReachAt {
 
 // 캐럿 자리를 한 번만 재서 규칙 넷이 나눠 쓴다 — 같은 걸음을 네 번 걷지 않는다.
 // Measures the caret's position once and lets all four rules share it, instead of walking the same steps four times.
-export function reachAt(doc: NabiDoc, pos: Position, registry: Registry, env: EditEnv): ReachAt {
+export function reachAt(doc: NabiDoc, pos: Position, registry: Registry, env: EditEnv, selection?: Selection): ReachAt {
   const holder = nodeAt(doc, pos.path);
   const holderWing = holder ? registry.ownerOf(holder.w) : null;
   const holderIsOwnNode = holder !== null && holderWing !== null && holderWing.w === holder.w;
@@ -52,7 +66,7 @@ export function reachAt(doc: NabiDoc, pos: Position, registry: Registry, env: Ed
   }
   const top = nodeAt(doc, [pos.path[0] ?? 0]);
 
-  return {
+  const reach: ReachAt = {
     holder,
     inline,
     holderWing,
@@ -63,11 +77,37 @@ export function reachAt(doc: NabiDoc, pos: Position, registry: Registry, env: Ed
     topIsWrapper: top !== null && isWrapper(top, env),
     topTakesAlign: top === null || takesAlign(top, env),
   };
+  const scopes: (readonly string[])[] = [];
+  for (let depth = pos.path.length - 1; depth > 0; depth -= 1) {
+    const node = nodeAt(doc, pos.path.slice(0, depth));
+    if (!node || !env.isolating?.has(node.w)) continue;
+    const wing = registry.ownerOf(node.w);
+    const declaration = wing?.w === node.w ? wing : wing?.parts?.[node.w];
+    if (declaration?.scopedCommands) scopes.push(declaration.scopedCommands);
+  }
+  const selected = selection ?? { anchor: pos, focus: pos };
+  const anchorScope = isolationPath(doc, selected.anchor.path, env);
+  const focusScope = isolationPath(doc, selected.focus.path, env);
+  const crossesScope =
+    anchorScope?.length !== focusScope?.length ||
+    (anchorScope?.some((value, index) => value !== focusScope?.[index]) ?? false);
+  policies.set(reach, { doc, selection: selected, env, registry, scopes, crossesScope });
+  return reach;
 }
 
 // 품을 쪽이 이 타입을 받는가 — `allows` 는 그 wing 자신의 노드에만 걸린다(부품에는 안 걸린다).
 // Whether the parent accepts this type — `allows` only applies to a wing's own node, never to its parts.
 export function admits(reach: ReachAt, childW: string): boolean {
+  const policy = policies.get(reach);
+  if (policy?.crossesScope) return false;
+  const child = policy?.registry.wingOf(childW);
+  if (child && policy?.scopes.length) {
+    const commands = (child.buttons ?? (child.button ? [child.button] : [])).flatMap(({ action }) =>
+      action && 'command' in action ? [action.command] : [],
+    );
+    if (commands.length && policy.scopes.some((scope) => !commands.some((command) => scope.includes(command))))
+      return false;
+  }
   const parent = reach.blockParent;
   const wing = reach.blockParentWing;
   if (!parent || !wing) return true; // document root — anything goes
@@ -84,6 +124,10 @@ export function visibleAt(reach: ReachAt, wing: Wing): boolean {
       // Inside a purely-plain-text box — marks can't survive there (a code box's repair strips them).
       return !(reach.inline && reach.holderIsOwnNode);
     case 'attr':
+      {
+        const policy = policies.get(reach);
+        if (policy) return paragraphTargets(policy.doc, policy.selection, wing.attrKey ?? '', policy.env).length > 0;
+      }
       // 래퍼문단이 드는 문단 속성은 정렬 하나뿐이고, 물건이 마다했으면(noAlign) 그마저 없다. 캐럿이 상자 속이든 통째로 고른 자리든 최상위는 같은 래퍼문단이라 한 판정으로 함께 닫힌다.
       // A wrapper paragraph carries only alignment among paragraph attrs, and even that's gone if the item declares noAlign. Whether the caret is inside the box or the whole thing is selected, the top-level node is the same wrapper, so one check covers both.
       if (!reach.topIsWrapper) return true;

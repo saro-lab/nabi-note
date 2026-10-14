@@ -34,6 +34,16 @@ export interface EditEnv extends SchemaEnv {
   // 문단 하나로 고정된 컨테이너(표의 칸 등) — 그 속의 엔터는 분할이 아니라 라인이다.
   // A container fixed to one paragraph (a table cell); Enter inside it becomes a line, not a split.
   readonly singleParagraph?: ReadonlySet<string>;
+  readonly isolating?: ReadonlySet<string>;
+}
+
+export function isolationPath(doc: NabiDoc, path: readonly number[], env: EditEnv): readonly number[] | null {
+  for (let depth = path.length - 1; depth > 0; depth -= 1) {
+    const at = path.slice(0, depth);
+    const node = nodeAt(doc, at);
+    if (node && (env.isolating?.has(node.w) || env.singleParagraph?.has(node.w))) return at;
+  }
+  return null;
 }
 
 // 라인은 언제나 한 칸이고, 홀더 속에 선 물건도 한 칸이다.

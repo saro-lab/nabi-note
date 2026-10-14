@@ -107,6 +107,12 @@ export const CORE_CSS = `${ICON_CSS}
   --nabi-hl-pink: rgb(244 114 182 / 45%);
   --nabi-hl-purple: rgb(192 132 252 / 45%);
   --nabi-hl-orange: rgb(251 146 60 / 45%);
+  --nabi-cell-yellow: rgb(250 204 21 / 14%);
+  --nabi-cell-green: rgb(74 222 128 / 14%);
+  --nabi-cell-cyan: rgb(56 189 248 / 14%);
+  --nabi-cell-pink: rgb(244 114 182 / 14%);
+  --nabi-cell-purple: rgb(192 132 252 / 14%);
+  --nabi-cell-orange: rgb(251 146 60 / 14%);
   --nabi-tc-green: #009e73;
   --nabi-tc-coral: #e05638;
   --nabi-tc-violet: #8b5cf6;
@@ -131,6 +137,12 @@ export const CORE_CSS = `${ICON_CSS}
   --nabi-hl-pink: rgb(244 114 182 / 35%);
   --nabi-hl-purple: rgb(192 132 252 / 35%);
   --nabi-hl-orange: rgb(251 146 60 / 35%);
+  --nabi-cell-yellow: rgb(250 204 21 / 12%);
+  --nabi-cell-green: rgb(74 222 128 / 12%);
+  --nabi-cell-cyan: rgb(56 189 248 / 12%);
+  --nabi-cell-pink: rgb(244 114 182 / 12%);
+  --nabi-cell-purple: rgb(192 132 252 / 12%);
+  --nabi-cell-orange: rgb(251 146 60 / 12%);
 }
 /* 라이트를 명시한 쪽이 바깥 다크를 이긴다 — 다크 규칙 뒤에 와야 되돌릴 수 있다
    An explicit light override beats an outer dark; it must come after the dark rule to win */
@@ -151,6 +163,12 @@ export const CORE_CSS = `${ICON_CSS}
   --nabi-hl-pink: rgb(244 114 182 / 45%);
   --nabi-hl-purple: rgb(192 132 252 / 45%);
   --nabi-hl-orange: rgb(251 146 60 / 45%);
+  --nabi-cell-yellow: rgb(250 204 21 / 14%);
+  --nabi-cell-green: rgb(74 222 128 / 14%);
+  --nabi-cell-cyan: rgb(56 189 248 / 14%);
+  --nabi-cell-pink: rgb(244 114 182 / 14%);
+  --nabi-cell-purple: rgb(192 132 252 / 14%);
+  --nabi-cell-orange: rgb(251 146 60 / 14%);
 }
 
 /* 편집기는 배경을 투명으로 두어 페이지 배경이 그대로 비친다 — 페이지 위 카드가 아니라 페이지의 일부다
@@ -197,6 +215,13 @@ export const CORE_CSS = `${ICON_CSS}
   margin-inline-end: .75rem; min-inline-size: 0; position: relative;
 }
 .nabi-group[hidden] { display: none; }
+.nabi-group:not([hidden]):not(:empty) ~ .nabi-group:not([hidden]):not(:empty)::before,
+.nabi-ctx-group:not([hidden]):not(:empty) ~ .nabi-ctx-group:not([hidden]):not(:empty)::before,
+.nabi-toolbox-group + .nabi-toolbox-group::before {
+  content: ""; position: absolute; inset-inline-start: -.375rem; inset-block-start: 50%;
+  block-size: 1rem; border-inline-start: 1px solid var(--nabi-line);
+  transform: translateY(-50%); pointer-events: none;
+}
 /* 한 줄 모드의 스크롤 그릇 — 줄(.nabi-toolbar-row)이 아니라 이 안쪽 겹이 구르는 까닭은, 줄이 toast 선반의 닻이라 자신이 스크롤되면 선반이 잘리기 때문이다
    The scroll container for narrow mode is this inner wrapper, not .nabi-toolbar-row, because that row anchors the toast shelf and would clip it if it scrolled itself */
 .nabi-strip { display: contents; }
@@ -373,7 +398,7 @@ export const CORE_CSS = `${ICON_CSS}
 .nabi-context[hidden] { display: none; }
 .nabi-ctx-group {
   display: flex; flex-wrap: wrap; align-items: center; gap: .1875rem;
-  margin-inline-end: .75rem; min-inline-size: 0; position: relative;
+  min-inline-size: 0; position: relative;
 }
 /* 라벨이 없는 그룹(색 줄·눈금) 앞에 이름을 붙인다 — 글이라 누를 수 없다
    A text label for groups without their own text (color row, slider); it's text, not a control, so it isn't clickable */
@@ -520,8 +545,11 @@ export const CORE_CSS = `${ICON_CSS}
   flex: 1 1 auto; min-block-size: 0; min-inline-size: 0; padding: 0;
   overflow: auto; overscroll-behavior: contain;
 }
-.nabi-toolbox-icons { display: flex; flex-wrap: wrap; align-items: center; gap: 0; }
-.nabi-toolbox-group { display: contents; }
+.nabi-toolbox-icons { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .75rem; }
+.nabi-toolbox-group {
+  display: flex; flex: 0 1 auto; flex-wrap: wrap; align-items: center; position: relative;
+  min-inline-size: 0; max-inline-size: 100%;
+}
 .nabi-toolbox-group > .nabi-btn {
   flex: none; box-sizing: border-box; inline-size: 2rem; min-inline-size: 2rem;
   block-size: 2rem; padding: 0; overflow: hidden;

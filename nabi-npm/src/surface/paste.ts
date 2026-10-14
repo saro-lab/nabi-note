@@ -3,7 +3,7 @@
 import { $fromJson, cocoon, isElement, type NabiNode } from '../schema/index.js';
 import { $guarded, $ownDataArray, $ownDataObject, $snapshotNodes } from '../schema/json.js';
 import { caretAt, isCollapsed, marksAt, ordered, selectionExists, type Selection } from '../caret/index.js';
-import { deleteRange } from '../doc/index.js';
+import { deleteRange, isolationPath } from '../doc/index.js';
 import { fragmentOf } from '../html/index.js';
 import {
   $isBuiltinHtmlFilter,
@@ -60,6 +60,9 @@ export function makePasteFlow(
     if (!built) return false;
     const chosen = target ?? nabi.getSelection();
     if (!selectionExists(hostOf(nabi).doc(), chosen, env)) return false;
+    const anchorScope = isolationPath(hostOf(nabi).doc(), chosen.anchor.path, env);
+    const focusScope = isolationPath(hostOf(nabi).doc(), chosen.focus.path, env);
+    if (JSON.stringify(anchorScope) !== JSON.stringify(focusScope)) return false;
     if (candidate.inline === true) {
       // 한 줄짜리 맨 글자는 문단을 안 쪼갠다 — 캐럿에 이어 쓰는 것이 그 뜻이다
       // A single-line plain-text candidate never splits the paragraph; it's meant to be spliced right at the caret

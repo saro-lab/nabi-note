@@ -43,7 +43,7 @@ const BUILTIN_ATTRS: Readonly<Record<string, ReadonlySet<string>>> = {
   hr: new Set(),
   table: new Set(['sort']),
   tr: new Set(),
-  td: new Set(['colspan', 'rowspan', 'th']),
+  td: new Set(['colspan', 'rowspan', 'th', 'bg']),
   img: new Set(['src', 'w']),
   youtube: new Set(['v', 'w']),
 };

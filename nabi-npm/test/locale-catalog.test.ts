@@ -180,7 +180,7 @@ if (
   defaultWings.length !== EXPECTED_WINGS.length
 )
   failures.push('defaultWings-coverage');
-if (typedDeclarations !== 68) failures.push(`source-LocaleText-coverage:${typedDeclarations}`);
+if (typedDeclarations !== 71) failures.push(`source-LocaleText-coverage:${typedDeclarations}`);
 for (const key of CORE_KEYS) if (!found.has(`DICTIONARY.${key}`)) failures.push(`core-key:${key}`);
 if (missing.length || invalid.length || fake.length || sourceFallback.length) {
   failures.push(

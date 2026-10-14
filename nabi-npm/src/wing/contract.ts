@@ -18,9 +18,11 @@ export interface StructureDecl {
   // blocks = 속이 문단/물건/컨테이너, inline = 속이 문단처럼 글·라인을 직접 든다
   // 'blocks' holds paragraphs/objects/containers; 'inline' holds text/lines directly, like a paragraph
   readonly holds: 'blocks' | 'inline';
-  // 문단 하나로 고정 — 속의 엔터는 분할이 아니라 줄바꿈이다(표의 칸)
-  // Fixed to one paragraph; Enter inside it is a line break, not a split (table cells)
+  // 문단 하나로 고정 — 속의 엔터는 분할이 아니라 줄바꿈이다.
+  // Fixed to one paragraph; Enter inside it is a line break, not a split.
   readonly singleParagraph?: boolean;
+  readonly isolating?: boolean;
+  readonly scopedCommands?: readonly string[];
   readonly boolAttrs?: readonly string[];
   readonly attrs?: readonly string[];
 }
@@ -30,6 +32,7 @@ export type ArrowDir = 'left' | 'right' | 'up' | 'down';
 
 export interface KeyIntent {
   readonly key: KeyName;
+  readonly shift?: boolean;
   // arrow일 때만 온다.
   // Only present when key is 'arrow'.
   readonly dir?: ArrowDir;
@@ -287,6 +290,7 @@ export interface Wing {
 
   readonly holds?: 'blocks' | 'inline';
   readonly singleParagraph?: boolean;
+  readonly isolating?: boolean;
   readonly boolAttrs?: readonly string[];
   readonly attrs?: readonly string[];
   readonly clearable?: boolean;

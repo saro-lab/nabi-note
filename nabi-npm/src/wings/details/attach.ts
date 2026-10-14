@@ -3,7 +3,7 @@
 //
 // `toggle`은 버블링을 안 해서 캡처로 받는다 — 재그리기 때마다 리스너를 다시 달 필요 없이 표면 하나에 한 번 단다.
 // `toggle` doesn't bubble, so this listens in the capture phase — one listener on the surface survives every redraw.
-import { isElement } from '../../schema/index.js';
+import { nodeAt, type Position } from '../../doc/index.js';
 import { selectObject } from '../../caret/index.js';
 import type { Attach } from '../../wing/index.js';
 
@@ -17,22 +17,26 @@ export const attachDetailsOpen: Attach = ({ root, nabi, doc, pathOfKey }) => {
     if (key === null || key === '') return;
     const path = pathOfKey(key);
     if (!path) return;
-    const node = doc()[path[0] as number];
-    if (!node) return;
+    const node = nodeAt(doc(), path);
+    if (!node || node.w !== 'details') return;
 
     const want = box.open ? 1 : 0;
     // 이미 그 값이면 아무 일도 안 한다 — 빈 되돌리기 지점을 안 남긴다.
     // A no-op when the value already matches — avoids leaving an empty undo entry.
-    const lump = node.ch[0];
-    if (lump !== undefined && isElement(lump) && (lump.a?.['o'] === 1 ? 1 : 0) === want) return;
+    if ((node.a?.['o'] === 1 ? 1 : 0) === want) return;
 
     // 접히는 속에 캐럿이 있으면 밖으로 옮긴다 — 접힌 속은 안 그려져 캐럿이 설 자리가 없다.
     // If the caret is inside the collapsing body, move it out — hidden content has nowhere on-screen to hold it.
-    const focus = nabi.getSelection().focus;
-    const inside = want === 0 && focus.path.length > 1 && focus.path[0] === path[0];
+    const selection = nabi.getSelection();
+    const inBody = (at: Position): boolean =>
+      at.path.length > path.length &&
+      path.every((value, index) => at.path[index] === value) &&
+      (at.path[path.length] ?? 0) > 0;
+    const inside = want === 0 && (inBody(selection.anchor) || inBody(selection.focus));
     nabi.group(() => {
-      if (inside) nabi.select(selectObject([path[0] as number]));
-      nabi.applyCommand('setDetailsOpen', { open: want });
+      nabi.select(selectObject(path.slice(0, -1)));
+      const changed = nabi.applyCommand('setDetailsOpen', { open: want });
+      if (!inside || !changed) nabi.select(selection);
     });
   };
 

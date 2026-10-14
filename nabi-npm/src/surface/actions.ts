@@ -1,7 +1,7 @@
 // DOM 없이 도는 키 정책 엔진 — mount(DOM)는 이벤트만 여기로 넘기고 preventDefault만 결정한다. 파이프라인: wing.onKey → 코어 규칙 → 브라우저(true=소비)
 // A DOM-free key policy engine; mount(DOM) only forwards events here and decides preventDefault. Pipeline: wing.onKey -> core rules -> browser (true = consumed)
 import { isWrapper } from '../schema/index.js';
-import { holderLength, holders, nodeAt, type Position } from '../doc/index.js';
+import { holderLength, holders, isolationPath, nodeAt, type Position } from '../doc/index.js';
 import {
   caretAt,
   docEnd,
@@ -19,15 +19,15 @@ import { canEscape, escapeVesselOp, vesselAt } from './vessel.js';
 
 export type ArrowDir = 'left' | 'right' | 'up' | 'down';
 
-// 모든 연타 몸짓(이중 엔터·Esc 두 번·Shift 두 번)이 공유하는 창(ms) — 갈리면 손이 셋을 따로 익혀야 한다
-// Shared double-tap window (ms) for every tap gesture (double Enter, double Esc, double Shift); a mismatch would force users to learn three different timings
+// Esc·Shift 연타의 기본 시간(ms).
+// Default double-tap window (ms) for Esc and Shift.
 export const TAP_MS = 350;
 
 export interface SurfaceActionsOptions {
   readonly nabi: Nabi;
   readonly registry: Registry;
-  // 그릇 탈출의 이중 엔터 창(ms) — Esc 연타도 이 값을 나눠 쓴다
-  // Vessel-escape double-Enter window (ms); double-Esc shares this same value
+  // 그릇 탈출의 이중 엔터 창(ms), 기본 180 — 직접 지정하면 Esc 연타에도 적용한다.
+  // Vessel-escape double-Enter window (ms), default 180; an explicit value also applies to double-Esc.
   readonly doubleEnterMs?: number;
   readonly now?: () => number;
   // 위에 뜬 것(덮개·판·전체화면 등)이 없을 때만 참 — 없으면 게이트 없이 Esc 두 번이 두 몸짓을 한 번에 낸다
@@ -59,6 +59,7 @@ export interface SurfaceActions {
 
 export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActions {
   const { nabi, registry } = options;
+  const enterMs = options.doubleEnterMs ?? 180;
   const doubleMs = options.doubleEnterMs ?? TAP_MS;
   const now = options.now ?? (() => Date.now());
   let lastEnterAt = 0;
@@ -80,7 +81,7 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
 
   const enter = (): boolean => {
     const t = now();
-    const quick = t - lastEnterAt <= doubleMs;
+    const quick = t - lastEnterAt <= enterMs;
     // 엔터 트리거 오토포맷(구분선·코드 펜스)이 먼저다 — 아무도 안 잡을 때만 문단 분할로 간다
     // Enter-triggered autoformat (divider, code fence) runs first; splitting only happens if nothing claims it
     if (tryInputRule(nabi, registry, 'enter')) {
@@ -96,7 +97,12 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
       const sel = nabi.getSelection();
       if (isCollapsed(sel)) {
         const vessel = vesselAt(hostOf(nabi).doc(), sel.focus, registry);
-        if (vessel && canEscape(hostOf(nabi).doc(), sel.focus, vessel, hostOf(nabi).env)) {
+        const boundary = isolationPath(hostOf(nabi).doc(), sel.focus.path, hostOf(nabi).env);
+        if (
+          vessel &&
+          (!boundary || vessel.path.length > boundary.length) &&
+          canEscape(hostOf(nabi).doc(), sel.focus, vessel, hostOf(nabi).env)
+        ) {
           if (hostOf(nabi).applyRaw(escapeVesselOp(vessel), 'escapeVessel')) {
             lastEnterAt = 0;
             return true;
@@ -177,7 +183,7 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
       lastEnterAt = 0;
       // 그릇·리스트가 Shift+Enter도 자기 규칙으로 받을 수 있다
       // Vessels/lists may claim Shift+Enter through their own rule too
-      if (route({ key: 'enter' })) return true;
+      if (route({ key: 'enter', shift: true })) return true;
       nabi.applyCommand('insertLine');
       return true;
     },

@@ -2,6 +2,7 @@ import type { LocaleInput } from '../../locale/index.js';
 // 업로드의 표면 절반 — 파일을 받아 호스트 훅에 넘기고 끝나면 한 번에 커밋한다. 호스트 배선(전송 훅·한도)이 인스턴스 것이라 wing 선언만으론 안 되는 것만 이 층에 산다. 업로드 중엔 editor의 $lock으로 커맨드 자체를 막고 contenteditable도 같은 순간에 끈다(안 그러면 화면과 트리가 갈린다). 오류는 전부 toast 한 문으로 말한다(084 ⑦, 예전엔 거절·전송 실패·중도 이탈이 셋으로 흩어져 있었다) — 취소·깨진 그림·미리보기 실패처럼 화면이 이미 뜻을 보여주는 자리는 말을 안 보탠다(같은 말을 두 번 하면 둘 다 안 읽는다)
 // The screen half of upload: takes files, hands them to a host hook, and commits once at the end. Only things that need instance-level wiring (transfer hook, limits) live here; declaration-only extras (checklist clicks, code highlighting, broken-image watching) live as a wing's `attach`. During upload, the editor's $lock blocks commands outright (even undo/document-swap), and contenteditable is disabled at the same moment, or the browser could write to the tree while it's locked and the screen and tree would diverge. All errors funnel through one toast door (084 7; previously scattered across an inline rejection note, a silent catch{}, and a silent early return) since only here does the code know the whole batch and what fraction failed. Some outcomes deliberately stay silent because the screen already shows them: user-cancelled, a broken-image marker (wings/img/watch.ts), or a preview-less box (ui/upload.ts) turning into an attachment; saying the same thing twice means neither gets read
 import { hostOf, type Nabi } from '../../editor/index.js';
+import { sameSelection } from '../../caret/index.js';
 import { AsyncMountScope, DisposerStack, HostElementLease } from '../../lifecycle.js';
 import { makeTranslator, type Translator } from '../../locale/index.js';
 import {
@@ -92,6 +93,7 @@ export function mountUpload(options: UploadOptions): UploadMount {
     readonly generation: number;
     readonly controller: AbortController;
     readonly release: () => void;
+    readonly stopTargetWatch: () => void;
   } | null = null;
 
   const lock = (): (() => void) => {
@@ -147,7 +149,14 @@ export function mountUpload(options: UploadOptions): UploadMount {
     if (accepted.length === 0 || !lifetime.active(generation) || running || active !== null) return;
 
     const controller = new AbortController();
-    const batch = { generation, controller, release: lock() };
+    const target = nabi.getSelection();
+    const original = hostOf(nabi).doc();
+    const release = lock();
+    let changed = false;
+    const stopTargetWatch = nabi.onChange((change) => {
+      if (change.doc || change.loaded) changed = true;
+    });
+    const batch = { generation, controller, release, stopTargetWatch };
     active = batch;
     running = true;
     const signal = controller.signal;
@@ -172,6 +181,7 @@ export function mountUpload(options: UploadOptions): UploadMount {
         active = null;
         running = false;
         controller.abort();
+        batch.stopTargetWatch();
         batch.release();
         call(() => options.onDone?.({ committed: 0, cancelled: true }));
       }
@@ -234,13 +244,26 @@ export function mountUpload(options: UploadOptions): UploadMount {
         // Settling is presentation only; uploaded data can still commit.
       }
       if (!lifetime.active(generation) || active !== batch) return;
+      const targetChanged = (): boolean => changed || hostOf(nabi).doc() !== original;
+      if (
+        targetChanged() ||
+        (!sameSelection(nabi.getSelection(), target) && !nabi.select(target)) ||
+        targetChanged() ||
+        !sameSelection(nabi.getSelection(), target)
+      ) {
+        hostOf(nabi).toast('warn', t.t('upload.changed'), UPLOAD_TOAST_MS);
+        abort(true);
+        return;
+      }
+      if (!lifetime.active(generation) || active !== batch) return;
       // 끊긴 배치는 커밋하지 않는다 — 취소는 "여기까지만 올려 두기"가 아니다
       // A cancelled batch never commits; cancelling doesn't mean "keep what made it so far"
+      let committed = false;
       if (items.length > 0) {
         // 배치 전체가 undo 한 점이다
         // The whole batch is one undo step
         nabi.group(() => {
-          nabi.applyCommand('commitUpload', { items, label: t.t('upload.attachment') });
+          committed = nabi.applyCommand('commitUpload', { items, label: t.t('upload.attachment') });
         });
       }
       // 못 올라간 것은 커밋 뒤에 말한다 — 그래야 "무엇이 섰고 무엇이 빠졌나"가 화면과 같은 순간을 가리킨다. 취소된 배치는 말 안 한다 — 끊긴 파일이 전부 실패로 잡혀도 그건 사람이 시킨 일이라 오류가 아니다
@@ -256,7 +279,8 @@ export function mountUpload(options: UploadOptions): UploadMount {
       // Notified only after commit; the screen must remove the placeholder only after the real content is in place, or it flickers
       active = null;
       running = false;
-      call(() => options.onDone?.({ committed: items.length, cancelled: false }));
+      batch.stopTargetWatch();
+      call(() => options.onDone?.({ committed: committed ? items.length : 0, cancelled: false }));
     });
   };
 
@@ -267,6 +291,7 @@ export function mountUpload(options: UploadOptions): UploadMount {
     active = null;
     running = false;
     batch.controller.abort();
+    batch.stopTargetWatch();
     batch.release();
     if (notify) call(() => options.onDone?.({ committed: 0, cancelled: true }));
   };

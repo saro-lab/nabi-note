@@ -46,6 +46,10 @@ Every load and every successful command passes through the same normalization la
 - Non-finite numbers and `_`-prefixed attributes are removed.
 - Internal IDs are unique and deterministic from document paths when no valid ID is preserved.
 
+Table cells can carry `a.bg` with `yellow|green|cyan|pink|purple|orange`; absent means the default cell/header background. Invalid names are removed. This is a cell attribute, so text-format clearing and content deletion preserve it. See `wings.md` for `setCellColor` and selection rules.
+
+Cells are isolating block holders, not single-paragraph holders. They preserve multiple paragraphs and supported blocks; nested tables/floats are unwrapped recursively. Header cells (`td.a.th: 1`) strip descendant paragraph heading attributes. Cell boundaries remain intact during neighboring deletion and range editing.
+
 Do not depend on malformed tree shape surviving a round trip.
 
 ## Positions and selections

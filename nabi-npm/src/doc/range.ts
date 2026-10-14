@@ -4,7 +4,9 @@ import { P, isElement, isWrapper, type ElementNode, type NabiDoc, type NabiNode 
 import {
   comparePositions,
   holderLength,
+  holders,
   isHolder,
+  isolationPath,
   nodeAt,
   positionExists,
   replaceAt,
@@ -198,12 +200,12 @@ function pruneAt(doc: NabiDoc, path: readonly number[]): NabiDoc {
   }
 }
 
-// 이 글자리를 품은 보호 칸(singleParagraph) — 없으면 null.
-// The protected cell (singleParagraph) holding this holder, or null.
+// 이 글자리를 품은 독립 편집 영역 — 없으면 null.
+// The isolated editing scope holding this holder, or null.
 function cellOf(doc: NabiDoc, path: readonly number[], env: EditEnv): ElementNode | null {
   for (let depth = path.length - 1; depth >= 1; depth -= 1) {
     const node = nodeAt(doc, path.slice(0, depth));
-    if (node && env.singleParagraph?.has(node.w)) return node;
+    if (node && (env.singleParagraph?.has(node.w) || env.isolating?.has(node.w))) return node;
   }
   return null;
 }
@@ -238,8 +240,8 @@ function joinEnds(doc: NabiDoc, startPath: readonly number[], env: EditEnv): Nab
   // 글 문단끼리만 만난다 — 접기 제목·코드 상자는 글자리라도 문단이 아니라 병합 대상이 아니다.
   // Only text paragraphs meet; a details title or code box is a holder but not a paragraph, so it never merges.
   if (!tail || tail.w !== P) return doc;
-  // 격자는 안 넘는다 — 서로 다른 칸(singleParagraph)의 글을 합치면 표가 무너진다.
-  // Never crosses a grid boundary — merging text across different cells (singleParagraph) would collapse the table.
+  // 독립 영역은 안 넘는다 — 서로 다른 칸의 글을 합치면 표가 무너진다.
+  // Never crosses an isolated scope -- merging text across different cells would collapse the table.
   if (cellOf(doc, startPath, env) !== cellOf(doc, tailPath, env)) return doc;
 
   const terminal = terminalOf(env);
@@ -255,6 +257,7 @@ function joinEnds(doc: NabiDoc, startPath: readonly number[], env: EditEnv): Nab
     const at = startPath.slice(0, depth);
     const node = nodeAt(out, at);
     if (!node) break;
+    if (env.isolating?.has(node.w) || env.singleParagraph?.has(node.w)) break;
     if (!isWrapper(node, env)) continue;
     if (holdersUnder(node, env) <= 1) out = replaceAt(out, at, [{ w: P, ch: [] }]) as NabiDoc;
     break;
@@ -309,6 +312,28 @@ export function deleteRange(doc: NabiDoc, range: DocRange, env: EditEnv): EditRe
   if (positionExists(next, caret, env)) return { doc: next, caret };
   const atIndex: Position = { path: start.path, offset: 0 };
   if (positionExists(next, atIndex, env)) return { doc: next, caret: atIndex };
+
+  const boundary = isolationPath(doc, start.path, env);
+  const scopeNode = boundary && nodeAt(next, boundary);
+  if (boundary && scopeNode) {
+    const candidates = holders([scopeNode], env)
+      .filter(({ node }) => {
+        if (!isWrapper(node, env)) return true;
+        const child = node.ch[0];
+        return isElement(child) && env.voids.has(child.w);
+      })
+      .map(({ node, path }) => ({ node, path: [...boundary, ...path.slice(1)] }));
+    const before = candidates.filter(({ path }) => comparePositions({ path, offset: 0 }, start) <= 0).at(-1);
+    const target = before ?? candidates[0];
+    if (target) {
+      return { doc: next, caret: { path: target.path, offset: before ? holderLength(target.node, env) : 0 } };
+    }
+    const empty: ElementNode = { w: P, ch: [] };
+    return {
+      doc: replaceAt(next, boundary, [withChildren(scopeNode, [empty])]),
+      caret: { path: [...boundary, 0], offset: 0 },
+    };
+  }
   const parentPath = start.path.slice(0, -1);
   const index = start.path[start.path.length - 1] as number;
   for (let back = index - 1; back >= 0; back -= 1) {

@@ -5,16 +5,38 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
-## [Unreleased]
-
-Planned version: **1.4.0**. This version has not been released; further changes will continue to be recorded in this section.
+## [1.4.0] - 2026-10-14
 
 ### Added
 
+- Added pale table cell backgrounds with light and dark theme values. Apply a color to one cell or a selected rectangle, restore the default background, and undo the change. Colors survive merge, split, clipboard, JSON, and HTML; colored tables use HTML in Markdown exports to preserve their backgrounds.
+- Table cells now support multiple paragraphs and built-in blocks such as images, lists, quotes, code, details, and video. Nested tables and floats are unwrapped while preserving content; header cells remove heading formatting only. Cell alignment targets inner paragraphs and images, including selected cell rectangles. Align the table itself from the main toolbar after using the new Select table control or placing the caret at either boundary of its wrapper paragraph. Boundary carets also show the dashed table outline; copy and cut include the entire paragraph and table in that state.
 - Added float regions (`floatWing`) whose text, images, and tables can be edited directly in the same editor. Regions support left/right placement and maximum widths of 20, 30, 40, or 50 percent, defaulting to right at 40 percent.
 - Added left/right controls, a maximum-width slider, and a float-with-X unwrap icon to the float context toolbar. The unwrap icon sits directly beside the width readout. Selected paragraphs can be wrapped in a region or unwrapped while preserving their contents in the document. Changes support undo and redo.
 - Added dotted region outlines that appear only while editing. In reader and preview views, following paragraphs flow beside the region. Diff preserves each region's left/right placement and maximum width while starting the next block below it. Narrow document containers and print use a single column.
 - Added `Wing.scopedCommands` to run selected block-container commands against their child document. Block insertion, uploads, and conversions stay inside floats. JSON and HTML save/load preserve region contents, placement, and width.
+- Added `setCellColor({ bg })` and `--nabi-cell-*` CSS variables. Cell backgrounds support `yellow`, `green`, `cyan`, `pink`, `purple`, and `orange`; an empty string restores the default background. Mixed cell colors show no single selected swatch.
+- Added unit and browser regression coverage for table block editing, colors, paragraph formatting, cell boundaries, copy/cut, paste, uploads, storage formats, and toolbar layout.
+
+### Changed
+
+- Reduced the default double-Enter window for leaving a container from 350 ms to 180 ms. Esc and Shift double-tap defaults remain unchanged.
+- Grouped the default toolbar into headings, text formatting, alignment, lists, insertion, and document tools, with vertical separators between groups. Custom group order and quick-tool settings remain supported, as do the mobile single-row toolbar and complete Tools palette.
+- In ordinary cell paragraphs, Enter creates a paragraph and Shift+Enter inserts a line break. Tab keeps list/code indentation and moves between cells in ordinary paragraphs. Paste, block insertion, and uploads stay within the original cell scope; asynchronous insertion is cancelled with feedback if the document changes first. Multi-block tables use HTML in Markdown exports.
+- Block-holding structural parts can declare `scopedCommands`; `isolating` protects editing boundaries while allowing multiple paragraphs.
+- Cell merge preserves child blocks in row order and uses the top-left background. Split keeps content in the origin cell and applies its background to the new cells. Content deletion, cut, and format clearing preserve cell backgrounds. Selected cell rectangles now use inset outlines instead of a background overlay.
+- Unified heading, drop-cap, and alignment commands with toolbar visibility and pressed states around the same inner paragraph targets. Header cells skip headings, and mixed selections show no single active value. Nested table and float insertion controls are hidden inside cells; cross-cell selections reject block insertion and paste.
+- `KeyIntent.shift` distinguishes Shift+Enter, and unhandled keys inside an isolated editing scope pass to ancestor wings up to that scope. Shift+Enter inserts a line break without splitting a list item, and Shift+Tab in code does not move to another cell when no further outdent is possible.
+- Updated the public AI documentation for table cell editing, backgrounds, storage formats, command scopes, uploads and paste, toolbar groups, and the double-Enter default. Refreshed SSR toolbars in every web documentation locale, the web demo's `nabi-note-1.4.0.tgz`, and its npm lockfile.
+- Added a pnpm lockfile and workspace configuration to the web documentation project. Build permissions for `esbuild` and `workerd` remain selection placeholders.
+
+### Fixed
+
+- Fixed pasting a single table or image inside a float placing it outside the region. Empty inner paragraphs are replaced by the pasted block while preserving table alignment, cell formatting, and outside paragraphs.
+- Fixed Backspace, Delete, and range deletion crossing cell boundaries to join contents or remove neighboring tables. Deletion keeps the caret inside its cell, and navigation through multi-block cells uses their first and last actual editable positions.
+- Fixed table deletion inside a float to remove only that table rather than its outer region. Native copy/cut shortcuts work at table wrapper boundaries, and plain-text copies of multi-block cells preserve block line breaks and image/video URLs.
+- Fixed image panels, URL prompts, file pickers, and uploads to preserve their starting selection. Selection-only moves still insert at the original target; document edits or replacement cancel insertion with localized feedback, even after undo restores equal content. Upload placeholders stay inside the original cell, and completion callbacks report actual insertion results.
+- Fixed toggling nested details blocks, including those inside cells, to update only the intended block. Closing moves the selection outside only when it reaches into the closing body; selections elsewhere are preserved.
 
 ## [1.3.2] - 2026-10-10
 
@@ -117,7 +139,7 @@ Planned version: **1.4.0**. This version has not been released; further changes 
 
 - First stable release.
 
-[Unreleased]: https://github.com/saro-lab/nabi-note
+[1.4.0]: https://www.npmjs.com/package/nabi-note/v/1.4.0
 [1.3.2]: https://www.npmjs.com/package/nabi-note/v/1.3.2
 [1.3.1]: https://www.npmjs.com/package/nabi-note/v/1.3.1
 [1.3.0]: https://www.npmjs.com/package/nabi-note/v/1.3.0

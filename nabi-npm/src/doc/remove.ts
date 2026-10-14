@@ -4,6 +4,7 @@ import { P, isElement, isWrapper, type ElementNode, type NabiDoc, type NabiNode 
 import {
   holderLength,
   isHolder,
+  isolationPath,
   nodeAt,
   replaceAt,
   terminalOf,
@@ -83,6 +84,14 @@ function firstHolderIn(root: ElementNode, env: EditEnv): readonly number[] | nul
   return found;
 }
 
+function containsIsolation(node: ElementNode, env: EditEnv): boolean {
+  return (
+    env.isolating?.has(node.w) === true ||
+    env.singleParagraph?.has(node.w) === true ||
+    node.ch.some((child) => isElement(child) && containsIsolation(child, env))
+  );
+}
+
 // 뒤 그릇의 첫 글자리를 이 문단 끝으로 끌어올린다 — joinIntoVessel의 거울(§9). 이게 없으면 `head|` 뒤의 목록이
 // 통째로(항목째) 사라졌다 — 속 없는 물건용 규칙이 그릇에도 새서, 백스페이스 쪽만 있던 보호가 Delete엔 없었다.
 // Pulls the following container's first holder up to the end of this paragraph — the mirror of joinIntoVessel (§9). Without it, Delete at `head|` erased the whole following list at once, since the empty-object rule leaked onto containers too; only Backspace had this guard.
@@ -95,11 +104,21 @@ function joinFromVessel(
   env: EditEnv,
 ): EditResult | null {
   const inner = firstHolderIn(next, env);
-  if (!inner) return null; // 속이 없는 물건 — 통째 삭제가 그 답이다
+  if (!inner) {
+    return containsIsolation(next, env)
+      ? { doc, caret: { path: [...parentPath, index], offset: holderLength(cur, env) } }
+      : null;
+  }
 
   const wrapperPath = [...parentPath, index + 1];
   const source = nodeAt(doc, [...wrapperPath, ...inner]);
   if (!source) return null;
+  if (
+    JSON.stringify(isolationPath(doc, [...wrapperPath, ...inner], env)) !==
+    JSON.stringify(isolationPath(doc, [...parentPath, index], env))
+  ) {
+    return { doc, caret: { path: [...parentPath, index], offset: holderLength(cur, env) } };
+  }
 
   const terminal = terminalOf(env);
   const junction = holderLength(cur, env);
@@ -146,11 +165,19 @@ function joinIntoVessel(
   const lump = prev.ch[0];
   if (!isElement(lump)) return null;
   const inner = lastHolderIn(prev, env);
-  if (!inner) return null; // 속이 없는 물건 — 통째 삭제가 그 답이다
+  if (!inner) {
+    return containsIsolation(prev, env) ? { doc, caret: { path: [...parentPath, index], offset: 0 } } : null;
+  }
 
   const terminal = terminalOf(env);
   const target = nodeAt(doc, [...parentPath, index - 1, ...inner]);
   if (!target) return null;
+  if (
+    JSON.stringify(isolationPath(doc, [...parentPath, index - 1, ...inner], env)) !==
+    JSON.stringify(isolationPath(doc, [...parentPath, index], env))
+  ) {
+    return { doc, caret: { path: [...parentPath, index], offset: 0 } };
+  }
   const junction = holderLength(target, env);
   const filled = withChildren(target, fromRuns([...holderRuns(target, terminal), ...holderRuns(cur, terminal)]));
 
@@ -336,6 +363,7 @@ function actOnNeighbour(
   if (neighbour === undefined || !isElement(neighbour)) return unchanged(doc, pos);
 
   if (isWrapper(neighbour, env)) {
+    if (containsIsolation(neighbour, env)) return unchanged(doc, pos);
     const next = spliceSiblings(doc, parentPath, at, 1, []);
     const shifted = dir === -1 ? index - 1 : index;
     return { doc: next, caret: { path: [...parentPath, shifted], offset: pos.offset } };

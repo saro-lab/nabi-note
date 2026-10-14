@@ -118,7 +118,7 @@ interface SurfaceOptions {
   readonly placeholder?: string;
   readonly ioFilters?: readonly IoFilter[];
   readonly fileSink?: (files: readonly File[]) => void;
-  readonly doubleEnterMs?: number;      // default 350
+  readonly doubleEnterMs?: number;      // default 180; explicit value also sets double-Esc
   readonly correctionDeferMs?: number; // default 80
 }
 
@@ -207,6 +207,8 @@ File/history utility exports:
 | `mountUploadView` | `nabi, surface` | start/progress/settle/done/unmount |
 
 Important optional toolbar inputs: `surface`, `locale`, `translator`, `groups`, `layout`, `quick`, `panels`, `settle`, `onFiles`, `onHost`, `file`, and `accelerators`.
+
+`groups?: readonly string[]` orders wing groups. The default is `heading`, `font`, `emphasis`, `script`, `color`, `clear`, `align`, `list`, `link`, `media`, `structure`, `container`, `file`. Unlisted groups follow the configured groups, and buttons within a group keep registration order. The expanded main toolbar and full Tools palette separate visible groups with decorative vertical lines; object property groups use the same separators while keeping their selection-based order. The mobile quick row retains its configured priority and has no group separators. Pass the same `groups` to SSR rendering and mounting.
 
 `ToolbarOptions.layout?: 'compact' | 'wrap'` defaults to `'compact'`. `quick?: readonly string[]` defaults to `['b', 'i', 'tc', 'fs']` and identifies `ToolbarSlot.name` values in priority order. The default layout shows every available main-toolbar command on desktop, wrapping like fullscreen. Below `--nabi-mobile-breakpoint`, based on viewport width rather than editor width, it uses one mobile main-toolbar row and keeps overflow commands in the full Tools palette. `quick` configures only that mobile row. The palette displays available commands together in their original wing groups, without category tabs. `layout: 'wrap'` keeps the previous explicit main-toolbar layout. Toolbar buttons use `2rem` and icons use `.875rem` on desktop and mobile; see `styling.md` for dimensions and fullscreen behavior.
 
@@ -378,7 +380,7 @@ Tree values: `P`, `BR`, `isElement`, `isText`.
 
 ## Wing declaration types
 
-`Wing.scopedCommands?: readonly string[]` opts a block container into relative child-document execution for selected wing commands. See `custom-wing.md`. Float commands and stored attributes are documented in `wings.md`.
+`Wing.scopedCommands?: readonly string[]` and `StructureDecl.scopedCommands?: readonly string[]` opt a block container or block-holding part into relative child-document execution for selected wing commands. `isolating?: boolean` protects such a holder's editing boundary without limiting it to one paragraph. See `custom-wing.md`. Float and table commands and stored attributes are documented in `wings.md`.
 
 Root-exported wing types include:
 

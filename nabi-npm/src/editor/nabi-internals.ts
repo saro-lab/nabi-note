@@ -1,5 +1,6 @@
 import { $ownDataArray, $ownDataObject, $snapshotNodes } from '../schema/json.js';
 import { $copyKnownTypes } from '../schema/env.js';
+import { $copyParagraphTargets } from '../doc/paragraph-target.js';
 import { isElement, type NabiNode, type NabiDoc } from '../schema/index.js';
 import type { EditEnv, Position } from '../doc/index.js';
 import type { Selection } from '../caret/index.js';
@@ -226,8 +227,10 @@ export function callbackEnv(env: EditEnv): EditEnv {
     ...(env.noAlign ? { noAlign: new ReadonlySetView(env.noAlign) } : {}),
     ...(repairs ? { repair: repairs } : {}),
     ...(env.singleParagraph ? { singleParagraph: new ReadonlySetView(env.singleParagraph) } : {}),
+    ...(env.isolating ? { isolating: new ReadonlySetView(env.isolating) } : {}),
   };
   $copyKnownTypes(env, view);
+  $copyParagraphTargets(env, view);
   return Object.freeze(view);
 }
 

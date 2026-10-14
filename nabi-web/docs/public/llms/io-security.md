@@ -41,7 +41,7 @@ Enable all relevant gates for a local preview workflow. A normal server upload r
 
 `mountToolbar({ panels: { img: renderer } })` replaces the image URL prompt with host UI; it does not replace URL validation or implement file transfer. The renderer can load a media library or call the host's uploader, then use `context.insertImage(url)` (equivalent to `context.run('insertImage', { src: url })`). The `insertImage` command accepts an argument object with `src` and optional `w`; it does not take an `alt` command argument. The panel helper accepts `insertImage(src, by?)`; use `context.run('insertImage', { src: url, w: 60 })` to specify width. Image-node repair and the relevant local-URL gates still apply. Validate uploaded files on the server as described below.
 
-Forward the panel's `signal` to asynchronous work and release host resources through the returned disposer or `onDispose()`. Closing the panel aborts the signal. A late `run()` after closure returns `false`; a document changed since panel opening also prevents applying a command to the stale selection. See `api-reference.md` for the complete panel lifecycle contract.
+Forward the panel's `signal` to asynchronous work and release host resources through the returned disposer or `onDispose()`. Closing the panel aborts the signal. A late `run()` after closure returns `false`. Image panels and the default URL prompt preserve their opening selection, including its cell. Any document edit or replacement since opening cancels insertion with a localized warning, even if the original target still exists or an undo restored equal content. Moving only the selection is allowed; insertion restores the opening selection. See `api-reference.md` for the complete panel lifecycle contract.
 
 ## HTML output
 
@@ -83,11 +83,15 @@ Dropping the subtree prevents script/style text from reappearing as document tex
 
 Clipboard custom data uses `application/vnd.nabi.tree+json` with the exact envelope `{ version: 1, body: [...] }`. Copy and cut attempt custom MIME, `text/html`, and `text/plain` independently. Paste priority is valid supported custom data, safe built-in HTML, then plain text. Every candidate is normalized and validated. A host filter cannot shadow the reserved built-in IDs `nabi`, `html`, `markdown`, or `text`.
 
-When a selection spans different cells in the same table, copy and cut use the same rectangle as the highlighted cell selection, including any merged cells that expand that rectangle. They do not copy intervening cells outside the rectangle or omit the final cell. Custom data and HTML preserve the selected rows, empty cells, header cells, spans, and inline formatting. Plain text separates the selected cells with tabs and rows with newlines. Cut clears only selected cell contents, preserves table structure and other cells, and restores the contents in one undo step. Failed clipboard writes do not clear the source. Partial text selections within one cell retain ordinary text-selection behavior.
+When a selection spans different cells in the same table, copy and cut use the same rectangle as the highlighted cell selection, including any merged cells that expand that rectangle. They do not copy intervening cells outside the rectangle or omit the final cell. Custom data and HTML preserve the selected rows, empty cells, header cells, spans, cell background names, and inline formatting. Plain text separates the selected cells with tabs and rows with newlines. Cut clears only selected cell contents, preserves table structure and other cells, and restores the contents in one undo step. Failed clipboard writes do not clear the source. Partial text selections within one cell retain ordinary text-selection behavior. When exactly one table wrapper is selected, or a collapsed caret is at either wrapper boundary with the dashed table outline, copy and cut include the entire table and its wrapper paragraph. Cut removes both together after a successful clipboard write; one undo restores them. This also works for tables inside floats.
 
 For ordinary non-HTML input where multiple custom candidates apply, `ask.choose` or the bound choose UI selects a positional index. An invalid index cancels. Markdown is offered only when the text looks like Markdown and registered wings can represent at least one detected construct.
 
 A paste containing any text HTML/plain data is treated as content paste. Its files do not go to `fileSink`. File-only paste and drop may go to `fileSink`.
+
+Pasting or dropping content inside a table cell inserts into that cell, preserving its paragraphs, images, lists, and other allowed blocks. Normalization unwraps nested table and float wrappers in order and removes heading attributes inside header cells. A selection crossing cell boundaries is rejected before deleting content. An explicit drop target takes precedence over the current selection.
+
+Paragraphs and object wrappers inside floats, quotes, or list items preserve pasted blocks within their parent, including a single table or image. Empty inner paragraphs are replaced by the pasted fragment; text, formatting, and outer content are preserved. Inline-only holders such as code and details summaries instead flatten recoverable text with line breaks, following their existing content rules.
 
 ## Custom IO filters
 
@@ -157,7 +161,9 @@ Defaults:
 
 Per-file type/size failures remove that file. Total-size failure rejects the entire accepted batch. A failed uploader result or thrown error removes that file while other files continue.
 
-During a batch the editor is locked. If `root` is supplied, it also becomes `contenteditable="false"`. All successful results commit once, as one undo step, after `onSettle`. Cancel releases the lock and restores `contenteditable` immediately even when the uploader ignores abort. Late progress and resolution are discarded. Cancel reports one cancelled `onDone`; `unmount()` cancels without invoking mount callbacks.
+During transfer the editor is locked. If `root` is supplied, it also becomes `contenteditable="false"`. The lock is released before `onSettle`; successful results then commit once as one undo step. Cancel releases the lock and restores `contenteditable` immediately even when the uploader ignores abort. Late progress and resolution are discarded. Cancel reports one cancelled `onDone`; `unmount()` cancels without invoking mount callbacks.
+
+The file picker and upload batch preserve their starting selection, including its cell. A selection-only move does not redirect insertion. Any document edit or replacement before commit cancels insertion and reports a localized warning; this deliberately includes edits outside the original target. A cancelled batch reports `{ committed: 0, cancelled: true }`. Upload placeholders remain after the original paragraph inside its cell and never fall back to the document root if that target disappears.
 
 An uploader receives `onProgress` and `AbortSignal`. It returns `{ uri }` or `null`. Progress is clamped to 0..100. Default upload warnings remain visible for 5000 ms.
 

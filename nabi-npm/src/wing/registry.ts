@@ -17,6 +17,7 @@ import {
 import { $builtinAttrTypes, $closeBuiltinAttrs, $closeKnownTypes, $isBuiltinWing } from '../schema/env.js';
 import { erectsNode, type Attach, type InputRule, type StructureDecl, type Wing } from './contract.js';
 import { scopeBlockCommand } from './scope.js';
+import { $collectParagraphTargets } from './paragraph-target.js';
 
 // 커맨드 이름 규칙 — 동사+목적어 카멜. 낱말 하나(`merge`)나 대문자 시작은 죽는다.
 // Command naming rule: verb+object camelCase; a single word (`merge`) or a capitalized start fails.
@@ -217,6 +218,12 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     if (wing.singleParagraph === true && wing.holds !== 'blocks') {
       fail(`"${wing.w}" 의 singleParagraph 는 blocks holder에만 사용할 수 있습니다`);
     }
+    if (
+      wing.isolating !== undefined &&
+      (typeof wing.isolating !== 'boolean' || wing.place !== 'container' || wing.holds !== 'blocks')
+    ) {
+      fail(`"${wing.w}" 의 isolating은 blocks container에서 true/false로 지정해야 합니다`);
+    }
     if (wing.allows !== undefined && wing.place !== 'container')
       fail(`"${wing.w}" 의 allows 는 container에만 지정할 수 있습니다`);
     if (wing.allows !== undefined) stringList('allows', wing.allows);
@@ -249,6 +256,17 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
       }
       if (decl.singleParagraph === true && decl.holds !== 'blocks') {
         fail(`"${wing.w}" 의 부품 "${part}" singleParagraph는 blocks holder에만 사용할 수 있습니다`);
+      }
+      if (decl.isolating !== undefined && (typeof decl.isolating !== 'boolean' || decl.holds !== 'blocks')) {
+        fail(`"${wing.w}" 의 부품 "${part}" isolating은 blocks holder에서 true/false로 지정해야 합니다`);
+      }
+      if (decl.scopedCommands !== undefined) {
+        stringList(`part "${part}" scopedCommands`, decl.scopedCommands);
+        if (decl.holds !== 'blocks') fail(`"${part}" 의 scopedCommands는 blocks holder에만 지정할 수 있습니다`);
+        for (const name of decl.scopedCommands) {
+          if (!COMMAND_NAME.test(name) || CORE_COMMAND_NAMES.has(name))
+            fail(`"${part}" 의 scopedCommands에 잘못된 wing command "${name}" 가 있습니다`);
+        }
       }
       if (decl.attrs !== undefined) stringList(`부품 "${part}" attrs`, decl.attrs);
       if (decl.boolAttrs !== undefined) stringList(`부품 "${part}" boolAttrs`, decl.boolAttrs);
@@ -336,6 +354,7 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
   const blockHolders: string[] = [];
   const inlineHolders: string[] = [];
   const singleParagraph: string[] = [];
+  const isolating: string[] = [];
   const noAlign: string[] = [];
   const boolAttrs = new Set<string>();
   const attrSchemas = new Map<string, ReadonlySet<string>>();
@@ -384,6 +403,7 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
       lumps.push(wing.w);
       (wing.holds === 'inline' ? inlineHolders : blockHolders).push(wing.w);
       if (wing.singleParagraph) singleParagraph.push(wing.w);
+      if (wing.isolating) isolating.push(wing.w);
     }
     for (const [part, decl] of Object.entries(wing.parts ?? {})) {
       if (!builtinTypes.has(part)) {
@@ -392,6 +412,7 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
       }
       (decl.holds === 'inline' ? inlineHolders : blockHolders).push(part);
       if (decl.singleParagraph) singleParagraph.push(part);
+      if (decl.isolating) isolating.push(part);
       for (const attr of decl.boolAttrs ?? []) boolAttrs.add(attr);
     }
     for (const attr of wing.boolAttrs ?? []) boolAttrs.add(attr);
@@ -441,7 +462,12 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
   }
 
   for (const [name, command] of Object.entries(commands)) {
-    const scopes = wings.filter((wing) => wing.scopedCommands?.includes(name)).map((wing) => wing.w);
+    const scopes = wings.flatMap((wing) => [
+      ...(wing.scopedCommands?.includes(name) ? [wing.w] : []),
+      ...Object.entries(wing.parts ?? {})
+        .filter(([, decl]) => decl.scopedCommands?.includes(name))
+        .map(([part]) => part),
+    ]);
     if (scopes.length > 0) commands[name] = scopeBlockCommand(command, new Set(scopes));
   }
 
@@ -476,9 +502,11 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     ...(noAlign.length > 0 ? { noAlign: new Set(noAlign) } : {}),
     ...(Object.keys(repair).length > 0 ? { repair } : {}),
     ...(singleParagraph.length > 0 ? { singleParagraph: new Set(singleParagraph) } : {}),
+    ...(isolating.length > 0 ? { isolating: new Set(isolating) } : {}),
   };
   $closeKnownTypes(env, [P, BR, ...byType.keys()]);
   $closeBuiltinAttrs(env, closedAttrs);
+  $collectParagraphTargets(wings, env);
 
   // 들여오기 역방향 — 주장한 wing들에게 차례로 묻고, 첫 답이 이긴다. 아무도 안 잡으면 기본 대응.
   // Import claiming, in reverse — asks each claiming wing in turn, first hit wins; falls back to the default if none claim it.

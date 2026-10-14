@@ -1,3 +1,4 @@
+import { BASE_LABEL, HIGHLIGHT_LABELS } from '../value-labels.js';
 // 값 마크 넷 — 형광펜(hl)·글자색(tc)은 키가 c, 글자 크기(fs)·서체(tf)는 키가 v다(크기·서체는 마크지 문단 속성이 아니다).
 // Four value marks — highlight/text-color use key `c`, size/typeface use `v` (size and typeface are marks, not paragraph attrs).
 //
@@ -212,104 +213,7 @@ const HIGHLIGHT_SWATCH: Readonly<Record<string, string>> = Object.fromEntries(
 const TEXT_SWATCH: Readonly<Record<string, string>> = Object.fromEntries(
   ['green', 'coral', 'violet', 'amber', 'blue'].map((name) => [name, `var(--nabi-tc-${name})`]),
 );
-const HIGHLIGHT_LABELS: Readonly<Record<string, LocaleText>> = {
-  yellow: {
-    ko: '노랑',
-    en: 'Yellow',
-    ja: '黄色',
-    zh: '黄色',
-    de: 'Gelb',
-    fr: 'Jaune',
-    es: 'Amarillo',
-    pt: 'Amarelo',
-    ru: 'Жёлтый',
-    ar: 'أصفر',
-    hi: 'पीला',
-    bn: 'হলুদ',
-    ur: 'پیلا',
-    id: 'Kuning',
-  },
-  green: {
-    ko: '연두',
-    en: 'Green',
-    ja: '黄緑',
-    zh: '绿色',
-    de: 'Grün',
-    fr: 'Vert',
-    es: 'Verde',
-    pt: 'Verde',
-    ru: 'Зелёный',
-    ar: 'أخضر',
-    hi: 'हरा',
-    bn: 'সবুজ',
-    ur: 'سبز',
-    id: 'Hijau',
-  },
-  cyan: {
-    ko: '하늘',
-    en: 'Cyan',
-    ja: '水色',
-    zh: '天蓝',
-    de: 'Hellblau',
-    fr: 'Cyan',
-    es: 'Celeste',
-    pt: 'Ciano',
-    ru: 'Голубой',
-    ar: 'سماوي',
-    hi: 'आसमानी',
-    bn: 'আকাশি',
-    ur: 'آسمانی',
-    id: 'Biru muda',
-  },
-  pink: {
-    ko: '분홍',
-    en: 'Pink',
-    ja: 'ピンク',
-    zh: '粉色',
-    de: 'Rosa',
-    fr: 'Rose',
-    es: 'Rosa',
-    pt: 'Rosa',
-    ru: 'Розовый',
-    ar: 'وردي',
-    hi: 'गुलाबी',
-    bn: 'গোলাপি',
-    ur: 'گلابی',
-    id: 'Merah muda',
-  },
-  purple: {
-    ko: '보라',
-    en: 'Purple',
-    ja: '紫',
-    zh: '紫色',
-    de: 'Lila',
-    fr: 'Violet',
-    es: 'Morado',
-    pt: 'Roxo',
-    ru: 'Фиолетовый',
-    ar: 'بنفسجي',
-    hi: 'बैंगनी',
-    bn: 'বেগুনি',
-    ur: 'ارغوانی',
-    id: 'Ungu',
-  },
-  orange: {
-    ko: '주황',
-    en: 'Orange',
-    ja: 'オレンジ',
-    zh: '橙色',
-    de: 'Orange',
-    fr: 'Orange',
-    es: 'Naranja',
-    pt: 'Laranja',
-    ru: 'Оранжевый',
-    ar: 'برتقالي',
-    hi: 'नारंगी',
-    bn: 'কমলা',
-    ur: 'نارنجی',
-    id: 'Oranye',
-  },
-};
+
 const TEXT_LABELS: Readonly<Record<string, LocaleText>> = {
   green: {
     ko: '초록',
@@ -543,22 +447,6 @@ const namedChoices = (values: readonly string[], names: Readonly<Record<string, 
 
 // 기본 칸 — 값 없음. 손잡이가 여기 앉으면 아무것도 안 걸린 것이고, 여기로 옮기면 벗는다.
 // The default slot means no value — the handle resting here means nothing is applied, and moving it here strips the mark.
-const BASE_LABEL: LocaleText = {
-  ko: '기본',
-  en: 'Default',
-  ja: '既定',
-  zh: '默认',
-  de: 'Standard',
-  fr: 'Par défaut',
-  es: 'Predeterminado',
-  pt: 'Padrão',
-  ru: 'По умолчанию',
-  ar: 'افتراضي',
-  hi: 'डिफ़ॉल्ट',
-  bn: 'ডিফল্ট',
-  ur: 'طے شدہ',
-  id: 'Bawaan',
-};
 
 // 순서가 있는 눈금 — 기본 칸이 가운데가 아니라 맨 앞이다: 목록이 작은 것부터 큰 것 순이라 그 앞이 "안 걸림"의 자리다.
 // An ordered scale — the default slot sits at the front, not the middle, since the list runs small to large and "unset" belongs before the smallest.
