@@ -11,7 +11,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Gộp phần tóm tắt ngắn và nội dung thành một khối. Khi tạo từ thanh công cụ, hãy nhập phần tóm tắt trước rồi viết tiếp nội dung bên dưới.
 
-Trạng thái mở được chọn bằng tam giác sẽ lưu trong tài liệu và trở thành trạng thái ban đầu trên trang xuất bản. Khi chỉnh sửa, phần nội dung vẫn được mở để có thể sửa, nhưng giá trị trạng thái đã lưu không thay đổi.
+Trạng thái mở được đặt bằng nút tam giác được lưu trong tài liệu và trở thành trạng thái ban đầu khi xuất bản. Khi chỉnh sửa, bạn cũng có thể nhấn tam giác để mở và đóng khối.
+
+Trong ô bảng hoặc khối khác, chỉ khối thu gọn đó mở hoặc đóng. Nếu con trỏ hay vùng chọn nằm trong phần nội dung đang đóng, chúng được chuyển ra ngoài; vùng chọn ở nơi khác được giữ nguyên.
 
 <WingDemo path="/wing/block/details" />
 

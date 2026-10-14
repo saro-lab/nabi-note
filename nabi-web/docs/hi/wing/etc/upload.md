@@ -25,6 +25,12 @@ const selected = wings()
 
 सिर्फ़ `upload` चुनने पर वह image या link की अनुपस्थित dependency अपने-आप देता है। स्थानांतरण को `mountUpload()` से और संपादन स्क्रीन की प्रगति UI को सामान्यतः `mountUploadView()` से जोड़ें। सर्वर HTTPS URL लौटाता हो तो local URL विकल्प जरूरी नहीं है।
 
+## अपलोड कहाँ जोड़ा जाता है
+
+फ़ाइल चयन विंडो खोलने या अपलोड शुरू करने की जगह याद रखी जाती है। यदि केवल कर्सर कहीं और ले जाएँ, तो सामग्री मूल जगह पर जुड़ती है। तालिका की कोशिका में शुरू हुआ अपलोड अपनी प्रगति और पूरी हुई सामग्री उसी कोशिका में रखता है। फ़्लोट क्षेत्र में शुरू हुए अपलोड का परिणाम भी उसी क्षेत्र में जुड़ता है। कई कोशिकाओं की सीमाएँ पार करने वाले चयन में अपलोड नहीं जोड़ा जा सकता।
+
+फ़ाइल चयन या असिंक्रोनस प्रक्रिया के दौरान दस्तावेज़ में संपादन या उसे बदलने से जोड़ना रद्द होता है और सूचना दिखाई जाती है। पूर्ववत करके वही सामग्री वापस आने पर भी पुरानी जगह पर नहीं जोड़ा जाता। केवल सफल ट्रांसफ़र के आधार पर पूरा होना न तय करें: `onDone` को मिलने वाले `committed` और `cancelled` जाँचें। `committed` वास्तव में दस्तावेज़ में जुड़ी फ़ाइलों की संख्या है।
+
 ## सर्वर API अनुबंध
 
 NABI NOTE अपने-आप आपकी सेवा को फ़ाइल नहीं भेजता। `uploader` function एक फ़ाइल सर्वर को भेजता है और सफलता पर केवल public या authenticated `https:` URL लौटाता है। सबसे सरल API अनुबंध ऐसा है।
@@ -58,6 +64,7 @@ Client-side `extensions` और `maxFileSize` तेज़ user feedback का 
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -121,9 +128,18 @@ const surface = mountSurface({
   fileSink: upload.take,
   locale: 'hi',
 })
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'hi',
+})
 ```
 
-`fileSink: upload.take` जोड़ें, ताकि drag and drop और केवल फ़ाइलों वाली paste upload flow में आए। upload wing UI फ़ाइल चयन बटन का परिणाम `upload.take()` तक देता है। अपलोड के दौरान editor लॉक रहता है और हर batch की सफल फ़ाइलें एक undo step में डाली जाती हैं। `upload.cancel()` या `uploadView` का रद्द करें बटन `AbortSignal` के माध्यम से चल रहे request रोकता है।
+`fileSink: upload.take` जोड़ें ताकि खींचकर छोड़ना और केवल फ़ाइलें पेस्ट करना अपलोड प्रक्रिया में जाए। फ़ाइल चयन बटन को टूलबार के `onFiles: upload.take` से जोड़ें। अपलोड के दौरान संपादक लॉक रहता है और हर बैच की सफल फ़ाइलें एक पूर्ववत चरण में जुड़ती हैं। `upload.cancel()` या `uploadView` का रद्द बटन `AbortSignal` के ज़रिए चल रहे अनुरोध रोकता है।
 
 ## विफलता और सफ़ाई
 
@@ -131,6 +147,7 @@ const surface = mountSurface({
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

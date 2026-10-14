@@ -93,6 +93,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -106,6 +108,8 @@ export const exCallout: Wing = {
 ```
 
 This declaration alone does not create a way to wrap selected paragraphs. Add a pure command in `commands` and a `button` that invokes it before exposing the feature in the editor UI.
+
+`isolating: true` allows multiple paragraphs while preventing deletion from crossing the callout boundary and merging it with adjacent content. Commands listed in `scopedCommands` run against the document inside the box, keeping image/table insertion and list/quote conversion inside it.
 
 ### 5. A matched list and item pair
 
@@ -165,10 +169,10 @@ Declare only what the wing needs. A factory already supplies some fields for you
 | Area | Options | Purpose |
 | --- | --- | --- |
 | Base | `w`, `place`, `basic`, `styles` | Name, structural kind, basic-catalog membership, default CSS |
-| Structure | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | Child kind, Enter behavior, allowed attributes, boolean attributes |
+| Structure | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | Child kinds, Enter behavior, editing boundary protection, allowed attributes, boolean attributes |
 | Structure | `parts`, `allows`, `noAlign`, `requiresAnyOf` | Internal parts, allowed children, alignment exclusion, wing dependency |
 | Values | `attrKey`, `attrValues`, `currentValue` | Stored value key and list, current-value detection |
-| Commands and input | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Commands, key handling, Escape/double-key behavior, autoformat rules |
+| Commands and input | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Commands, commands run within the inner document, key handling, Escape/double-key behavior, autoformat rules |
 | Surface behavior | `attach` | DOM behavior and cleanup for a surface |
 | Conversion | `toHtml`, `partHtml`, `toMd`, `partMd` | HTML and Markdown output |
 | Import and repair | `claim`, `ioFilter`, `repair`, `partRepair` | HTML import, file handling, JSON validation and repair |
@@ -190,6 +194,30 @@ A command is a pure function of document and selection that returns the next doc
 Put DOM-only behavior, such as table drag selection, in `attach(host)`. Immediately register cleanup for every listener or changed attribute with `host.onDispose()` so failed setup is still cleaned up. Do not modify composing text DOM or the surface's selection mapping.
 
 Declare toolbar and context controls with `button`, `buttons`, and `context`; duplicating their command rules in application UI can make UI and document model diverge.
+
+### Run commands inside a block
+
+Declare `scopedCommands` on containers with `holds: 'blocks'` and on block-holding `parts`. When both selection endpoints are in the same region, commands receive that region's child document and relative selection paths, and their result is applied back to the outer document. Selections crossing the region boundary are rejected; outside that region, the original command behavior applies. Float regions and table cells use this mechanism to keep insertion, conversion, and uploads within their boundaries.
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+Only wing commands can appear in this list. Unregistered commands are skipped, so it does not require image or upload wings to be registered together. Choose commands that work solely with the supplied inner document and relative paths; exclude commands that require absolute paths in the complete document or replace the whole document. Core commands cannot appear in this list either.
+
+`singleParagraph` limits content to one paragraph; `isolating` preserves multiple paragraphs while preventing Backspace/Delete from crossing the editing boundary. Block-holding `parts` can also declare `isolating: true`.
+
+### Handle keys in nested blocks
+
+Use `KeyIntent.shift` received by `onKey` to distinguish Enter from Shift+Enter. When an inner wing returns `null` inside an independent editing region, handling passes through ancestor wings up to that region. Lists and code inside cells therefore handle indentation first; an unhandled Tab can move between cells. The same wing is never called twice for one key input.
 
 ## CSS styles
 

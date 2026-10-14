@@ -38,6 +38,15 @@ Usa percorsi dalla radice come `/icons/...` o URL HTTPS completi. I percorsi rel
 
 Anteponi `--nabi-icon-` al valore `data-nabi-icon` dell’elemento per ottenere la variabile CSS. Per esempio, `diff-close` usa `--nabi-icon-diff-close`. Il <a href="/llms/icons.md" target="_blank" rel="noopener">contratto delle icone</a> descrive le chiavi di contesto, menu, salvataggio, cronologia e altre, inclusa la codifica dei caratteri speciali.
 
+Il pulsante di inserimento dell'area flottante usa `toolbar-float`; quello per rimuoverne l'involucro nelle proprietà usa `context-float-unwrap`. I file predefiniti sono `float-float.svg` e `float-unwrap.svg`, disponibili anche per il tema scuro. Il pulsante di rimozione appare accanto alla larghezza; sostituire l'immagine conserva nome e suggerimento.
+
+```css
+.paper-note {
+  --nabi-icon-toolbar-float: url("/icons/float.svg");
+  --nabi-icon-context-float-unwrap: url("/icons/float-unwrap.svg");
+}
+```
+
 ## Modalità scura e pannelli
 
 Cambiare la classe tema o una variabile CSS aggiorna le icone senza un nuovo mount. Le icone predefinite seguono il tema chiaro/scuro. I file personalizzati non ereditano `currentColor`; assegna varianti scure come sopra se necessario. I pannelli aperti sotto `body` seguono anche il tema delle icone e le modifiche a classi/stili dell’editor di origine. Imposta le variabili sull’editor o su un genitore comune, non solo dentro la barra.

@@ -11,6 +11,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Coloca la primera letra de un párrafo en un tamaño mayor y deja que las líneas siguientes fluyan a su lado. Es formato de nivel de párrafo, así que no se aplica solo a una parte de una palabra seleccionada.
 
+Dentro de una tabla, la letra capitular se aplica a los párrafos internos, no a las celdas. Al seleccionar varias celdas, se cambian todos los párrafos compatibles que contienen; el estado de la barra refleja esa misma selección de párrafos.
+
 La vista publicada y la vista de edición conservan la misma forma. Mientras se edita, la primera letra se envuelve en un elemento real para que no se desplacen las posiciones del cursor y de borrado; ese elemento no se incluye en el contenido guardado del documento.
 
 <WingDemo path="/wing/etc/dropcap" />

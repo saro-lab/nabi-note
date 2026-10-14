@@ -13,6 +13,8 @@ Trasforma un paragrafo in un titolo e scegline il livello. Attiva il titolo dall
 
 Un titolo non è un tipo di blocco separato, ma un attributo salvato nel paragrafo. Selezionando di nuovo il titolo, torna a essere un paragrafo normale: puoi quindi cambiare solo il livello mantenendo intatta la struttura del testo.
 
+Nelle celle normali puoi trasformare i paragrafi interni in titoli. I titoli non si applicano alle celle di intestazione e la conversione in intestazione rimuove anche la formattazione dei titoli esistente. Se selezioni più paragrafi, la barra mostra un solo valore attivo soltanto se hanno tutti lo stesso livello di titolo.
+
 <WingDemo path="/wing/block/heading" />
 
 ```ts

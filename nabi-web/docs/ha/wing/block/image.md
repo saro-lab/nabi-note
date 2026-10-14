@@ -59,6 +59,8 @@ const toolbar = mountToolbar({
 
 Rufe taga ko cire toolbar yana soke `signal` kuma ya kira aikin tsaftacewa. `run()` yana rufe taga kuma ya aiwatar da umarni sau ɗaya a zaɓin da aka adana lokacin buɗewa. Idan an riga an rufe taga ko abubuwan da ke cikin takardar sun canza bayan buɗewa, yana mayar da `false` ba tare da aiwatar da umarnin ba.
 
+Idan siginar rubutu kawai aka matsar, hoton zai shiga wurin farko da aka buɗe taga. Idan an buɗe ta cikin sel ko yankin iyo, hoton zai shiga ciki. Gyara ko maye gurbin takarda yana soke sakawa tare da sanarwa, ko da soke aiki ya dawo da abin da yake ciki daidai; sake buɗe taga ka sake zaɓar hoto.
+
 ## Tsarin CSS
 
 Ana yi wa hoto ado da `.nabi-content img`. Ka bar faɗi da daidaitawar da aka adana yadda suke, kuma ka canza kamanni kawai, kamar iyaka ko inuwa.

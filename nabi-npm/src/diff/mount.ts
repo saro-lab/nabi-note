@@ -87,7 +87,6 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
     // "바뀐 부분만" 은 글자가 아니라 서로를 향해 접히는 상하 세모 화살표다. 말은 title/aria 로 남는다.
     // "Only changes" is a pair of triangles folding toward each other, not text; the label lives in title/aria instead.
     const toggleButton = iconButton(t('diff.onlyChanges'), 'diff-fold');
-    toggleButton.setAttribute('aria-pressed', 'false');
     // 숫자와 접기는 왼쪽 무리다 — 오른쪽 끝은 전체화면(mountDiffWing)이 얹는 닫기(X) 하나만의 자리다.
     // The count and fold toggle group on the left; the far right is reserved solely for the close (X) that mountDiffWing adds.
     bar.append(prevButton, nextButton, count, toggleButton, spacer);
@@ -113,7 +112,7 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
     let beforeEls: HTMLElement[] = [];
     let afterEls: HTMLElement[] = [];
     let cursor = -1;
-    let folded = false;
+    let folded = true;
     let unmounted = false;
     // 매칭 블록 쌍 기준 세로 앵커 — [i] 끼리 같은 자리다. 양 끝(0·문서 끝)이 늘 들어 있다.
     let anchorsB: number[] = [];
@@ -129,8 +128,11 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
 
     // --- 접기 — 안 바뀐 구간을 감추고 앞뒤 맥락만 남긴다 ---------------------------------------
     const applyFold = (): void => {
-      attributes.className('nabi-diff-only', folded);
-      toggleButton.setAttribute('aria-pressed', folded ? 'true' : 'false');
+      const hasChanges = (model?.changes.length ?? 0) > 0;
+      const onlyChanges = folded && hasChanges;
+      attributes.className('nabi-diff-only', onlyChanges);
+      toggleButton.disabled = !hasChanges;
+      toggleButton.setAttribute('aria-pressed', onlyChanges ? 'true' : 'false');
       if (!model) return;
       const keep = new Set<number>();
       model.entries.forEach((entry, at) => {
@@ -141,7 +143,7 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
         let hiddenRun = false;
         for (const blockEl of els) {
           const entry = Number(blockEl.dataset['entry']);
-          const hidden = !keep.has(entry);
+          const hidden = onlyChanges && !keep.has(entry);
           blockEl.classList.toggle('nabi-diff-gap', hidden && !hiddenRun);
           blockEl.classList.toggle('nabi-diff-cut', hidden && hiddenRun);
           hiddenRun = hidden;
@@ -362,7 +364,7 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
       prevButton.disabled = cursor <= 0;
       nextButton.disabled = total === 0 || cursor >= total - 1;
       const active = root.ownerDocument.activeElement as HTMLButtonElement | null;
-      if ((active === prevButton || active === nextButton) && active.disabled) {
+      if ((active === prevButton || active === nextButton || active === toggleButton) && active.disabled) {
         const buttons = [...bar.querySelectorAll<HTMLButtonElement>('button')];
         const at = buttons.indexOf(active);
         const target =
@@ -397,7 +399,7 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
       if (!unmounted) jump(cursor + 1);
     });
     toggleButton.addEventListener('click', () => {
-      if (unmounted) return;
+      if (unmounted || toggleButton.disabled) return;
       folded = !folded;
       applyFold();
       measure();

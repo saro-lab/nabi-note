@@ -59,6 +59,8 @@ const toolbar = mountToolbar({
 
 Menutup panel atau melepas toolbar membatalkan `signal` dan memanggil fungsi pembersihan. `run()` menutup panel dan menerapkan perintah satu kali pada pilihan yang disimpan saat panel dibuka. Jika panel sudah ditutup atau isi dokumen berubah sejak dibuka, fungsi ini mengembalikan `false` tanpa menjalankan perintah.
 
+Jika Anda hanya memindahkan kursor, gambar disisipkan pada posisi awal saat panel dibuka. Jika panel dibuka di dalam sel tabel atau area mengambang, gambar masuk ke dalamnya. Mengedit atau mengganti dokumen membatalkan penyisipan dan menampilkan pemberitahuan meskipun undo mengembalikan isi yang sama; buka kembali panel untuk memilih gambar lagi.
+
 ## Gaya CSS
 
 Atur gaya gambar dengan `.nabi-content img`. Pertahankan lebar dan perataan tersimpan, dan ubah hanya detail visual seperti batas atau bayangan.

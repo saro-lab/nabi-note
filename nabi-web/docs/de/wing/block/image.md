@@ -59,6 +59,8 @@ const toolbar = mountToolbar({
 
 Beim Schließen des Panels oder Entfernen der Toolbar wird `signal` abgebrochen und die Aufräumfunktion aufgerufen. `run()` schließt das Panel und führt einen Befehl einmal an der beim Öffnen erfassten Auswahl aus. Ist das Panel bereits geschlossen oder wurde der Dokumentinhalt seit dem Öffnen geändert, gibt es `false` zurück, ohne den Befehl auszuführen.
 
+Wird nur der Cursor versetzt, erfolgt das Einfügen an der ursprünglichen Position, an der das Fenster geöffnet wurde. Wurde es in einer Tabellenzelle oder einem Float-Bereich geöffnet, wird das Bild dort eingefügt. Nach dem Bearbeiten oder Ersetzen des Dokuments wird das Einfügen mit einem Hinweis abgebrochen, selbst wenn Rückgängig denselben Inhalt wiederherstellt. Öffnen Sie das Fenster erneut und wählen Sie das Bild noch einmal.
+
 ## CSS-Stile
 
 Stilieren Sie Bilder mit `.nabi-content img`. Bewahren Sie die gespeicherte Breite und Ausrichtung bei und ändern Sie nur visuelle Details wie Rahmen oder Schatten.

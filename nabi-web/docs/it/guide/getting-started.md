@@ -61,7 +61,35 @@ const toolbar = mountToolbar({
 
 `locale` controlla il testo della barra degli strumenti e di aiuto; passa lo stesso valore a ogni mount dell'interfaccia. `placeholder` viene mostrato soltanto quando l'editor è vuoto. `onError` riceve errori isolati da comandi e callback. `undoLimit` è il numero di voci di annullamento (200 per impostazione predefinita). `typingMergeMs` è l'intervallo che unisce digitazioni consecutive in un solo passaggio di annullamento; impostalo a `0` per mantenere ogni inserimento separato.
 
+L'intervallo predefinito fra pressioni consecutive di Enter per uscire da un contenitore di blocchi è 180ms. La doppia pressione di Esc e Shift mantiene 350ms. Impostare esplicitamente `doubleEnterMs` in `mountSurface()` cambia sia l'intervallo di Enter sia quello del doppio Esc.
+
 Ogni editor necessita di radici del contenuto e della barra degli strumenti proprie e non sovrapposte. In una pagina con più editor, assegna a ogni barra la propria superficie editor tramite `surface`, così focus e scorciatoie non si mescolano.
+
+## Configurare la barra degli strumenti
+
+La barra predefinita raggruppa titoli, formattazione del testo, allineamento, elenchi, inserimento e strumenti del documento, in quest'ordine, con separatori verticali. Sul desktop tutti gli strumenti occupano più righe; sui dispositivi mobili quelli rapidi e il pulsante di tutti gli strumenti occupano una riga. Le proprietà di tabelle, immagini e aree flottanti compaiono sotto e restano utilizzabili insieme agli strumenti del testo.
+
+`groups` cambia l'ordine dei gruppi e `quick` quello degli strumenti rapidi mobili. Per esempio, un editor che inserisce spesso immagini può portare il gruppo `media` all'inizio.
+
+```ts
+import { TOOLBAR_GROUPS, mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  locale: 'it',
+  groups: ['media', ...TOOLBAR_GROUPS.filter((group) => group !== 'media')],
+  quick: ['b', 'i', 'tc', 'img'],
+})
+```
+
+Gli strumenti rapidi rispettano l'ordine specificato senza separatori. All'interno di un gruppo vale l'ordine di registrazione delle ali. Nel pre-rendering SSR della barra, passa lo stesso ordine di gruppi al server e al browser. [Temi CSS](./style#soglia-della-modalita-mobile) spiega la disposizione in base alla larghezza dello schermo.
+
+Collega `mountHints()` per scegliere gli strumenti da tastiera premendo Shift due volte. Tab cambia gruppo e le frecce percorrono le icone dello stesso gruppo. Desktop e schermo intero usano la barra visibile; sui dispositivi mobili si usa la tavolozza di tutti gli strumenti.
+
+Pannelli immagini, campi URL e selettori di file ricordano la selezione all'apertura. Se sposti solo il cursore, l'inserimento avviene nella posizione originale; se modifichi o sostituisci il documento, l'input viene annullato con un avviso. Anche se Annulla ripristina un contenuto identico, la vecchia selezione non viene riutilizzata.
 
 ## Scegli le wing
 

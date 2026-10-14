@@ -13,6 +13,8 @@ Yana sanya lamba mai layuka da yawa dabam da rubutu na yau da kullum. A sakin la
 
 Sunan harshe ganewa ne da ake amfani da shi wajen haskaka tsarin rubutu; za ka iya rubuta sunan da kanka ko da bai cikin jerin da aka yi rajista ba. Domin a kiyaye abun lamba da shigar layi, tubalin lamba ba ya amfani da daidaitawar sakin layi.
 
+Ana iya amfani da lambar layuka da yawa da tura rubutu ciki da Tab a cikin sel. Ko Shift+Tab ba zai iya rage zurfin layi ba, siginar rubutu tana nan cikin lambar, ba ta komawa sel na baya.
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

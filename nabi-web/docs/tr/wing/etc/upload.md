@@ -25,6 +25,12 @@ const selected = wings()
 
 Yalnızca `upload` seçerseniz, görsel veya bağlantı bağımlılıklarından eksik olanı otomatik olarak ekler. Aktarım `mountUpload()` ile, düzenleme ekranındaki ilerleme arayüzü ise genellikle `mountUploadView()` ile bağlanır. Sunucu HTTPS URL'leri döndürüyorsa yerel URL seçeneğine gerek yoktur.
 
+## Yüklemelerin ekleneceği konum
+
+Dosya seçicinin açıldığı veya yüklemenin başlatıldığı konum hatırlanır. Yalnızca imleç taşınırsa ilk konuma eklenir. Yükleme bir tablo hücresinde başladıysa ilerleme göstergesi ve tamamlanan içerik o hücrede kalır. Yüzen alanda başlayan yüklemelerin sonuçları da aynı alana eklenir. Birden çok hücrenin sınırlarını aşan seçime yükleme eklenemez.
+
+Dosya seçimi veya asenkron işlem sırasında belgeyi düzenlemek ya da değiştirmek eklemeyi iptal eder ve bildirim gösterir. Geri alma aynı içeriği getirse bile eski konuma ekleme yapılmaz. Tamamlanmayı yalnızca aktarım başarısına göre değerlendirmeyin: `onDone` tarafından alınan `committed` ve `cancelled` değerlerini kontrol edin. `committed`, belgeye gerçekten eklenen dosya sayısıdır.
+
 ## Sunucu API sözleşmesi
 
 NABI NOTE dosyaları kendiliğinden sunucunuza göndermez. `uploader` işlevi tek bir dosyayı sunucuya yollar ve başarılı olduğunda yalnızca herkese açık veya kimlik doğrulamalı bir `https:` URL'si döndürür. En basit API sözleşmesi şöyledir.
@@ -58,6 +64,7 @@ Aşağıdaki örnek, NABI NOTE'un beklediği gerçek bağlantıdır. Tarayıcın
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -121,9 +128,18 @@ const surface = mountSurface({
   fileSink: upload.take,
   locale: 'tr',
 })
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'tr',
+})
 ```
 
-Sürükle-bırak ve yalnızca dosya içeren yapıştırma işlemlerinin yükleme akışına girmesi için `fileSink: upload.take` bağlantısını kurun. Yükleme wing'i arayüzü, dosya seçme düğmesinin sonuçlarını `upload.take()` işlevine iletir. Yükleme sürerken düzenleyici kilitlenir ve her toplu işteki başarılı dosyalar tek bir geri alma adımı olarak eklenir. `upload.cancel()` veya `uploadView` içindeki iptal düğmesi, devam eden istekleri `AbortSignal` aracılığıyla durdurur.
+Sürükle-bırak ve yalnızca dosya yapıştırma işlemlerinin yüklemeye girmesi için `fileSink: upload.take` bağlantısını kurun. Dosya seçme düğmesini araç çubuğunun `onFiles: upload.take` seçeneğiyle bağlayın. Yükleme sırasında düzenleyici kilitlenir ve başarılı dosyalar her toplu iş için tek geri alma adımıyla eklenir. `upload.cancel()` veya `uploadView` içindeki iptal düğmesi devam eden istekleri `AbortSignal` aracılığıyla durdurur.
 
 ## Başarısızlık ve temizleme
 
@@ -131,6 +147,7 @@ Sunucu hata yanıtı verirse veya `uploader` `null` döndürürse o dosya belgey
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

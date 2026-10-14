@@ -103,6 +103,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -117,6 +119,8 @@ export const exCallout: Wing = {
 
 Bu bildirim seçili paragrafları saran komutu tek başına oluşturmaz. `commands` içine saf komut ve onu çağıran
 bir `button` ekleyin.
+
+`isolating: true`, birden fazla paragrafa izin verirken silmenin bilgi kutusunun sınırını aşıp komşu içerikle birleşmesini önler. `scopedCommands` içindeki komutlar kutunun iç belgesi üzerinde çalışır; resim ve tablo ekleme ile liste ve alıntı dönüşümleri kutunun içinde kalır.
 
 ### 5. Liste ve öğe çifti
 
@@ -176,13 +180,15 @@ için `partHtml` gerekir. Değer seçen kanatları `attrKey` ve `attrValues` ile
 
 ## Bildirim seçenekleri
 
+Yalnızca gerekli seçenekleri bildirin. Factory kullanıyorsanız onun zaten belirlediği değerleri yeniden yazmayın.
+
 | Alan | Seçenekler | Amaç |
 | --- | --- | --- |
 | Temel | `w`, `place`, `basic`, `styles` | Ad, yapı türü, temel kanat üyeliği, varsayılan CSS |
-| Yapı | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | Çocuk türü, Enter davranışı, öznitelikler |
+| Yapı | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | Çocuk türü, Enter davranışı, düzenleme sınırını koruma, izinli öznitelikler, boolean öznitelikler |
 | Yapı | `parts`, `allows`, `noAlign`, `requiresAnyOf` | Part'lar, izinli çocuklar, hizalama, bağımlılıklar |
 | Değerler | `attrKey`, `attrValues`, `currentValue` | Saklanan değerler ve geçerli değer |
-| Komutlar ve girdi | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Komutlar, tuşlar, otomatik dönüşüm |
+| Komutlar ve girdi | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Komutlar, iç belgede çalışacak komutlar, tuş işleme, Escape/çift tuş, otomatik dönüştürme |
 | Surface | `attach` | DOM davranışı ve temizleme |
 | Dönüşüm | `toHtml`, `partHtml`, `toMd`, `partMd` | HTML ve Markdown çıktısı |
 | İçe aktarma | `claim`, `ioFilter`, `repair`, `partRepair` | HTML, dosya, JSON denetimi ve onarımı |
@@ -190,7 +196,7 @@ için `partHtml` gerekir. Değer seçen kanatları `attrKey` ve `attrValues` ile
 | Biçimi temizle | `clearable` | Kaldırma hedefi |
 
 `w` ve `place` her zaman gerekir. Düğüm oluşturan `mark`, `void`, `container` kanatları `toHtml()` gerektirir.
-Container için `holds`, her part için aynı adlı `partHtml` gerekir.
+Container için `holds`, her part için aynı adlı `partHtml` gerekir. `attr` ve `tool` belge düğümü oluşturmadığından bu kuralları farklıdır.
 
 ## HTML, Markdown ve JSON'u birlikte koruyun
 
@@ -199,21 +205,48 @@ yoksa bilgi kaybolmasın diye üretilen HTML korunur. İçe aktarmada `claim()` 
 doğrulanmış özniteliklerinizi tanımalıdır.
 
 `repair()`, JSON yüklenirken ve komutlardan sonra çalışır. Geçersiz öznitelikleri düzelterek döndürün,
-korunamayan düğümler için `null` döndürün. HTML'yi `ctx.element()`, `ctx.escape()` ve `ctx.url()` ile kurun.
+korunamayan düğümler için `null` döndürün. HTML'yi `ctx.element()`, `ctx.escape()` ve `ctx.url()` ile kurun. Dizeleri birleştirerek etiket, öznitelik veya URL doğrulamasını atlamayın.
 
 ## Komutları ekran davranışından ayırın
 
 Komut, belge ve seçimin saf fonksiyonudur; yeni belgeyi ve seçimi döndürür. DOM'u okumaz veya değiştirmez,
 geçerli değişiklik yapamazsa `null` döndürür. `insertNote` gibi fiille başlayan lower camel case kullanın.
 
-Tablo sürükleme seçimi gibi DOM'a özgü davranışları `attach(host)` içine koyun. Her listener için hemen
-`host.onDispose()` temizlemesi kaydedin. Birleştirme metni DOM'unu veya surface seçim eşlemesini değiştirmeyin.
+Tabloda sürükleyerek seçim gibi komutla ifade edilmesi zor ekran davranışlarını `attach(host)` içine koyun. Event listener veya öznitelik değişikliğinden hemen sonra `host.onDispose()` ile geri alma işlevi kaydedin; böylece sonraki kurulum başarısız olsa da temizlik yapılır. Birleştirme sırasındaki metin DOM'unu veya surface seçim eşlemesini doğrudan değiştirmeyin.
+
+Araç çubuğu ve bağlamsal araçlar `button`, `buttons` ve `context` bildirimleriyle oluşturulur. Aynı komut kurallarını uygulama arayüzünde ayrıca uygularsanız araç çubuğu ile belge modeli birbirinden sapabilir.
+
+### Blok içinde komut çalıştırma
+
+`scopedCommands`, `holds: 'blocks'` olan container'larda ve blok tutan `parts` üzerinde bildirilir. Seçimin iki ucu aynı bölgedeyse komuta o bölgenin çocuk belgesi ve göreli seçim yolları verilir; sonuç dış belgeye geri uygulanır. Bölge sınırını aşan seçimler reddedilir; bölgenin dışında komutun özgün davranışı korunur. Yüzen bölgeler ve tablo hücreleri de ekleme, dönüştürme ve yükleme kapsamını bu yöntemle korur.
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+Listeye yalnızca kanat komutları yazılabilir. Kayıtlı olmayan komutlar atlanır; bu nedenle resim veya yükleme kanatlarını birlikte kaydetmek zorunlu değildir. Yalnızca verilen iç belge ve göreli yollarla çalışan komutları seçin. Belgenin tamamında mutlak yol isteyen veya bütün belgeyi değiştiren komutları eklemeyin. Çekirdek komutlar da bu listede kullanılamaz.
+
+`singleParagraph`, içeriği tek paragrafla sınırlar; `isolating` ise birden fazla paragrafı koruyarak Backspace/Delete tuşlarının düzenleme sınırını aşmasını önler. Blok tutan `parts` üzerinde de `isolating: true` bildirilebilir.
+
+### İç içe bloklarda tuş işleme
+
+`onKey` tarafından alınan `KeyIntent.shift`, Enter ile Shift+Enter'ı ayırır. Bağımsız bir düzenleme bölgesindeki iç kanat `null` döndürürse işleme, o bölgeye kadar üst kanatlara sırayla aktarılır. Böylece hücre içindeki liste ve kod önce girintiyi işler; işlenmeyen Tab hücreler arasında geçiş yapabilir. Aynı tuş girdisinde bir kanat iki kez çağrılmaz.
 
 ## CSS stilleri
 
 `styles`, gerekli temel CSS'yi bildirir; kaydedilen kanatların CSS'si `nabi-note/nabi.css` içinde bulunur.
 Runtime seçimi için tarayıcıda `collectSheets()` ve `injectSheets()` kullanılabilir, SSR'de CSS dosyasını
-bağlayın. `[data-key]` düzenleme düğümlerinin `display` veya `white-space` değerini değiştirmeyin.
+bağlayın.
+
+Yayın görünümünde de editörle aynı sınıfları ve data özniteliklerini kullanın. Düzenleme ve yayın seçicilerini ayırın; `[data-key]` düzenleme düğümlerinin yapısını, `display` veya `white-space` değerini değiştirmeyin. CSS yalnızca görünümü değiştirmeli, belge yapısına ve imleç eşlemesine dokunmamalıdır.
 
 ```ts
 const exCallout = {
@@ -232,6 +265,8 @@ const exCallout = {
   `,
 } as const
 ```
+
+Yalnızca `toHtml()` tarafından oluşturulan class veya data özniteliklerini hedefleyerek aynı JSON'u editör ve yayın görünümünde güvenle farklı biçimlendirebilirsiniz. Hizmete özgü değişiklikleri `.article-body .ex-callout` gibi daha dar seçicilerle ayırın.
 
 ## Denetim listesi
 

@@ -25,6 +25,12 @@ const selected = wings()
 
 إذا اخترت `upload` وحدها، فهي توفر تلقائيًا اعتماد image أو link الناقص. يُربط النقل بـ`mountUpload()`، وتُربط واجهة تقدم التحرير عادة بـ`mountUploadView()`. إذا أعاد الخادم عناوين HTTPS، فلا حاجة لخيار العناوين المحلية.
 
+## موضع إدراج الملفات المرفوعة
+
+يُحفظ الموضع الذي فُتح فيه منتقي الملفات أو بدأ فيه الرفع. إذا حُرّك المؤشر فقط، يبقى الإدراج في الموضع الأصلي. إذا بدأ الرفع داخل خلية، يظل مؤشر التقدم والمحتوى المكتمل داخلها. وتُدرج نتائج الرفع الذي بدأ في منطقة عائمة داخل تلك المنطقة أيضًا. لا يمكن إدراج الرفع في تحديد يعبر حدود عدة خلايا.
+
+يؤدي تحرير المستند أو استبداله أثناء اختيار الملفات أو المعالجة غير المتزامنة إلى إلغاء الإدراج وإظهار إشعار. حتى إذا أعاد التراجع المحتوى نفسه، لا يُستأنف الإدراج في الموضع القديم. لا تعتمد على نجاح النقل وحده لتحديد الاكتمال: تحقّق من `committed` و`cancelled` اللذين يستقبلهما `onDone`. يمثّل `committed` عدد الملفات التي أُدرجت فعليًا في المستند.
+
 ## عقد API الخادم
 
 لا يرسل NABI NOTE الملفات إلى خادمك بنفسه. ترسل دالة `uploader` ملفًا واحدًا، وتعيد عند النجاح عنوان `https:` عامًا أو محميًا فقط. أبسط عقد هو:
@@ -58,6 +64,7 @@ Content-Type: multipart/form-data
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -121,9 +128,18 @@ const surface = mountSurface({
   fileSink: upload.take,
   locale: 'ar',
 })
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'ar',
+})
 ```
 
-صِل `fileSink: upload.take` حتى يدخل السحب والإفلات واللصق الذي يحتوي ملفات فقط مسار الرفع. تمرر واجهة زر اختيار الملفات في upload wing النتائج إلى `upload.take()`. يُقفل المحرر أثناء الرفع، وتُدرج الملفات الناجحة من كل دفعة كخطوة تراجع واحدة. تلغي `upload.cancel()` أو زر الإلغاء في `uploadView` الطلبات الجارية عبر `AbortSignal`.
+صِل `fileSink: upload.take` لتمرير السحب والإفلات واللصق الذي يحتوي ملفات فقط إلى مسار الرفع. صِل زر اختيار الملفات عبر `onFiles: upload.take` في شريط الأدوات. يُقفل المحرر أثناء الرفع، وتُدرج الملفات الناجحة بخطوة تراجع واحدة لكل دفعة. يلغي `upload.cancel()` أو زر الإلغاء في `uploadView` الطلبات الجارية عبر `AbortSignal`.
 
 ## الفشل والتنظيف
 
@@ -131,6 +147,7 @@ const surface = mountSurface({
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

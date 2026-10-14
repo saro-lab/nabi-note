@@ -59,6 +59,8 @@ const toolbar = mountToolbar({
 
 Closing the panel or unmounting the toolbar aborts `signal` and calls the cleanup function. `run()` closes the panel and applies a command once at the selection captured when it opened. If the panel is already closed or the document content has changed since it opened, it returns `false` without executing the command.
 
+If you only move the cursor elsewhere, the image is inserted at the original position where the panel opened. If opened inside a table cell or float area, the image goes inside it. Editing or replacing the document cancels insertion and shows a notice even if undo restores the same content; reopen the panel to choose an image again.
+
 ## CSS Styles
 
 Style images with `.nabi-content img`. Keep the stored width and alignment intact, and change only visual details such as borders or shadows.

@@ -93,6 +93,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -106,6 +108,8 @@ export const exCallout: Wing = {
 ```
 
 การประกาศนี้เพียงอย่างเดียวไม่ได้สร้างวิธีห่อหุ้มย่อหน้าที่เลือก เพิ่ม pure command ใน `commands` และ `button` ที่เรียกมันก่อนแสดงฟีเจอร์ใน UI ของเครื่องมือแก้ไข
+
+`isolating: true` อนุญาตให้มีหลายย่อหน้า พร้อมป้องกันการลบข้ามขอบเขตกล่องข้อความไปเชื่อมกับเนื้อหาข้างเคียง คำสั่งใน `scopedCommands` ทำงานกับเอกสารภายในกล่อง จึงแทรกรูปภาพ ตาราง และแปลงรายการหรือข้อความอ้างอิงอยู่ภายในกล่อง
 
 ### 5. คู่ list และ item ที่จับคู่กัน
 
@@ -165,10 +169,10 @@ const exNote = {
 | ส่วน | ตัวเลือก | จุดประสงค์ |
 | --- | --- | --- |
 | พื้นฐาน | `w`, `place`, `basic`, `styles` | ชื่อ ชนิดโครงสร้าง การเป็นสมาชิก basic catalog และ CSS เริ่มต้น |
-| โครงสร้าง | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | ชนิดลูก พฤติกรรม Enter attribute ที่อนุญาต และ boolean attribute |
+| โครงสร้าง | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | ชนิดโหนดลูก พฤติกรรม Enter การป้องกันขอบเขตแก้ไข แอตทริบิวต์ที่อนุญาต แอตทริบิวต์ boolean |
 | โครงสร้าง | `parts`, `allows`, `noAlign`, `requiresAnyOf` | part ภายใน ลูกที่อนุญาต การยกเว้นการจัดแนว และ dependency ของ wing |
 | ค่า | `attrKey`, `attrValues`, `currentValue` | key และ list ของค่าที่บันทึก การตรวจหาค่าปัจจุบัน |
-| คำสั่งและการป้อน | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | คำสั่ง การจัดการคีย์ พฤติกรรม Escape/double-key และกฎจัดรูปแบบอัตโนมัติ |
+| คำสั่งและการป้อน | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | คำสั่ง คำสั่งที่ทำงานในเอกสารภายใน การจัดการปุ่ม Escape/กดซ้ำ การแปลงอัตโนมัติ |
 | พฤติกรรม surface | `attach` | พฤติกรรม DOM และการล้างข้อมูลของ surface |
 | การแปลง | `toHtml`, `partHtml`, `toMd`, `partMd` | ผลลัพธ์ HTML และ Markdown |
 | การนำเข้าและซ่อม | `claim`, `ioFilter`, `repair`, `partRepair` | การนำเข้า HTML การจัดการไฟล์ การตรวจสอบและซ่อม JSON |
@@ -190,6 +194,30 @@ const exNote = {
 ใส่พฤติกรรมที่ใช้เฉพาะ DOM เช่น การลากเลือกตาราง ไว้ใน `attach(host)` ลงทะเบียนการล้างข้อมูลให้ listener หรือ attribute ที่เปลี่ยนทุกตัวด้วย `host.onDispose()` ทันที เพื่อให้การตั้งค่าที่ล้มเหลวถูกล้างด้วย อย่าแก้ไข DOM ของข้อความที่กำลัง compose หรือ selection mapping ของ surface
 
 ประกาศ control ของแถบเครื่องมือและ context ด้วย `button`, `buttons` และ `context` การทำกฎคำสั่งซ้ำใน UI แอปพลิเคชันอาจทำให้ UI กับ document model แยกจากกัน
+
+### เรียกคำสั่งภายในบล็อก
+
+ประกาศ `scopedCommands` บนคอนเทนเนอร์ที่มี `holds: 'blocks'` และ `parts` ที่เก็บบล็อก หากปลายทั้งสองของช่วงเลือกอยู่ในบริเวณเดียวกัน คำสั่งจะได้รับเอกสารลูกและเส้นทางช่วงเลือกแบบสัมพัทธ์ของบริเวณนั้น แล้วนำผลกลับไปใช้กับเอกสารภายนอก ช่วงเลือกที่ข้ามขอบเขตจะถูกปฏิเสธ ส่วนภายนอกบริเวณยังใช้พฤติกรรมเดิมของคำสั่ง พื้นที่ลอยและเซลล์ตารางก็ใช้กลไกนี้จำกัดการแทรก การแปลง และการอัปโหลด
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+รายการนี้ระบุได้เฉพาะคำสั่งของปีก คำสั่งที่ไม่ได้ลงทะเบียนจะถูกข้าม จึงไม่บังคับให้ลงทะเบียนปีกภาพหรืออัปโหลดร่วมกัน เลือกคำสั่งที่ทำงานได้ด้วยเอกสารภายในและเส้นทางสัมพัทธ์ที่ได้รับเท่านั้น อย่าใส่คำสั่งที่ต้องใช้เส้นทางสัมบูรณ์ของเอกสารทั้งหมดหรือแทนที่เอกสารทั้งฉบับ และไม่สามารถใส่คำสั่งแกนหลักได้
+
+`singleParagraph` จำกัดให้มีหนึ่งย่อหน้า ส่วน `isolating` คงหลายย่อหน้าไว้ แต่ป้องกัน Backspace/Delete ข้ามขอบเขตแก้ไข `parts` ที่เก็บบล็อกก็ประกาศ `isolating: true` ได้เช่นกัน
+
+### จัดการปุ่มในบล็อกซ้อนกัน
+
+ใช้ `KeyIntent.shift` ที่ `onKey` ได้รับเพื่อแยก Enter กับ Shift+Enter หากปีกภายในคืน `null` ในพื้นที่แก้ไขอิสระ จะส่งการจัดการขึ้นไปยังปีกบรรพบุรุษตามลำดับจนถึงพื้นที่นั้น ดังนั้นรายการและโค้ดในเซลล์จะจัดการการเยื้องก่อน ส่วน Tab ที่ยังไม่ถูกจัดการใช้ย้ายเซลล์ได้ การกดปุ่มครั้งเดียวจะไม่เรียกปีกเดิมสองครั้ง
 
 ## สไตล์ CSS
 

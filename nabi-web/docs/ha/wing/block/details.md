@@ -11,7 +11,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Yana haɗa taƙaitaccen bayani da abun ciki a tubali ɗaya. Idan ka ƙirƙire shi daga sandar kayan aiki, ka fara da shigar da taƙaitaccen bayani sannan ka ci gaba da rubuta abun ciki a ƙasa.
 
-Ana adana matsayin buɗewa da alwatika ya ƙayyade a cikin daftari, kuma ya zama matsayin farko a shafin da aka wallafa. Yayin gyarawa, ana barin abun ciki a buɗe domin a iya gyara shi, amma ƙimar matsayin da aka adana tana nan yadda take.
+Yanayin buɗewa da aka saita da alamar alwatika yana ajiyuwa cikin takarda, ya zama yanayin farko a shafin da aka wallafa. Yayin gyara ma za ka iya danna alwatikar don buɗewa da rufe toshe.
+
+A cikin sel ko wani toshe, toshen ninkewa da abin ya shafa ne kawai yake buɗewa ko rufewa. Idan siginar rubutu ko zaɓi yana cikin abin da ake rufewa, za a fitar da shi waje; zaɓin da yake wani wuri yana nan yadda yake.
 
 <WingDemo path="/wing/block/details" />
 

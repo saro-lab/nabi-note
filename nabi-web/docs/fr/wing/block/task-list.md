@@ -13,6 +13,8 @@ Une liste avec un état d'achèvement. Tapez `[ ]` ou `[x]` suivi d'un espace da
 
 L'état coché est stocké avec chaque élément du document. Lorsqu'un élément est divisé, l'état coché suit l'élément qui conserve le texte plutôt que l'élément vide avant lui, donc diviser une tâche terminée ne change pas l'état de manière inattendue.
 
+Enter divise un élément et Shift+Enter ajoute seulement un saut de ligne à l'intérieur. Tab et Shift+Tab augmentent et réduisent le retrait. Les mêmes règles s'appliquent dans les cellules et l'état coché est également enregistré.
+
 <WingDemo path="/wing/block/task-list" />
 
 ```ts

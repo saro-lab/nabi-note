@@ -93,6 +93,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -106,6 +108,8 @@ export const exCallout: Wing = {
 ```
 
 只有这份声明还不会创建“包住选中段落”的方法。在编辑器 UI 暴露该功能前，请先在 `commands` 中添加纯命令，再添加调用它的 `button`。
+
+`isolating: true` 允许多个段落，同时防止删除操作越过提示框边界，与相邻内容合并。`scopedCommands` 中的命令基于框内文档执行，因此图片、表格插入和列表、引用转换都不会超出提示框。
 
 ### 5. 同时出现的列表和列表项
 
@@ -165,10 +169,10 @@ const exNote = {
 | 范围 | 选项 | 用途 |
 | --- | --- | --- |
 | 基础 | `w`, `place`, `basic`, `styles` | 名称、结构类型、basic catalog 成员、默认 CSS |
-| 结构 | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | 子节点类型、Enter 行为、允许的属性、布尔属性 |
+| 结构 | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | 子节点类型、Enter 行为、编辑边界保护、允许的属性、boolean 属性 |
 | 结构 | `parts`, `allows`, `noAlign`, `requiresAnyOf` | 内部 part、允许的子节点、排除对齐、wing 依赖 |
 | 值 | `attrKey`, `attrValues`, `currentValue` | 保存值的 key 和列表、当前值检测 |
-| 命令和输入 | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | 命令、按键处理、Escape/双击按键行为、自动格式规则 |
+| 命令和输入 | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | 命令、在内部文档中执行的命令、按键处理、Escape·连续按键·自动转换 |
 | surface 行为 | `attach` | surface 的 DOM 行为和清理 |
 | 转换 | `toHtml`, `partHtml`, `toMd`, `partMd` | HTML 和 Markdown 输出 |
 | 导入和修复 | `claim`, `ioFilter`, `repair`, `partRepair` | HTML 导入、文件处理、JSON 验证和修复 |
@@ -190,6 +194,30 @@ const exNote = {
 表格拖拽选择这样的 DOM 专用行为放在 `attach(host)` 中。每个 listener 或被改动的属性都要立即用 `host.onDispose()` 注册清理，即使设置中途失败也能清理。不要修改正在组合输入的文字 DOM，也不要修改 surface 的选择映射。
 
 用 `button`、`buttons`、`context` 声明工具栏和上下文控件；在应用 UI 中重复实现它们的命令规则，可能会让 UI 和文档模型分叉。
+
+### 在块内执行命令
+
+在 `holds: 'blocks'` 的容器和容纳块的 `parts` 上声明 `scopedCommands`。如果选区两端都在同一区域内，就把该区域的子文档和相对选区路径传给命令，再将结果应用回外部文档。跨越区域边界的选区会被拒绝；在区域外，命令保持原有行为。浮动区域和表格单元格也通过这一机制限制插入、转换和上传的范围。
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+列表中只能指定翼的命令。未注册的命令会被跳过，因此不要求同时注册图片或上传翼。应选择只依赖传入的内部文档和相对路径的命令，不要加入需要整个文档的绝对路径或替换整个文档的命令。核心命令也不能加入此列表。
+
+`singleParagraph` 将内容限制为一个段落；`isolating` 则保留多个段落，同时防止 Backspace、Delete 越过编辑边界。容纳块的 `parts` 也可以声明 `isolating: true`。
+
+### 嵌套块的按键处理
+
+通过 `onKey` 接收的 `KeyIntent.shift` 可以区分 Enter 和 Shift+Enter。在独立编辑区域内，如果内部翼返回 `null`，就依次交给祖先翼处理，直到该区域为止。因此单元格内的列表和代码先处理缩进，未被处理的 Tab 可以用于切换单元格。同一次按键输入不会调用同一个翼两次。
 
 ## CSS 样式
 

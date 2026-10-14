@@ -13,6 +13,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 每一项的勾选状态会和文档一起保存。拆分项目时，勾选状态会跟随保留文字的那一项，而不是前面的空项目，因此拆分已完成任务时状态不会意外反转。
 
+Enter 拆分项目，Shift+Enter 只在项目内换行。Tab 和 Shift+Tab 用于增加和减少缩进。表格单元格内遵循相同规则，也会保存勾选状态。
+
 <WingDemo path="/wing/block/task-list" />
 
 ```ts

@@ -11,7 +11,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Eine Aufzählungsliste stellt mehrere Elemente ohne Reihenfolge dar. Geben Sie `-` gefolgt von einem Leerzeichen in einem leeren Absatz ein oder wechseln Sie dazu über die Symbolleiste. Ausgewählte Absätze können auch gleichzeitig zu einer Liste gruppiert werden.
 
-Innerhalb einer Liste rückt Tab eine Ebene ein und Shift+Tab eine Ebene aus. Enter erstellt das nächste Element, und das erneute Drücken von Enter bei einem leeren Element beendet die Liste.
+Innerhalb einer Liste rückt Tab eine Ebene ein und Shift+Tab eine Ebene aus. Enter erstellt das nächste Element, und das erneute Drücken von Enter bei einem leeren Element beendet die Liste. Shift+Enter fügt innerhalb des Eintrags einen Zeilenumbruch ein, ohne ihn aufzuteilen.
+
+Für Listen in Tabellenzellen gelten dieselben Eingaberegeln. Innerhalb einer Liste rückt Tab die Liste ein, statt zur nächsten Zelle zu wechseln.
 
 <WingDemo path="/wing/block/bullet-list" />
 

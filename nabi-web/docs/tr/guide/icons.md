@@ -38,6 +38,15 @@ import 'nabi-note/nabi.css'
 
 Simge öğesinin `data-nabi-icon` değerinin önüne `--nabi-icon-` ekleyerek CSS değişkenini elde edin. Örneğin `diff-close`, `--nabi-icon-diff-close` kullanır. Bağlam, menü, kaydetme, geçmiş ve diğer anahtarların kuralları ile özel karakter kodlaması için <a href="/llms/icons.md" target="_blank" rel="noopener">simge sözleşmesine</a> bakın.
 
+Yüzen bölge ekleme düğmesi `toolbar-float`, özellik araçlarındaki sarmalı kaldırma düğmesi `context-float-unwrap` kullanır. Varsayılan dosyalar `float-float.svg` ve `float-unwrap.svg` olup koyu tema sürümleri de bulunur. Kaldırma düğmesi genişlik değerinin yanında görünür; resmi değişse de adı ve araç ipucu korunur.
+
+```css
+.paper-note {
+  --nabi-icon-toolbar-float: url("/icons/float.svg");
+  --nabi-icon-context-float-unwrap: url("/icons/float-unwrap.svg");
+}
+```
+
 ## Koyu mod ve paneller
 
 Tema sınıfını veya CSS değişkenini değiştirmek, yeniden mount etmeden simgeleri günceller. Varsayılan simgeler açık/koyu temayı izler. Özel dosyalar `currentColor` değerini miras almaz; gerekirse yukarıdaki gibi koyu sürümler belirtin. `body` altında açılan paneller de kaynak düzenleyicinin simge temasını ve sınıf/stil değişikliklerini izler. Değişkenleri yalnızca araç çubuğunun içine değil, düzenleyiciye veya ortak üst öğeye koyun.

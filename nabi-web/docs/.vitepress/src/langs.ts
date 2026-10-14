@@ -9,6 +9,7 @@ import {
   type MessageKey,
 } from '../locales/index.ts'
 import { shuffle } from './util.ts'
+import { hasLocalePage } from './nav.ts'
 
 const LANG_COOKIE = 'lang'
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365
@@ -111,7 +112,8 @@ export function applyLanguage(force: string = ''): void {
   const lang = force || getLanguage() || preferredLanguage()
   writeCookie(LANG_COOKIE, lang)
 
-  const rest = pathWithoutLanguage()
+  const path = pathWithoutLanguage()
+  const rest = hasLocalePage(path, lang) ? path : '/'
   const target = `/${lang}${rest === '/' ? '/' : rest}`
   if (location.pathname === target) {
     return

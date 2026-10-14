@@ -17,22 +17,20 @@ import 'nabi-note/nabi.css'
   --nabi-bg: #fff;
   --nabi-accent: #5b4ee8;
   --nabi-content-min-height: 20rem;
-  --nabi-font: Inter, system-ui, sans-serif;
+  --nabi-font: Pretendard, system-ui, sans-serif;
   --nabi-sticky-top: 4rem;
 }
 ```
 
-Put shared tokens on a common parent so the editor and its published view retain the same visual language.
+Assign the same theme class to the editor's `.nabi` and the published view's `.nabi-content` to apply the same variables to both. Load your service CSS after the package CSS and specify the current theme with `data-nabi-theme`.
 
 ```html
-<section class="brand-note">
-  <div class="nabi">...</div>
-  <article class="nabi-content">...</article>
-</section>
+<div class="nabi brand-note" data-nabi-theme="light">...</div>
+<article class="nabi-content brand-note" data-nabi-theme="light">...</article>
 ```
 
 ```css
-.brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-fg: #1f2937;
   --nabi-muted: #6b7280;
   --nabi-bg: #fff;
@@ -56,20 +54,33 @@ Put shared tokens on a common parent so the editor and its published view retain
 | Touch controls | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
 | Mobile-mode width threshold | `--nabi-mobile-breakpoint` |
 
-Highlight and text-color tokens use `--nabi-hl-<name>` and `--nabi-tc-<name>`. Changing `--nabi-hl-yellow`, for example, changes the display color of stored `yellow` highlights without changing document data.
+Highlights and text colors use `--nabi-hl-<name>` and `--nabi-tc-<name>`. Table cell backgrounds use `--nabi-cell-<name>` with `yellow`, `green`, `cyan`, `pink`, `purple`, and `orange`. Variables change only the displayed color, not the stored color name.
 
 ```css
-.article-editor {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-hl-yellow: #fff0a6;
   --nabi-tc-blue: #2563eb;
+  --nabi-cell-cyan: #e2f4f7;
+}
+```
+
+The default theme uses pale cell backgrounds. Dark mode retains the same color names but uses separate, brighter, less saturated colors to make them easier to distinguish on dark surfaces. These translucent colors let the background show through; when customizing them, check text contrast on your actual page background. Apply the theme class to the actual editor or published-content element as shown above, rather than an arbitrary outer parent, to override that element's default color variables.
+
+```css
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
+  --nabi-cell-cyan: #183b43;
 }
 ```
 
 ## Mobile breakpoint
 
-Mobile mode starts when the toolbar/context row or viewport width is strictly below `36rem`. Exactly `36rem` keeps the regular layout. Mobile mode scrolls the toolbar and context row horizontally, centers panels, and reduces the table picker to 5×5 touch-sized cells.
+The default `layout: 'compact'` toolbar switches to a single mobile row when viewport width is below `36rem`. Exactly `36rem` retains the desktop layout. On desktop, all tools wrap even when the editor itself is narrow. Object property tools wrap below; both rows occupy space above the content. Fullscreen expands all tools regardless of viewport width.
 
-Set `--nabi-mobile-breakpoint` on `:root`, an ancestor, or an individual `.nabi`. Use a non-negative CSS length such as `rem`, `px`, or `calc()`. Changes to the CSS value, root font size, container width, or viewport width automatically update open panels too. Input panels moved under `body` keep using their original editor’s threshold.
+On mobile, quick tools, the all-tools button, and connected preview/fullscreen buttons remain in the main toolbar. They remain usable when property tools appear. The all-tools palette uses the same group order and separators as desktop. `layout: 'wrap'` always displays all tools with wrapping.
+
+Mobile panels open in the available space around the toolbar and property tools. The table size picker is an exception: it opens centered over a translucent backdrop with a touch-friendly 5×5 grid. It does not wait for the keyboard to close; choosing a size inserts one table and closes the picker.
+
+Set `--nabi-mobile-breakpoint` on `:root`, an ancestor, or an individual `.nabi` to change the threshold. Use a non-negative CSS length such as `rem`, `px`, or `calc()`. Changes to the CSS value, root font size, or viewport width automatically update open panels too. Input panels moved under `body` retain their original editor's threshold.
 
 ```css
 .article-editor {
@@ -77,7 +88,7 @@ Set `--nabi-mobile-breakpoint` on `:root`, an ancestor, or an individual `.nabi`
 }
 ```
 
-Touch devices retain larger controls above this breakpoint.
+Float regions have a separate single-column threshold. They use one column when the content container, rather than the viewport, is narrower than `36rem`; printing uses the same layout.
 
 ## Dark mode
 
@@ -91,7 +102,7 @@ Light mode is the default. Add `.dark` to `html` or `body`, or set `data-nabi-th
 Use `data-nabi-theme="light"` to opt out of an ancestor's `.dark`. Your application controls theme switching; the package does not automatically follow `prefers-color-scheme`.
 
 ```css
-.dark .brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
   --nabi-fg: #f3f4f6;
   --nabi-muted: #a1a1aa;
   --nabi-bg: #18181b;
@@ -111,7 +122,7 @@ Published HTML also needs `.nabi-content` and the same CSS. Tables, code blocks,
 
 ```css
 .article-body {
-  --nabi-font: "Source Serif 4", Georgia, serif;
+  --nabi-font: "Noto Serif KR", serif;
   --nabi-bg: transparent;
 }
 ```

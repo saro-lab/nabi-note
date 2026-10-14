@@ -13,6 +13,8 @@ Sıralamanın önemli olduğu öğeleri numaralı listeye dönüştürür. Boş 
 
 Görüntülenen numaralar öğelerin konumundan hesaplanır; bu nedenle öğe eklediğinizde veya girinti verdiğinizde otomatik olarak devam eder. Girilen başlangıç numarasını saklayıp istediğiniz bir numaradan sayma özelliği sunulmaz.
 
+Enter sonraki öğeyi oluşturur, Shift+Enter ise yalnızca mevcut öğenin içinde satır sonu ekler. Tab ve Shift+Tab girintiyi artırır ve azaltır; tablo hücrelerinde de liste girintisi hücreler arasında geçişten önce gelir.
+
 <WingDemo path="/wing/block/ordered-list" />
 
 ```ts

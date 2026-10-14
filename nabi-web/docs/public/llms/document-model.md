@@ -165,6 +165,6 @@ The mounted surface controls composition and selection mapping.
 - Empty Android composition gets a real text slot.
 - Structural actions first synchronize the actual DOM selection.
 - Correction input may be deferred; default `correctionDeferMs` is 80.
-- Structure double-key timing defaults to 350 ms.
+- Double-Enter for container escape defaults to 180 ms. Double-Escape and double-Shift default to 350 ms. An explicit surface `doubleEnterMs` also sets the double-Escape window; it does not change double-Shift.
 
 A host may read the root, but must not rewrite active text nodes, set `innerHTML`, remount the root, or force a redraw during composition. Use editor methods and commands.

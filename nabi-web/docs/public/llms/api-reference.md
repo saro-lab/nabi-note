@@ -176,6 +176,8 @@ function mountUpload(options: UploadOptions): UploadMount;
 
 `UploadOptions` contains `nabi`, `uploader`, optional `root`, limits `extensions|maxFileSize|maxTotalSize`, lifecycle callbacks `onStart|onProgress|onSettle|onDone|onReject`, and locale/translator. `UploadMount`: `take`, `isRunning`, `cancel`, `unmount`.
 
+`onDone?: (result: { committed: number; cancelled: boolean }) => void` reports actual insertion after the command attempt. A rejected commit reports zero even when files uploaded successfully. The batch retains its starting selection; document edits or replacement before insertion cancel with `{ committed: 0, cancelled: true }`, while selection-only moves restore that starting target. See `io-security.md` for file-picker and placeholder behavior.
+
 ```ts
 function browserHistoryStorage(
   view: { localStorage?: Storage } | null | undefined,
@@ -258,7 +260,7 @@ Return a disposer for normal teardown, or call `onDispose()` immediately after s
 
 `insertImage(src, by?)` is a shortcut for `run('insertImage', { src }, by)` and shares its return value, one-shot behavior, URL validation, and saved-selection checks. Use `run()` directly for additional command arguments such as image width.
 
-`run()` closes the panel, restores surface focus and the selection captured at opening, then calls `nabi.applyCommand()`. It is one-shot even if the command fails. `by` defaults to `'keyboard'`; pass `'pointer'` when forwarding a pointer choice. A closed panel, an inactive toolbar, or document content that changed since opening returns `false` without applying the command; selection-only changes can be restored. Check the return value if the host needs to report that a choice was not inserted. Native URL validation still applies, and this hook does not upload files. See `quickstart-npm.md` for an image-picker example.
+`run()` closes the panel, restores surface focus and the selection captured at opening, then calls `nabi.applyCommand()`. It is one-shot even if the command fails. `by` defaults to `'keyboard'`; pass `'pointer'` when forwarding a pointer choice. A closed panel, an inactive toolbar, or any document edit or replacement since opening returns `false` without applying the command. Editing and then undoing still invalidates the target and reports a localized warning; selection-only changes can be restored, including the original cell or float selection. Check the return value if the host needs to report that a choice was not inserted. Native URL validation still applies, and this hook does not upload files. See `quickstart-npm.md` for an image-picker example.
 
 ### Mount ownership and overlays
 
@@ -381,6 +383,8 @@ Tree values: `P`, `BR`, `isElement`, `isText`.
 ## Wing declaration types
 
 `Wing.scopedCommands?: readonly string[]` and `StructureDecl.scopedCommands?: readonly string[]` opt a block container or block-holding part into relative child-document execution for selected wing commands. `isolating?: boolean` protects such a holder's editing boundary without limiting it to one paragraph. See `custom-wing.md`. Float and table commands and stored attributes are documented in `wings.md`.
+
+`KeyIntent.shift?: boolean` distinguishes Shift+Enter from Enter. Unhandled keys visit ancestor wings up to the nearest isolating holder, allowing list/code handlers inside cells to process indentation before table navigation.
 
 Root-exported wing types include:
 

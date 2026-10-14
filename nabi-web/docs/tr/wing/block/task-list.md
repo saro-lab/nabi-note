@@ -13,6 +13,8 @@ Tamamlanma durumunu içeren bir listedir. Boş bir paragrafta `[ ]` veya `[x]` y
 
 İşaretli olup olmadığı, öğe özniteliği olarak belgeyle birlikte saklanır. Bir öğeyi böldüğünüzde işaret durumu boş önceki öğeyi değil, metnin kaldığı öğeyi izler; böylece tamamlanmış bir işi ikiye bölmek durumu tersine çevirmez.
 
+Enter öğeyi böler, Shift+Enter ise yalnızca öğenin içinde satır sonu ekler. Tab ve Shift+Tab girintiyi artırır ve azaltır. Tablo hücrelerinde aynı kurallar geçerlidir ve işaretli durum da kaydedilir.
+
 <WingDemo path="/wing/block/task-list" />
 
 ```ts

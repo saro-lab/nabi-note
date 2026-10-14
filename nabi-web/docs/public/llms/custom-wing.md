@@ -133,6 +133,35 @@ A `container` with `holds: 'blocks'` may declare `scopedCommands` containing win
 
 Names must follow the command naming rule. Missing commands are ignored so an optional image or table wing is not required just because its insertion command is listed. Only list commands whose arguments and results use the supplied child document; do not list commands expecting absolute document paths or whole-document replacement. Block-holding `StructureDecl` parts can also declare `scopedCommands`. The built-in float and table cells use this for block insertion/conversion and upload commits.
 
+For example, this isolated note keeps image insertion in its own child document while allowing multiple paragraphs:
+
+```ts
+import { createNabiWith, imageWing, type Wing } from 'nabi-note';
+
+const exNote: Wing = {
+  w: 'exNote',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { 'data-ex-note': '1' }),
+  claim: (el, inner) =>
+    el.tag === 'aside' && el.attrs['data-ex-note'] === '1'
+      ? [{ w: 'exNote', ch: inner(true) }]
+      : null,
+};
+
+const { nabi } = createNabiWith([exNote, imageWing], {
+  doc: [{ w: 'p', ch: [{ w: 'exNote', ch: [{ w: 'p', ch: ['A note.'] }] }] }],
+});
+const start = { path: [0, 0, 0], offset: 0 };
+nabi.select({ anchor: start, focus: start });
+nabi.applyCommand('insertImage', { src: '/images/reference.png' });
+```
+
+The image becomes a sibling of the note's inner paragraph. Register the same custom wing when loading its JSON or HTML in another editor or renderer. `isolating` controls editing boundaries and `scopedCommands` controls only the named wing commands; neither replaces the other.
+
 ## HTML and import
 
 Use `HtmlContext.element`, `wrap`, `escape`, `url`, and `src`. They enforce tag/attribute grammar, escaping, editor keys, fillers, and URL policy.

@@ -13,6 +13,8 @@ Insert multi-line code separately from ordinary body text. Type three backticks 
 
 The language name is an identifier used for syntax highlighting, and names outside the registered list can also be typed manually. Because code content and indentation must be preserved, code blocks do not accept paragraph alignment.
 
+You can also use multiline code and Tab indentation inside table cells. Even when Shift+Tab cannot outdent a line any further, it stays inside the code instead of moving to the previous cell.
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

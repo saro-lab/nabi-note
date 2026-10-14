@@ -11,6 +11,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Bir paragrafın ilk harfini daha büyük boyutta yerleştirip sonraki satırların onun yanında akmasını sağlayın. Bu paragraf düzeyinde biçimlendirmedir; seçili bir sözcüğün yalnızca bir bölümüne uygulanmaz.
 
+Tabloda büyük başlangıç harfi hücrelerin kendisine değil, içlerindeki paragraflara uygulanır. Birden çok hücre seçildiğinde içlerindeki uygun paragraflar birlikte değiştirilir; araç çubuğunun durumu da aynı paragraf seçimine göre gösterilir.
+
 Yayımlanmış ve düzenleme görünümü aynı şekli korur. Düzenlerken imleç ve silme konumlarının kaymaması için ilk harf gerçek bir öğeyle sarılır; bu öğe kaydedilen belge içeriğine dahil edilmez.
 
 <WingDemo path="/wing/etc/dropcap" />

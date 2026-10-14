@@ -13,6 +13,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 显示的编号根据项目位置计算，因此新增或缩进项目时会自动延续。不提供保存自定义起始编号并从该编号开始计数的功能。
 
+Enter 创建下一个项目，Shift+Enter 只在当前项目内换行。Tab 和 Shift+Tab 用于增加和减少缩进；在表格单元格中，列表缩进也优先于单元格切换。
+
 <WingDemo path="/wing/block/ordered-list" />
 
 ```ts

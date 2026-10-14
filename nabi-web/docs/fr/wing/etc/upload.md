@@ -25,6 +25,12 @@ const selected = wings()
 
 Si vous sélectionnez uniquement `upload`, il fournit automatiquement celle des dépendances image ou lien qui manque. Le transfert est connecté avec `mountUpload()`, et l'interface utilisateur de progression de l'écran d'édition est généralement connectée avec `mountUploadView()`. Si le serveur retourne des URL HTTPS, l'option d'URL locale n'est pas nécessaire.
 
+## Position d'insertion des téléversements
+
+La position où le sélecteur de fichiers s'ouvre ou le téléversement commence est mémorisée. Si seul le curseur est déplacé, l'insertion reste à la position d'origine. Dans une cellule, la progression et le contenu final restent dans cette cellule. Un téléversement commencé dans une zone flottante y insère aussi son résultat. L'insertion est impossible dans une sélection couvrant plusieurs cellules.
+
+Modifier ou remplacer le document pendant la sélection des fichiers ou le traitement asynchrone annule l'insertion et affiche un message. Rétablir le même contenu par annulation ne permet pas l'insertion à l'ancienne position. Ne jugez pas la fin de l'opération au seul succès du transfert : vérifiez `committed` et `cancelled` reçus par `onDone`. `committed` est le nombre de fichiers réellement insérés dans le document.
+
 ## Contrat d'API du serveur
 
 NABI NOTE n'envoie pas les fichiers à votre serveur par lui-même. La fonction `uploader` envoie un fichier au serveur et, en cas de succès, retourne uniquement une URL publique ou authentifiée `https:`. Le contrat d'API le plus simple ressemble à ceci.
@@ -58,6 +64,7 @@ L'exemple ci-dessous est la connexion réelle attendue par NABI NOTE. Il utilise
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -121,9 +128,18 @@ const surface = mountSurface({
   fileSink: upload.take,
   locale: 'fr',
 })
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'fr',
+})
 ```
 
-Connectez `fileSink: upload.take` pour que les opérations de glisser-déposer et de collage qui ne contiennent que des fichiers entrent dans le flux de téléversement. L'interface de la wing upload transmet les résultats du bouton de sélection de fichiers à `upload.take()`. Pendant le téléversement, l'éditeur est verrouillé, et les fichiers réussis de chaque lot sont insérés en une seule étape d'annulation. `upload.cancel()` ou le bouton d'annulation dans `uploadView` annule les requêtes en cours via `AbortSignal`.
+Connectez `fileSink: upload.take` pour que le glisser-déposer et le collage contenant uniquement des fichiers déclenchent le téléversement. Connectez le bouton de sélection de fichiers via `onFiles: upload.take` de la barre d'outils. Pendant le téléversement, l'éditeur est verrouillé et les fichiers réussis sont insérés en une étape d'annulation par lot. `upload.cancel()` ou le bouton d'annulation de `uploadView` interrompt les requêtes en cours via `AbortSignal`.
 
 ## Échec et nettoyage
 
@@ -131,6 +147,7 @@ Si le serveur retourne une réponse d'erreur ou si l'`uploader` retourne `null`,
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

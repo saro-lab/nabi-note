@@ -93,6 +93,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -106,6 +108,8 @@ export const exCallout: Wing = {
 ```
 
 Cette déclaration seule ne crée pas de moyen d'englober les paragraphes sélectionnés. Ajoutez une commande pure dans `commands` et un `button` qui l'appelle avant d'exposer la fonctionnalité dans l'interface de l'éditeur.
+
+`isolating: true` autorise plusieurs paragraphes tout en empêchant une suppression de franchir la limite de l'encadré et de fusionner son contenu avec le voisin. Les commandes de `scopedCommands` s'exécutent sur le document interne : l'insertion d'images ou de tableaux et la conversion en listes ou citations restent dans l'encadré.
 
 ### 5. Une paire liste/élément associée
 
@@ -165,10 +169,10 @@ Déclarez uniquement ce dont la wing a besoin. Une factory fournit déjà certai
 | Zone | Options | But |
 | --- | --- | --- |
 | Base | `w`, `place`, `basic`, `styles` | Nom, type structurel, appartenance au catalogue de base, CSS par défaut |
-| Structure | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | Type d'enfant, comportement Entrée, attributs autorisés, attributs booléens |
+| Structure | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | Type d'enfants, comportement d'Enter, protection des limites d'édition, attributs autorisés, attributs booléens |
 | Structure | `parts`, `allows`, `noAlign`, `requiresAnyOf` | Parties internes, enfants autorisés, exclusion d'alignement, dépendance de wing |
 | Valeurs | `attrKey`, `attrValues`, `currentValue` | Clé et liste de la valeur enregistrée, détection de la valeur actuelle |
-| Commandes et saisie | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Commandes, gestion des touches, comportement Échap/double touche, règles d'autoformatage |
+| Commandes et saisie | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Commandes, commandes exécutées dans le document interne, gestion des touches, Escape/double frappe, conversion automatique |
 | Comportement de surface | `attach` | Comportement DOM et nettoyage pour une surface |
 | Conversion | `toHtml`, `partHtml`, `toMd`, `partMd` | Sortie HTML et Markdown |
 | Importation et réparation | `claim`, `ioFilter`, `repair`, `partRepair` | Importation HTML, gestion des fichiers, validation JSON et réparation |
@@ -190,6 +194,30 @@ Une commande est une fonction pure du document et de la sélection qui retourne 
 Placez les comportements purement DOM, comme la sélection par glissement dans un tableau, dans `attach(host)`. Enregistrez immédiatement le nettoyage de chaque listener ou attribut modifié avec `host.onDispose()`, afin qu'une configuration échouée soit quand même nettoyée. Ne modifiez pas le DOM du texte en composition ni le mapping de sélection de la surface.
 
 Déclarez les contrôles de barre d'outils et de contexte avec `button`, `buttons` et `context`; dupliquer leurs règles de commande dans l'interface de l'application peut faire diverger l'interface et le modèle de document.
+
+### Exécuter des commandes dans un bloc
+
+Déclarez `scopedCommands` sur les conteneurs avec `holds: 'blocks'` et les `parts` contenant des blocs. Si les deux extrémités de la sélection sont dans la même zone, la commande reçoit son document enfant et des chemins de sélection relatifs, puis son résultat est réintégré au document extérieur. Les sélections franchissant une limite de zone sont refusées ; hors de cette zone, la commande conserve son comportement d'origine. Les zones flottantes et cellules de tableau utilisent aussi ce mécanisme pour limiter les insertions, conversions et téléversements.
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+Cette liste accepte uniquement les commandes d'ailes. Les commandes non enregistrées sont ignorées : elle n'impose donc pas d'enregistrer aussi les ailes d'image ou de téléversement. Choisissez des commandes qui fonctionnent uniquement avec le document interne et les chemins relatifs fournis ; excluez celles qui exigent des chemins absolus dans le document complet ou remplacent celui-ci. Les commandes du cœur sont également exclues.
+
+`singleParagraph` limite le contenu à un paragraphe ; `isolating` conserve plusieurs paragraphes tout en empêchant Backspace/Delete de franchir les limites d'édition. Les `parts` contenant des blocs peuvent également déclarer `isolating: true`.
+
+### Gérer les touches dans les blocs imbriqués
+
+`KeyIntent.shift`, reçu par `onKey`, distingue Enter de Shift+Enter. Si une aile interne renvoie `null` dans une zone d'édition indépendante, le traitement remonte successivement aux ailes parentes jusqu'à cette zone. Ainsi, les listes et le code dans une cellule traitent d'abord l'indentation ; un Tab non traité peut servir à changer de cellule. Une même aile n'est jamais appelée deux fois pour une frappe.
 
 ## Styles CSS
 

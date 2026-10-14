@@ -11,7 +11,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Kelompokkan ringkasan singkat dan isi dalam satu blok. Saat membuatnya dari bilah alat, masukkan ringkasannya lebih dahulu lalu lanjutkan menulis isi di bawahnya.
 
-Keadaan terbuka yang diatur dengan segitiga disimpan dalam dokumen dan menjadi keadaan awal pada tampilan terbit. Ketika mengedit, isi tetap terbuka agar dapat diubah, tetapi nilai keadaan yang tersimpan dipertahankan.
+Status buka yang ditentukan melalui segitiga disimpan dalam dokumen dan menjadi status awal tampilan yang dipublikasikan. Saat mengedit, Anda juga dapat mengeklik segitiga untuk membuka dan menutup blok.
+
+Di dalam sel tabel atau blok lain, hanya blok lipat tersebut yang dibuka atau ditutup. Jika kursor atau pilihan berada di isi yang ditutup, posisinya dipindahkan ke luar; pilihan di tempat lain tetap dipertahankan.
 
 <WingDemo path="/wing/block/details" />
 

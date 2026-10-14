@@ -38,6 +38,15 @@ import 'nabi-note/nabi.css'
 
 在图标元素的 `data-nabi-icon` 值前加上 `--nabi-icon-` 即得到 CSS 变量。例如 `diff-close` 对应 `--nabi-icon-diff-close`。上下文、菜单、保存、历史等完整键规则和特殊字符编码见<a href="/llms/icons.md" target="_blank" rel="noopener">图标约定</a>。
 
+浮动区域的插入按钮使用 `toolbar-float`，属性工具中的解除按钮使用 `context-float-unwrap`。默认文件分别为 `float-float.svg` 和 `float-unwrap.svg`，也提供深色主题版本。解除按钮显示在宽度值旁边，更换图片后仍保留名称和工具提示。
+
+```css
+.paper-note {
+  --nabi-icon-toolbar-float: url("/icons/float.svg");
+  --nabi-icon-context-float-unwrap: url("/icons/float-unwrap.svg");
+}
+```
+
 ## 深色模式和面板
 
 更改主题类或 CSS 变量即可更新图标，无需重新 mount。默认图标遵循浅色和深色主题。自定义文件不继承 `currentColor`，需要时请按上例指定深色版本。在 `body` 下打开的面板也会跟随原编辑器的图标主题及类、样式变化。请将变量放在编辑器或共同父元素上，不要仅放在工具栏内部。

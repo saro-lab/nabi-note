@@ -57,6 +57,7 @@ const ID_BY_PATH: Readonly<Record<string, string>> = {
   '/wing/block/ordered-list': 'ol',
   '/wing/block/task-list': 'tl',
   '/wing/block/table': 'table',
+  '/wing/block/float': 'float',
   '/wing/block/image': 'img',
   '/wing/block/youtube': 'youtube',
   '/wing/block/code': 'code',
@@ -86,6 +87,10 @@ const EXTRA_BY_PATH: Readonly<Record<string, readonly string[]>> = {
 // `path` 는 로케일 접두사를 뺀 경로여야 한다(예: `/wing/inline/bold`).
 // `path` must already have the locale prefix stripped (e.g. `/wing/inline/bold`).
 export function wingsFor(path: string): string[] {
+  if (path === '/wing/block/table' || path === '/wing/block/float') {
+    return ['table', 'img', 'b', 'h', 'align', 'dc', 'ul', 'ol', 'tl', 'quote', 'code', 'details', 'youtube', 'hr', 'upload', 'a',
+      ...(path === '/wing/block/float' ? ['float'] : [])]
+  }
   const branch = BRANCHES.find((items) => items.some((item) => item.path === path))
   const index = branch?.findIndex((item) => item.path === path) ?? -1
 

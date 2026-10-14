@@ -17,22 +17,20 @@ import 'nabi-note/nabi.css'
   --nabi-bg: #fff;
   --nabi-accent: #5b4ee8;
   --nabi-content-min-height: 20rem;
-  --nabi-font: Inter, system-ui, sans-serif;
+  --nabi-font: Pretendard, system-ui, sans-serif;
   --nabi-sticky-top: 4rem;
 }
 ```
 
-Si pones los mismos tokens en un padre común del editor y de la pantalla publicada, ambos mantienen el mismo tono visual.
+Asigna la misma clase de tema al `.nabi` del editor y al `.nabi-content` de la vista publicada para aplicarles las mismas variables. Carga el CSS del servicio después del CSS del paquete e indica el tema actual con `data-nabi-theme`.
 
 ```html
-<section class="brand-note">
-  <div class="nabi">...</div>
-  <article class="nabi-content">...</article>
-</section>
+<div class="nabi brand-note" data-nabi-theme="light">...</div>
+<article class="nabi-content brand-note" data-nabi-theme="light">...</article>
 ```
 
 ```css
-.brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-fg: #1f2937;
   --nabi-muted: #6b7280;
   --nabi-bg: #fff;
@@ -56,20 +54,33 @@ Si pones los mismos tokens en un padre común del editor y de la pantalla public
 | Entorno táctil | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
 | Ancho de activación del modo móvil | `--nabi-mobile-breakpoint` |
 
-El resaltado y el color de texto se cambian con `--nabi-hl-<name>` y `--nabi-tc-<name>`. Por ejemplo, si cambias `--nabi-hl-yellow`, solo cambia el color visible del resaltado `yellow` guardado en el documento.
+El resaltado y el color del texto usan `--nabi-hl-<name>` y `--nabi-tc-<name>`. Los fondos de celda usan `--nabi-cell-<name>` con `yellow`, `green`, `cyan`, `pink`, `purple` y `orange`. Las variables solo cambian el color mostrado, no el nombre guardado.
 
 ```css
-.article-editor {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-hl-yellow: #fff0a6;
   --nabi-tc-blue: #2563eb;
+  --nabi-cell-cyan: #e2f4f7;
+}
+```
+
+El tema predeterminado muestra fondos de celda suaves. El modo oscuro conserva los nombres, pero usa colores propios más claros y menos saturados para distinguirlos mejor sobre superficies oscuras. Son translúcidos y dejan ver el fondo; al personalizarlos, comprueba el contraste del texto sobre el fondo real de la página. Para sobrescribir las variables de color predeterminadas, aplica la clase de tema al elemento real del editor o del contenido publicado, como arriba, y no a un padre exterior arbitrario.
+
+```css
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
+  --nabi-cell-cyan: #183b43;
 }
 ```
 
 ## Umbral del modo móvil
 
-El modo móvil se activa cuando el ancho de la barra de herramientas, la barra contextual o la ventana es menor que `36rem`. Con exactamente `36rem` se mantiene la disposición normal. En modo móvil, ambas barras se desplazan horizontalmente, los paneles se centran y el selector de tablas se reduce a 5×5 celdas adaptadas al uso táctil.
+La barra predeterminada `layout: 'compact'` pasa a una fila móvil cuando la pantalla mide menos de `36rem`. Con exactamente `36rem` conserva la disposición de escritorio. En escritorio, todas las herramientas se distribuyen en varias filas aunque el editor sea estrecho. Las propiedades de objetos también se ajustan debajo; ambas filas ocupan espacio sobre el texto. En pantalla completa se despliegan todas las herramientas independientemente del ancho.
 
-Define `--nabi-mobile-breakpoint` en `:root`, un antecesor o una `.nabi` individual. Usa una longitud CSS no negativa, como `rem`, `px` o `calc()`. Los cambios del valor CSS, el tamaño de fuente raíz, el ancho del contenedor o el de la ventana actualizan automáticamente también los paneles abiertos. Los paneles de entrada trasladados bajo `body` mantienen el umbral de su editor original.
+En móvil permanecen en la barra principal las herramientas rápidas, el botón de todas las herramientas y los botones conectados de vista previa/pantalla completa. Siguen disponibles cuando aparecen las propiedades. La paleta mantiene el mismo orden de grupos y separadores que el escritorio. `layout: 'wrap'` siempre muestra todas las herramientas con ajuste de línea.
+
+Los paneles móviles se abren en el espacio disponible alrededor de la barra y las propiedades. El selector de tamaño de tabla es una excepción: se abre centrado sobre un fondo translúcido con una cuadrícula táctil de 5×5. No espera a que se cierre el teclado; elegir un tamaño inserta una tabla y cierra el selector.
+
+Define `--nabi-mobile-breakpoint` en `:root`, un ancestro o un `.nabi` individual para cambiar el umbral. Usa longitudes CSS no negativas como `rem`, `px` o `calc()`. Los cambios del valor CSS, el tamaño de fuente raíz o el ancho de pantalla actualizan automáticamente los paneles abiertos. Los paneles de entrada movidos bajo `body` conservan el umbral de su editor original.
 
 ```css
 .article-editor {
@@ -77,7 +88,7 @@ Define `--nabi-mobile-breakpoint` en `:root`, un antecesor o una `.nabi` individ
 }
 ```
 
-Los dispositivos táctiles conservan controles más grandes por encima de este umbral.
+Las regiones flotantes tienen un umbral independiente para pasar a una columna: el contenedor del texto, no la pantalla, debe medir menos de `36rem`. La impresión usa la misma disposición.
 
 ## Modo oscuro
 
@@ -91,7 +102,7 @@ El modo claro es el predeterminado. Si añades `.dark` al `html` o al `body`, o 
 Usa `data-nabi-theme="light"` si quieres cortar la influencia de un `.dark` superior. El cambio de tema lo gestiona el servicio; el paquete no sigue automáticamente `prefers-color-scheme`.
 
 ```css
-.dark .brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
   --nabi-fg: #f3f4f6;
   --nabi-muted: #a1a1aa;
   --nabi-bg: #18181b;
@@ -111,7 +122,7 @@ El HTML publicado necesita `.nabi-content` y el mismo CSS. Sin JavaScript tambi�
 
 ```css
 .article-body {
-  --nabi-font: "Source Serif 4", Georgia, serif;
+  --nabi-font: "Noto Serif KR", serif;
   --nabi-bg: transparent;
 }
 ```

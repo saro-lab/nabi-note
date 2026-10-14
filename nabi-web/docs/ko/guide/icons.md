@@ -38,6 +38,17 @@ import 'nabi-note/nabi.css'
 
 아이콘 요소의 `data-nabi-icon` 값 앞에 `--nabi-icon-`을 붙이면 해당 CSS 변수가 됩니다. 예를 들어 `diff-close`는 `--nabi-icon-diff-close`입니다. 컨텍스트·메뉴·저장·히스토리 등의 전체 키 규칙과 특수문자 처리 방법은 <a href="/llms/icons.md" target="_blank" rel="noopener">아이콘 계약</a>을 참고하세요.
 
+플로트 영역의 삽입 버튼은 `toolbar-float`, 속성 도구의 해제 버튼은 `context-float-unwrap`입니다.
+기본 파일은 각각 `float-float.svg`, `float-unwrap.svg`이며 어두운 테마용 파일도 제공합니다.
+해제 버튼은 너비 값 옆에 표시되고, 그림을 바꿔도 이름과 툴팁은 유지됩니다.
+
+```css
+.paper-note {
+  --nabi-icon-toolbar-float: url("/icons/float.svg");
+  --nabi-icon-context-float-unwrap: url("/icons/float-unwrap.svg");
+}
+```
+
 ## 다크 모드와 패널
 
 테마 클래스나 CSS 변수를 바꾸면 다시 mount하지 않아도 아이콘이 바뀝니다. 기본 아이콘은 밝은/어두운 테마를 따릅니다. 사용자 파일은 `currentColor`를 상속하지 않으므로 필요하면 위 예제처럼 어두운 테마용 파일을 지정하세요. `body` 아래에 열리는 패널도 원래 편집기의 아이콘 테마와 클래스·스타일 변경을 따릅니다. 변수는 툴바 내부에만 두지 말고 편집기나 공통 부모에 두세요.

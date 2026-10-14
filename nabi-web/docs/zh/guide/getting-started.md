@@ -61,7 +61,35 @@ const toolbar = mountToolbar({
 
 `locale` 控制工具栏和辅助文字；请把同一个值传给每个 UI mount。`placeholder` 只在空编辑器中显示。`onError` 接收命令和回调中隔离出来的失败。`undoLimit` 是 undo 记录数量，默认 200。`typingMergeMs` 是把连续输入合并为一个 undo 步骤的时间间隔；设为 `0` 时，每次插入都会分开记录。
 
+通过连续按 Enter 退出块容器时，默认间隔为 180ms。连续按 Esc 和 Shift 的默认值仍为 350ms。在 `mountSurface()` 中显式设置 `doubleEnterMs` 后，不仅 Enter，连续按 Esc 的间隔也会改为该值。
+
 每个编辑器都需要互不重叠的内容 root 和工具栏 root。在一个页面上有多个编辑器时，请通过 `surface` 为每个工具栏指定自己的编辑 surface，避免焦点和快捷键串到别的编辑器。
+
+## 配置工具栏
+
+默认工具栏按标题、文字格式、对齐、列表、插入、文档工具的顺序分组，组间显示竖直分隔线。桌面端将全部工具展开为多行，移动端则在一行内显示快捷工具和全部工具按钮。表格、图片、浮动区域的属性工具显示在下方，可与正文工具同时使用。
+
+用 `groups` 更改分组顺序，用 `quick` 更改移动端快捷工具的顺序。例如，经常插入图片的编辑器可以把 `media` 组移到前面。
+
+```ts
+import { TOOLBAR_GROUPS, mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  locale: 'zh',
+  groups: ['media', ...TOOLBAR_GROUPS.filter((group) => group !== 'media')],
+  quick: ['b', 'i', 'tc', 'img'],
+})
+```
+
+快捷工具严格按指定顺序排列，不添加分隔线。同一组内按翼的注册顺序排列。如果用 SSR 预渲染工具栏，请向服务器和浏览器传递相同的分组顺序。随屏幕宽度变化的布局详见 [CSS 主题](./style#移动模式切换宽度)。
+
+连接 `mountHints()` 后，可以连续按两次 Shift，通过键盘选择工具。Tab 切换分组，方向键在同组图标间移动。桌面端和全屏模式使用当前可见的工具栏，移动端使用全部工具面板。
+
+图片面板、地址输入框、文件选择器会记住打开时的选区位置。如果只是移动光标，仍插入原位置；如果编辑或替换了文档，则取消输入并显示提示。即使撤销后内容相同，也不会重新使用旧选区。
 
 ## 选择 wing
 

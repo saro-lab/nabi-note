@@ -25,6 +25,12 @@ const selected = wings()
 
 Ukichagua `upload` pekee, huleta kiotomatiki utegemezi unaokosekana kati ya picha na kiungo. Uhamishaji huunganishwa kwa `mountUpload()`, na UI ya maendeleo ya skrini ya kuhariri kwa kawaida huunganishwa kwa `mountUploadView()`. Seva ikirudisha URL za HTTPS, chaguo la URL za ndani halihitajiki.
 
+## Mahali pa kuingiza vipakiaji
+
+Mahali ambapo kichagua faili hufunguliwa au upakiaji huanza hukumbukwa. Ukihamisha kishale pekee, uingizaji bado hufanyika mahali pa awali. Upakiaji ukianza katika seli, kiashiria cha maendeleo na maudhui yaliyokamilika hubaki ndani ya seli hiyo. Matokeo ya upakiaji ulioanzia eneo linaloelea pia huingizwa humo. Upakiaji hauwezi kuingizwa katika uteuzi unaovuka mipaka ya seli kadhaa.
+
+Kuhariri au kubadilisha hati wakati wa kuchagua faili au uchakataji usiolandanishwa hughairi uingizaji na kuonyesha taarifa. Kutendua na kurudisha maudhui yale yale hakurudishi uingizaji mahali pa zamani. Usihukumu kukamilika kwa mafanikio ya uhamishaji pekee: angalia `committed` na `cancelled` zinazopokelewa na `onDone`. `committed` ni idadi ya faili zilizoingizwa kweli kwenye hati.
+
 ## Mkataba wa API ya Seva
 
 NABI NOTE haitumi faili kwenye seva yako yenyewe. Kitendakazi cha `uploader` hutuma faili moja kwenye seva, na kikifaulu hurudisha URL ya `https:` ya umma au inayohitaji uthibitishaji pekee. Mkataba rahisi zaidi wa API unaonekana hivi.
@@ -58,6 +64,7 @@ Mfano hapa chini ni muunganisho halisi ambao NABI NOTE inatarajia. Unatumia `XML
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -67,7 +74,7 @@ import {
 const content = document.querySelector<HTMLElement>('#content')!
 const { nabi, registry } = createNabiWith(
   wings().use('img').use('a').use('upload').build(),
-  { locale: 'en' },
+  { locale: 'sw' },
 )
 
 function sendUpload(task: UploadTask): Promise<{ uri: string } | null> {
@@ -105,25 +112,34 @@ const upload = mountUpload({
   extensions: ['png', 'jpg', 'jpeg', 'webp', 'pdf'],
   maxFileSize: 10 * 1024 * 1024,
   maxTotalSize: 20 * 1024 * 1024,
-  locale: 'en',
+  locale: 'sw',
   onStart: (tasks) => uploadView.start(tasks),
   onProgress: (id, percent) => uploadView.progress(id, percent),
   onSettle: () => uploadView.settle(),
   onDone: () => uploadView.done(),
 })
 
-uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'en' })
+uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'sw' })
 
 const surface = mountSurface({
   nabi,
   registry,
   root: content,
   fileSink: upload.take,
-  locale: 'en',
+  locale: 'sw',
+})
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'sw',
 })
 ```
 
-Unganisha `fileSink: upload.take` ili kuburuta na kudondosha, na vitendo vya kubandika vyenye faili pekee, viingie kwenye mtiririko wa upakiaji. UI ya wing ya kupakia hupitisha matokeo ya kitufe cha kuchagua faili kwa `upload.take()`. Wakati upakiaji unaendelea, kihariri hufungwa, na faili zilizofanikiwa kutoka kila kundi huingizwa kama hatua moja ya kutendua. `upload.cancel()` au kitufe cha kughairi katika `uploadView` husitisha maombi yanayoendelea kupitia `AbortSignal`.
+Unganisha `fileSink: upload.take` ili kuburuta na kudondosha pamoja na kubandika faili pekee viingie kwenye mtiririko wa upakiaji. Unganisha kitufe cha kuchagua faili kupitia `onFiles: upload.take` ya upau wa zana. Wakati wa upakiaji, kihariri hufungwa na faili zilizofanikiwa huingizwa kwa hatua moja ya kutendua kwa kila kundi. `upload.cancel()` au kitufe cha kughairi cha `uploadView` husitisha maombi yanayoendelea kupitia `AbortSignal`.
 
 ## Kushindwa na Usafishaji
 
@@ -131,6 +147,7 @@ Seva ikirudisha jibu la hitilafu au `uploader` ikirudisha `null`, faili hiyo hai
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

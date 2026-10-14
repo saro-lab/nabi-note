@@ -137,12 +137,12 @@ export const CORE_CSS = `${ICON_CSS}
   --nabi-hl-pink: rgb(244 114 182 / 35%);
   --nabi-hl-purple: rgb(192 132 252 / 35%);
   --nabi-hl-orange: rgb(251 146 60 / 35%);
-  --nabi-cell-yellow: rgb(250 204 21 / 12%);
-  --nabi-cell-green: rgb(74 222 128 / 12%);
-  --nabi-cell-cyan: rgb(56 189 248 / 12%);
-  --nabi-cell-pink: rgb(244 114 182 / 12%);
-  --nabi-cell-purple: rgb(192 132 252 / 12%);
-  --nabi-cell-orange: rgb(251 146 60 / 12%);
+  --nabi-cell-yellow: rgb(245 214 115 / 20%);
+  --nabi-cell-green: rgb(155 213 148 / 20%);
+  --nabi-cell-cyan: rgb(146 201 232 / 20%);
+  --nabi-cell-pink: rgb(230 170 203 / 20%);
+  --nabi-cell-purple: rgb(194 177 230 / 20%);
+  --nabi-cell-orange: rgb(229 180 140 / 20%);
 }
 /* 라이트를 명시한 쪽이 바깥 다크를 이긴다 — 다크 규칙 뒤에 와야 되돌릴 수 있다
    An explicit light override beats an outer dark; it must come after the dark rule to win */

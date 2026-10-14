@@ -18,7 +18,7 @@ import { defaultWings as sourceWings } from '../../nabi-npm/src/wings/index.ts';
 import { makeRegistry, renderStoredEditorHtml, renderToolbarHtml, renderViewToolsHtml } from 'nabi-note/ssr';
 import { tinyHtml } from '../../nabi-npm/test/tiny-html.ts';
 import { messages } from '../docs/.vitepress/locales/index.ts';
-import { SAMPLE_KEYS, messageKeyFor, type SampleTree, type SampleTrees } from '../docs/.vitepress/src/sample.ts';
+import { SAMPLE_KEYS, messageKeyFor, type SampleKey, type SampleTree, type SampleTrees } from '../docs/.vitepress/src/sample.ts';
 import { trees as koTrees } from '../docs/.vitepress/trees/ko.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -98,10 +98,13 @@ for (const [code, sheet] of Object.entries(messages)) {
         'export const trees: SampleTrees = {',
       ];
   let mainTree: unknown[] | null = null;
-  for (const key of SAMPLE_KEYS) {
+  const keys = direct ? Object.keys(direct) as SampleKey[] : SAMPLE_KEYS;
+  for (const key of keys) {
     let tree: unknown[];
     if (direct) {
-      tree = checkedTree(direct[key], code, key);
+      const sample = direct[key];
+      if (!sample) throw new Error(`${code} ${key} 예문이 없다`);
+      tree = checkedTree(sample, code, key);
     } else {
       const html = (sheet as Record<string, string>)[messageKeyFor(key)];
       // 사전에 예문이 빠졌으면 그 자리에서 멈춘다 — 조용히 빈 문서를 굳히면 화면에서야 드러난다.
@@ -154,7 +157,7 @@ for (const [code, sheet] of Object.entries(messages)) {
   chipRows.push(`  ${JSON.stringify(code)}: ${JSON.stringify(chips)},`);
 
   console.log(
-    `[build-trees] ${code} — 예문 ${SAMPLE_KEYS.length}${direct ? ' 직접 트리' : ''}, 홈 미리그리기 ${mainHtml.length}자, 칩 ${chips.length}`,
+    `[build-trees] ${code} — 예문 ${keys.length}${direct ? ' 직접 트리' : ''}, 홈 미리그리기 ${mainHtml.length}자, 칩 ${chips.length}`,
   );
 }
 

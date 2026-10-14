@@ -11,6 +11,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Platzieren Sie den ersten Buchstaben eines Absatzes in einer größeren Größe und lassen Sie die folgenden Zeilen daran vorbeifließen. Dies ist eine Formatierung auf Absatzebene, daher wird sie nicht nur auf einen Teil eines ausgewählten Wortes angewendet.
 
+In Tabellen werden Initialen auf die enthaltenen Absätze angewendet, nicht auf die Zellen selbst. Bei mehreren ausgewählten Zellen werden alle geeigneten Absätze darin geändert. Der Status der Werkzeugleiste richtet sich nach derselben Absatzauswahl.
+
 Die veröffentlichte Ansicht und die Bearbeitungsansicht behalten dieselbe Form bei. Während der Bearbeitung ist der erste Buchstabe in ein echtes Element eingebettet, sodass Cursor- und Löschpositionen nicht verrutschen; dieses Element ist nicht im gespeicherten Dokumentinhalt enthalten.
 
 <WingDemo path="/wing/etc/dropcap" />

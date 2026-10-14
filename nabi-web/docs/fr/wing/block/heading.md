@@ -13,6 +13,8 @@ Transformez un paragraphe en titre et choisissez son niveau. Activez le titre da
 
 Un titre n'est pas un type de bloc séparé. Il est stocké sous forme d'attribut sur un paragraphe. Appuyer à nouveau sur le titre le ramène à un paragraphe normal, vous permettant ainsi de modifier uniquement le niveau tout en conservant la structure du corps intacte.
 
+Dans les cellules ordinaires, les paragraphes internes peuvent devenir des titres. Les titres ne s'appliquent pas aux cellules d'en-tête, et la conversion en cellule d'en-tête supprime également le format de titre existant. Lorsque plusieurs paragraphes sont sélectionnés, la barre d'outils affiche une valeur active commune uniquement s'ils ont tous le même niveau de titre.
+
 <WingDemo path="/wing/block/heading" />
 
 ```ts

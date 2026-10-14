@@ -65,6 +65,8 @@ The browser factory wires its internal `DOMParser` adapter automatically, so `se
 
 `undoLimit` defaults to 200 and accepts integers of 1 or greater. `typingMergeMs` defaults to 1000 milliseconds; set it to 0 to keep every insertion as a separate undo step. Invalid values throw during editor creation. `onError` receives isolated command, repair, normalization, listener, and host callback failures.
 
+Container escape uses two Enter presses within 180 ms by default. Double-Escape and double-Shift retain their 350 ms defaults. Set `doubleEnterMs` on `mountSurface()` only when overriding this behavior; that explicit value also changes the double-Escape window.
+
 ## Replace the image URL prompt with host UI
 
 Supply `panels` when mounting the toolbar. Its keys are toolbar slot names; `img` replaces the image button's default URL prompt. Omitted slots keep their default behavior.
@@ -93,7 +95,7 @@ Use `mode: 'modal'` for a window over a full-page translucent backdrop, or `mode
 
 `mountMyImagePicker` is supplied by your application, not NABI NOTE. It synchronously renders DOM or a framework component inside the given `root` and returns a cleanup function. Forward `signal` to asynchronous image-list or upload requests, and send the selected image URL to `onSelect`. The renderer itself must not be `async`. For effects that need cleanup if rendering throws midway, use the context's `onDispose()` as soon as each effect starts.
 
-The package manages panel positioning, closing, focus, and teardown. Closing or unmounting aborts the signal and calls cleanup. `insertImage()` (or the generic `run()`) closes the panel and applies one command at the selection captured when it opened; a closed panel or changed document returns `false` without insertion. The image wing must be registered, and its URL policy is unchanged. This API does not transfer files. See `api-reference.md` for `ToolbarPanelContext`, and `io-security.md` for URL and upload boundaries.
+The package manages panel positioning, closing, focus, and teardown. Closing or unmounting aborts the signal and calls cleanup. `insertImage()` (or the generic `run()`) closes the panel and applies one command at the selection captured when it opened, including an inner table cell or float. Moving only the selection is allowed. Any document edit or replacement since opening cancels insertion with a localized warning, even after undo restores equal content; a closed panel or changed document returns `false`. The image wing must be registered, and its URL policy is unchanged. This API does not transfer files. See `api-reference.md` for `ToolbarPanelContext`, and `io-security.md` for URL and upload boundaries.
 
 ## Change the UI language without resetting editing state
 
@@ -136,13 +138,15 @@ createNabiWith(wings().all().drop('upload').use('fs', { values: ['sm', 'lg'] }))
 ```
 
 - `all()` includes all official wings.
-- `allBasic()` includes 26 and omits `upload`, `save`, `open`, and `diff`, which need host wiring.
+- `allBasic()` includes wings that work without host wiring, including `float` and `table`. It omits `upload`, `save`, `open`, and `diff`.
 - A direct array is the tree-shakable route for a small set.
 - `use('upload')` pulls its first available dependency, `img`, if neither `img` nor `a` is present.
 - `drop()` refuses to break a dependency and never cascades.
 - The builder validates unknown names, unknown option keys, option shapes, and custom names immediately.
 
 See `wings.md` for the catalog.
+
+The table and float examples in `wings.md` show multi-paragraph cells, cell backgrounds, whole-table alignment, and a supporting note with an image. Both are editable with the assembly above. Mount the context toolbar below to expose cell colors, Select table, and float placement/width/unwrap controls. Save the same JSON or published HTML and load matching wing CSS in readers and preview.
 
 ## Read and write
 
@@ -198,6 +202,8 @@ const view = mountViewTools({
 
 The context toolbar follows the compact toolbar mounted for the same `nabi`; do not give it a separate layout option. Keep the toolbar and context roots as siblings. Available object properties appear automatically in the context root below the main toolbar, take up layout space, and wrap on desktop and mobile. Both rows move together inside the shared `toolbarChrome` wrapper. The desktop main toolbar shows all available commands; mobile keeps quick actions in its main row. View controls remain visible, subject to their individual visibility options. There is no Object properties entry button or back-to-tools button. The mobile full palette contains registered wing buttons only, with no duplicate view controls or added undo/redo buttons. Without a compact toolbar, the context and view mounts retain their standalone placement.
 
+Main commands and the full Tools palette follow the default group order with vertical separators. Override `groups` on `mountToolbar()` when the host needs a different order, and pass the same order to `renderToolbarHtml()` for SSR. The mobile `quick` order is independent and has no separators; see `api-reference.md` for the group names.
+
 `mountHints()` makes double-Shift open the mobile compact palette or focus the visible toolbar on desktop and in fullscreen. Tab/Shift+Tab cycle groups, arrow keys move between icons, Enter/Space activate, and Escape returns to editing. The former letter badges are no longer used. See `styling.md` for wrapping and visual-row navigation rules.
 
 Pass `surface` to toolbar-like mounts. It scopes keyboard accelerators and focus restoration, which is required when multiple editors share a page.
@@ -236,6 +242,7 @@ import { mountUpload, mountUploadView } from 'nabi-note';
 const uploadView = mountUploadView({ nabi, surface: content });
 const upload = mountUpload({
   nabi,
+  root: content,
   uploader: async ({ file, onProgress, signal }) => {
     const uri = await sendToServer(file, { onProgress, signal });
     return { uri };
@@ -248,6 +255,8 @@ const upload = mountUpload({
 ```
 
 The uploader return URI is validated when committed. If local `blob:` or `data:image/...` URIs are required, enable the document import, image wing, and upload wing boundaries separately. See `io-security.md`.
+
+Register `wings().allBasic().use('upload')` when assembling this editor. Pass `upload.take` as `onFiles` to the toolbar and as `fileSink` to the surface to connect the file button, file-only paste, and drop. Uploads use their starting selection, so images and attachments stay inside the original table cell or float even after a selection-only move. A document edit or replacement before insertion cancels the batch with feedback. `onDone({ committed, cancelled })` runs after the insertion attempt; `committed` is zero if the command was rejected, even when the server upload succeeded. Cell placeholders remain inside their original cell.
 
 ## Local history
 

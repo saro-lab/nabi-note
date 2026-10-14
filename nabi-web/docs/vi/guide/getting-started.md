@@ -61,7 +61,35 @@ const toolbar = mountToolbar({
 
 `locale` điều khiển văn bản của thanh công cụ và trợ giúp; hãy truyền cùng một giá trị vào mọi lần gắn UI. `placeholder` chỉ hiện khi trình soạn thảo trống. `onError` nhận các lỗi độc lập từ lệnh và callback. `undoLimit` là số mục hoàn tác (mặc định là 200). `typingMergeMs` là khoảng thời gian gộp các lần gõ liên tiếp thành một bước hoàn tác; đặt thành `0` để giữ riêng từng lần chèn.
 
+Khoảng thời gian mặc định giữa hai lần Enter để thoát container khối là 180ms. Nhấn kép Esc và Shift vẫn dùng 350ms. Đặt rõ `doubleEnterMs` trong `mountSurface()` thay đổi cả khoảng nhấn kép Esc lẫn Enter.
+
 Mỗi trình soạn thảo cần vùng gốc nội dung và thanh công cụ riêng, không chồng lấn. Trên trang có nhiều trình soạn thảo, hãy cấp cho từng thanh công cụ bề mặt soạn thảo riêng qua `surface` để tiêu điểm và phím tắt không lẫn sang nhau.
+
+## Cấu hình thanh công cụ
+
+Thanh công cụ mặc định nhóm tiêu đề, định dạng chữ, căn chỉnh, danh sách, chèn và công cụ tài liệu theo thứ tự đó, với vạch dọc ngăn nhóm. Trên máy tính, mọi công cụ trải ra nhiều hàng; trên di động, công cụ nhanh và nút tất cả công cụ nằm trên một hàng. Công cụ thuộc tính của bảng, ảnh và vùng nổi xuất hiện bên dưới, dùng được cùng công cụ văn bản.
+
+Dùng `groups` để đổi thứ tự nhóm và `quick` để đổi thứ tự công cụ nhanh trên di động. Ví dụ, trình soạn thảo thường chèn ảnh có thể đưa nhóm `media` lên đầu.
+
+```ts
+import { TOOLBAR_GROUPS, mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  locale: 'vi',
+  groups: ['media', ...TOOLBAR_GROUPS.filter((group) => group !== 'media')],
+  quick: ['b', 'i', 'tc', 'img'],
+})
+```
+
+Công cụ nhanh giữ nguyên thứ tự chỉ định và không có vạch ngăn. Trong cùng nhóm, thứ tự theo đăng ký cánh. Khi kết xuất trước thanh công cụ bằng SSR, truyền cùng thứ tự nhóm cho máy chủ và trình duyệt. [Giao diện CSS](./style#nguong-che-đo-di-đong) giải thích bố cục theo độ rộng màn hình.
+
+Kết nối `mountHints()` để chọn công cụ bằng bàn phím sau khi nhấn Shift hai lần. Tab chuyển nhóm, phím mũi tên chuyển biểu tượng trong cùng nhóm. Máy tính và toàn màn hình dùng thanh công cụ đang hiển thị; di động dùng bảng tất cả công cụ.
+
+Bảng ảnh, ô nhập URL và trình chọn tệp ghi nhớ vùng chọn lúc mở. Nếu chỉ di chuyển con trỏ, nội dung được chèn tại vị trí ban đầu; nếu sửa hoặc thay tài liệu, thao tác nhập bị hủy kèm thông báo. Hoàn tác về nội dung giống hệt cũng không cho phép dùng lại vùng chọn cũ.
 
 ## Chọn wing
 

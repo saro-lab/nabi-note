@@ -13,6 +13,8 @@ Transformez les éléments dont l'ordre est important en une liste numérotée. 
 
 Les chiffres affichés sont calculés à partir de la position des éléments, donc ils continuent automatiquement lorsque vous ajoutez ou indentez des éléments. La sauvegarde d'un numéro de départ personnalisé et le comptage à partir de ce nombre ne sont pas fournis.
 
+Enter crée l'élément suivant et Shift+Enter ajoute seulement un saut de ligne dans l'élément courant. Tab et Shift+Tab augmentent et réduisent le retrait ; dans les cellules aussi, le retrait de la liste est prioritaire sur le déplacement entre cellules.
+
 <WingDemo path="/wing/block/ordered-list" />
 
 ```ts

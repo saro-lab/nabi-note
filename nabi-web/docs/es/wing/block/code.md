@@ -13,6 +13,8 @@ Inserta código de varias líneas separado del texto normal. Escribe tres acento
 
 El nombre de idioma es un identificador usado para el resaltado de sintaxis, y también se pueden escribir manualmente nombres que no estén en la lista registrada. Como el contenido del código y la indentación deben conservarse, los bloques de código no aceptan alineación de párrafo.
 
+También puedes usar código multilínea y sangría con Tab dentro de las celdas. Aunque Shift+Tab no pueda reducir más la sangría de una línea, permanece dentro del código sin pasar a la celda anterior.
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

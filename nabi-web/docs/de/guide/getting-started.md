@@ -61,7 +61,35 @@ const toolbar = mountToolbar({
 
 `locale` steuert Symbolleiste und Hilfetext; übergeben Sie denselben Wert an jede UI-Einbindung. `placeholder` wird nur für einen leeren Editor angezeigt. `onError` empfängt isolierte Fehler von Befehlen und Callbacks. `undoLimit` ist die Anzahl der Rückgängig-Einträge (standardmäßig 200). `typingMergeMs` ist das Intervall, das aufeinanderfolgende Eingaben in einem einzigen Rückgängig-Schritt zusammenfasst; setzen Sie es auf `0`, um jede Einfügung separat zu halten.
 
+Das Standardintervall für aufeinanderfolgendes Enter zum Verlassen eines Blockcontainers beträgt 180ms. Für doppeltes Esc und Shift bleiben es 350ms. Ein explizites `doubleEnterMs` in `mountSurface()` ändert neben Enter auch das Intervall für doppeltes Esc.
+
 Jeder Editor benötigt seine eigenen nicht überlappenden Inhalts- und Symbolleisten-Wurzeln. Geben Sie auf einer Seite mit mehreren Editoren jeder Symbolleiste ihre eigene Editor-Oberfläche durch `surface` an, damit Fokus und Tastenkürzel nicht ineinander übergehen.
+
+## Toolbar konfigurieren
+
+Die Standard-Toolbar gruppiert Überschriften, Textformatierung, Ausrichtung, Listen, Einfügen und Dokumentwerkzeuge in dieser Reihenfolge, mit senkrechten Trennlinien zwischen den Gruppen. Auf dem Desktop werden alle Werkzeuge mehrzeilig angezeigt, mobil stehen Schnellwerkzeuge und die Schaltfläche für alle Werkzeuge in einer Zeile. Eigenschaftswerkzeuge für Tabellen, Bilder und Float-Bereiche erscheinen darunter und bleiben gemeinsam mit den Textwerkzeugen nutzbar.
+
+`groups` ändert die Gruppenreihenfolge, `quick` die Reihenfolge der mobilen Schnellwerkzeuge. Ein Editor mit häufigen Bildeinfügungen kann beispielsweise die Gruppe `media` nach vorn verschieben.
+
+```ts
+import { TOOLBAR_GROUPS, mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  locale: 'de',
+  groups: ['media', ...TOOLBAR_GROUPS.filter((group) => group !== 'media')],
+  quick: ['b', 'i', 'tc', 'img'],
+})
+```
+
+Schnellwerkzeuge behalten die angegebene Reihenfolge ohne Trennlinien. Innerhalb einer Gruppe gilt die Registrierungsreihenfolge der Wings. Beim Vorrendern der Toolbar per SSR müssen Server und Browser dieselbe Gruppenreihenfolge erhalten. [CSS-Themes](./style#umschaltbreite-fur-den-mobilmodus) erläutert das Layout abhängig von der Bildschirmbreite.
+
+Mit `mountHints()` lässt sich durch zweimaliges Drücken von Shift die Werkzeugauswahl per Tastatur öffnen. Tab wechselt die Gruppe, Pfeiltasten wechseln zwischen Symbolen derselben Gruppe. Desktop und Vollbild verwenden die sichtbare Toolbar, mobil wird die Palette aller Werkzeuge verwendet.
+
+Bildpanels, URL-Eingaben und Dateiauswahl merken sich die Auswahl beim Öffnen. Wird nur der Cursor bewegt, erfolgt das Einfügen an der ursprünglichen Stelle. Wird das Dokument bearbeitet oder ersetzt, wird die Eingabe mit einem Hinweis abgebrochen. Auch wenn Rückgängig denselben Inhalt wiederherstellt, wird die alte Auswahl nicht erneut verwendet.
 
 ## Wings auswählen
 

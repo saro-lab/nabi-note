@@ -61,7 +61,35 @@ const toolbar = mountToolbar({
 
 `locale` mengatur bahasa toolbar dan teks bantuan; berikan nilai yang sama ke setiap UI yang di-mount. `placeholder` hanya ditampilkan pada editor kosong. `onError` menerima kegagalan terisolasi dari perintah dan callback. `undoLimit` adalah jumlah entri undo (bawaan 200). `typingMergeMs` adalah jeda yang menggabungkan pengetikan berurutan menjadi satu langkah undo; atur ke `0` agar setiap penyisipan tetap terpisah.
 
+Interval bawaan penekanan Enter berturut-turut untuk keluar dari kontainer blok adalah 180ms. Esc dan Shift ganda tetap memakai 350ms. Menentukan `doubleEnterMs` secara eksplisit di `mountSurface()` mengubah interval Esc ganda sekaligus Enter.
+
 Setiap editor memerlukan root konten dan toolbar sendiri yang tidak saling tumpang tindih. Pada halaman dengan beberapa editor, berikan setiap toolbar surface editornya sendiri melalui `surface` agar fokus dan pintasan tidak saling bercampur.
+
+## Mengatur bilah alat
+
+Bilah alat bawaan mengelompokkan judul, format teks, perataan, daftar, penyisipan, dan alat dokumen dalam urutan tersebut, dengan pemisah vertikal antarkelompok. Desktop menampilkan semua alat dalam beberapa baris; perangkat seluler menampilkan alat cepat dan tombol semua alat dalam satu baris. Properti tabel, gambar, dan wilayah mengambang muncul di bawahnya sehingga dapat dipakai bersama alat teks.
+
+Gunakan `groups` untuk mengubah urutan kelompok dan `quick` untuk urutan alat cepat seluler. Misalnya, editor yang sering menyisipkan gambar dapat memindahkan kelompok `media` ke depan.
+
+```ts
+import { TOOLBAR_GROUPS, mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  locale: 'id',
+  groups: ['media', ...TOOLBAR_GROUPS.filter((group) => group !== 'media')],
+  quick: ['b', 'i', 'tc', 'img'],
+})
+```
+
+Alat cepat mengikuti urutan yang ditentukan tanpa pemisah. Di dalam kelompok, urutannya mengikuti pendaftaran sayap. Saat melakukan prarender bilah alat dengan SSR, berikan urutan kelompok yang sama di server dan peramban. [Tema CSS](./style#ambang-mode-seluler) menjelaskan tata letak berdasarkan lebar layar.
+
+Hubungkan `mountHints()` agar alat dapat dipilih dengan papan ketik melalui dua kali Shift. Tab berpindah kelompok dan tombol panah berpindah ikon dalam kelompok yang sama. Desktop dan layar penuh memakai bilah alat yang terlihat; perangkat seluler memakai palet semua alat.
+
+Panel gambar, input URL, dan pemilih berkas mengingat seleksi saat dibuka. Jika hanya kursor yang dipindahkan, penyisipan memakai posisi awal; jika dokumen diedit atau diganti, input dibatalkan dengan pemberitahuan. Membatalkan perubahan hingga kontennya sama tidak membuat seleksi lama dapat dipakai kembali.
 
 ## Memilih wing
 

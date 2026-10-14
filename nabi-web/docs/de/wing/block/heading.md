@@ -13,6 +13,8 @@ Verwandeln Sie einen Absatz in eine Überschrift und wählen Sie deren Ebene. Ak
 
 Eine Überschrift ist kein separater Blocktyp. Sie wird als Attribut eines Absatzes gespeichert. Wenn Sie erneut auf die Überschrift klicken, wird sie wieder zu einem normalen Absatz, sodass Sie nur die Ebene ändern können, während die Struktur des Textkörpers intakt bleibt.
 
+In normalen Tabellenzellen lassen sich die enthaltenen Absätze in Überschriften umwandeln. Für Kopfzellen sind Überschriften nicht verfügbar; beim Umwandeln in eine Kopfzelle wird auch vorhandene Überschriftenformatierung entfernt. Bei mehreren ausgewählten Absätzen zeigt die Werkzeugleiste nur dann einen gemeinsamen aktiven Wert, wenn alle dieselbe Überschriftenebene haben.
+
 <WingDemo path="/wing/block/heading" />
 
 ```ts

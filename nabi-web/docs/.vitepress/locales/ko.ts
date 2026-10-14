@@ -36,6 +36,7 @@ export const ko = {
   menu_block_ordered_list: '번호 목록',
   menu_block_task_list: '체크리스트',
   menu_block_table: '표',
+  menu_block_float: '플로트 영역',
   menu_block_image: '이미지',
   menu_block_youtube: '유튜브',
   menu_block_code: '코드',

@@ -38,6 +38,15 @@ Verwenden Sie wurzelrelative Pfade wie `/icons/...` oder vollständige HTTPS-URL
 
 Stellen Sie dem Wert von `data-nabi-icon` das Präfix `--nabi-icon-` voran. So verwendet `diff-close` die Variable `--nabi-icon-diff-close`. Die <a href="/llms/icons.md" target="_blank" rel="noopener">Icon-Spezifikation</a> beschreibt Schlüssel für Kontext, Menüs, Speichern, Verlauf und weitere Bereiche sowie die Kodierung von Sonderzeichen.
 
+Die Einfügeschaltfläche für Float-Bereiche verwendet `toolbar-float`, die Auflösen-Schaltfläche der Eigenschaftswerkzeuge `context-float-unwrap`. Die Standarddateien sind `float-float.svg` und `float-unwrap.svg`; Varianten für dunkle Themes sind ebenfalls enthalten. Auflösen erscheint neben dem Breitenwert. Ein Bildwechsel erhält Name und Tooltip.
+
+```css
+.paper-note {
+  --nabi-icon-toolbar-float: url("/icons/float.svg");
+  --nabi-icon-context-float-unwrap: url("/icons/float-unwrap.svg");
+}
+```
+
 ## Dunkelmodus und Panels
 
 Änderungen an Theme-Klassen oder CSS-Variablen aktualisieren Icons ohne erneutes Mounten. Standardicons folgen dem hellen/dunklen Theme. Eigene Dateien erben `currentColor` nicht; definieren Sie bei Bedarf dunkle Varianten wie oben. Unter `body` geöffnete Panels folgen ebenfalls dem Icon-Theme und den Klassen-/Stiländerungen des ursprünglichen Editors. Setzen Sie Variablen am Editor oder einem gemeinsamen Elternteil, nicht nur innerhalb der Toolbar.

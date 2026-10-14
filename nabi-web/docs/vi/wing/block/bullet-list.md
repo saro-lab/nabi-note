@@ -11,7 +11,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Đây là danh sách liệt kê nhiều mục không theo thứ tự. Trong đoạn trống, nhập Space sau dấu `-` hoặc chuyển đổi bằng thanh công cụ. Bạn cũng có thể gộp các đoạn đã chọn thành danh sách cùng lúc.
 
-Trong danh sách, dùng Tab để thụt vào một cấp và Shift+Tab để thụt ra. Enter tạo mục tiếp theo; nhấn Enter thêm lần nữa trên mục trống để kết thúc danh sách.
+Trong danh sách, dùng Tab để thụt vào một cấp và Shift+Tab để thụt ra. Enter tạo mục tiếp theo; nhấn Enter thêm lần nữa trên mục trống để kết thúc danh sách. Shift+Enter xuống dòng trong mục mà không tách mục đó.
+
+Danh sách trong ô bảng cũng tuân theo các quy tắc nhập này. Trong danh sách, Tab tăng thụt lề thay vì chuyển sang ô khác.
 
 <WingDemo path="/wing/block/bullet-list" />
 

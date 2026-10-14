@@ -17,22 +17,20 @@ import 'nabi-note/nabi.css'
   --nabi-bg: #fff;
   --nabi-accent: #5b4ee8;
   --nabi-content-min-height: 20rem;
-  --nabi-font: Inter, system-ui, sans-serif;
+  --nabi-font: Pretendard, system-ui, sans-serif;
   --nabi-sticky-top: 4rem;
 }
 ```
 
-Weka tokens zinazoshirikiwa kwenye parent ya pamoja ili kihariri na mwonekano wake uliochapishwa viendelee kuwa na lugha ileile ya muonekano.
+Weka darasa moja la mandhari kwenye `.nabi` ya kihariri na `.nabi-content` ya mwonekano uliochapishwa ili kutumia variables sawa. Pakia CSS ya huduma baada ya CSS ya kifurushi na uweke mandhari ya sasa kupitia `data-nabi-theme`.
 
 ```html
-<section class="brand-note">
-  <div class="nabi">...</div>
-  <article class="nabi-content">...</article>
-</section>
+<div class="nabi brand-note" data-nabi-theme="light">...</div>
+<article class="nabi-content brand-note" data-nabi-theme="light">...</article>
 ```
 
 ```css
-.brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-fg: #1f2937;
   --nabi-muted: #6b7280;
   --nabi-bg: #fff;
@@ -56,20 +54,33 @@ Weka tokens zinazoshirikiwa kwenye parent ya pamoja ili kihariri na mwonekano wa
 | Controls za touch | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
 | Upana wa kuingia hali ya simu | `--nabi-mobile-breakpoint` |
 
-Tokens za highlight na text color hutumia `--nabi-hl-<name>` na `--nabi-tc-<name>`. Kubadili `--nabi-hl-yellow`, kwa mfano, hubadili rangi ya kuonyesha highlight za `yellow` zilizohifadhiwa bila kubadili data ya hati.
+Uangaziaji na rangi ya maandishi hutumia `--nabi-hl-<name>` na `--nabi-tc-<name>`. Mandharinyuma ya seli hutumia `--nabi-cell-<name>` yenye `yellow`, `green`, `cyan`, `pink`, `purple`, `orange`. Variables hubadili rangi inayoonekana pekee, si jina lililohifadhiwa.
 
 ```css
-.article-editor {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-hl-yellow: #fff0a6;
   --nabi-tc-blue: #2563eb;
+  --nabi-cell-cyan: #e2f4f7;
+}
+```
+
+Mandhari ya kawaida hutumia rangi hafifu kwa mandharinyuma ya seli. Hali nyeusi huhifadhi majina lakini hutumia rangi tofauti, angavu zaidi na zisizokolea sana, ili zitofautishwe kwenye msingi mweusi. Rangi hizi zenye uwazi kiasi huonyesha msingi; ukizibadili, hakiki utofauti wa maandishi kwenye mandharinyuma halisi ya ukurasa. Ili kubatilisha variables za rangi za kawaida, weka darasa la mandhari kwenye elementi halisi ya kihariri au maudhui yaliyochapishwa kama hapo juu, si kwenye mzazi yeyote wa nje.
+
+```css
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
+  --nabi-cell-cyan: #183b43;
 }
 ```
 
 ## Kizingiti cha hali ya simu
 
-Hali ya simu huanza upana wa upau wa zana, mstari wa muktadha au eneo la kuonyesha unapokuwa chini ya `36rem`. Upana wa `36rem` hasa hubaki na mpangilio wa kawaida. Katika hali ya simu, upau wa zana na mstari wa muktadha husogezwa mlalo, paneli huwekwa katikati, na kichagua jedwali hupunguzwa hadi visanduku 5×5 vinavyofaa kuguswa.
+Upau wa kawaida `layout: 'compact'` hubadilika kuwa mstari mmoja wa simu upana wa skrini ukiwa chini ya `36rem`. `36rem` kamili huhifadhi mpangilio wa kompyuta. Kompyuta huonyesha zana zote kwa kuvunja mistari hata kihariri kikiwa chembamba. Sifa za vitu pia huvunja mistari chini yake; mistari yote miwili huchukua nafasi juu ya maandishi. Skrini nzima hupanua zana zote bila kujali upana.
 
-Weka `--nabi-mobile-breakpoint` kwenye `:root`, kipengele cha juu au `.nabi` moja. Tumia urefu wa CSS usio hasi kama `rem`, `px` au `calc()`. Mabadiliko ya thamani ya CSS, ukubwa wa fonti ya mzizi, upana wa kontena au eneo la kuonyesha husasisha pia paneli zilizo wazi kiotomatiki. Paneli za kuingiza data zilizohamishwa chini ya `body` huendelea kutumia kizingiti cha kihariri cha asili.
+Kwenye simu, zana za haraka, kitufe cha zana zote na vitufe vilivyounganishwa vya hakikisho/skrini nzima hubaki kwenye upau mkuu. Bado vinatumika sifa zinapoonekana. Paleti ya zana zote hutumia mpangilio wa makundi na vitenganishi vya kompyuta. `layout: 'wrap'` huonyesha zana zote kwa kuvunja mistari kila wakati.
+
+Paneli za simu hufunguka kwenye nafasi iliyopo karibu na upau na sifa. Kichaguzi cha ukubwa wa jedwali ni tofauti: hufunguka katikati juu ya msingi wenye uwazi kiasi, kwa gridi ya 5×5 rahisi kugusa. Hakisubiri kibodi ifungwe; kuchagua ukubwa huingiza jedwali moja kisha kufunga kichaguzi.
+
+Weka `--nabi-mobile-breakpoint` kwenye `:root`, elementi ya juu au `.nabi` moja kubadili kizingiti. Tumia urefu wa CSS usio hasi kama `rem`, `px` au `calc()`. Mabadiliko ya thamani ya CSS, ukubwa wa fonti ya mzizi au upana wa skrini husasisha pia paneli zilizo wazi kiotomatiki. Paneli za kuingiza zilizohamishwa chini ya `body` huhifadhi kizingiti cha kihariri cha asili.
 
 ```css
 .article-editor {
@@ -77,7 +88,7 @@ Weka `--nabi-mobile-breakpoint` kwenye `:root`, kipengele cha juu au `.nabi` moj
 }
 ```
 
-Vifaa vya kugusa hubakiza vidhibiti vikubwa hata juu ya kizingiti hiki.
+Maeneo yanayoelea yana kizingiti tofauti cha safu moja. Hutumia safu moja kontena la maandishi, si skrini, likiwa chini ya `36rem`; uchapishaji hutumia mpangilio huo huo.
 
 ## Dark mode
 
@@ -91,7 +102,7 @@ Light mode ndiyo chaguomsingi. Ongeza `.dark` kwenye `html` au `body`, au weka `
 Tumia `data-nabi-theme="light"` kujiondoa kwenye `.dark` ya ancestor. Programu yako ndiyo inadhibiti kubadilisha mandhari; kifurushi hakifuati `prefers-color-scheme` kiotomatiki.
 
 ```css
-.dark .brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
   --nabi-fg: #f3f4f6;
   --nabi-muted: #a1a1aa;
   --nabi-bg: #18181b;
@@ -111,7 +122,7 @@ HTML iliyochapishwa pia inahitaji `.nabi-content` na CSS ileile. Jedwali, code b
 
 ```css
 .article-body {
-  --nabi-font: "Source Serif 4", Georgia, serif;
+  --nabi-font: "Noto Serif KR", serif;
   --nabi-bg: transparent;
 }
 ```

@@ -111,6 +111,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -126,6 +128,10 @@ export const exCallout: Wing = {
 이 선언만으로는 문단을 안내 상자 안으로 넣는 명령이 생기지 않습니다. 선택한 문단을 감싸는
 순수 명령을 `commands`에 추가하고, 그 명령을 실행하는 `button`을 선언해야 편집기 UI에서
 사용할 수 있습니다.
+
+`isolating: true`는 여러 문단을 허용하면서 삭제가 안내 상자의 경계를 넘어 이웃 내용과 합쳐지는
+것을 막습니다. `scopedCommands`에 적은 명령은 상자 안의 문서를 기준으로 실행되므로,
+이미지·표 삽입과 목록·인용 전환이 상자 밖으로 나가지 않습니다.
 
 ### 5. 목록과 항목을 함께 만드는 기능
 
@@ -193,10 +199,10 @@ const exNote = {
 | 구분 | 옵션 | 용도 |
 | --- | --- | --- |
 | 기본 | `w`, `place`, `basic`, `styles` | 이름, 구조 종류, 기본 날개 포함 여부, 기본 CSS |
-| 구조 | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | 자식 종류, Enter 동작, 허용 속성, boolean 속성 |
+| 구조 | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | 자식 종류, Enter 동작, 편집 경계 보호, 허용 속성, boolean 속성 |
 | 구조 | `parts`, `allows`, `noAlign`, `requiresAnyOf` | 내부 part, 허용 자식, 정렬 금지, 의존 날개 |
 | 값 선택 | `attrKey`, `attrValues`, `currentValue` | 저장할 값의 키·목록과 현재 선택값 판정 |
-| 명령·입력 | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | 명령, 키 처리, Escape·연속 키·자동 변환 |
+| 명령·입력 | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | 명령, 내부 문서에서 실행할 명령, 키 처리, Escape·연속 키·자동 변환 |
 | 화면 연결 | `attach` | surface에 필요한 DOM 동작과 해제 처리 |
 | 변환 | `toHtml`, `partHtml`, `toMd`, `partMd` | HTML·Markdown 출력 |
 | 가져오기·복구 | `claim`, `ioFilter`, `repair`, `partRepair` | HTML 가져오기, 파일 처리, JSON 검증·복구 |
@@ -230,6 +236,41 @@ listener나 속성을 바꾼 직후 `host.onDispose()`로 원복 함수를 등�
 
 툴바와 상황 도구는 `button`, `buttons`, `context` 선언으로 만듭니다. 같은 명령 규칙을
 애플리케이션 UI에서 별도로 구현하면 툴바와 문서 모델이 어긋날 수 있습니다.
+
+### 블록 안에서 명령 실행하기
+
+`scopedCommands`는 `holds: 'blocks'`인 컨테이너와 블록을 담는 `parts`에 선언합니다. 선택의
+양 끝이 같은 영역 안에 있으면 그 영역의 자식 문서와 상대 선택 경로를 명령에 전달하고,
+결과를 다시 바깥 문서에 반영합니다. 영역 경계를 넘는 선택은 거절하며, 해당 영역 밖에서는
+원래 명령대로 동작합니다. 플로트 영역과 표 셀도 이 방식으로 삽입·변환·업로드 범위를 지킵니다.
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+목록에는 날개 명령만 지정할 수 있습니다. 등록되지 않은 명령은 건너뛰므로 이미지나 업로드
+날개를 반드시 함께 등록하게 만들지는 않습니다. 전달받은 내부 문서와 상대 경로만으로 동작하는
+명령을 골라야 하며, 문서 전체의 절대 경로를 요구하거나 전체 문서를 교체하는 명령은 넣지
+않습니다. 코어 명령도 이 목록에 지정할 수 없습니다.
+
+`singleParagraph`는 문단을 하나로 제한하는 옵션이고, `isolating`은 여러 문단을 유지한 채
+Backspace·Delete가 편집 경계를 넘지 않게 하는 옵션입니다. 블록을 담는 `parts`에도
+`isolating: true`를 선언할 수 있습니다.
+
+### 중첩된 블록의 키 처리
+
+`onKey`가 받는 `KeyIntent.shift`로 Enter와 Shift+Enter를 구분할 수 있습니다. 독립된 편집
+영역 안에서 내부 날개가 `null`을 반환하면 그 영역까지의 상위 날개에 차례로 처리를 맡깁니다.
+그래서 셀 안 목록·코드는 먼저 들여쓰기를 처리하고, 처리하지 않은 Tab은 셀 이동에 사용할 수
+있습니다. 한 키 입력에서 같은 날개를 두 번 호출하지는 않습니다.
 
 ## CSS 스타일
 

@@ -11,6 +11,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Tempatkan huruf pertama paragraf pada ukuran lebih besar dan biarkan baris berikutnya mengalir di sisinya. Ini adalah pemformatan tingkat paragraf, sehingga tidak diterapkan hanya pada sebagian kata terpilih.
 
+Di dalam tabel, huruf awal besar diterapkan pada paragraf di dalam sel, bukan selnya. Memilih beberapa sel mengubah semua paragraf yang mendukungnya di dalam sel tersebut; status toolbar juga mencerminkan pilihan paragraf yang sama.
+
 Tampilan terbit dan tampilan edit mempertahankan bentuk yang sama. Saat mengedit, huruf pertama dibungkus dalam elemen nyata agar posisi kursor dan hapus tidak bergeser; elemen itu tidak termasuk dalam isi dokumen tersimpan.
 
 <WingDemo path="/wing/etc/dropcap" />

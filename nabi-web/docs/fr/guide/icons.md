@@ -38,6 +38,15 @@ Utilisez des chemins depuis la racine comme `/icons/...` ou des URL HTTPS compl�
 
 Préfixez la valeur `data-nabi-icon` de l’élément par `--nabi-icon-` pour obtenir sa variable CSS. Ainsi, `diff-close` utilise `--nabi-icon-diff-close`. Le <a href="/llms/icons.md" target="_blank" rel="noopener">contrat des icônes</a> décrit les clés de contexte, menu, enregistrement, historique et autres, ainsi que l’encodage des caractères spéciaux.
 
+Le bouton d'insertion d'une zone flottante utilise `toolbar-float` et le bouton de suppression de l'enveloppe dans les propriétés utilise `context-float-unwrap`. Les fichiers par défaut sont `float-float.svg` et `float-unwrap.svg`, également fournis en version sombre. Le bouton de suppression de l'enveloppe apparaît près de la largeur ; changer son image conserve son nom et son infobulle.
+
+```css
+.paper-note {
+  --nabi-icon-toolbar-float: url("/icons/float.svg");
+  --nabi-icon-context-float-unwrap: url("/icons/float-unwrap.svg");
+}
+```
+
 ## Mode sombre et panneaux
 
 Modifier la classe de thème ou une variable CSS actualise les icônes sans nouveau mount. Les icônes par défaut suivent le thème clair/sombre. Les fichiers personnalisés n’héritent pas de `currentColor` ; prévoyez des variantes sombres comme ci-dessus si nécessaire. Les panneaux ouverts sous `body` suivent aussi le thème d’icônes et les changements de classe/style de l’éditeur source. Placez les variables sur l’éditeur ou un parent commun, pas seulement dans la barre d’outils.

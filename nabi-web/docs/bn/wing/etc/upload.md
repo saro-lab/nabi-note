@@ -25,6 +25,12 @@ const selected = wings()
 
 শুধু `upload` নির্বাচন করলে image বা link-এর যে একটি নির্ভরতা অনুপস্থিত থাকে, সেটি স্বয়ংক্রিয়ভাবে যোগ হয়। স্থানান্তর `mountUpload()` দিয়ে যুক্ত করুন এবং সম্পাদনা পর্দায় অগ্রগতির UI সাধারণত `mountUploadView()` দিয়ে যুক্ত করা হয়। সার্ভার HTTPS URL ফেরত দিলে local URL বিকল্পের প্রয়োজন নেই।
 
+## আপলোড কোথায় যোগ হবে
+
+ফাইল বাছাই উইন্ডো খোলা বা আপলোড শুরুর অবস্থান মনে রাখা হয়। শুধু কার্সর সরালে মূল অবস্থানেই যোগ হয়। টেবিলের ঘরে শুরু হলে অগ্রগতির নির্দেশক এবং সম্পূর্ণ বিষয়বস্তু সেই ঘরেই থাকে। ভাসমান অঞ্চলে শুরু হওয়া আপলোডের ফলও সেই অঞ্চলে যায়। একাধিক ঘরের সীমানা পেরোনো নির্বাচনে আপলোড যোগ করা যায় না।
+
+ফাইল বাছাই বা অ্যাসিঙ্ক্রোনাস প্রক্রিয়ার সময় নথি সম্পাদনা বা প্রতিস্থাপন করলে যোগ করা বাতিল হয় ও বার্তা দেখায়। পূর্বাবস্থায় ফিরিয়ে একই বিষয়বস্তু আনলেও পুরোনো অবস্থানে যোগ হয় না। শুধু স্থানান্তর সফল হওয়া দিয়ে সম্পূর্ণ হয়েছে কি না বিচার করবেন না: `onDone`-এ পাওয়া `committed` ও `cancelled` দেখুন। `committed` হলো সত্যিই নথিতে যোগ হওয়া ফাইলের সংখ্যা।
+
 ## সার্ভার API চুক্তি
 
 NABI NOTE নিজে আপনার সার্ভারে ফাইল পাঠায় না। `uploader` ফাংশনটি একটি করে ফাইল সার্ভারে পাঠায় এবং সফল হলে কেবল একটি public বা authenticated `https:` URL ফেরত দেয়। সবচেয়ে সহজ API চুক্তিটি এমন।
@@ -58,6 +64,7 @@ Content-Type: multipart/form-data
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -121,9 +128,18 @@ const surface = mountSurface({
   fileSink: upload.take,
   locale: 'bn',
 })
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'bn',
+})
 ```
 
-`fileSink: upload.take` যুক্ত করুন, যাতে টেনে এনে ছাড়া এবং শুধু ফাইল থাকা পেস্টের কাজ upload flow-তে প্রবেশ করে। upload wing-এর UI ফাইল বাছাই বোতামের ফল `upload.take()`-এ পাঠায়। আপলোড চলাকালে সম্পাদকটি লক থাকে এবং প্রতিটি batch-এর সফল ফাইলগুলো একটি undo ধাপে যোগ হয়। `upload.cancel()` অথবা `uploadView`-এর cancel বোতাম `AbortSignal`-এর মাধ্যমে চলমান request বন্ধ করে।
+`fileSink: upload.take` যুক্ত করুন যাতে টেনে ছাড়া এবং শুধু ফাইল পেস্ট করা আপলোডের প্রক্রিয়ায় যায়। টুলবারের `onFiles: upload.take` দিয়ে ফাইল বাছাই বোতাম যুক্ত করুন। আপলোড চলাকালে সম্পাদক লক থাকে এবং প্রতি ব্যাচের সফল ফাইলগুলো একটি পূর্বাবস্থায় ফেরানোর ধাপে যোগ হয়। `upload.cancel()` বা `uploadView`-এর বাতিল বোতাম `AbortSignal` দিয়ে চলমান অনুরোধ থামায়।
 
 ## ব্যর্থতা ও পরিষ্কার করা
 
@@ -131,6 +147,7 @@ const surface = mountSurface({
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

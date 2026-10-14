@@ -13,6 +13,8 @@ Jeri ne mai matsayin ko an kammala abu. A sakin layi fanko, rubuta `[ ]` ko `[x]
 
 Ana adana ko an duba abu a matsayin sifar abu tare da daftari. Lokacin raba abu, matsayin dubawa yana bin abin da rubutu ya rage a ciki, ba abin farko marar rubutu ba, saboda haka matsayin ba zai rikice ba ko ka raba aikin da aka kammala gida biyu.
 
+Enter yana raba abu, Shift+Enter kuma yana sauya layi kawai a cikinsa. Tab da Shift+Tab suna ƙara da rage zurfi. Haka ake yi a sel na tebur, kuma ana adana yanayin alamar cika tare.
+
 <WingDemo path="/wing/block/task-list" />
 
 ```ts

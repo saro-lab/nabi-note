@@ -25,6 +25,12 @@ const selected = wings()
 
 Jika Anda hanya memilih `upload`, paket ini secara otomatis melengkapi salah satu dependensi gambar atau tautan yang belum ada. Transfer dihubungkan dengan `mountUpload()`, dan UI progres pada layar pengeditan biasanya dihubungkan dengan `mountUploadView()`. Jika server mengembalikan URL HTTPS, opsi URL lokal tidak diperlukan.
 
+## Posisi penyisipan upload
+
+Posisi saat pemilih file dibuka atau upload dimulai akan diingat. Jika hanya kursor yang dipindahkan, penyisipan tetap dilakukan di posisi awal. Jika upload dimulai dalam sel tabel, indikator progres dan isi akhirnya tetap di dalam sel itu. Hasil upload yang dimulai dalam area mengambang juga masuk ke area tersebut. Upload tidak dapat disisipkan pada pilihan yang melintasi beberapa sel.
+
+Mengedit atau mengganti dokumen selama pemilihan file atau pemrosesan asinkron membatalkan penyisipan dan menampilkan pemberitahuan. Undo yang mengembalikan isi sama tidak memulihkan penyisipan di posisi lama. Jangan menilai penyelesaian hanya dari keberhasilan transfer: periksa `committed` dan `cancelled` yang diterima `onDone`. `committed` adalah jumlah file yang benar-benar disisipkan dalam dokumen.
+
 ## Kontrak API server
 
 NABI NOTE tidak mengirim file ke server Anda dengan sendirinya. Fungsi `uploader` mengirim satu file ke server, lalu jika berhasil hanya mengembalikan URL `https:` publik atau yang diautentikasi. Kontrak API paling sederhana tampak seperti ini.
@@ -58,6 +64,7 @@ Contoh di bawah ini adalah integrasi nyata yang diharapkan NABI NOTE. Contoh mem
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -67,7 +74,7 @@ import {
 const content = document.querySelector<HTMLElement>('#content')!
 const { nabi, registry } = createNabiWith(
   wings().use('img').use('a').use('upload').build(),
-  { locale: 'en' },
+  { locale: 'id' },
 )
 
 function sendUpload(task: UploadTask): Promise<{ uri: string } | null> {
@@ -105,25 +112,34 @@ const upload = mountUpload({
   extensions: ['png', 'jpg', 'jpeg', 'webp', 'pdf'],
   maxFileSize: 10 * 1024 * 1024,
   maxTotalSize: 20 * 1024 * 1024,
-  locale: 'en',
+  locale: 'id',
   onStart: (tasks) => uploadView.start(tasks),
   onProgress: (id, percent) => uploadView.progress(id, percent),
   onSettle: () => uploadView.settle(),
   onDone: () => uploadView.done(),
 })
 
-uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'en' })
+uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'id' })
 
 const surface = mountSurface({
   nabi,
   registry,
   root: content,
   fileSink: upload.take,
-  locale: 'en',
+  locale: 'id',
+})
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'id',
 })
 ```
 
-Hubungkan `fileSink: upload.take` agar drag and drop, serta operasi paste yang hanya berisi file, masuk ke alur upload. UI wing upload meneruskan hasil tombol pemilihan file ke `upload.take()`. Saat upload berlangsung, editor dikunci dan file yang berhasil dari setiap batch disisipkan sebagai satu langkah undo. `upload.cancel()` atau tombol batal di `uploadView` membatalkan permintaan yang sedang berjalan melalui `AbortSignal`.
+Hubungkan `fileSink: upload.take` agar seret dan lepas serta tempel yang hanya berisi file masuk ke alur upload. Hubungkan tombol pemilihan file melalui `onFiles: upload.take` pada toolbar. Selama upload, editor terkunci dan file yang berhasil disisipkan dalam satu langkah undo per batch. `upload.cancel()` atau tombol batal di `uploadView` menghentikan permintaan yang berjalan melalui `AbortSignal`.
 
 ## Kegagalan dan pembersihan
 
@@ -131,6 +147,7 @@ Jika server mengembalikan respons error atau `uploader` mengembalikan `null`, fi
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

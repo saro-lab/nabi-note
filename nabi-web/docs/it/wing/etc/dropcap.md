@@ -11,6 +11,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Mostra la prima lettera di un paragrafo in dimensione maggiore e lascia che le righe successive le scorrano accanto. È una formattazione a livello di paragrafo, quindi non si applica soltanto a una parte della parola selezionata.
 
+In una tabella, il capolettera si applica ai paragrafi interni, non alle celle. Selezionando più celle si modificano tutti i paragrafi compatibili al loro interno; lo stato della barra si basa sulla stessa selezione di paragrafi.
+
 La vista pubblicata e quella di modifica mantengono la stessa forma. Durante la modifica, la prima lettera è racchiusa in un elemento reale affinché le posizioni del cursore e di eliminazione non slittino; quell'elemento non è incluso nel contenuto salvato del documento.
 
 <WingDemo path="/wing/etc/dropcap" />

@@ -25,6 +25,12 @@ const selected = wings()
 
 اگر فقط `upload` را انتخاب کنید، وابستگی گم‌شدهٔ تصویر یا پیوند را خودکار فراهم می‌کند. انتقال با `mountUpload()` متصل می‌شود و UI پیشرفت در صفحهٔ ویرایش معمولاً با `mountUploadView()` متصل می‌شود. اگر سرور URLهای HTTPS برگرداند، گزینهٔ URL محلی لازم نیست.
 
+## محل درج بارگذاری‌ها
+
+محلی که انتخابگر فایل باز یا بارگذاری شروع شده است به خاطر سپرده می‌شود. اگر فقط مکان‌نما جابه‌جا شود، درج در همان محل اولیه انجام می‌شود. اگر بارگذاری در سلول شروع شود، نشانگر پیشرفت و محتوای نهایی در همان سلول می‌مانند. نتیجهٔ بارگذاری از ناحیهٔ شناور نیز در همان ناحیه درج می‌شود. درج بارگذاری در انتخابی که از مرز چند سلول عبور کند ممکن نیست.
+
+ویرایش یا جایگزینی سند هنگام انتخاب فایل یا پردازش ناهمگام، درج را لغو کرده و پیام نشان می‌دهد. بازگرداندن همان محتوا با واگرد هم درج در محل قبلی را بازنمی‌گرداند. تکمیل را فقط بر اساس موفقیت انتقال نسنجید: `committed` و `cancelled` دریافتی در `onDone` را بررسی کنید. `committed` تعداد فایل‌هایی است که واقعاً در سند درج شده‌اند.
+
 ## قرارداد API سرور
 
 NABI NOTE به‌خودی‌خود فایل‌ها را به سرور شما نمی‌فرستد. تابع `uploader` یک فایل را به سرور می‌فرستد و در موفقیت فقط یک URL عمومی یا دارای احراز هویت `https:` برمی‌گرداند. ساده‌ترین قرارداد API چنین است.
@@ -58,6 +64,7 @@ Failure: 4xx or 5xx response
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -67,7 +74,7 @@ import {
 const content = document.querySelector<HTMLElement>('#content')!
 const { nabi, registry } = createNabiWith(
   wings().use('img').use('a').use('upload').build(),
-  { locale: 'en' },
+  { locale: 'fa' },
 )
 
 function sendUpload(task: UploadTask): Promise<{ uri: string } | null> {
@@ -105,25 +112,34 @@ const upload = mountUpload({
   extensions: ['png', 'jpg', 'jpeg', 'webp', 'pdf'],
   maxFileSize: 10 * 1024 * 1024,
   maxTotalSize: 20 * 1024 * 1024,
-  locale: 'en',
+  locale: 'fa',
   onStart: (tasks) => uploadView.start(tasks),
   onProgress: (id, percent) => uploadView.progress(id, percent),
   onSettle: () => uploadView.settle(),
   onDone: () => uploadView.done(),
 })
 
-uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'en' })
+uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'fa' })
 
 const surface = mountSurface({
   nabi,
   registry,
   root: content,
   fileSink: upload.take,
-  locale: 'en',
+  locale: 'fa',
+})
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'fa',
 })
 ```
 
-`fileSink: upload.take` را متصل کنید تا drag and drop و pasteهای فقط‌فایل وارد جریان بارگذاری شوند. UI wing بارگذاری نتیجه‌های دکمهٔ انتخاب فایل را به `upload.take()` می‌دهد. هنگام بارگذاری ویرایشگر قفل است و فایل‌های موفق هر batch در یک گام undo وارد می‌شوند. `upload.cancel()` یا دکمهٔ لغو در `uploadView` درخواست‌های درحال‌اجرا را با `AbortSignal` متوقف می‌کند.
+`fileSink: upload.take` را وصل کنید تا کشیدن و رها کردن و چسباندنِ فقط فایل وارد جریان بارگذاری شوند. دکمهٔ انتخاب فایل را با `onFiles: upload.take` نوار ابزار وصل کنید. هنگام بارگذاری ویرایشگر قفل می‌شود و فایل‌های موفق هر دسته در یک مرحلهٔ واگرد درج می‌شوند. `upload.cancel()` یا دکمهٔ لغو در `uploadView` درخواست‌های جاری را از طریق `AbortSignal` متوقف می‌کند.
 
 ## خطا و پاک‌سازی
 
@@ -131,6 +147,7 @@ const surface = mountSurface({
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

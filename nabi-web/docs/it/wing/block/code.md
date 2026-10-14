@@ -13,6 +13,8 @@ Inserisci il codice su più righe separatamente dal testo normale. In un paragra
 
 Il nome del linguaggio è un identificatore usato per l'evidenziazione della sintassi e possono essere digitati manualmente anche nomi al di fuori dell'elenco registrato. Poiché il contenuto del codice e il rientro devono essere preservati, i blocchi di codice non accettano l'allineamento del paragrafo.
 
+Puoi usare codice su più righe e rientri con Tab anche nelle celle. Se Shift+Tab non può ridurre ulteriormente il rientro di una riga, rimane comunque nel codice invece di passare alla cella precedente.
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

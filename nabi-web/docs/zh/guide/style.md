@@ -17,22 +17,20 @@ import 'nabi-note/nabi.css'
   --nabi-bg: #fff;
   --nabi-accent: #5b4ee8;
   --nabi-content-min-height: 20rem;
-  --nabi-font: Inter, system-ui, sans-serif;
+  --nabi-font: Pretendard, system-ui, sans-serif;
   --nabi-sticky-top: 4rem;
 }
 ```
 
-把共用 token 放在共同父元素上，让编辑器和发布页面保持同一种视觉语言。
+为编辑器的 `.nabi` 和发布页面的 `.nabi-content` 指定相同的主题类，即可对两者应用相同变量。在包的 CSS 之后加载业务 CSS，并通过 `data-nabi-theme` 指定当前主题。
 
 ```html
-<section class="brand-note">
-  <div class="nabi">...</div>
-  <article class="nabi-content">...</article>
-</section>
+<div class="nabi brand-note" data-nabi-theme="light">...</div>
+<article class="nabi-content brand-note" data-nabi-theme="light">...</article>
 ```
 
 ```css
-.brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-fg: #1f2937;
   --nabi-muted: #6b7280;
   --nabi-bg: #fff;
@@ -56,20 +54,33 @@ import 'nabi-note/nabi.css'
 | 触控控件 | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
 | 移动模式切换宽度 | `--nabi-mobile-breakpoint` |
 
-荧光笔和文字颜色 token 使用 `--nabi-hl-<name>` 与 `--nabi-tc-<name>`。例如修改 `--nabi-hl-yellow`，会改变已保存的 `yellow` 荧光笔显示颜色，而不会改变文档数据。
+高亮和文字颜色分别使用 `--nabi-hl-<name>`、`--nabi-tc-<name>`。表格单元格背景色使用 `--nabi-cell-<name>`，支持 `yellow`、`green`、`cyan`、`pink`、`purple`、`orange`。变量只改变显示颜色，不改变存储的颜色名称。
 
 ```css
-.article-editor {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-hl-yellow: #fff0a6;
   --nabi-tc-blue: #2563eb;
+  --nabi-cell-cyan: #e2f4f7;
+}
+```
+
+默认主题使用浅淡的单元格背景色。深色模式保留相同的颜色名称，但使用另一组更明亮、饱和度更低的颜色，让它们在深色背景上也容易区分。这些颜色为半透明，会透出底色；自定义时请在实际页面背景上检查与文字的对比度。要覆盖元素的默认颜色变量，应像上例一样，把主题类指定在实际的编辑器或发布内容元素上，而不是任意外层父元素上。
+
+```css
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
+  --nabi-cell-cyan: #183b43;
 }
 ```
 
 ## 移动模式切换宽度
 
-当工具栏、上下文栏的宽度或视口宽度小于 `36rem` 时，界面切换到移动模式。宽度恰好为 `36rem` 时保持常规布局。移动模式下，工具栏和上下文栏可横向滚动，面板居中显示，表格选择网格缩减为便于触摸的 5×5 个单元格。
+默认 `layout: 'compact'` 工具栏在屏幕宽度小于 `36rem` 时切换为移动端单行布局。恰好为 `36rem` 时保留桌面布局。桌面端即使编辑器本身较窄，也会换行显示全部工具。对象属性工具也会在下方换行，两行都占据正文上方的空间。全屏模式无论屏幕宽度如何，都展开全部工具。
 
-在 `:root`、祖先元素或单个 `.nabi` 上设置 `--nabi-mobile-breakpoint` 即可更改阈值。请使用 `rem`、`px` 或 `calc()` 等非负 CSS 长度。CSS 值、根元素字号、容器宽度或视口宽度变化时，已打开的面板也会自动更新。移至 `body` 下的输入面板仍使用原编辑器的阈值。
+移动端的主工具栏保留快捷工具、全部工具按钮，以及已连接的预览和全屏按钮。属性工具出现时，这些按钮仍可一起使用。全部工具面板沿用桌面端的分组顺序和分隔线。`layout: 'wrap'` 始终换行显示全部工具。
+
+移动端面板在工具栏和属性工具周围的可用空间内打开。表格尺寸选择器是例外：它会在半透明背景上居中打开，显示便于触摸的 5×5 网格。它不等待键盘关闭，选好尺寸后插入一个表格并关闭。
+
+可在 `:root`、祖先元素或单个 `.nabi` 上设置 `--nabi-mobile-breakpoint` 来改变阈值。使用 `rem`、`px`、`calc()` 等非负 CSS 长度值。CSS 值、根字号或屏幕宽度变化时，已打开的面板也会自动更新。移至 `body` 下的输入面板仍遵循原编辑器的阈值。
 
 ```css
 .article-editor {
@@ -77,7 +88,7 @@ import 'nabi-note/nabi.css'
 }
 ```
 
-触摸设备在宽度超过此阈值时仍保留较大的操作控件。
+浮动区域切换为单列的阈值是独立的。它依据正文容器的宽度，而非屏幕宽度；低于 `36rem` 时显示为一列，打印时也使用相同布局。
 
 ## 深色模式
 
@@ -91,7 +102,7 @@ import 'nabi-note/nabi.css'
 使用 `data-nabi-theme="light"` 可以退出祖先元素的 `.dark`。主题切换由你的应用控制；包不会自动跟随 `prefers-color-scheme`。
 
 ```css
-.dark .brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
   --nabi-fg: #f3f4f6;
   --nabi-muted: #a1a1aa;
   --nabi-bg: #18181b;
@@ -111,7 +122,7 @@ import 'nabi-note/nabi.css'
 
 ```css
 .article-body {
-  --nabi-font: "Noto Serif SC", "Source Serif 4", serif;
+  --nabi-font: "Noto Serif KR", serif;
   --nabi-bg: transparent;
 }
 ```

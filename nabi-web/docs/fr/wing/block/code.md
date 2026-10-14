@@ -13,6 +13,8 @@ Insérez du code sur plusieurs lignes séparément du texte ordinaire du corps. 
 
 Le nom de la langue est un identifiant utilisé pour la coloration syntaxique, et des noms en dehors de la liste enregistrée peuvent également être tapés manuellement. Étant donné que le contenu du code et l'indentation doivent être préservés, les blocs de code n'acceptent pas l'alignement des paragraphes.
 
+Vous pouvez aussi utiliser du code sur plusieurs lignes et le retrait avec Tab dans les cellules. Même lorsque Shift+Tab ne peut plus réduire le retrait d'une ligne, le curseur reste dans le code au lieu de passer à la cellule précédente.
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

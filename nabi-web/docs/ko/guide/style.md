@@ -23,17 +23,17 @@ import 'nabi-note/nabi.css'
 }
 ```
 
-같은 토큰을 편집기와 게시 화면의 공통 부모에 두면 두 화면이 같은 분위기를 유지합니다.
+편집기의 `.nabi`와 게시 화면의 `.nabi-content`에 같은 테마 클래스를 지정하면 두 화면에
+같은 변수를 적용할 수 있습니다. 패키지 CSS 뒤에 서비스 CSS를 불러오고, 현재 테마를
+`data-nabi-theme`으로 지정합니다.
 
 ```html
-<section class="brand-note">
-  <div class="nabi">...</div>
-  <article class="nabi-content">...</article>
-</section>
+<div class="nabi brand-note" data-nabi-theme="light">...</div>
+<article class="nabi-content brand-note" data-nabi-theme="light">...</article>
 ```
 
 ```css
-.brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-fg: #1f2937;
   --nabi-muted: #6b7280;
   --nabi-bg: #fff;
@@ -57,21 +57,46 @@ import 'nabi-note/nabi.css'
 | 터치 환경 | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
 | 모바일 모드 전환 폭 | `--nabi-mobile-breakpoint` |
 
-형광펜과 글자색은 각각 `--nabi-hl-<name>`, `--nabi-tc-<name>`으로 바꿉니다. 예를 들어
-`--nabi-hl-yellow`을 바꾸면 문서에 저장된 `yellow` 형광펜 값의 화면색만 바뀝니다.
+형광펜과 글자색은 각각 `--nabi-hl-<name>`, `--nabi-tc-<name>`으로 바꿉니다. 표의 셀 배경색은
+`--nabi-cell-<name>`을 사용하며 `yellow`, `green`, `cyan`, `pink`, `purple`, `orange`를
+지원합니다. 변수는 저장된 색 이름을 바꾸지 않고 화면에 표시하는 색만 바꿉니다.
 
 ```css
-.article-editor {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-hl-yellow: #fff0a6;
   --nabi-tc-blue: #2563eb;
+  --nabi-cell-cyan: #e2f4f7;
+}
+```
+
+셀 배경색은 기본 테마에서 연한 색으로 표시합니다. 다크 모드에서는 같은 색 이름을 유지하면서
+밝고 채도가 낮은 별도 색상을 사용해 어두운 바탕에서도 색을 구분하기 쉽게 합니다.
+배경이 비치는 반투명 색이므로 직접 색을 바꾼다면 실제 페이지 배경에서 글자와의 대비를 확인하세요.
+테마 클래스는 임의의 바깥 부모가 아니라 위 예시처럼 실제 편집기·게시 요소에
+지정해야 그 요소의 기본 색 변수를 덮어쓸 수 있습니다.
+
+```css
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
+  --nabi-cell-cyan: #183b43;
 }
 ```
 
 ## 모바일 모드 기준
 
-툴바·상황 줄의 폭이나 화면 폭이 `36rem` 미만이면 모바일 모드로 전환됩니다. 정확히 `36rem`이면 일반 모드를 유지합니다. 모바일 모드에서는 툴바와 상황 줄을 가로로 스크롤하고, 패널을 가운데에 띄우며, 표 선택 격자를 터치하기 쉬운 5×5 칸으로 줄입니다.
+기본 `layout: 'compact'` 툴바는 화면 폭이 `36rem` 미만일 때 모바일의 한 줄 배치로 바뀝니다.
+정확히 `36rem`이면 데스크톱 배치를 유지합니다. 데스크톱에서는 편집기 자체가 좁아도 전체 도구를
+줄바꿈해 보여 줍니다. 객체의 속성 도구도 아래에서 줄바꿈하며, 두 줄 모두 본문 위의 공간을
+차지합니다. 전체화면에서는 화면 폭에 관계없이 전체 도구를 펼칩니다.
 
-`--nabi-mobile-breakpoint`를 `:root`, 상위 요소 또는 개별 `.nabi`에 지정해 기준을 바꿀 수 있습니다. `rem`, `px`, `calc()` 등 0 이상의 CSS 길이 값을 사용합니다. CSS 값, 루트 글자 크기, 컨테이너 폭이나 화면 폭이 바뀌면 이미 열린 패널에도 자동으로 적용됩니다. `body` 아래로 옮겨진 입력 패널도 원래 편집기의 기준을 따릅니다.
+모바일에서는 빠른 도구, 전체 도구 버튼과 연결한 미리보기·전체화면 버튼이 메인 툴바에 남습니다.
+속성 도구가 나타나도 이 버튼들을 함께 쓸 수 있습니다. 전체 도구 팔레트에도 데스크톱과 같은
+그룹 순서와 구분선을 사용합니다. `layout: 'wrap'`은 항상 전체 도구를 줄바꿈해서 보여 줍니다.
+
+모바일 패널은 툴바와 속성 도구 주변의 사용 가능한 공간에 열립니다. 표의 크기 선택기는 예외로
+반투명 배경 위의 가운데에 열리고, 터치하기 쉬운 5×5 격자를 표시합니다. 키보드가 닫힐 때까지
+기다리지 않으며, 크기를 고르면 표 하나를 넣고 닫습니다.
+
+`--nabi-mobile-breakpoint`를 `:root`, 상위 요소 또는 개별 `.nabi`에 지정해 기준을 바꿀 수 있습니다. `rem`, `px`, `calc()` 등 0 이상의 CSS 길이 값을 사용합니다. CSS 값, 루트 글자 크기나 화면 폭이 바뀌면 이미 열린 패널에도 자동으로 적용됩니다. `body` 아래로 옮겨진 입력 패널도 원래 편집기의 기준을 따릅니다.
 
 ```css
 .article-editor {
@@ -79,7 +104,8 @@ import 'nabi-note/nabi.css'
 }
 ```
 
-터치 기기의 큰 조작 버튼은 이 기준보다 넓은 화면에서도 유지됩니다.
+플로트 영역이 한 열로 바뀌는 기준은 별도입니다. 화면 폭이 아니라 본문 컨테이너의 폭이
+`36rem` 미만일 때 한 열로 표시하며, 인쇄할 때도 같은 배치를 사용합니다.
 
 ## 다크 모드
 
@@ -95,7 +121,7 @@ import 'nabi-note/nabi.css'
 서비스가 관리하며 패키지가 `prefers-color-scheme`을 자동으로 따르지는 않습니다.
 
 ```css
-.dark .brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
   --nabi-fg: #f3f4f6;
   --nabi-muted: #a1a1aa;
   --nabi-bg: #18181b;

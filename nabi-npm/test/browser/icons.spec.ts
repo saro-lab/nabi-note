@@ -166,8 +166,9 @@ test('viewer states and standalone diff use the same theme variables', async ({ 
     /custom-diff\.webp/,
   );
   const fold = page.locator('#icon-diff [data-nabi-icon="diff-fold"]').locator('..');
-  await fold.click();
   await expect(fold).toHaveAttribute('aria-pressed', 'true');
+  await fold.click();
+  await expect(fold).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('hidden controls do not fetch their custom images', async ({ page }) => {

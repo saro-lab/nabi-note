@@ -13,6 +13,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 表示される番号は項目の位置から計算されるため、項目を追加したりインデントしたりしても自動で続きます。入力した開始番号を保存して任意の番号から数える機能はありません。
 
+Enter は次の項目を作り、Shift+Enter は現在の項目内で改行だけを行います。Tab と Shift+Tab はインデントの増減に使い、表のセル内でもセル移動よりリストのインデントを優先します。
+
 <WingDemo path="/wing/block/ordered-list" />
 
 ```ts

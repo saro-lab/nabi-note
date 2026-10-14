@@ -93,6 +93,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -106,6 +108,8 @@ export const exCallout: Wing = {
 ```
 
 この宣言だけでは、選択した段落を包む方法はまだありません。エディター UI に出す前に、`commands` に純粋なコマンドを追加し、それを呼ぶ `button` を追加します。
+
+`isolating: true` は複数の段落を許可しながら、削除によって案内ボックスの境界を越え、隣の内容と結合されることを防ぎます。`scopedCommands` に指定したコマンドはボックス内の文書を対象に実行されるため、画像・表の挿入やリスト・引用への変換がボックスの外に出ません。
 
 ### 5. 対になるリストと項目
 
@@ -165,10 +169,10 @@ wing に必要なものだけを宣言します。factory がすでに一部の 
 | 領域 | オプション | 目的 |
 | --- | --- | --- |
 | 基本 | `w`, `place`, `basic`, `styles` | 名前、構造の種類、basic catalog への所属、基本 CSS |
-| 構造 | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | 子の種類、Enter 動作、許可する属性、真偽値属性 |
+| 構造 | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | 子の種類、Enter の動作、編集境界の保護、許可する属性、boolean 属性 |
 | 構造 | `parts`, `allows`, `noAlign`, `requiresAnyOf` | 内部 part、許可する子、配置からの除外、wing 依存関係 |
 | 値 | `attrKey`, `attrValues`, `currentValue` | 保存値のキーと一覧、現在値の検出 |
-| コマンドと入力 | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | コマンド、キー処理、Escape/二度押し動作、自動書式規則 |
+| コマンドと入力 | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | コマンド、内部文書で実行するコマンド、キー処理、Escape・連続キー・自動変換 |
 | surface 動作 | `attach` | DOM 動作と cleanup |
 | 変換 | `toHtml`, `partHtml`, `toMd`, `partMd` | HTML と Markdown 出力 |
 | インポートと修復 | `claim`, `ioFilter`, `repair`, `partRepair` | HTML インポート、ファイル処理、JSON 検証と修復 |
@@ -190,6 +194,30 @@ wing に必要なものだけを宣言します。factory がすでに一部の 
 表のドラッグ選択のような DOM だけの動作は `attach(host)` に置きます。すべての listener や変更した属性には、すぐに `host.onDispose()` で cleanup を登録してください。途中で setup に失敗しても片付けられるようにするためです。変換入力中の DOM や surface の選択対応付けは変更しないでください。
 
 ツールバーとコンテキストコントロールは `button`、`buttons`、`context` で宣言します。アプリケーション UI 側で同じコマンド規則を重複実装すると、UI と文書モデルがずれることがあります。
+
+### ブロック内でコマンドを実行する
+
+`scopedCommands` は `holds: 'blocks'` のコンテナと、ブロックを保持する `parts` に宣言します。選択の両端が同じ領域内にある場合、その領域の子文書と相対的な選択パスをコマンドに渡し、結果を外側の文書に反映します。領域の境界をまたぐ選択は拒否し、その領域の外では元のコマンドどおりに動作します。フロート領域と表のセルもこの仕組みで挿入・変換・アップロードの範囲を守ります。
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+一覧に指定できるのはウィングのコマンドだけです。未登録のコマンドはスキップされるため、画像やアップロードのウィングを必ず一緒に登録する必要はありません。渡された内部文書と相対パスだけで動作するコマンドを選び、文書全体の絶対パスを必要とするものや、文書全体を置き換えるものは含めないでください。コアコマンドも指定できません。
+
+`singleParagraph` は段落を一つに制限するオプションです。`isolating` は複数の段落を維持しながら、Backspace・Delete が編集境界を越えることを防ぎます。ブロックを保持する `parts` にも `isolating: true` を宣言できます。
+
+### 入れ子になったブロックのキー処理
+
+`onKey` が受け取る `KeyIntent.shift` で Enter と Shift+Enter を区別できます。独立した編集領域内で内部のウィングが `null` を返すと、その領域までの親ウィングに順番に処理を渡します。そのため、セル内のリストやコードが先にインデントを処理し、処理されなかった Tab をセル移動に使えます。一度のキー入力で同じウィングを二度呼び出すことはありません。
 
 ## CSS スタイル
 

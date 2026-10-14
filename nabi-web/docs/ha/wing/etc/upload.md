@@ -25,6 +25,12 @@ const selected = wings()
 
 Idan ka zaɓi `upload` shi kaɗai, zai ƙara ɗaya daga dogarorin hoto da mahaɗi wanda ba ya nan ta atomatik. Ana haɗa tura fayil da `mountUpload()`, kuma galibi ana haɗa nunin ci gaba na allon edita da `mountUploadView()`. Idan sabar ta mayar da URL na HTTPS, ba a bukatar zaɓin yarda da URL na gida.
 
+## Wurin saka fayilolin da aka loda
+
+Ana tuna wurin da aka buɗe zaɓen fayil ko aka fara lodawa. Idan siginar rubutu kawai aka matsar, ana sakawa a wurin farko. Idan lodawa ta fara a sel na tebur, alamar ci gaba da abin da aka gama suna nan cikin sel ɗin. Sakamakon lodawa da aka fara a yankin iyo ma yana shiga yankin. Ba za a saka lodawa a zaɓin da ya ketare iyakokin sel da yawa ba.
+
+Gyara ko maye gurbin takarda yayin zaɓen fayil ko aiki na bayan fage yana soke sakawa tare da sanarwa. Ko soke aiki ya dawo da abun ciki iri ɗaya, ba a sake sakawa a tsohon wurin. Kada ka tantance kammalawa daga nasarar aikawa kaɗai: bincika `committed` da `cancelled` da `onDone` yake karɓa. `committed` shi ne yawan fayilolin da suka shiga takarda da gaske.
+
 ## Yarjejeniyar API na sabar
 
 NABI NOTE ba ya aika fayil zuwa sabar. Aikin `uploader` ne yake aika fayil guda zuwa sabar, kuma idan ya yi nasara ya mayar da URL na `https:` wanda jama'a ko masu izini kawai za su iya samu. Yarjejeniyar API mafi sauƙi ita ce kamar haka.
@@ -58,6 +64,7 @@ Misalin da ke ƙasa shi ne ainihin haɗawar da NABI NOTE yake tsammani. Dalilin 
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -67,7 +74,7 @@ import {
 const content = document.querySelector<HTMLElement>('#content')!
 const { nabi, registry } = createNabiWith(
   wings().use('img').use('a').use('upload').build(),
-  { locale: 'ko' },
+  { locale: 'ha' },
 )
 
 function sendUpload(task: UploadTask): Promise<{ uri: string } | null> {
@@ -105,25 +112,34 @@ const upload = mountUpload({
   extensions: ['png', 'jpg', 'jpeg', 'webp', 'pdf'],
   maxFileSize: 10 * 1024 * 1024,
   maxTotalSize: 20 * 1024 * 1024,
-  locale: 'ko',
+  locale: 'ha',
   onStart: (tasks) => uploadView.start(tasks),
   onProgress: (id, percent) => uploadView.progress(id, percent),
   onSettle: () => uploadView.settle(),
   onDone: () => uploadView.done(),
 })
 
-uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'ko' })
+uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'ha' })
 
 const surface = mountSurface({
   nabi,
   registry,
   root: content,
   fileSink: upload.take,
-  locale: 'ko',
+  locale: 'ha',
+})
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'ha',
 })
 ```
 
-Dole ne ka haɗa `fileSink: upload.take` domin ja da saukewa da liƙa abin da fayiloli kawai suke ciki su shiga loda fayil. UI na wing ɗin `upload` yana miƙa maɓallin zaɓen fayil zuwa `upload.take()`. Yayin lodawa editan yana kulle, kuma fayilolin da suka yi nasara suna shiga da soke aiki sau ɗaya ga kowane batch. `upload.cancel()` ko maɓallin soke na `uploadView` suna katse buƙatar da ke gudana ta hanyar `AbortSignal`.
+Haɗa `fileSink: upload.take` domin ja da saukewa da liƙa fayiloli kawai su shiga tsarin lodawa. Haɗa maɓallin zaɓen fayil da `onFiles: upload.take` na sandar kayan aiki. Yayin lodawa editan yana kulle, kuma fayilolin da suka yi nasara suna shiga a matakin soke aiki ɗaya ga kowace rukuni. `upload.cancel()` ko maɓallin soke na `uploadView` suna katse buƙatun da ke gudana ta `AbortSignal`.
 
 ## Kuskure da cire allo
 
@@ -131,6 +147,7 @@ Idan sabar ta ba da amsar kuskure ko `uploader` ya mayar da `null`, ba a saka wa
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

@@ -38,6 +38,15 @@ Gunakan jalur dari akar seperti `/icons/...` atau URL HTTPS lengkap. Jalur relat
 
 Tambahkan `--nabi-icon-` di depan nilai `data-nabi-icon` elemen untuk memperoleh variabel CSS. Misalnya, `diff-close` memakai `--nabi-icon-diff-close`. Lihat <a href="/llms/icons.md" target="_blank" rel="noopener">kontrak ikon</a> untuk aturan kunci konteks, menu, penyimpanan, riwayat, dan lainnya, termasuk pengodean karakter khusus.
 
+Tombol penyisipan wilayah mengambang memakai `toolbar-float`; tombol melepas pembungkus pada alat properti memakai `context-float-unwrap`. Berkas bawaannya adalah `float-float.svg` dan `float-unwrap.svg`, beserta versi tema gelap. Tombol pelepas muncul di samping nilai lebar; mengganti gambarnya tetap mempertahankan nama dan tooltip.
+
+```css
+.paper-note {
+  --nabi-icon-toolbar-float: url("/icons/float.svg");
+  --nabi-icon-context-float-unwrap: url("/icons/float-unwrap.svg");
+}
+```
+
 ## Mode gelap dan panel
 
 Mengubah kelas tema atau variabel CSS memperbarui ikon tanpa mount ulang. Ikon bawaan mengikuti tema terang/gelap. Berkas khusus tidak mewarisi `currentColor`; tetapkan varian gelap seperti contoh bila diperlukan. Panel di bawah `body` juga mengikuti tema ikon dan perubahan kelas/gaya editor asal. Letakkan variabel pada editor atau induk bersama, bukan hanya di dalam toolbar.

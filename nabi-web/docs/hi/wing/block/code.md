@@ -13,6 +13,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 भाषा नाम syntax highlighting का identifier है और registered list से बाहर का नाम भी सीधे लिखा जा सकता है। code content और indentation बचाए रखने के लिए code block पर paragraph alignment लागू नहीं होता।
 
+तालिका की कोशिकाओं में भी कई पंक्तियों का कोड और Tab से इंडेंट इस्तेमाल कर सकते हैं। यदि Shift+Tab किसी पंक्ति का इंडेंट और कम नहीं कर सकता, तब भी कर्सर कोड में रहता है, पिछली कोशिका में नहीं जाता।
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

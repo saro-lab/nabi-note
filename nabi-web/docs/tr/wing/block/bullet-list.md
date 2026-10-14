@@ -11,7 +11,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Birden çok öğeyi sırasız olarak listeleyen bir listedir. Boş bir paragrafta `-` yazdıktan sonra Space tuşuna basarak veya araç çubuğundan dönüştürerek oluşturabilirsiniz. Seçili paragrafları da tek seferde listeye dönüştürebilirsiniz.
 
-Liste içinde Tab ile bir düzey girinti ekler, Shift+Tab ile girintiyi kaldırırsınız. Enter yeni bir öğe oluşturur; boş bir öğede tekrar Enter tuşuna basmak listeyi bitirir.
+Liste içinde Tab ile bir düzey girinti ekler, Shift+Tab ile girintiyi kaldırırsınız. Enter yeni bir öğe oluşturur; boş bir öğede tekrar Enter tuşuna basmak listeyi bitirir. Shift+Enter öğeyi bölmeden içinde satır sonu ekler.
+
+Tablo hücrelerindeki listeler de aynı giriş kurallarını izler. Bir listede Tab, başka hücreye geçmek yerine listeyi girintiler.
 
 <WingDemo path="/wing/block/bullet-list" />
 

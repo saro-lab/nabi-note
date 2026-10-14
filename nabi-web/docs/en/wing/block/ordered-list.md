@@ -13,6 +13,8 @@ Turn items whose order matters into a numbered list. Type a number and a period,
 
 Displayed numbers are calculated from item positions, so they continue automatically when you add or indent items. Saving a custom starting number and counting from that number is not provided.
 
+Enter creates the next item, and Shift+Enter only inserts a line break within the current item. Tab and Shift+Tab indent and outdent; inside table cells, list indentation also takes priority over moving between cells.
+
 <WingDemo path="/wing/block/ordered-list" />
 
 ```ts

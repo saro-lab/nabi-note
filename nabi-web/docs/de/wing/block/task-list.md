@@ -13,6 +13,8 @@ Eine Liste mit Abschlussstatus. Geben Sie `[ ]` oder `[x]` gefolgt von einem Lee
 
 Der geprüfte Zustand wird mit jedem Element im Dokument gespeichert. Wenn ein Element geteilt wird, folgt der geprüfte Zustand dem Element, das den Text behält, nicht dem leeren Element davor, sodass das Teilen einer abgeschlossenen Aufgabe den Status nicht unerwartet umkehrt.
 
+Enter teilt einen Eintrag, Shift+Enter fügt nur einen Zeilenumbruch innerhalb des Eintrags ein. Tab und Shift+Tab rücken ein und aus. In Tabellenzellen gelten dieselben Regeln; auch der Abhakstatus wird gespeichert.
+
 <WingDemo path="/wing/block/task-list" />
 
 ```ts

@@ -25,6 +25,12 @@ const selected = wings()
 
 फक्त `upload` निवडल्यास image किंवा link dependency पैकी जी अनुपस्थित असेल ती आपोआप पुरवली जाते. हस्तांतरण `mountUpload()` ने जोडले जाते आणि संपादन स्क्रीनचा प्रगती UI सहसा `mountUploadView()` ने जोडला जातो. server ने HTTPS URL परत केल्यास local URL option लागत नाही.
 
+## अपलोड कुठे जोडला जातो
+
+फाइल निवड खिडकी उघडलेली किंवा अपलोड सुरू केलेली जागा लक्षात ठेवली जाते. फक्त कर्सर हलवला तर मूळ जागीच जोडले जाते. तक्त्याच्या कक्षात सुरू झालेल्या अपलोडचा प्रगती दर्शक आणि पूर्ण झालेला मजकूर त्याच कक्षात राहतो. फ्लोट भागात सुरू झालेल्या अपलोडचा निकालही त्याच भागात जातो. अनेक कक्षांच्या सीमा ओलांडणाऱ्या निवडीत अपलोड जोडता येत नाही.
+
+फाइल निवडताना किंवा असिंक्रोनस प्रक्रिया चालू असताना दस्तऐवज संपादित किंवा बदलल्यास जोडणे रद्द होते आणि सूचना दिसते. पूर्ववत करून तोच मजकूर परत आणला तरी जुन्या जागी जोडले जात नाही. केवळ हस्तांतरण यशस्वी झाले म्हणून काम पूर्ण झाले असे मानू नका: `onDone` ला मिळणारे `committed` आणि `cancelled` तपासा. `committed` म्हणजे दस्तऐवजात प्रत्यक्ष जोडलेल्या फाइलची संख्या.
+
 ## Server API करार
 
 NABI NOTE स्वतःहून तुमच्या server कडे फाइल पाठवत नाही. `uploader` function एक फाइल server कडे पाठवते आणि यशस्वी झाल्यावर फक्त public किंवा authentication असलेला `https:` URL परत करते. सर्वांत सोपा API करार असा दिसतो.
@@ -58,6 +64,7 @@ Client बाजूचे `extensions` आणि `maxFileSize` वापरक�
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -121,9 +128,18 @@ const surface = mountSurface({
   fileSink: upload.take,
   locale: 'mr',
 })
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'mr',
+})
 ```
 
-`fileSink: upload.take` जोडा, म्हणजे drag and drop आणि फक्त फाइल असलेल्या paste क्रिया upload flow मध्ये जातील. upload wing UI फाइल निवड बटणाचे निकाल `upload.take()` कडे देते. upload सुरू असताना संपादक lock असतो आणि प्रत्येक batch मधील यशस्वी फाइल एकाच undo टप्प्यात घातल्या जातात. `upload.cancel()` किंवा `uploadView` मधील cancel button `AbortSignal` मधून सुरू असलेल्या request थांबवते.
+ओढून सोडणे आणि फक्त फाइल पेस्ट करणे अपलोड प्रक्रियेत जाण्यासाठी `fileSink: upload.take` जोडा. फाइल निवड बटण टूलबारच्या `onFiles: upload.take` ने जोडा. अपलोड चालू असताना संपादक लॉक असतो आणि प्रत्येक संचातील यशस्वी फाइल एकाच पूर्ववत टप्प्यात जोडल्या जातात. `upload.cancel()` किंवा `uploadView` मधील रद्द बटण `AbortSignal` द्वारे चालू विनंत्या थांबवते.
 
 ## अयशस्वीता आणि साफसफाई
 
@@ -131,6 +147,7 @@ Server ने error response दिल्यास किंवा `uploader` �
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

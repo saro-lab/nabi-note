@@ -1,8 +1,9 @@
-import type { MessageKey } from '../locales/index.ts'
+import type { LocaleCode, MessageKey } from '../locales/index.ts'
 
 export interface NavItem {
   readonly path: string
   readonly key: MessageKey
+  readonly locales?: readonly LocaleCode[]
 }
 
 export interface NavBranch {
@@ -59,6 +60,7 @@ export const NAV: readonly NavGroup[] = [
           { path: '/wing/block/ordered-list', key: 'menu_block_ordered_list' },
           { path: '/wing/block/task-list', key: 'menu_block_task_list' },
           { path: '/wing/block/table', key: 'menu_block_table' },
+          { path: '/wing/block/float', key: 'menu_block_float' },
           { path: '/wing/block/image', key: 'menu_block_image' },
           { path: '/wing/block/youtube', key: 'menu_block_youtube' },
           { path: '/wing/block/code', key: 'menu_block_code' },
@@ -85,3 +87,19 @@ export const NAV: readonly NavGroup[] = [
 export const NAV_FLAT: readonly NavItem[] = NAV.flatMap((group) =>
   group.entries.flatMap((entry) => (isLink(entry) ? [entry] : entry.items)),
 )
+
+export function hasLocalePage(path: string, locale: string): boolean {
+  const item = NAV_FLAT.find((item) => item.path === path.replace(/\.(html|md)$/, '').replace(/\/$/, ''))
+  return !item?.locales || item.locales.some((code) => code === locale)
+}
+
+export function navFor(locale: string): readonly NavGroup[] {
+  return NAV.map((group) => ({
+    ...group,
+    entries: group.entries.flatMap((entry): NavEntry[] => {
+      if (isLink(entry)) return hasLocalePage(entry.path, locale) ? [entry] : []
+      const items = entry.items.filter((item) => hasLocalePage(item.path, locale))
+      return items.length ? [{ ...entry, items }] : []
+    }),
+  }))
+}

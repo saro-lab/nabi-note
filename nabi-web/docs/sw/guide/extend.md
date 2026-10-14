@@ -93,6 +93,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -106,6 +108,8 @@ export const exCallout: Wing = {
 ```
 
 Declaration hii peke yake haitengenezi njia ya kufunika aya zilizochaguliwa. Ongeza pure command katika `commands` na `button` inayoitumia kabla ya kuonyesha kipengele kwenye UI ya kihariri.
+
+`isolating: true` huruhusu aya nyingi huku ikizuia kufuta kuvuka mpaka wa kisanduku na kuunganisha yaliyomo na yaliyo jirani. Amri katika `scopedCommands` hutekelezwa kwenye hati ya ndani ya kisanduku, hivyo kuingiza picha/jedwali na kubadili orodha/nukuu hubaki ndani yake.
 
 ### 5. Jozi inayolingana ya orodha na item
 
@@ -165,10 +169,10 @@ Declare kile wing inachohitaji tu. Factory tayari hutoa baadhi ya fields kwa aji
 | Eneo | Options | Kusudi |
 | --- | --- | --- |
 | Msingi | `w`, `place`, `basic`, `styles` | Jina, aina ya muundo, uanachama wa katalogi ya msingi, CSS chaguomsingi |
-| Muundo | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | Aina ya mtoto, tabia ya Enter, attributes zinazoruhusiwa, boolean attributes |
+| Muundo | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | Aina ya watoto, tabia ya Enter, ulinzi wa mipaka ya kuhariri, sifa zinazoruhusiwa, sifa za boolean |
 | Muundo | `parts`, `allows`, `noAlign`, `requiresAnyOf` | Parts za ndani, watoto wanaoruhusiwa, kutoruhusu alignment, dependency ya wing |
 | Thamani | `attrKey`, `attrValues`, `currentValue` | Key na orodha ya thamani iliyohifadhiwa, utambuzi wa thamani ya sasa |
-| Commands na input | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Commands, kushughulikia key, tabia ya Escape/double-key, sheria za autoformat |
+| Commands na input | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Amri, amri za hati ya ndani, ushughulikiaji wa vitufe, Escape/kubonyeza mara mbili, ubadilishaji otomatiki |
 | Tabia ya surface | `attach` | Tabia ya DOM na cleanup ya surface |
 | Ubadilishaji | `toHtml`, `partHtml`, `toMd`, `partMd` | Output ya HTML na Markdown |
 | Import na repair | `claim`, `ioFilter`, `repair`, `partRepair` | HTML import, ushughulikiaji wa faili, validation na repair ya JSON |
@@ -190,6 +194,30 @@ Command ni pure function ya hati na selection inayorudisha hati inayofuata na se
 Weka tabia ya DOM pekee, kama table drag selection, katika `attach(host)`. Sajili cleanup mara moja kwa kila listener au attribute iliyobadilishwa kwa `host.onDispose()` ili setup iliyoshindwa bado isafishwe. Usibadilishe composing text DOM wala selection mapping ya surface.
 
 Declare controls za toolbar na context kwa `button`, `buttons`, na `context`; kurudia sheria zake za command kwenye UI ya programu kunaweza kufanya UI na document model zitofautiane.
+
+### Tekeleza amri ndani ya bloku
+
+Tamka `scopedCommands` kwenye kontena zenye `holds: 'blocks'` na `parts` zinazobeba bloku. Ncha zote za uteuzi zikiwa katika eneo moja, amri hupokea hati mtoto ya eneo hilo na njia za uteuzi zinazohusiana nalo; matokeo huwekwa tena kwenye hati ya nje. Uteuzi unaovuka mpaka wa eneo hukataliwa; nje ya eneo, amri hufuata tabia yake ya awali. Maeneo yanayoelea na seli za jedwali pia hutumia njia hii kuweka mipaka ya kuingiza, kubadilisha na kupakia.
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+Orodha inakubali amri za mabawa pekee. Amri ambazo hazijasajiliwa hurukwa, hivyo si lazima kusajili pamoja mabawa ya picha au upakiaji. Chagua amri zinazotumia hati ya ndani na njia zinazohusiana nayo zilizotolewa pekee; usiweke zinazohitaji njia kamili za hati nzima au kubadilisha hati nzima. Amri za msingi pia hazikubaliki kwenye orodha.
+
+`singleParagraph` huweka kikomo cha aya moja; `isolating` huhifadhi aya nyingi huku ikizuia Backspace/Delete kuvuka mpaka wa kuhariri. `parts` zinazobeba bloku pia zinaweza kutamka `isolating: true`.
+
+### Kushughulikia vitufe katika bloku zilizopachikwa
+
+`KeyIntent.shift` inayopokelewa na `onKey` hutofautisha Enter na Shift+Enter. Bawa la ndani likirudisha `null` katika eneo huru la kuhariri, ushughulikiaji hupitishwa kwa mabawa ya juu kwa mpangilio hadi eneo hilo. Kwa hiyo, orodha na msimbo ndani ya seli hushughulikia ujongezaji kwanza; Tab isiyoshughulikiwa inaweza kuhamia seli nyingine. Bawa lilelile haliitwi mara mbili kwa ingizo moja la kitufe.
 
 ## Mitindo ya CSS
 

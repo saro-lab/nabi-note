@@ -85,6 +85,8 @@ Clipboard custom data uses `application/vnd.nabi.tree+json` with the exact envel
 
 When a selection spans different cells in the same table, copy and cut use the same rectangle as the highlighted cell selection, including any merged cells that expand that rectangle. They do not copy intervening cells outside the rectangle or omit the final cell. Custom data and HTML preserve the selected rows, empty cells, header cells, spans, cell background names, and inline formatting. Plain text separates the selected cells with tabs and rows with newlines. Cut clears only selected cell contents, preserves table structure and other cells, and restores the contents in one undo step. Failed clipboard writes do not clear the source. Partial text selections within one cell retain ordinary text-selection behavior. When exactly one table wrapper is selected, or a collapsed caret is at either wrapper boundary with the dashed table outline, copy and cut include the entire table and its wrapper paragraph. Cut removes both together after a successful clipboard write; one undo restores them. This also works for tables inside floats.
 
+Within each copied cell, plain text preserves block line breaks and includes image/video URLs. A table's placement inside a float does not change these clipboard rules. Deleting a table from inside its cells removes that table's wrapper only and preserves the surrounding float.
+
 For ordinary non-HTML input where multiple custom candidates apply, `ask.choose` or the bound choose UI selects a positional index. An invalid index cancels. Markdown is offered only when the text looks like Markdown and registered wings can represent at least one detected construct.
 
 A paste containing any text HTML/plain data is treated as content paste. Its files do not go to `fileSink`. File-only paste and drop may go to `fileSink`.
@@ -164,6 +166,8 @@ Per-file type/size failures remove that file. Total-size failure rejects the ent
 During transfer the editor is locked. If `root` is supplied, it also becomes `contenteditable="false"`. The lock is released before `onSettle`; successful results then commit once as one undo step. Cancel releases the lock and restores `contenteditable` immediately even when the uploader ignores abort. Late progress and resolution are discarded. Cancel reports one cancelled `onDone`; `unmount()` cancels without invoking mount callbacks.
 
 The file picker and upload batch preserve their starting selection, including its cell. A selection-only move does not redirect insertion. Any document edit or replacement before commit cancels insertion and reports a localized warning; this deliberately includes edits outside the original target. A cancelled batch reports `{ committed: 0, cancelled: true }`. Upload placeholders remain after the original paragraph inside its cell and never fall back to the document root if that target disappears.
+
+`onDone` reports the insertion result, not merely successful server transfers. If `commitUpload` is rejected, such as for a selection crossing cell boundaries, the completed batch reports `{ committed: 0, cancelled: false }`. A successful command reports the committed batch's item count. Keep completion UI tied to this callback rather than assuming a returned upload URL was inserted.
 
 An uploader receives `onProgress` and `AbortSignal`. It returns `{ uri }` or `null`. Progress is clamped to 0..100. Default upload warnings remain visible for 5000 ms.
 

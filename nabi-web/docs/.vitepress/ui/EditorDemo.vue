@@ -830,6 +830,7 @@ const EXPORT_NAME: Readonly<Record<string, string>> = {
   code: 'codeWing',
   hr: 'dividerWing',
   table: 'tableWings',
+  float: 'floatWing',
   img: 'imageWing',
   youtube: 'youtubeWing',
   upload: 'uploadWing',
@@ -1067,7 +1068,7 @@ onMounted(async () => {
     .filter((wing) => wing.button !== undefined || wing.buttons !== undefined)
     .map((wing) => ({ id: wing.w, label: labelOf(wing.w, locale.value) }))
 
-  doc = trees[props.sample ?? 'main']
+  doc = trees[props.sample ?? 'main'] ?? trees.small
 
   const initial = props.wings
   for (const item of catalog.value) {

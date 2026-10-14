@@ -66,7 +66,35 @@ const toolbar = mountToolbar({
 
 `locale` shi ne harshen sandar kayan aiki da saƙonnin jagora. A ba dukkan sassan allo ƙima iri ɗaya. `placeholder` saƙon da zai bayyana ne a editan da babu komai; idan kirtani fanko ne, yana ɓoye. `onError` yana karɓar kurakuran da aka ware daga umarni ko callbacks. `undoLimit` yawan sauye-sauyen da za a iya soke ne, kuma tsohuwar ƙimarsa 200 ce. `typingMergeMs` lokaci ne na haɗa rubutu a jere zuwa soke guda; idan `0` ne, ana raba kowace harafi.
 
+Tazarar asali tsakanin danna Enter a jere domin fita daga container na blocks ita ce 180ms. Esc da Shift sau biyu suna ci gaba da 350ms. Saita `doubleEnterMs` kai tsaye a `mountSurface()` yana sauya tazarar Esc sau biyu tare da ta Enter.
+
 Yi amfani da tushen abun ciki da na sandar kayan aiki da ba sa haɗuwa ga kowane edita. Ko a allo mai editoci da yawa, a ba `surface` na toolbar yankin gyara nasa domin gajerun hanyoyi da focus kada su gauraya.
+
+## Tsara toolbar
+
+Toolbar na asali yana tara kanun rubutu, tsarin rubutu, daidaitawa, jerin abubuwa, sakawa da kayan takarda bisa wannan jeri, da layukan tsaye tsakanin rukuni. Desktop yana nuna duk kayan a layuka da yawa; wayar hannu tana nuna kayan gaggawa da maɓallin duk kayan a layi ɗaya. Kayan properties na tebur, hoto da yankin iyo suna bayyana ƙasa, don amfani tare da kayan rubutu.
+
+Yi amfani da `groups` don sauya jerin rukuni da `quick` don jerin kayan gaggawa na waya. Misali, editan da ke yawan saka hotuna zai iya kawo rukunin `media` gaba.
+
+```ts
+import { TOOLBAR_GROUPS, mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  locale: 'ha',
+  groups: ['media', ...TOOLBAR_GROUPS.filter((group) => group !== 'media')],
+  quick: ['b', 'i', 'tc', 'img'],
+})
+```
+
+Kayan gaggawa suna bin jerin da aka sa ba tare da masu rarrabawa ba. A cikin rukuni ana bin jerin rajistar fuka-fuki. Idan ana zana toolbar tun farko da SSR, a ba uwar garke da browser jeri iri ɗaya. [Jigogin CSS](./style#iyakar-yanayin-wayar-hannu) suna bayyana tsari bisa faɗin allo.
+
+Haɗa `mountHints()` don zaɓar kayan da keyboard ta danna Shift sau biyu. Tab yana sauya rukuni, maɓallan kibiya kuma suna motsawa tsakanin icons na rukuni ɗaya. Desktop da cikakken allo suna amfani da toolbar da ake gani; waya tana amfani da palette na duk kayan.
+
+Panel na hoto, filin URL da mai zaɓar fayil suna tuna zaɓin lokacin buɗewa. Idan an motsa cursor kawai, ana sakawa a tsohon wuri; idan an gyara ko maye gurbin takarda, ana soke shigarwa tare da sanarwa. Ko undo ya dawo da abun ciki iri ɗaya, ba a sake amfani da tsohon zaɓi.
 
 ## Zaɓar fuka-fuki
 

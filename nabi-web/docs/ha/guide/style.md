@@ -22,17 +22,15 @@ import 'nabi-note/nabi.css'
 }
 ```
 
-Idan an sanya tokens iri ɗaya a parent na gama-gari na edita da allon wallafawa, allon biyu za su riƙe yanayi iri ɗaya.
+Sanya class na jigo ɗaya a `.nabi` na edita da `.nabi-content` na shafin da aka wallafa don amfani da variables iri ɗaya. Loda CSS na sabis bayan na package, sannan a nuna jigon yanzu da `data-nabi-theme`.
 
 ```html
-<section class="brand-note">
-  <div class="nabi">...</div>
-  <article class="nabi-content">...</article>
-</section>
+<div class="nabi brand-note" data-nabi-theme="light">...</div>
+<article class="nabi-content brand-note" data-nabi-theme="light">...</article>
 ```
 
 ```css
-.brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-fg: #1f2937;
   --nabi-muted: #6b7280;
   --nabi-bg: #fff;
@@ -56,20 +54,33 @@ Idan an sanya tokens iri ɗaya a parent na gama-gari na edita da allon wallafawa
 | Yanayin taɓawa | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
 | Faɗin sauyawa zuwa yanayin wayar hannu | `--nabi-mobile-breakpoint` |
 
-Ana canza highlighter da launin rubutu da `--nabi-hl-<name>` da `--nabi-tc-<name>` bi da bi. Misali, canza `--nabi-hl-yellow` yana canza launin allo kaɗai na ƙimar highlighter `yellow` da aka adana a takarda.
+Haskakawa da launin rubutu suna amfani da `--nabi-hl-<name>` da `--nabi-tc-<name>`. Bayan cell na tebur yana amfani da `--nabi-cell-<name>` mai goyon bayan `yellow`, `green`, `cyan`, `pink`, `purple`, `orange`. Variables suna sauya launin da ake gani kawai, ba sunan da aka adana ba.
 
 ```css
-.article-editor {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-hl-yellow: #fff0a6;
   --nabi-tc-blue: #2563eb;
+  --nabi-cell-cyan: #e2f4f7;
+}
+```
+
+Jigon asali yana nuna bayan cells da launuka masu laushi. Yanayin duhu yana riƙe sunayen amma yana amfani da wasu launuka masu haske da ƙarancin kaifi domin a bambanta su a bayan duhu. Waɗannan launuka masu ɗan bayyana suna barin a ga bayan shafi; idan an sauya su, a duba bambancin rubutu da ainihin bayan shafin. Don maye gurbin variables na launi na asali, a saka class na jigo a ainihin element na edita ko abun da aka wallafa kamar sama, ba a wani mahaifin waje kawai ba.
+
+```css
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
+  --nabi-cell-cyan: #183b43;
 }
 ```
 
 ## Iyakar yanayin wayar hannu
 
-Yanayin wayar hannu yana farawa idan faɗin sandar kayan aiki, layin mahalli ko yankin kallo ya yi ƙasa da `36rem`. A daidai `36rem`, tsarin yau da kullum yana nan. A yanayin wayar hannu, sandar kayan aiki da layin mahalli suna gungurawa a kwance, bangarori suna tsakiya, kuma ragar zaɓen tebur tana raguwa zuwa ƙwayoyi 5×5 masu sauƙin taɓawa.
+Toolbar na asali `layout: 'compact'` yana komawa layi ɗaya na waya idan faɗin allo ya gaza `36rem`. Daidai `36rem` yana barin tsarin desktop. A desktop, duk kayan suna naɗewa zuwa layuka ko edita ya yi ƙunci. Properties na object ma suna naɗewa a ƙasa; layukan biyu suna ɗaukar sarari sama da rubutu. Cikakken allo yana buɗe duk kayan ko da wane faɗi ne.
 
-Saita `--nabi-mobile-breakpoint` a kan `:root`, wani kashi na sama ko `.nabi` guda. Yi amfani da tsawon CSS marar ƙima mara kyau, kamar `rem`, `px` ko `calc()`. Sauyin ƙimar CSS, girman rubutun tushe, faɗin akwati ko yankin kallo yana sabunta bangarorin da suke buɗe kai tsaye. Bangarorin shigar da bayanai da aka matsar ƙarƙashin `body` suna ci gaba da amfani da iyakar editan asalinsu.
+A waya, kayan gaggawa, maɓallin duk kayan da maɓallan preview/cikakken allo da aka haɗa suna zama a babban toolbar. Har yanzu ana iya amfani da su lokacin da properties suka bayyana. Palette na duk kayan yana bin jerin rukuni da masu rarrabawa na desktop. `layout: 'wrap'` kullum yana nuna duk kayan da naɗewar layi.
+
+Panel na waya yana buɗewa a sararin da ke kewaye da toolbar da properties. Mai zaɓar girman tebur ya bambanta: yana buɗewa a tsakiya kan bayan mai ɗan bayyana da grid na 5×5 mai sauƙin taɓawa. Ba ya jiran keyboard ya rufe; zaɓar girma yana saka tebur ɗaya sannan ya rufe.
+
+Saita `--nabi-mobile-breakpoint` a `:root`, element na sama ko `.nabi` ɗaya domin sauya iyaka. Yi amfani da tsawon CSS marar korau kamar `rem`, `px` ko `calc()`. Canjin ƙimar CSS, girman font na tushe ko faɗin allo yana sabunta panels da ke buɗe kai tsaye. Panel na shigarwa da aka matsar ƙarƙashin `body` yana riƙe iyakar editansa na asali.
 
 ```css
 .article-editor {
@@ -77,7 +88,7 @@ Saita `--nabi-mobile-breakpoint` a kan `:root`, wani kashi na sama ko `.nabi` gu
 }
 ```
 
-Na’urorin taɓawa suna riƙe manyan maɓallan sarrafawa ko da faɗin ya haura wannan iyaka.
+Yankunan iyo suna da iyaka dabam ta komawa shafi ɗaya. Suna amfani da shafi ɗaya idan faɗin container na rubutu, ba allo ba, ya gaza `36rem`; bugawa ma tana amfani da wannan tsari.
 
 ## Dark mode
 
@@ -91,7 +102,7 @@ Tsohuwar yanayi light mode ce. Idan an ƙara `.dark` a `html` ko `body` na shafi
 Yi amfani da `data-nabi-theme="light"` idan kana son katse tasirin `.dark` na sama. Sabis ne yake sarrafa canjin jigo; package ba ya bin `prefers-color-scheme` da kansa.
 
 ```css
-.dark .brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
   --nabi-fg: #f3f4f6;
   --nabi-muted: #a1a1aa;
   --nabi-bg: #18181b;

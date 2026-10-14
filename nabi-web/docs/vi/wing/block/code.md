@@ -13,6 +13,8 @@ Chèn mã nhiều dòng tách biệt với nội dung thường. Trong đoạn t
 
 Tên ngôn ngữ là mã định danh dùng để tô sáng cú pháp; bạn có thể nhập trực tiếp cả tên ngoài danh sách đăng ký. Vì cần giữ nguyên nội dung mã và thụt lề, khối mã không áp dụng căn chỉnh đoạn văn.
 
+Trong ô bảng, bạn cũng có thể dùng mã nhiều dòng và thụt lề bằng Tab. Dù Shift+Tab không thể giảm thụt lề của dòng thêm nữa, con trỏ vẫn ở trong mã, không chuyển về ô trước.
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

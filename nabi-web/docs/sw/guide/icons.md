@@ -38,6 +38,15 @@ Tumia njia kutoka mzizi kama `/icons/...` au URL kamili za HTTPS. Hakuna hakikis
 
 Ongeza `--nabi-icon-` mbele ya thamani ya `data-nabi-icon` ya elementi ili kupata kigeu cha CSS. Kwa mfano, `diff-close` hutumia `--nabi-icon-diff-close`. Angalia <a href="/llms/icons.md" target="_blank" rel="noopener">mkataba wa aikoni</a> kwa kanuni za funguo za muktadha, menyu, kuhifadhi, historia na nyingine, pamoja na usimbaji wa herufi maalumu.
 
+Kitufe cha kuingiza eneo linaloelea hutumia `toolbar-float`; kitufe cha kuondoa kifungashio katika sifa hutumia `context-float-unwrap`. Faili za kawaida ni `float-float.svg` na `float-unwrap.svg`, pamoja na matoleo ya mandhari nyeusi. Kitufe cha kuondoa kifungashio huonekana kando ya thamani ya upana; kubadili picha huhifadhi jina na kidokezo chake.
+
+```css
+.paper-note {
+  --nabi-icon-toolbar-float: url("/icons/float.svg");
+  --nabi-icon-context-float-unwrap: url("/icons/float-unwrap.svg");
+}
+```
+
 ## Hali nyeusi na paneli
 
 Kubadilisha darasa la mandhari au kigeu cha CSS husasisha aikoni bila mount nyingine. Aikoni chaguomsingi hufuata mandhari angavu/nyeusi. Faili maalumu hazirithi `currentColor`; weka matoleo meusi kama mfano hapo juu inapohitajika. Paneli zinazofunguliwa chini ya `body` pia hufuata mandhari ya aikoni na mabadiliko ya darasa/mtindo ya kihariri chanzo. Weka vigeu kwenye kihariri au mzazi wa pamoja, si ndani ya upau wa zana pekee.

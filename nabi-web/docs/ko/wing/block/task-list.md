@@ -13,6 +13,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 체크 여부는 항목 속성으로 문서에 함께 저장됩니다. 항목을 나눌 때는 체크 상태가 빈 앞 항목이 아니라 글자가 남은 항목을 따라가므로, 완료한 일을 둘로 나눠도 상태가 뒤바뀌지 않습니다.
 
+Enter로 항목을 나누고, Shift+Enter로 항목 안에서 줄만 바꿀 수 있습니다. Tab과 Shift+Tab은
+들여쓰기와 내어쓰기에 사용합니다. 표 셀 안에서도 같은 규칙을 따르며 체크 상태를 함께 저장합니다.
+
 <WingDemo path="/wing/block/task-list" />
 
 ```ts

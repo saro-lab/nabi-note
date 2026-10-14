@@ -17,22 +17,20 @@ import 'nabi-note/nabi.css'
   --nabi-bg: #fff;
   --nabi-accent: #5b4ee8;
   --nabi-content-min-height: 20rem;
-  --nabi-font: Inter, system-ui, sans-serif;
+  --nabi-font: Pretendard, system-ui, sans-serif;
   --nabi-sticky-top: 4rem;
 }
 ```
 
-共有トークンは共通の親に置くと、エディターと公開表示が同じ視覚言語を保てます。
+編集画面の `.nabi` と公開画面の `.nabi-content` に同じテーマクラスを指定すると、両方に同じ変数を適用できます。パッケージの CSS の後にサービスの CSS を読み込み、現在のテーマを `data-nabi-theme` で指定します。
 
 ```html
-<section class="brand-note">
-  <div class="nabi">...</div>
-  <article class="nabi-content">...</article>
-</section>
+<div class="nabi brand-note" data-nabi-theme="light">...</div>
+<article class="nabi-content brand-note" data-nabi-theme="light">...</article>
 ```
 
 ```css
-.brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-fg: #1f2937;
   --nabi-muted: #6b7280;
   --nabi-bg: #fff;
@@ -56,20 +54,33 @@ import 'nabi-note/nabi.css'
 | タッチ操作 | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
 | モバイルモードの切り替え幅 | `--nabi-mobile-breakpoint` |
 
-ハイライトと文字色のトークンは `--nabi-hl-<name>` と `--nabi-tc-<name>` を使います。たとえば `--nabi-hl-yellow` を変えると、文書データを変えずに、保存済みの `yellow` ハイライトの表示色だけを変えられます。
+ハイライトと文字色はそれぞれ `--nabi-hl-<name>`、`--nabi-tc-<name>` で変更します。表のセル背景色は `--nabi-cell-<name>` を使い、`yellow`、`green`、`cyan`、`pink`、`purple`、`orange` に対応します。変数は保存された色名を変えず、画面上の色だけを変えます。
 
 ```css
-.article-editor {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-hl-yellow: #fff0a6;
   --nabi-tc-blue: #2563eb;
+  --nabi-cell-cyan: #e2f4f7;
+}
+```
+
+既定のテーマではセルの背景を淡い色で表示します。ダークモードでは同じ色名を維持しながら、明るく彩度を抑えた別の色を使い、暗い背景でも色を見分けやすくしています。背景が透ける半透明色なので、色を変更する場合は実際のページ背景で文字とのコントラストを確認してください。既定の色変数を上書きするには、任意の外側の親ではなく、上の例のように実際の編集要素・公開要素にテーマクラスを指定します。
+
+```css
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
+  --nabi-cell-cyan: #183b43;
 }
 ```
 
 ## モバイルモードの切り替え幅
 
-ツールバー・コンテキスト行の幅、または画面幅が `36rem` 未満になるとモバイルモードに切り替わります。ちょうど `36rem` では通常のレイアウトを維持します。モバイルモードではツールバーとコンテキスト行が横スクロールになり、パネルが中央に表示され、表の選択グリッドがタッチしやすい 5×5 マスになります。
+既定の `layout: 'compact'` ツールバーは、画面幅が `36rem` 未満になるとモバイルの一行配置に切り替わります。ちょうど `36rem` ならデスクトップ配置を維持します。デスクトップでは編集画面自体が狭くても、すべてのツールを折り返して表示します。オブジェクトのプロパティツールも下で折り返し、両方の行が本文の上のスペースを使います。全画面表示では画面幅に関係なく全ツールを展開します。
 
-`--nabi-mobile-breakpoint` を `:root`、祖先要素、または個々の `.nabi` に指定すると基準を変更できます。`rem`、`px`、`calc()` など、0 以上の CSS 長さを使います。CSS 値、ルートの文字サイズ、コンテナー幅、画面幅が変わると、開いているパネルにも自動的に反映されます。`body` 配下に移動した入力パネルも、元のエディターの基準を使います。
+モバイルではクイックツール、全ツールボタン、接続したプレビュー・全画面ボタンがメインツールバーに残ります。プロパティツールの表示中も一緒に使えます。全ツールパレットもデスクトップと同じグループ順序と区切り線を使います。`layout: 'wrap'` は常に全ツールを折り返して表示します。
+
+モバイルのパネルはツールバーとプロパティツールの周囲にある空きスペースで開きます。表のサイズ選択は例外で、半透明の背景の中央に開き、タッチしやすい 5×5 のグリッドを表示します。キーボードが閉じるのを待たず、サイズを選ぶと表を一つ挿入して閉じます。
+
+`--nabi-mobile-breakpoint` を `:root`、祖先要素、または個々の `.nabi` に指定すると基準を変更できます。`rem`、`px`、`calc()` など、0 以上の CSS 長さを使います。CSS 値、ルートの文字サイズ、画面幅が変わると、開いているパネルにも自動的に反映されます。`body` の下に移された入力パネルも、元の編集画面の基準に従います。
 
 ```css
 .article-editor {
@@ -77,7 +88,7 @@ import 'nabi-note/nabi.css'
 }
 ```
 
-タッチ端末では、この基準より広い画面でも大きな操作ボタンを維持します。
+フロート領域が一列になる基準は別です。画面幅ではなく本文コンテナの幅が `36rem` 未満の場合に一列で表示し、印刷時も同じ配置を使います。
 
 ## ダークモード
 
@@ -91,7 +102,7 @@ import 'nabi-note/nabi.css'
 祖先の `.dark` から外したい場合は `data-nabi-theme="light"` を使います。テーマ切り替えはアプリケーションが制御します。パッケージは `prefers-color-scheme` に自動追従しません。
 
 ```css
-.dark .brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
   --nabi-fg: #f3f4f6;
   --nabi-muted: #a1a1aa;
   --nabi-bg: #18181b;
@@ -111,7 +122,7 @@ import 'nabi-note/nabi.css'
 
 ```css
 .article-body {
-  --nabi-font: Georgia, serif;
+  --nabi-font: "Noto Serif KR", serif;
   --nabi-bg: transparent;
 }
 ```

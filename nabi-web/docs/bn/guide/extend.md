@@ -95,6 +95,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -108,6 +110,8 @@ export const exCallout: Wing = {
 ```
 
 শুধু এই ঘোষণা দিয়ে অনুচ্ছেদকে নির্দেশনা বাক্সে রাখার কমান্ড তৈরি হয় না। নির্বাচিত অনুচ্ছেদ ঘিরে রাখার বিশুদ্ধ কমান্ড `commands`-এ যোগ করতে হবে এবং সেই কমান্ড চালানোর `button` ঘোষণা করতে হবে, তবেই সম্পাদক UI-তে এটি ব্যবহার করা যাবে।
+
+`isolating: true` একাধিক অনুচ্ছেদ অনুমোদন করে, কিন্তু মোছার কাজকে তথ্যবাক্সের সীমানা পেরিয়ে পাশের লেখার সঙ্গে মিশে যেতে দেয় না। `scopedCommands`-এর কমান্ড বাক্সের ভেতরের নথিতে চলে, তাই ছবি বা টেবিল ঢোকানো এবং তালিকা বা উদ্ধৃতিতে রূপান্তর বাক্সের ভেতরেই থাকে।
 
 ### 5. তালিকা ও আইটেম একসঙ্গে বানানো সুবিধা
 
@@ -167,10 +171,10 @@ const exNote = {
 | বিভাগ | option | কাজ |
 | --- | --- | --- |
 | মূল | `w`, `place`, `basic`, `styles` | নাম, কাঠামোর ধরন, মৌলিক উইং অন্তর্ভুক্তি, মৌলিক CSS |
-| কাঠামো | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | সন্তানের ধরন, Enter-এর আচরণ, অনুমোদিত attribute, boolean attribute |
+| কাঠামো | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | সন্তানের ধরন, Enter-এর আচরণ, সম্পাদনার সীমানা সুরক্ষা, অনুমোদিত attribute, boolean attribute |
 | কাঠামো | `parts`, `allows`, `noAlign`, `requiresAnyOf` | ভেতরের part, অনুমোদিত সন্তান, সারিবদ্ধকরণ নিষেধ, নির্ভরশীল উইং |
 | মান নির্বাচন | `attrKey`, `attrValues`, `currentValue` | সংরক্ষিত মানের key ও তালিকা, এবং বর্তমান নির্বাচিত মান নির্ণয় |
-| কমান্ড·ইনপুট | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | কমান্ড, key পরিচালনা, Escape·পরপর key·স্বয়ংক্রিয় রূপান্তর |
+| কমান্ড·ইনপুট | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | কমান্ড, ভেতরের নথিতে চলা কমান্ড, কী পরিচালনা, Escape/দুইবার চাপা, স্বয়ংক্রিয় রূপান্তর |
 | পর্দা-সংযোগ | `attach` | surface-এর দরকারি DOM আচরণ ও অপসারণ ব্যবস্থা |
 | রূপান্তর | `toHtml`, `partHtml`, `toMd`, `partMd` | HTML·Markdown আউটপুট |
 | আমদানি·মেরামত | `claim`, `ioFilter`, `repair`, `partRepair` | HTML আমদানি, ফাইল পরিচালনা, JSON যাচাই·মেরামত |
@@ -192,6 +196,30 @@ const exNote = {
 সারণির drag নির্বাচন যেমন কমান্ডে প্রকাশ করা কঠিন পর্দার আচরণ `attach(host)`-এ রাখুন। event listener বা attribute বদলানোর সঙ্গে সঙ্গেই `host.onDispose()`-এ পুনরুদ্ধার function নিবন্ধন করতে হবে, যেন পরে সেটিং ব্যর্থ হলেও পরিষ্কার হয়। রচনাধীন পাঠের DOM বা surface-এর নির্বাচন mapping সরাসরি বদলাবেন না।
 
 টুলবার ও প্রাসঙ্গিক সরঞ্জাম `button`, `buttons`, `context` ঘোষণা দিয়ে তৈরি করুন। একই কমান্ডের নিয়ম application UI-তে আলাদা করে বাস্তবায়ন করলে টুলবার ও নথির model অমিল হতে পারে।
+
+### ব্লকের ভেতরে কমান্ড চালানো
+
+`holds: 'blocks'`-যুক্ত কন্টেইনার এবং ব্লকধারী `parts`-এ `scopedCommands` ঘোষণা করুন। নির্বাচনের দুই প্রান্ত একই এলাকায় থাকলে কমান্ড সেই এলাকার সন্তান নথি ও আপেক্ষিক নির্বাচন-পথ পায়; ফল পরে বাইরের নথিতে প্রয়োগ হয়। এলাকার সীমানা পার হওয়া নির্বাচন প্রত্যাখ্যাত হয়; বাইরে কমান্ডের মূল আচরণ থাকে। ভাসমান এলাকা ও টেবিলের সেলও এভাবেই ঢোকানো, রূপান্তর ও আপলোডের সীমা রক্ষা করে।
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+তালিকায় শুধু উইং কমান্ড দেওয়া যায়। নিবন্ধিত নয় এমন কমান্ড এড়িয়ে যাওয়া হয়, তাই ছবি বা আপলোড উইং একসঙ্গে নিবন্ধন বাধ্যতামূলক নয়। শুধু পাওয়া ভেতরের নথি ও আপেক্ষিক পথে কাজ করে এমন কমান্ড বাছুন; পুরো নথির পরম পথ দরকার হয় বা পুরো নথি বদলে দেয় এমন কমান্ড রাখবেন না। কোর কমান্ডও এই তালিকায় রাখা যায় না।
+
+`singleParagraph` একটি অনুচ্ছেদে সীমাবদ্ধ করে; `isolating` একাধিক অনুচ্ছেদ রেখে Backspace/Delete-কে সম্পাদনার সীমানা পার হতে বাধা দেয়। ব্লকধারী `parts`-এও `isolating: true` ঘোষণা করা যায়।
+
+### নেস্টেড ব্লকে কী পরিচালনা
+
+`onKey`-এ পাওয়া `KeyIntent.shift` দিয়ে Enter ও Shift+Enter আলাদা করা যায়। স্বাধীন সম্পাদনা এলাকায় ভেতরের উইং `null` ফেরালে পর্যায়ক্রমে সেই এলাকা পর্যন্ত ওপরের উইংগুলোর কাছে পরিচালনা যায়। তাই সেলের তালিকা ও কোড আগে ইন্ডেন্ট সামলায়; না-সামলানো Tab দিয়ে সেল বদলানো যায়। এক কী ইনপুটে একই উইংকে দুবার ডাকা হয় না।
 
 ## CSS শৈলী
 

@@ -9,7 +9,11 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Encabezado
 
-Convierte el párrafo actual en un encabezado de nivel 1 a 6. Escribir `#` y pulsar Espacio en un párrafo vacío también lo convierte en encabezado. El nivel se guarda como atributo de párrafo, no como formato de texto.
+Convierte un párrafo en encabezado y elige su nivel. Activa el encabezado en la barra y elige de H1 a H6, o escribe de `#` a `######` seguido de Space en un párrafo vacío.
+
+El encabezado es un atributo guardado en el párrafo, no un tipo de bloque independiente. Al volver a pulsar el encabezado, regresas a un párrafo normal, por lo que puedes cambiar el nivel sin alterar la estructura del contenido.
+
+En las celdas normales puedes convertir los párrafos internos en encabezados. No se aplican encabezados a las celdas de cabecera y, al convertir una celda en cabecera, se elimina cualquier formato de encabezado existente. Si seleccionas varios párrafos, la barra muestra un único valor activo solo cuando todos tienen el mismo nivel de encabezado.
 
 <WingDemo path="/wing/block/heading" />
 

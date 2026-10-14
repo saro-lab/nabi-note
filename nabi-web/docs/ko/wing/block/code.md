@@ -13,6 +13,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 언어 이름은 구문 강조에 쓰는 식별자이며, 등록된 목록 밖 이름도 직접 입력할 수 있습니다. 코드 내용과 들여쓰기를 보존해야 하므로 코드 블록은 문단 정렬을 적용하지 않습니다.
 
+표 셀 안에서도 여러 줄의 코드와 Tab 들여쓰기를 사용할 수 있습니다. Shift+Tab으로 더
+내어쓸 수 없는 줄에서도 이전 셀로 넘어가지 않고 코드 안에 머뭅니다.
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

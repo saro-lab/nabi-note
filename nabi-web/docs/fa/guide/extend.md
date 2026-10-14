@@ -93,6 +93,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -106,6 +108,8 @@ export const exCallout: Wing = {
 ```
 
 این declaration به‌تنهایی راهی برای پوشاندن پاراگراف‌های انتخاب‌شده نمی‌سازد. پیش از نمایش قابلیت در UI ویرایشگر، یک command خالص در `commands` و یک `button` که آن را فرا می‌خواند اضافه کنید.
+
+`isolating: true` چند پاراگراف را مجاز می‌کند و در عین حال نمی‌گذارد حذف از مرز کادر راهنما عبور کند و آن را با محتوای کناری ادغام کند. فرمان‌های `scopedCommands` روی سند داخل کادر اجرا می‌شوند؛ بنابراین درج تصویر و جدول و تبدیل فهرست و نقل‌قول داخل کادر می‌مانند.
 
 ### ۵. جفت فهرست و موردِ همسان
 
@@ -165,10 +169,10 @@ const exNote = {
 | بخش | گزینه‌ها | کاربرد |
 | --- | --- | --- |
 | پایه | `w`, `place`, `basic`, `styles` | نام، نوع ساختاری، عضویت در کاتالوگ پایه، CSS پیش‌فرض |
-| ساختار | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | نوع فرزند، رفتار Enter، ویژگی‌های مجاز، ویژگی‌های بولی |
+| ساختار | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | نوع فرزند، رفتار Enter، حفاظت از مرز ویرایش، ویژگی‌های مجاز، ویژگی‌های بولی |
 | ساختار | `parts`, `allows`, `noAlign`, `requiresAnyOf` | partهای داخلی، فرزندهای مجاز، حذف هم‌ترازی، وابستگی wing |
 | مقدارها | `attrKey`, `attrValues`, `currentValue` | کلید و فهرست مقدار ذخیره‌شده، تشخیص مقدار کنونی |
-| command و ورودی | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | commandها، مدیریت کلید، رفتار Escape/کلید دوتایی، قواعد قالب‌بندی خودکار |
+| command و ورودی | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | فرمان‌ها، فرمان‌های اجراشونده در سند داخلی، رسیدگی به کلید، Escape/فشردن دوباره، تبدیل خودکار |
 | رفتار surface | `attach` | رفتار DOM و پاک‌سازی یک surface |
 | تبدیل | `toHtml`, `partHtml`, `toMd`, `partMd` | خروجی HTML و Markdown |
 | import و repair | `claim`, `ioFilter`, `repair`, `partRepair` | واردکردن HTML، مدیریت فایل، اعتبارسنجی و repair JSON |
@@ -190,6 +194,30 @@ command تابعی خالص از سند و selection است که سند بعدی
 رفتار صرفاً DOM، مانند انتخاب کشیدنی جدول، را در `attach(host)` بگذارید. برای هر listener یا ویژگیِ تغییرکرده بی‌درنگ با `host.onDispose()` پاک‌سازی ثبت کنید تا پیکربندی ناموفق نیز پاک شود. DOM متن درحال‌نگارش یا نگاشت selection surface را تغییر ندهید.
 
 کنترل‌های نوارابزار و زمینه را با `button`، `buttons` و `context` اعلام کنید؛ تکرار قواعد command آن‌ها در UI برنامه می‌تواند UI و مدل سند را از هم دور کند.
+
+### اجرای فرمان داخل بلوک
+
+`scopedCommands` را روی ظرف‌های دارای `holds: 'blocks'` و `parts` حاوی بلوک تعریف کنید. اگر هر دو انتهای انتخاب در یک ناحیه باشند، فرمان سند فرزند آن ناحیه و مسیرهای نسبی انتخاب را دریافت می‌کند و نتیجه دوباره در سند بیرونی اعمال می‌شود. انتخابی که از مرز ناحیه عبور کند رد می‌شود؛ بیرون آن ناحیه، رفتار اصلی فرمان برقرار است. ناحیه‌های شناور و سلول‌های جدول نیز با همین سازوکار محدودهٔ درج، تبدیل و بارگذاری را حفظ می‌کنند.
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+این فهرست فقط فرمان‌های بال را می‌پذیرد. فرمان‌های ثبت‌نشده نادیده گرفته می‌شوند؛ پس ثبت هم‌زمان بال تصویر یا بارگذاری الزامی نیست. فرمان‌هایی را انتخاب کنید که فقط با سند داخلی و مسیرهای نسبی دریافتی کار می‌کنند؛ فرمان‌های نیازمند مسیر مطلق در کل سند یا جایگزینی کل سند را اضافه نکنید. فرمان‌های هسته نیز نمی‌توانند در این فهرست باشند.
+
+`singleParagraph` محتوا را به یک پاراگراف محدود می‌کند؛ `isolating` چند پاراگراف را نگه می‌دارد، اما نمی‌گذارد Backspace/Delete از مرز ویرایش عبور کند. `parts` حاوی بلوک نیز می‌توانند `isolating: true` داشته باشند.
+
+### رسیدگی به کلیدها در بلوک‌های تو‌در‌تو
+
+با `KeyIntent.shift` دریافتی در `onKey` می‌توان Enter را از Shift+Enter تشخیص داد. اگر بال داخلی در ناحیهٔ ویرایش مستقل `null` برگرداند، رسیدگی به‌ترتیب به بال‌های بالادست تا همان ناحیه واگذار می‌شود. بنابراین فهرست و کد داخل سلول ابتدا تورفتگی را رسیدگی می‌کنند و Tab رسیدگی‌نشده می‌تواند بین سلول‌ها حرکت کند. یک بال برای یک ورودی کلید دو بار فراخوانی نمی‌شود.
 
 ## سبک‌های CSS
 

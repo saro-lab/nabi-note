@@ -25,6 +25,12 @@ const selected = wings()
 
 If you select only `upload`, it automatically supplies whichever one of the image or link dependencies is missing. Transfer is connected with `mountUpload()`, and the editing-screen progress UI is usually connected with `mountUploadView()`. If the server returns HTTPS URLs, the local URL option is not needed.
 
+## Where uploads are inserted
+
+The position where the file picker opens or the upload starts is remembered. Moving only the cursor elsewhere still inserts at the original position. For an upload started in a table cell, both progress indicators and completed content stay inside that cell. Uploads started in a float area also insert their results there. Uploads cannot be inserted into a selection spanning multiple cells.
+
+Editing or replacing the document during file selection or asynchronous processing cancels insertion and shows a notice. Undoing to the same content does not restore insertion at the old position. Do not judge completion by transfer success alone: check `committed` and `cancelled` received by `onDone`. `committed` is the number of files actually inserted into the document.
+
 ## Server API Contract
 
 NABI NOTE does not send files to your server by itself. The `uploader` function sends one file to the server, and on success returns only a public or authenticated `https:` URL. The simplest API contract looks like this.
@@ -58,6 +64,7 @@ The example below is the real connection NABI NOTE expects. It uses `XMLHttpRequ
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -121,9 +128,18 @@ const surface = mountSurface({
   fileSink: upload.take,
   locale: 'en',
 })
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'en',
+})
 ```
 
-Connect `fileSink: upload.take` so drag and drop, and paste operations that contain only files, enter the upload flow. The upload wing UI passes file selection button results to `upload.take()`. While upload is running, the editor is locked, and successful files from each batch are inserted as one undo step. `upload.cancel()` or the cancel button in `uploadView` aborts in-progress requests through `AbortSignal`.
+Connect `fileSink: upload.take` so drag and drop and pasting only files enter the upload flow. Connect the file selection button through the toolbar's `onFiles: upload.take`. During upload, the editor is locked, and successful files are inserted with one undo step per batch. `upload.cancel()` or the cancel button in `uploadView` aborts ongoing requests through `AbortSignal`.
 
 ## Failure and Cleanup
 
@@ -131,6 +147,7 @@ If the server returns an error response or the `uploader` returns `null`, that f
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

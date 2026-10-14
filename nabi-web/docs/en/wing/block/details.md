@@ -11,7 +11,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Group a short summary and body into one block. When you create it from the toolbar, you enter the summary first and continue writing content below it.
 
-The open state set with the triangle is stored in the document and becomes the initial state in the published view. While editing, the body is kept open so it can be changed, but the stored state value is preserved.
+The open state set with the triangle is saved in the document and becomes the initial state in the published view. You can also click the triangle to open and close the block while editing.
+
+Inside a table cell or another block, only that details block opens or closes. If the cursor or selection is inside the body being closed, it moves outside; a selection elsewhere is preserved.
 
 <WingDemo path="/wing/block/details" />
 

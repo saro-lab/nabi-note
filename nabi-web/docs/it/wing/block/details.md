@@ -11,7 +11,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Raggruppa un breve riepilogo e il corpo in un unico blocco. Quando lo crei dalla barra degli strumenti, inserisci prima il riepilogo e poi continua a scrivere il contenuto sotto.
 
-Lo stato aperto impostato con il triangolo viene salvato nel documento e diventa lo stato iniziale della vista pubblicata. Durante la modifica il corpo resta aperto per poterlo cambiare, ma il valore dello stato salvato viene mantenuto.
+Lo stato di apertura impostato con il triangolo viene salvato nel documento e diventa lo stato iniziale della vista pubblicata. Puoi fare clic sul triangolo per aprire e chiudere il blocco anche durante la modifica.
+
+Dentro una cella o un altro blocco, si apre o chiude soltanto il blocco comprimibile interessato. Se il cursore o la selezione si trova nel contenuto che viene chiuso, viene spostato all'esterno; una selezione altrove rimane invariata.
 
 <WingDemo path="/wing/block/details" />
 

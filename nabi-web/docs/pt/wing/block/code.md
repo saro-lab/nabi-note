@@ -13,6 +13,8 @@ Insira código de várias linhas separado do texto comum. Digite três crases em
 
 O nome do idioma é um identificador usado para realce de sintaxe, e nomes fora da lista registrada também podem ser digitados manualmente. Como o conteúdo do código e a indentação devem ser preservados, blocos de código não aceitam alinhamento de parágrafo.
 
+Você também pode usar código com várias linhas e recuo com Tab nas células. Mesmo quando Shift+Tab não consegue reduzir mais o recuo de uma linha, permanece no código em vez de passar à célula anterior.
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

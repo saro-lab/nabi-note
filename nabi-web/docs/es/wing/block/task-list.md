@@ -9,7 +9,11 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Checklist
 
-Convierte elementos en una lista con casillas. El estado marcado o sin marcar se guarda en el documento, de modo que vuelve igual al cargarlo. En un párrafo vacío, escribir `[ ]` o `[x]` y pulsar Espacio también crea una checklist.
+Una lista con estado de finalización. Escribe `[ ]` o `[x]` seguido de Space en un párrafo vacío o créala desde la barra, y pulsa las casillas para cambiar su estado.
+
+El estado de la casilla se guarda en el documento como atributo del elemento. Al dividir un elemento, el estado sigue al elemento que conserva el texto, no al elemento vacío anterior, de modo que dividir una tarea completada no intercambia su estado.
+
+Enter divide un elemento y Shift+Enter solo introduce un salto de línea dentro de él. Tab y Shift+Tab aumentan y reducen la sangría. Las mismas reglas se aplican en las celdas y también se guarda el estado de la casilla.
 
 <WingDemo path="/wing/block/task-list" />
 

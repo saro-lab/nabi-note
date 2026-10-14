@@ -13,6 +13,8 @@ Fügen Sie mehrzeiligen Code getrennt vom normalen Fließtext ein. Geben Sie dre
 
 Der Sprachname ist ein Bezeichner, der für die Syntaxhervorhebung verwendet wird, und Namen außerhalb der registrierten Liste können auch manuell eingegeben werden. Da Codeinhalt und Einrückung erhalten bleiben müssen, akzeptieren Codeblöcke keine Absatzausrichtung.
 
+Auch in Tabellenzellen sind mehrzeiliger Code und Einrückungen mit Tab möglich. Kann Shift+Tab eine Zeile nicht weiter ausrücken, bleibt der Cursor trotzdem im Code, statt zur vorherigen Zelle zu wechseln.
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

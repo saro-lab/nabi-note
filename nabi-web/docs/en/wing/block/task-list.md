@@ -13,6 +13,8 @@ A list with completion state. Type `[ ]` or `[x]` followed by Space in an empty 
 
 The checked state is stored with each item in the document. When an item is split, the checked state follows the item that keeps the text rather than the empty item before it, so splitting a completed task does not flip the state unexpectedly.
 
+Enter splits an item, and Shift+Enter only inserts a line break within it. Tab and Shift+Tab indent and outdent. The same rules apply inside table cells, and the checked state is saved as well.
+
 <WingDemo path="/wing/block/task-list" />
 
 ```ts

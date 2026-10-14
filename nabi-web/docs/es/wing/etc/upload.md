@@ -25,6 +25,12 @@ const selected = wings()
 
 Si seleccionas solo `upload`, suministra automáticamente la dependencia que falte entre imagen y enlace. La transferencia se conecta con `mountUpload()`, y la UI de progreso de la pantalla de edición normalmente se conecta con `mountUploadView()`. Si el servidor devuelve URL HTTPS, la opción de URL local no hace falta.
 
+## Dónde se insertan las subidas
+
+Se recuerda la posición donde se abre el selector de archivos o se inicia la subida. Si solo mueves el cursor, la inserción se mantiene en la posición original. Si la subida comienza en una celda, el indicador de progreso y el contenido final permanecen allí. Los resultados de subidas iniciadas en un área flotante también se insertan en ella. No se pueden insertar subidas en una selección que abarque varias celdas.
+
+Editar o reemplazar el documento durante la selección de archivos o el procesamiento asíncrono cancela la inserción y muestra un aviso. Deshacer hasta recuperar el mismo contenido no restaura la inserción en la posición anterior. No evalúes la finalización solo por el éxito de la transferencia: comprueba `committed` y `cancelled`, recibidos por `onDone`. `committed` es el número de archivos realmente insertados en el documento.
+
 ## Contrato de API del servidor
 
 NABI NOTE no envía archivos a tu servidor por sí solo. La función `uploader` envía un archivo al servidor y, si tiene éxito, devuelve solo una URL `https:` pública o autenticada. El contrato de API más simple se ve así.
@@ -58,6 +64,7 @@ El ejemplo siguiente es la conexión real que espera NABI NOTE. Usa `XMLHttpRequ
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -67,7 +74,7 @@ import {
 const content = document.querySelector<HTMLElement>('#content')!
 const { nabi, registry } = createNabiWith(
   wings().use('img').use('a').use('upload').build(),
-  { locale: 'en' },
+  { locale: 'es' },
 )
 
 function sendUpload(task: UploadTask): Promise<{ uri: string } | null> {
@@ -105,25 +112,34 @@ const upload = mountUpload({
   extensions: ['png', 'jpg', 'jpeg', 'webp', 'pdf'],
   maxFileSize: 10 * 1024 * 1024,
   maxTotalSize: 20 * 1024 * 1024,
-  locale: 'en',
+  locale: 'es',
   onStart: (tasks) => uploadView.start(tasks),
   onProgress: (id, percent) => uploadView.progress(id, percent),
   onSettle: () => uploadView.settle(),
   onDone: () => uploadView.done(),
 })
 
-uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'en' })
+uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'es' })
 
 const surface = mountSurface({
   nabi,
   registry,
   root: content,
   fileSink: upload.take,
-  locale: 'en',
+  locale: 'es',
+})
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'es',
 })
 ```
 
-Conecta `fileSink: upload.take` para que arrastrar y soltar, y las operaciones de pegado que contienen solo archivos, entren al flujo de subida. La UI del wing de subida pasa los resultados del botón de selección de archivo a `upload.take()`. Mientras la subida está en curso, el editor queda bloqueado, y los archivos correctos de cada lote se insertan como un solo paso de deshacer. `upload.cancel()` o el botón de cancelar en `uploadView` aborta las peticiones en curso mediante `AbortSignal`.
+Conecta `fileSink: upload.take` para que arrastrar y soltar y pegar solo archivos entren en el flujo de subida. Conecta el botón de selección de archivos mediante `onFiles: upload.take` de la barra. Durante la subida, el editor queda bloqueado y los archivos correctos se insertan con un único paso de deshacer por lote. `upload.cancel()` o el botón de cancelar de `uploadView` interrumpe las solicitudes en curso mediante `AbortSignal`.
 
 ## Fallo y limpieza
 
@@ -131,6 +147,7 @@ Si el servidor devuelve una respuesta de error o el `uploader` devuelve `null`, 
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

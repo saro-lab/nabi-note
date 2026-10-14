@@ -93,6 +93,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -106,6 +108,8 @@ export const exCallout: Wing = {
 ```
 
 Esta declaración por sí sola no crea una forma de envolver los párrafos seleccionados. Añade un comando puro en `commands` y un `button` que lo invoque antes de exponer la función en la UI del editor.
+
+`isolating: true` permite varios párrafos e impide que una eliminación cruce el límite del recuadro y lo fusione con el contenido vecino. Los comandos de `scopedCommands` se ejecutan sobre el documento interno, por lo que insertar imágenes o tablas y convertir listas o citas permanece dentro del recuadro.
 
 ### 5. Un par de lista y elemento que siempre van juntos
 
@@ -165,10 +169,10 @@ Declara solo lo que el wing necesita. Una factory ya suministra algunos campos p
 | Área | Opciones | Propósito |
 | --- | --- | --- |
 | Base | `w`, `place`, `basic`, `styles` | Nombre, tipo estructural, pertenencia al catálogo básico, CSS predeterminado |
-| Estructura | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | Tipo de hijos, comportamiento de Enter, atributos permitidos, atributos booleanos |
+| Estructura | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | Tipo de hijos, comportamiento de Enter, protección del límite de edición, atributos permitidos, atributos booleanos |
 | Estructura | `parts`, `allows`, `noAlign`, `requiresAnyOf` | Partes internas, hijos permitidos, exclusión de alineación, dependencia de wing |
 | Valores | `attrKey`, `attrValues`, `currentValue` | Clave y lista del valor guardado, detección del valor actual |
-| Comandos y entrada | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Comandos, manejo de teclas, Escape/doble tecla, reglas de autoformato |
+| Comandos y entrada | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Comandos, comandos ejecutados en el documento interno, manejo de teclas, Escape/doble pulsación, conversión automática |
 | Comportamiento de superficie | `attach` | Comportamiento DOM y limpieza de una superficie |
 | Conversión | `toHtml`, `partHtml`, `toMd`, `partMd` | Salida HTML y Markdown |
 | Importación y reparación | `claim`, `ioFilter`, `repair`, `partRepair` | Importación HTML, manejo de archivos, validación y reparación de JSON |
@@ -190,6 +194,30 @@ Un comando es una función pura del documento y la selección que devuelve el si
 Pon el comportamiento que solo existe en el DOM, como la selección por arrastre de tablas, en `attach(host)`. Registra inmediatamente la limpieza de cada listener o atributo modificado con `host.onDispose()` para que también se limpie si la configuración falla más tarde. No modifiques el DOM de texto en composición ni el mapeo de selección de la superficie.
 
 Declara los controles de barra y de contexto con `button`, `buttons` y `context`; duplicar sus reglas de comando en la UI de la aplicación puede hacer que la UI y el modelo de documento se desalineen.
+
+### Ejecutar comandos dentro de un bloque
+
+Declara `scopedCommands` en contenedores con `holds: 'blocks'` y en `parts` que alojan bloques. Si ambos extremos de la selección están en la misma región, el comando recibe su documento hijo y las rutas relativas de selección; después, el resultado se aplica al documento exterior. Se rechazan las selecciones que cruzan límites de región; fuera de ella se mantiene el comportamiento original. Las regiones flotantes y las celdas también usan este mecanismo para limitar inserciones, conversiones y cargas.
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+La lista solo admite comandos de alas. Los no registrados se omiten, de modo que no obliga a registrar también las alas de imagen o carga. Elige comandos que funcionen únicamente con el documento interno y las rutas relativas recibidas; excluye los que necesitan rutas absolutas del documento completo o lo reemplazan entero. Tampoco admite comandos del núcleo.
+
+`singleParagraph` limita el contenido a un párrafo; `isolating` conserva varios párrafos e impide que Backspace/Delete cruce el límite de edición. Las `parts` que alojan bloques también pueden declarar `isolating: true`.
+
+### Manejar teclas en bloques anidados
+
+`KeyIntent.shift`, recibido por `onKey`, distingue Enter de Shift+Enter. Si un ala interna devuelve `null` dentro de una región de edición independiente, el manejo pasa sucesivamente a las alas superiores hasta esa región. Así, listas y código dentro de celdas procesan primero la sangría; un Tab no procesado puede cambiar de celda. Una misma ala nunca se invoca dos veces para una pulsación.
 
 ## Estilos CSS
 

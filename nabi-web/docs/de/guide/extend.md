@@ -93,6 +93,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -106,6 +108,8 @@ export const exCallout: Wing = {
 ```
 
 Diese Deklaration allein erstellt noch keine Möglichkeit, ausgewählte Absätze einzuhüllen. Fügen Sie einen reinen Befehl in `commands` und eine `button`, die ihn aufruft, hinzu, bevor Sie die Funktion in der Editor-Benutzeroberfläche verfügbar machen.
+
+`isolating: true` erlaubt mehrere Absätze und verhindert zugleich, dass Löschen die Grenze des Hinweisblocks überschreitet und ihn mit benachbarten Inhalten zusammenführt. Befehle in `scopedCommands` arbeiten auf dem Dokument innerhalb des Blocks; das Einfügen von Bildern und Tabellen sowie die Umwandlung in Listen und Zitate bleiben darin.
 
 ### 5. Ein passendes Listen- und Elementpaar
 
@@ -165,10 +169,10 @@ Deklarieren Sie nur das, was der Flügel benötigt. Eine Fabrik liefert bereits 
 | Bereich | Optionen | Zweck |
 | --- | --- | --- |
 | Basis | `w`, `place`, `basic`, `styles` | Name, strukturelle Art, Zugehörigkeit zum Grundkatalog, Standard-CSS |
-| Struktur | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | Art der Kinder, Enter-Verhalten, zulässige Attribute, boolesche Attribute |
+| Struktur | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | Art der Kinder, Enter-Verhalten, Schutz der Bearbeitungsgrenze, erlaubte Attribute, boolesche Attribute |
 | Struktur | `parts`, `allows`, `noAlign`, `requiresAnyOf` | Interne Teile, zulässige Kinder, Ausschluss der Ausrichtung, Flügelabhängigkeit |
 | Werte | `attrKey`, `attrValues`, `currentValue` | Schlüssel und Liste des gespeicherten Werts, Erkennung des aktuellen Werts |
-| Befehle und Eingabe | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Befehle, Tastenbehandlung, Escape/Doppel-Tasten-Verhalten, Autoformatierungsregeln |
+| Befehle und Eingabe | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Befehle, im inneren Dokument ausgeführte Befehle, Tastenbehandlung, Escape/Doppeltasten, automatische Umwandlung |
 | Oberflächenverhalten | `attach` | DOM-Verhalten und Bereinigung für eine Oberfläche |
 | Konvertierung | `toHtml`, `partHtml`, `toMd`, `partMd` | HTML- und Markdown-Ausgabe |
 | Import und Reparatur | `claim`, `ioFilter`, `repair`, `partRepair` | HTML-Import, Dateihandling, JSON-Validierung und Reparatur |
@@ -190,6 +194,30 @@ Ein Befehl ist eine reine Funktion von Dokument und Auswahl, die das nächste Do
 Legen Sie nur-DOM-Verhalten, wie die Drag-Auswahl von Tabellen, in `attach(host)`. Registrieren Sie sofort die Bereinigung für jeden Listener oder jedes geänderte Attribut mit `host.onDispose()`, damit auch ein fehlgeschlagener Setup bereinigt wird. Ändern Sie nicht den composing-Text-DOM oder die Auswahlzuordnung der Oberfläche.
 
 Deklarieren Sie Symbolleisten- und Kontrollen mit `button`, `buttons` und `context`; das Duplizieren ihrer Befehlsregeln in der Anwendungs-Benutzeroberfläche kann dazu führen, dass Benutzeroberfläche und Dokumentmodell divergieren.
+
+### Befehle innerhalb eines Blocks ausführen
+
+Deklariere `scopedCommands` auf Containern mit `holds: 'blocks'` und auf `parts`, die Blöcke enthalten. Liegen beide Auswahlenden im selben Bereich, erhält der Befehl dessen untergeordnetes Dokument und relative Auswahlpfade; sein Ergebnis wird anschließend in das äußere Dokument übernommen. Auswahlen über Bereichsgrenzen werden abgelehnt; außerhalb des Bereichs gilt das ursprüngliche Befehlsverhalten. Float-Bereiche und Tabellenzellen begrenzen so ebenfalls Einfügen, Umwandlung und Uploads.
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+Die Liste darf nur Wing-Befehle enthalten. Nicht registrierte Befehle werden übersprungen; Bild- oder Upload-Wings müssen also nicht zwingend mitregistriert werden. Wähle Befehle, die ausschließlich mit dem übergebenen inneren Dokument und relativen Pfaden arbeiten. Befehle, die absolute Pfade im Gesamtdokument benötigen oder das gesamte Dokument ersetzen, gehören nicht hinein. Auch Core-Befehle sind nicht zulässig.
+
+`singleParagraph` begrenzt den Inhalt auf einen Absatz. `isolating` erhält mehrere Absätze, verhindert aber, dass Backspace/Delete die Bearbeitungsgrenze überschreiten. Auch blockhaltende `parts` können `isolating: true` deklarieren.
+
+### Tasten in verschachtelten Blöcken behandeln
+
+Mit `KeyIntent.shift`, das `onKey` empfängt, lassen sich Enter und Shift+Enter unterscheiden. Gibt ein innerer Wing in einem eigenständigen Bearbeitungsbereich `null` zurück, wird die Verarbeitung nacheinander an übergeordnete Wings bis zur Bereichsgrenze weitergereicht. Listen und Code in Zellen behandeln daher zuerst die Einrückung; ein nicht verarbeitetes Tab kann zwischen Zellen wechseln. Derselbe Wing wird pro Tasteneingabe nie zweimal aufgerufen.
 
 ## CSS-Stile
 

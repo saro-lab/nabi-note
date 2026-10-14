@@ -25,6 +25,12 @@ const selected = wings()
 
 Se você selecionar apenas `upload`, ela fornece automaticamente qualquer dependência ausente entre imagem e link. A transferência é conectada com `mountUpload()`, e a UI de progresso da tela de edição normalmente é conectada com `mountUploadView()`. Se o servidor devolver URLs HTTPS, a opção de URL local não é necessária.
 
+## Onde os uploads são inseridos
+
+A posição em que o seletor de arquivos é aberto ou o upload começa é lembrada. Mover apenas o cursor mantém a inserção na posição original. Se o upload começar em uma célula, tanto o progresso quanto o conteúdo final permanecem nela. Uploads iniciados em uma área flutuante também inserem os resultados nessa área. Não é possível inseri-los em uma seleção que atravesse várias células.
+
+Editar ou substituir o documento durante a seleção de arquivos ou o processamento assíncrono cancela a inserção e exibe um aviso. Desfazer até recuperar o mesmo conteúdo não restaura a inserção na posição anterior. Não avalie a conclusão apenas pelo sucesso da transferência: verifique `committed` e `cancelled` recebidos por `onDone`. `committed` é o número de arquivos realmente inseridos no documento.
+
 ## Contrato da API do servidor
 
 NABI NOTE não envia arquivos para o seu servidor por conta própria. A função `uploader` envia um arquivo ao servidor e, quando a operação é bem-sucedida, devolve apenas uma URL `https:` pública ou autenticada. O contrato de API mais simples fica assim.
@@ -58,6 +64,7 @@ O exemplo abaixo é a conexão real esperada pelo NABI NOTE. Ele usa `XMLHttpReq
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -67,7 +74,7 @@ import {
 const content = document.querySelector<HTMLElement>('#content')!
 const { nabi, registry } = createNabiWith(
   wings().use('img').use('a').use('upload').build(),
-  { locale: 'en' },
+  { locale: 'pt' },
 )
 
 function sendUpload(task: UploadTask): Promise<{ uri: string } | null> {
@@ -105,25 +112,34 @@ const upload = mountUpload({
   extensions: ['png', 'jpg', 'jpeg', 'webp', 'pdf'],
   maxFileSize: 10 * 1024 * 1024,
   maxTotalSize: 20 * 1024 * 1024,
-  locale: 'en',
+  locale: 'pt',
   onStart: (tasks) => uploadView.start(tasks),
   onProgress: (id, percent) => uploadView.progress(id, percent),
   onSettle: () => uploadView.settle(),
   onDone: () => uploadView.done(),
 })
 
-uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'en' })
+uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'pt' })
 
 const surface = mountSurface({
   nabi,
   registry,
   root: content,
   fileSink: upload.take,
-  locale: 'en',
+  locale: 'pt',
+})
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'pt',
 })
 ```
 
-Conecte `fileSink: upload.take` para que operações de arrastar e soltar, e de colar que contenham apenas arquivos, entrem no fluxo de upload. A UI da wing de upload passa os resultados do botão de seleção de arquivos para `upload.take()`. Enquanto o upload estiver em andamento, o editor fica bloqueado, e os arquivos concluídos de cada lote são inseridos como uma única etapa de desfazer. `upload.cancel()` ou o botão de cancelar em `uploadView` aborta as requisições em andamento por meio de `AbortSignal`.
+Conecte `fileSink: upload.take` para que arrastar e soltar e colar somente arquivos entrem no fluxo de upload. Conecte o botão de seleção de arquivos por meio de `onFiles: upload.take` da barra. Durante o upload, o editor fica bloqueado e os arquivos bem-sucedidos são inseridos com uma etapa de desfazer por lote. `upload.cancel()` ou o botão de cancelar de `uploadView` interrompe as requisições em andamento via `AbortSignal`.
 
 ## Falha e limpeza
 
@@ -131,6 +147,7 @@ Se o servidor devolver uma resposta de erro ou o `uploader` devolver `null`, ess
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

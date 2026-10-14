@@ -91,7 +91,7 @@ For 1.1.0 and later builds, keep the same package version for JS, CSS, and `dist
 
 ## Toolbar configuration in 1.4.0 builds
 
-The pinned 1.0.0 examples above describe the earlier published baseline. To use the 1.4.0 toolbar contract, load a matching 1.4.0 JavaScript/CSS build from your own build or an available package version. 1.4.0 is an unreleased working version. Use your local build until it is published; this document does not claim CDN availability.
+The pinned 1.0.0 examples above describe the earlier published baseline. To use the 1.4.0 contract, load matching 1.4.0 JavaScript, CSS, and icon assets from your own build or an available package version. The contract version alone does not claim CDN availability. For a locally hosted build, use `/nabi-note/dist/nabi.css` and `/nabi-note/dist/browser/nabi-note.min.js` after copying the package's complete `dist` directory there.
 
 ```js
 const toolbar = N.mountToolbar({
@@ -104,6 +104,8 @@ const toolbar = N.mountToolbar({
   quick: ['b', 'i', 'tc', 'fs']
 });
 ```
+
+The 1.4.0 catalog includes `float` in `N.wings().allBasic()` and supports multi-block table cells, cell colors, and Select table. The table and float examples in `wings.md` work with `N.createNabiWith` and `N.wings` in place of the imports. Mount `N.mountContextToolbar` on a sibling context root to expose their property controls. Container double-Enter defaults to 180 ms; double-Escape and double-Shift remain 350 ms. See `api-reference.md` before overriding `doubleEnterMs`, which also changes the double-Escape window.
 
 Compact is the default. On desktop it shows all main-toolbar commands and wraps like fullscreen, even inside a narrow editor. Mobile keeps a single row; `quick` contains its toolbar slot names in priority order. The viewport width and `--nabi-mobile-breakpoint` determine the switch. Commands that do not fit remain in the mobile Tools palette, which shows available icons together in their original wing groups without category tabs, group borders, or a title/close header. Desktop and mobile toolbar buttons use `2rem` with `.875rem` icons. Use `layout: 'wrap'` for the explicit wrapping main toolbar. A context toolbar mounted on its own sibling root for the same `nabi` automatically shows available object properties below the main toolbar; do not nest its mount root inside `toolbarRoot`. The property row takes up layout space, wraps on desktop and mobile, and moves with the main row inside their shared sticky wrapper. Connected preview/fullscreen controls remain in the main toolbar. There is no Object properties entry button or back-to-tools button. The full palette contains registered wing buttons only, without duplicate view controls or added undo/redo buttons.
 

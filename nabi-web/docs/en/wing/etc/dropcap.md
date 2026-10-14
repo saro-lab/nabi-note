@@ -11,6 +11,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Place the first letter of a paragraph at a larger size and let the following lines flow beside it. This is paragraph-level formatting, so it is not applied to only part of a selected word.
 
+Inside a table, drop caps apply to inner paragraphs rather than the cells themselves. Selecting several cells changes all eligible paragraphs inside them, and the toolbar state reflects the same paragraph selection.
+
 The published view and editing view keep the same shape. While editing, the first letter is wrapped in a real element so caret and delete positions do not drift; that element is not included in the saved document content.
 
 <WingDemo path="/wing/etc/dropcap" />

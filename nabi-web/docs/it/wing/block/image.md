@@ -59,6 +59,8 @@ const toolbar = mountToolbar({
 
 La chiusura del pannello o lo smontaggio della barra degli strumenti interrompe `signal` e richiama la funzione di pulizia. `run()` chiude il pannello e applica un comando una sola volta alla selezione acquisita all’apertura. Se il pannello è già chiuso o il contenuto del documento è cambiato dall’apertura, restituisce `false` senza eseguire il comando.
 
+Se sposti soltanto il cursore, l'immagine viene inserita nella posizione originale in cui hai aperto il pannello. Se lo hai aperto in una cella o in un'area flottante, l'immagine viene inserita al suo interno. Modificare o sostituire il documento annulla l'inserimento con un avviso, anche se un annullamento ripristina lo stesso contenuto; riapri il pannello e scegli di nuovo l'immagine.
+
 ## Stili CSS
 
 Personalizza le immagini con `.nabi-content img`. Mantieni la larghezza e l'allineamento salvati e modifica solo dettagli visivi, come bordi od ombre.

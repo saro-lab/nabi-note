@@ -38,6 +38,15 @@ Dùng đường dẫn từ gốc như `/icons/...` hoặc URL HTTPS đầy đủ
 
 Thêm `--nabi-icon-` trước giá trị `data-nabi-icon` của phần tử để có biến CSS. Ví dụ, `diff-close` dùng `--nabi-icon-diff-close`. Xem <a href="/llms/icons.md" target="_blank" rel="noopener">quy ước biểu tượng</a> để biết quy tắc khóa ngữ cảnh, menu, lưu, lịch sử và các mục khác, gồm cách mã hóa ký tự đặc biệt.
 
+Nút chèn vùng nổi dùng `toolbar-float`; nút gỡ lớp bao trong công cụ thuộc tính dùng `context-float-unwrap`. Tệp mặc định là `float-float.svg` và `float-unwrap.svg`, có cả phiên bản giao diện tối. Nút gỡ lớp bao xuất hiện cạnh giá trị chiều rộng; thay ảnh vẫn giữ tên và chú giải.
+
+```css
+.paper-note {
+  --nabi-icon-toolbar-float: url("/icons/float.svg");
+  --nabi-icon-context-float-unwrap: url("/icons/float-unwrap.svg");
+}
+```
+
 ## Chế độ tối và bảng điều khiển
 
 Đổi lớp giao diện hoặc biến CSS sẽ cập nhật biểu tượng mà không cần mount lại. Biểu tượng mặc định theo giao diện sáng/tối. Tệp tùy chỉnh không kế thừa `currentColor`; hãy đặt bản tối như ví dụ nếu cần. Các bảng mở dưới `body` cũng theo giao diện biểu tượng và thay đổi lớp/kiểu của trình soạn thảo nguồn. Đặt biến trên trình soạn thảo hoặc cha chung, không chỉ bên trong thanh công cụ.

@@ -25,6 +25,18 @@ const selected = wings()
 
 `upload`만 선택하면 이미지와 링크 중 아직 없는 한 가지 의존성을 자동으로 보충합니다. 전송은 `mountUpload()`로, 편집 화면의 진행 상태 표시는 보통 `mountUploadView()`로 연결합니다. 서버가 HTTPS URL을 돌려주면 로컬 URL 허용 옵션은 필요하지 않습니다.
 
+## 업로드가 들어갈 위치
+
+파일 선택창을 열거나 업로드를 시작한 위치를 기억합니다. 커서만 다른 곳으로 옮겼다면 원래
+위치에 넣습니다. 표 셀에서 시작했다면 진행 표시와 완료한 내용도 그 셀 안에 머뭅니다.
+플로트 영역에서 시작한 업로드 결과도 해당 영역 안에 들어갑니다. 여러 셀의 경계를 넘는
+선택에는 업로드를 삽입할 수 없습니다.
+
+파일 선택이나 비동기 처리 중 문서를 편집·교체하면 삽입을 취소하고 안내합니다. 실행 취소로
+같은 내용이 돌아와도 이전 위치에 넣지 않습니다. 완료 여부는 전송 성공만으로 판단하지 말고
+`onDone`이 받는 `committed`와 `cancelled`를 확인하세요. `committed`는 실제로 문서에
+들어간 파일 수입니다.
+
 ## 서버 API 약속
 
 NABI NOTE는 파일을 서버로 보내지 않습니다. `uploader` 함수가 파일 하나를 서버에 보내고,
@@ -66,6 +78,7 @@ Content-Type: multipart/form-data
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -129,10 +142,19 @@ const surface = mountSurface({
   fileSink: upload.take,
   locale: 'ko',
 })
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'ko',
+})
 ```
 
 `fileSink: upload.take`를 연결해야 드래그 앤 드롭과 파일만 있는 붙여넣기가 업로드로 들어갑니다.
-파일 선택 버튼은 `upload` 날개의 UI가 `upload.take()`로 넘깁니다. 업로드하는 동안 편집기는
+파일 선택 버튼은 툴바의 `onFiles: upload.take`로 연결합니다. 업로드하는 동안 편집기는
 잠기고, 성공한 파일은 배치 하나당 실행 취소 한 번으로 들어갑니다. `upload.cancel()` 또는
 `uploadView`의 취소 버튼은 `AbortSignal`을 통해 진행 중인 요청을 끊습니다.
 
@@ -144,6 +166,7 @@ const surface = mountSurface({
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

@@ -13,6 +13,8 @@ Ingiza msimbo wa mistari mingi kando na maandishi ya kawaida ya mwili. Andika al
 
 Jina la lugha ni kitambulisho kinachotumiwa kuangazia sintaksia, na majina nje ya orodha iliyosajiliwa yanaweza pia kuandikwa mwenyewe. Kwa kuwa maudhui na ujongezaji wa msimbo lazima vihifadhiwe, blokii za msimbo hazikubali mpangilio wa aya.
 
+Unaweza pia kutumia msimbo wa mistari mingi na ujongezaji wa Tab ndani ya seli. Hata Shift+Tab isipoweza kupunguza ujongezaji wa mstari zaidi, kishale hubaki kwenye msimbo badala ya kuhamia seli iliyotangulia.
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

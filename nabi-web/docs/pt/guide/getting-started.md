@@ -61,7 +61,35 @@ const toolbar = mountToolbar({
 
 `locale` controla a barra de ferramentas e os textos auxiliares; passe o mesmo valor a toda montagem de UI. `placeholder` aparece apenas quando o editor está vazio. `onError` recebe falhas isoladas de comandos e callbacks. `undoLimit` é o número de entradas de desfazer (200 por padrão). `typingMergeMs` é o intervalo que combina digitação consecutiva em um único passo de desfazer; defina como `0` para manter cada inserção separada.
 
+O intervalo padrão entre pressionamentos consecutivos de Enter para sair de um contêiner de blocos é 180ms. O duplo toque em Esc e Shift mantém 350ms. Definir `doubleEnterMs` explicitamente em `mountSurface()` altera o intervalo tanto de Enter quanto do duplo Esc.
+
 Cada editor precisa de raízes próprias e não sobrepostas para conteúdo e barra de ferramentas. Em uma página com vários editores, dê a cada barra sua própria superfície por `surface`, para que foco e atalhos não se misturem.
+
+## Configurar a barra de ferramentas
+
+A barra padrão agrupa títulos, formatação de texto, alinhamento, listas, inserção e ferramentas do documento, nessa ordem, com separadores verticais. No desktop, todas as ferramentas aparecem em várias linhas; no celular, as ferramentas rápidas e o botão de todas as ferramentas ocupam uma linha. As propriedades de tabelas, imagens e regiões flutuantes aparecem abaixo e podem ser usadas junto com as ferramentas do texto.
+
+Use `groups` para alterar a ordem dos grupos e `quick` para a ordem das ferramentas rápidas no celular. Por exemplo, um editor que insere imagens com frequência pode mover o grupo `media` para o início.
+
+```ts
+import { TOOLBAR_GROUPS, mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  locale: 'pt',
+  groups: ['media', ...TOOLBAR_GROUPS.filter((group) => group !== 'media')],
+  quick: ['b', 'i', 'tc', 'img'],
+})
+```
+
+As ferramentas rápidas seguem a ordem indicada, sem separadores. Dentro de cada grupo, vale a ordem de registro das asas. Ao pré-renderizar a barra com SSR, passe a mesma ordem de grupos ao servidor e ao navegador. [Temas CSS](./style#limite-do-modo-movel) explica a disposição conforme a largura da tela.
+
+Conecte `mountHints()` para escolher ferramentas pelo teclado pressionando Shift duas vezes. Tab muda de grupo e as setas percorrem os ícones do mesmo grupo. No desktop e em tela cheia, usa-se a barra visível; no celular, a paleta de todas as ferramentas.
+
+Painéis de imagem, campos de URL e seletores de arquivo lembram a seleção ao abrir. Se você apenas mover o cursor, a inserção usa a posição original; se editar ou substituir o documento, a entrada é cancelada com um aviso. Mesmo que desfazer restaure um conteúdo idêntico, a seleção antiga não é reutilizada.
 
 ## Escolher wings
 

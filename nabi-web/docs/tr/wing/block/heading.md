@@ -13,6 +13,8 @@ Bir paragrafı başlığa dönüştürür ve düzeyini belirler. Araç çubuğun
 
 Başlık ayrı bir blok türü değildir; paragrafta saklanan bir özniteliktir. Başlığı tekrar seçmek onu normal paragrafa döndürür; böylece gövde yapısını koruyarak yalnızca düzeyi değiştirebilirsiniz.
 
+Normal tablo hücrelerindeki paragrafları başlığa dönüştürebilirsiniz. Başlık hücrelerine başlık biçimi uygulanmaz; bir hücre başlık hücresine dönüştürüldüğünde mevcut başlık biçimi de kaldırılır. Birden çok paragraf seçildiğinde araç çubuğu, yalnızca tümünün başlık düzeyi aynıysa tek bir etkin değer gösterir.
+
 <WingDemo path="/wing/block/heading" />
 
 ```ts

@@ -11,7 +11,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Kusanya muhtasari mfupi na mwili katika blokii moja. Unapoiunda kutoka kwenye upau wa zana, unaingiza muhtasari kwanza kisha unaendelea kuandika maudhui chini yake.
 
-Hali ya wazi iliyowekwa kwa pembetatu huhifadhiwa katika hati na huwa hali ya mwanzo kwenye mwonekano uliochapishwa. Wakati wa kuhariri, mwili huwekwa wazi ili uweze kubadilishwa, lakini thamani ya hali iliyohifadhiwa huhifadhiwa.
+Hali ya kufunguka iliyowekwa kwa pembetatu huhifadhiwa kwenye hati na kuwa hali ya mwanzo katika mwonekano uliochapishwa. Wakati wa kuhariri pia unaweza kubofya pembetatu kufungua na kufunga kizuizi.
+
+Ndani ya seli au kizuizi kingine, ni kizuizi hicho cha kukunja pekee kinachofunguka au kufungwa. Kishale au uteuzi ukiwa ndani ya maudhui yanayofungwa, huhamishwa nje; uteuzi ulio sehemu nyingine huhifadhiwa.
 
 <WingDemo path="/wing/block/details" />
 

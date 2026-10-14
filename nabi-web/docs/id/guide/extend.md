@@ -93,6 +93,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -106,6 +108,8 @@ export const exCallout: Wing = {
 ```
 
 Deklarasi ini saja tidak membuat cara untuk membungkus paragraf yang dipilih. Tambahkan perintah murni pada `commands` dan `button` yang memanggilnya sebelum mengekspos fitur di UI editor.
+
+`isolating: true` mengizinkan beberapa paragraf sekaligus mencegah penghapusan melewati batas kotak dan menggabungkannya dengan konten di sebelahnya. Perintah dalam `scopedCommands` berjalan pada dokumen di dalam kotak, sehingga penyisipan gambar/tabel serta konversi daftar/kutipan tetap di dalamnya.
 
 ### 5. Pasangan daftar dan item yang selalu berpasangan
 
@@ -165,10 +169,10 @@ Deklarasikan hanya yang diperlukan wing. Factory sudah menyediakan beberapa fiel
 | Area | Opsi | Tujuan |
 | --- | --- | --- |
 | Dasar | `w`, `place`, `basic`, `styles` | Nama, jenis struktur, keanggotaan katalog dasar, CSS bawaan |
-| Struktur | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | Jenis anak, perilaku Enter, atribut yang diizinkan, atribut boolean |
+| Struktur | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | Jenis anak, perilaku Enter, perlindungan batas pengeditan, atribut yang diizinkan, atribut boolean |
 | Struktur | `parts`, `allows`, `noAlign`, `requiresAnyOf` | Bagian internal, anak yang diizinkan, pengecualian perataan, dependensi wing |
 | Nilai | `attrKey`, `attrValues`, `currentValue` | Kunci dan daftar nilai tersimpan, deteksi nilai saat ini |
-| Perintah dan input | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Perintah, penanganan tombol, perilaku Escape/tombol ganda, aturan autoformat |
+| Perintah dan input | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Perintah, perintah pada dokumen internal, penanganan tombol, Escape/tekan ganda, konversi otomatis |
 | Perilaku surface | `attach` | Perilaku DOM dan pembersihan untuk surface |
 | Konversi | `toHtml`, `partHtml`, `toMd`, `partMd` | Keluaran HTML dan Markdown |
 | Impor dan perbaikan | `claim`, `ioFilter`, `repair`, `partRepair` | Impor HTML, penanganan file, validasi dan perbaikan JSON |
@@ -190,6 +194,30 @@ Perintah adalah fungsi murni dari dokumen dan seleksi yang mengembalikan dokumen
 Letakkan perilaku khusus DOM, seperti pemilihan drag pada tabel, di `attach(host)`. Segera daftarkan pembersihan setiap listener atau atribut yang berubah dengan `host.onDispose()` agar penyiapan yang gagal tetap dibersihkan. Jangan mengubah DOM teks yang sedang dikomposisi atau pemetaan seleksi surface.
 
 Deklarasikan kontrol toolbar dan konteks dengan `button`, `buttons`, dan `context`; menggandakan aturan perintahnya di UI aplikasi dapat membuat UI dan model dokumen menyimpang.
+
+### Menjalankan perintah di dalam blok
+
+Deklarasikan `scopedCommands` pada kontainer dengan `holds: 'blocks'` dan `parts` yang menampung blok. Jika kedua ujung seleksi berada di wilayah yang sama, perintah menerima dokumen anak wilayah itu dan jalur seleksi relatif, lalu hasilnya diterapkan kembali ke dokumen luar. Seleksi yang melintasi batas wilayah ditolak; di luar wilayah, perilaku asli perintah tetap berlaku. Wilayah mengambang dan sel tabel juga memakai mekanisme ini untuk membatasi penyisipan, konversi, dan unggahan.
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+Daftar ini hanya menerima perintah sayap. Perintah yang belum terdaftar dilewati, sehingga sayap gambar atau unggahan tidak wajib didaftarkan bersamaan. Pilih perintah yang hanya bekerja dengan dokumen internal dan jalur relatif yang diberikan; jangan sertakan perintah yang membutuhkan jalur absolut dalam dokumen lengkap atau mengganti seluruh dokumen. Perintah inti juga tidak boleh dimasukkan.
+
+`singleParagraph` membatasi konten menjadi satu paragraf; `isolating` mempertahankan beberapa paragraf sambil mencegah Backspace/Delete melewati batas pengeditan. `parts` yang menampung blok juga dapat mendeklarasikan `isolating: true`.
+
+### Menangani tombol dalam blok bertingkat
+
+`KeyIntent.shift` yang diterima `onKey` membedakan Enter dan Shift+Enter. Jika sayap internal mengembalikan `null` dalam wilayah pengeditan mandiri, penanganan diteruskan berurutan ke sayap leluhur hingga wilayah tersebut. Karena itu, daftar dan kode dalam sel menangani indentasi lebih dahulu; Tab yang tidak ditangani dapat berpindah sel. Sayap yang sama tidak dipanggil dua kali untuk satu input tombol.
 
 ## Gaya CSS
 

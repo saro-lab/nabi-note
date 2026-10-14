@@ -25,6 +25,12 @@ const selected = wings()
 
 Se selezioni solo `upload`, esso fornisce automaticamente la dipendenza mancante fra immagine e link. Il trasferimento viene collegato con `mountUpload()` e l'interfaccia di avanzamento nella schermata di modifica di solito con `mountUploadView()`. Se il server restituisce URL HTTPS, l'opzione per gli URL locali non è necessaria.
 
+## Posizione di inserimento dei caricamenti
+
+Viene memorizzata la posizione in cui si apre il selettore di file o si avvia il caricamento. Spostando solo il cursore, l'inserimento rimane nella posizione originale. Se il caricamento inizia in una cella, l'indicatore di avanzamento e il contenuto finale restano nella cella. Anche i caricamenti avviati in un'area flottante inseriscono lì i risultati. Non è possibile inserirli in una selezione che attraversa più celle.
+
+Modificare o sostituire il documento durante la selezione dei file o l'elaborazione asincrona annulla l'inserimento e mostra un avviso. Annullare fino a ripristinare lo stesso contenuto non ripristina l'inserimento nella vecchia posizione. Non giudicare il completamento solo dal successo del trasferimento: controlla `committed` e `cancelled` ricevuti da `onDone`. `committed` indica il numero di file effettivamente inseriti nel documento.
+
 ## Contratto API del server
 
 NABI NOTE non invia autonomamente file al tuo server. La funzione `uploader` invia un file al server e, in caso di successo, restituisce solo un URL `https:` pubblico o autenticato. Il contratto API più semplice è il seguente.
@@ -58,6 +64,7 @@ L'esempio seguente è il collegamento effettivo previsto da NABI NOTE. Usa `XMLH
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -121,9 +128,18 @@ const surface = mountSurface({
   fileSink: upload.take,
   locale: 'it',
 })
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'it',
+})
 ```
 
-Collega `fileSink: upload.take` affinché trascinamento e rilascio e le operazioni di incolla che contengono solo file entrino nel flusso di caricamento. L'interfaccia del wing di caricamento passa a `upload.take()` i risultati del pulsante di selezione file. Durante il caricamento l'editor è bloccato e i file riusciti di ciascun lotto vengono inseriti come un'unica operazione annullabile. `upload.cancel()` o il pulsante Annulla in `uploadView` interrompe le richieste in corso tramite `AbortSignal`.
+Collega `fileSink: upload.take` affinché trascinamento e incolla di soli file entrino nel flusso di caricamento. Collega il pulsante di scelta dei file tramite `onFiles: upload.take` della barra. Durante il caricamento l'editor è bloccato e i file riusciti vengono inseriti con un'unica operazione annullabile per lotto. `upload.cancel()` o il pulsante Annulla di `uploadView` interrompe le richieste in corso tramite `AbortSignal`.
 
 ## Errori e pulizia
 
@@ -131,6 +147,7 @@ Se il server restituisce una risposta di errore o l'`uploader` restituisce `null
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

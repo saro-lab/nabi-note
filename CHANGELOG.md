@@ -20,6 +20,7 @@ Dates use Korea Standard Time (KST).
 
 ### Changed
 
+- Document comparison now shows only changes and surrounding context by default. With no changes, folding is disabled and both complete documents remain visible.
 - Reduced the default double-Enter window for leaving a container from 350 ms to 180 ms. Esc and Shift double-tap defaults remain unchanged.
 - Grouped the default toolbar into headings, text formatting, alignment, lists, insertion, and document tools, with vertical separators between groups. Custom group order and quick-tool settings remain supported, as do the mobile single-row toolbar and complete Tools palette.
 - In ordinary cell paragraphs, Enter creates a paragraph and Shift+Enter inserts a line break. Tab keeps list/code indentation and moves between cells in ordinary paragraphs. Paste, block insertion, and uploads stay within the original cell scope; asynchronous insertion is cancelled with feedback if the document changes first. Multi-block tables use HTML in Markdown exports.
@@ -32,6 +33,7 @@ Dates use Korea Standard Time (KST).
 
 ### Fixed
 
+- Fixed float content remaining visible inside folded comparison regions.
 - Fixed pasting a single table or image inside a float placing it outside the region. Empty inner paragraphs are replaced by the pasted block while preserving table alignment, cell formatting, and outside paragraphs.
 - Fixed Backspace, Delete, and range deletion crossing cell boundaries to join contents or remove neighboring tables. Deletion keeps the caret inside its cell, and navigation through multi-block cells uses their first and last actual editable positions.
 - Fixed table deletion inside a float to remove only that table rather than its outer region. Native copy/cut shortcuts work at table wrapper boundaries, and plain-text copies of multi-block cells preserve block line breaks and image/video URLs.

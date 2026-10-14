@@ -31,9 +31,36 @@ Do not use runtime injection in SSR. Link or bundle `nabi-note/nabi.css`.
 
 ## Table cell colors
 
-Cell backgrounds use dedicated `--nabi-cell-yellow`, `--nabi-cell-green`, `--nabi-cell-cyan`, `--nabi-cell-pink`, `--nabi-cell-purple`, and `--nabi-cell-orange` tokens. The property swatches and document cells read the same tokens. Defaults use the corresponding highlight RGB values at 14% opacity in light mode and 12% in dark mode. The explicit light override restores the light values inside a dark host.
+Cell backgrounds use dedicated `--nabi-cell-yellow`, `--nabi-cell-green`, `--nabi-cell-cyan`, `--nabi-cell-pink`, `--nabi-cell-purple`, and `--nabi-cell-orange` tokens. The property swatches and document cells read the same tokens. Light mode uses the corresponding highlight RGB values at 14% opacity. Dark mode uses separate, lighter, less saturated tints at 20% opacity, preserving the same color names and stored values. The explicit light override restores the light values inside a dark host.
+
+Default dark-mode values:
+
+| Token suffix | CSS value |
+| --- | --- |
+| `yellow` | `rgb(245 214 115 / 20%)` |
+| `green` | `rgb(155 213 148 / 20%)` |
+| `cyan` | `rgb(146 201 232 / 20%)` |
+| `pink` | `rgb(230 170 203 / 20%)` |
+| `purple` | `rgb(194 177 230 / 20%)` |
+| `orange` | `rgb(229 180 140 / 20%)` |
 
 These backgrounds remain transparent to the host page and are intentionally much fainter than text highlights. They do not change foreground colors; host backgrounds and custom tokens affect the resulting contrast. A custom cell color takes priority over the normal header background. Selected cell rectangles use inset outlines so the stored background remains visible while selected. Selection outlines are editor-only and are never stored in JSON or HTML. A collapsed caret at either boundary of a table wrapper paragraph also shows the image-style dashed outline around the table. A caret inside a cell or in a neighboring paragraph does not show this whole-table outline; the caret remains collapsed. At either table wrapper boundary, the main toolbar shows alignment controls that align the table itself.
+
+Override the token on the editor or reader's theme scope, after loading the package CSS:
+
+```css
+.project-notes:is(.nabi, .nabi-content)[data-nabi-theme='light'] {
+  --nabi-cell-cyan: rgb(35 155 185 / 14%);
+  --nabi-cell-yellow: rgb(210 170 40 / 14%);
+}
+
+.project-notes:is(.nabi, .nabi-content)[data-nabi-theme='dark'] {
+  --nabi-cell-cyan: rgb(150 205 220 / 20%);
+  --nabi-cell-yellow: rgb(235 210 130 / 20%);
+}
+```
+
+Apply `project-notes` to the `.nabi` editor wrapper or `.nabi-content` reader wrapper and let the host set its explicit `data-nabi-theme="light|dark"`. Continue to store `bg: 'cyan'` or `bg: 'yellow'`, rather than storing CSS values in the document. See `wings.md` for an editable colored-table example.
 
 ## Host markup
 

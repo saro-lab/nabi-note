@@ -59,6 +59,8 @@ const toolbar = mountToolbar({
 
 Cerrar el panel o desmontar la barra de herramientas cancela `signal` y llama a la función de limpieza. `run()` cierra el panel y aplica un comando una sola vez a la selección capturada al abrirlo. Si el panel ya está cerrado o el contenido del documento ha cambiado desde su apertura, devuelve `false` sin ejecutar el comando.
 
+Si solo mueves el cursor, la imagen se inserta en la posición original donde abriste el panel. Si lo abriste dentro de una celda o un área flotante, la imagen se inserta allí. Editar o reemplazar el documento cancela la inserción y muestra un aviso, incluso si deshacer recupera el mismo contenido; vuelve a abrir el panel y elige la imagen de nuevo.
+
 ## Estilos CSS
 
 Da estilo a las imágenes con `.nabi-content img`. Mantén intactas la anchura y la alineación guardadas, y cambia solo detalles visuales como bordes o sombras.

@@ -101,7 +101,7 @@ diff.update(nextBefore, nextAfter);
 diff.unmount();
 ```
 
-The mount creates a read-only two-pane view, previous/next navigation, change count, unchanged-region folding, scroll mapping, and connector graphics. Folding keeps one context block around each change. The mount injects `DIFF_CSS` with exact-string reference counting per document, so it can stand alone; load `nabi.css` too when rendered document content uses wing styles.
+The mount creates a read-only two-pane view, previous/next navigation, change count, unchanged-region folding, scroll mapping, and connector graphics. Only-changes mode is enabled by default and keeps one context block around each change. With no changes, both complete documents remain visible and the fold toggle is disabled. Updates preserve the user's fold preference, applying it only when changes exist. Folded regions also hide float blocks. The mount injects `DIFF_CSS` with exact-string reference counting per document, so it can stand alone; load `nabi.css` too when rendered document content uses wing styles.
 
 `unmount()` removes generated content and the `.nabi-diff` class. The final reference also removes the package-owned injected diff style; a matching style supplied by the host is never removed.
 

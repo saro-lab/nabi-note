@@ -38,6 +38,15 @@ import 'nabi-note/nabi.css'
 
 アイコン要素の`data-nabi-icon`の値に`--nabi-icon-`を付けるとCSS変数になります。例：`diff-close`は`--nabi-icon-diff-close`です。コンテキスト、メニュー、保存、履歴などのキー規則と特殊文字の処理は<a href="/llms/icons.md" target="_blank" rel="noopener">アイコンの仕様</a>を参照してください。
 
+フロート領域の挿入ボタンは `toolbar-float`、プロパティツールの解除ボタンは `context-float-unwrap` です。既定のファイルはそれぞれ `float-float.svg` と `float-unwrap.svg` で、ダークテーマ用のファイルもあります。解除ボタンは幅の値の横に表示され、画像を差し替えても名前とツールチップは維持されます。
+
+```css
+.paper-note {
+  --nabi-icon-toolbar-float: url("/icons/float.svg");
+  --nabi-icon-context-float-unwrap: url("/icons/float-unwrap.svg");
+}
+```
+
 ## ダークモードとパネル
 
 テーマクラスやCSS変数を変えるだけで、再mountせずにアイコンが変わります。標準アイコンはライト・ダークテーマに従います。独自ファイルは`currentColor`を継承しないため、必要に応じて上の例のようにダーク用ファイルを指定してください。`body`直下のパネルも元のエディターのアイコンテーマとクラス・スタイル変更に従います。変数はツールバー内だけでなく、エディターか共通の親に置いてください。

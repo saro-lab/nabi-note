@@ -11,6 +11,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Placez la première lettre d'un paragraphe à une taille plus grande et laissez les lignes suivantes s'écouler à côté. Il s'agit d'une mise en forme au niveau du paragraphe, elle ne s'applique donc pas à une partie seulement d'un mot sélectionné.
 
+Dans un tableau, la lettrine s'applique aux paragraphes internes, pas aux cellules elles-mêmes. Sélectionner plusieurs cellules modifie tous les paragraphes compatibles qu'elles contiennent ; l'état de la barre d'outils repose sur cette même sélection de paragraphes.
+
 La vue de publication et la vue d'édition conservent la même apparence. Lors de l'édition, la première lettre est enveloppée dans un élément réel afin que les positions du curseur et de la suppression ne dérivent pas ; cet élément n'est pas inclus dans le contenu du document sauvegardé.
 
 <WingDemo path="/wing/etc/dropcap" />

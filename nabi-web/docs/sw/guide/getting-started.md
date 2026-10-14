@@ -61,7 +61,35 @@ const toolbar = mountToolbar({
 
 `locale` hudhibiti maandishi ya toolbar na usaidizi; pitisha thamani ileile kwa kila UI mount. `placeholder` huonyeshwa kwa kihariri tupu pekee. `onError` hupokea makosa yaliyotengwa kutoka commands na callbacks. `undoLimit` ni idadi ya hatua za kutendua (chaguomsingi 200). `typingMergeMs` ni muda unaounganisha uandishi unaofuatana kuwa hatua moja ya kutendua; weka `0` ili kila uingizaji ubaki tofauti.
 
+Muda wa kawaida kati ya mibofyo mfululizo ya Enter ya kutoka kwenye kontena la bloku ni 180ms. Esc na Shift mara mbili hubaki 350ms. Kuweka `doubleEnterMs` wazi katika `mountSurface()` hubadili muda wa Esc mara mbili pamoja na Enter.
+
 Kila kihariri kinahitaji content na toolbar roots zake zisizopishana. Kwenye ukurasa wenye vihariri kadhaa, pitisha eneo lake la kuhariri kwa kila toolbar kupitia `surface` ili focus na shortcuts zisichanganyike.
+
+## Sanidi upau wa zana
+
+Upau wa kawaida hupanga vichwa, uumbizaji wa maandishi, upangaji, orodha, uingizaji na zana za hati kwa mpangilio huo, ukitenganisha makundi kwa mistari wima. Kompyuta huonyesha zana zote katika mistari mingi; simu huonyesha zana za haraka na kitufe cha zana zote katika mstari mmoja. Zana za sifa za jedwali, picha na maeneo yanayoelea huonekana chini na zinaweza kutumiwa pamoja na zana za maandishi.
+
+Tumia `groups` kubadili mpangilio wa makundi na `quick` kubadili mpangilio wa zana za haraka kwenye simu. Kwa mfano, kihariri kinachoingiza picha mara nyingi kinaweza kuhamisha kundi la `media` mbele.
+
+```ts
+import { TOOLBAR_GROUPS, mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  locale: 'sw',
+  groups: ['media', ...TOOLBAR_GROUPS.filter((group) => group !== 'media')],
+  quick: ['b', 'i', 'tc', 'img'],
+})
+```
+
+Zana za haraka hufuata mpangilio uliotajwa bila vitenganishi. Ndani ya kundi hutumika mpangilio wa kusajili mabawa. Unaporender upau mapema kwa SSR, pitisha mpangilio sawa wa makundi kwenye seva na kivinjari. [Mandhari za CSS](./style#kizingiti-cha-hali-ya-simu) hueleza mpangilio kulingana na upana wa skrini.
+
+Unganisha `mountHints()` ili uchague zana kwa kibodi kwa kubonyeza Shift mara mbili. Tab hubadili kundi, na mishale husogea kati ya aikoni za kundi moja. Kompyuta na skrini nzima hutumia upau unaoonekana; simu hutumia paleti ya zana zote.
+
+Paneli za picha, sehemu za URL na vichaguzi vya faili hukumbuka uteuzi wa wakati wa kufunguliwa. Ukisogeza kishale pekee, uingizaji hutumia nafasi ya awali; ukihariri au kubadilisha hati, ingizo hughairiwa kwa taarifa. Kutengua hadi maudhui yawe sawa hakufanyi uteuzi wa zamani utumike tena.
 
 ## Chagua wings
 

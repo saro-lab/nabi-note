@@ -13,6 +13,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 语言名称是语法高亮使用的标识符，注册列表之外的名称也可以手动输入。由于代码内容和缩进必须保留，代码块不接受段落对齐。
 
+表格单元格内也支持多行代码和 Tab 缩进。即使 Shift+Tab 无法继续减少某行的缩进，也会留在代码内，不会移到上一个单元格。
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

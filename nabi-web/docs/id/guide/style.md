@@ -17,22 +17,20 @@ import 'nabi-note/nabi.css'
   --nabi-bg: #fff;
   --nabi-accent: #5b4ee8;
   --nabi-content-min-height: 20rem;
-  --nabi-font: Inter, system-ui, sans-serif;
+  --nabi-font: Pretendard, system-ui, sans-serif;
   --nabi-sticky-top: 4rem;
 }
 ```
 
-Letakkan token bersama pada parent umum agar editor dan tampilan terbitannya mempertahankan bahasa visual yang sama.
+Berikan kelas tema yang sama pada `.nabi` editor dan `.nabi-content` tampilan terbitan untuk menerapkan variabel yang sama. Muat CSS layanan setelah CSS paket dan tentukan tema aktif melalui `data-nabi-theme`.
 
 ```html
-<section class="brand-note">
-  <div class="nabi">...</div>
-  <article class="nabi-content">...</article>
-</section>
+<div class="nabi brand-note" data-nabi-theme="light">...</div>
+<article class="nabi-content brand-note" data-nabi-theme="light">...</article>
 ```
 
 ```css
-.brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-fg: #1f2937;
   --nabi-muted: #6b7280;
   --nabi-bg: #fff;
@@ -56,20 +54,33 @@ Letakkan token bersama pada parent umum agar editor dan tampilan terbitannya mem
 | Kontrol sentuh | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
 | Lebar peralihan mode seluler | `--nabi-mobile-breakpoint` |
 
-Token sorotan dan warna teks memakai `--nabi-hl-<name>` dan `--nabi-tc-<name>`. Misalnya, mengubah `--nabi-hl-yellow` mengubah warna tampilan sorotan `yellow` yang tersimpan tanpa mengubah data dokumen.
+Sorotan dan warna teks memakai `--nabi-hl-<name>` dan `--nabi-tc-<name>`. Latar sel tabel memakai `--nabi-cell-<name>` dengan `yellow`, `green`, `cyan`, `pink`, `purple`, dan `orange`. Variabel hanya mengubah warna yang tampil, bukan nama warna yang disimpan.
 
 ```css
-.article-editor {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-hl-yellow: #fff0a6;
   --nabi-tc-blue: #2563eb;
+  --nabi-cell-cyan: #e2f4f7;
+}
+```
+
+Tema bawaan menampilkan latar sel dengan warna lembut. Mode gelap mempertahankan nama warna tetapi memakai warna tersendiri yang lebih terang dan kurang jenuh agar mudah dibedakan di atas latar gelap. Warna tembus pandang ini memperlihatkan latar di bawahnya; saat menyesuaikan warna, periksa kontras teks pada latar halaman sebenarnya. Untuk menimpa variabel warna bawaan, terapkan kelas tema pada elemen editor atau konten terbitan yang sebenarnya seperti contoh di atas, bukan sembarang induk luar.
+
+```css
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
+  --nabi-cell-cyan: #183b43;
 }
 ```
 
 ## Ambang mode seluler
 
-Mode seluler aktif ketika lebar bilah alat, baris konteks, atau viewport kurang dari `36rem`. Tepat pada `36rem`, tata letak biasa tetap digunakan. Dalam mode seluler, bilah alat dan baris konteks bergulir secara horizontal, panel berada di tengah, dan pemilih tabel menjadi 5×5 sel yang nyaman disentuh.
+Bilah alat bawaan `layout: 'compact'` beralih ke satu baris seluler saat lebar layar di bawah `36rem`. Tepat `36rem` tetap memakai tata letak desktop. Di desktop, semua alat membungkus ke baris berikutnya meski editornya sempit. Properti objek juga membungkus di bawahnya; kedua baris memakai ruang di atas teks. Layar penuh membuka semua alat tanpa bergantung pada lebar layar.
 
-Atur `--nabi-mobile-breakpoint` pada `:root`, elemen leluhur, atau satu `.nabi`. Gunakan panjang CSS nonnegatif seperti `rem`, `px`, atau `calc()`. Perubahan nilai CSS, ukuran font akar, lebar kontainer, atau viewport juga memperbarui panel yang terbuka secara otomatis. Panel masukan yang dipindahkan ke bawah `body` tetap menggunakan ambang editor asalnya.
+Di seluler, alat cepat, tombol semua alat, dan tombol pratinjau/layar penuh yang terhubung tetap berada di bilah utama. Semuanya tetap dapat digunakan saat alat properti muncul. Palet semua alat memakai urutan kelompok dan pemisah yang sama dengan desktop. `layout: 'wrap'` selalu menampilkan semua alat dengan pembungkusan baris.
+
+Panel seluler terbuka pada ruang yang tersedia di sekitar bilah alat dan properti. Pemilih ukuran tabel menjadi pengecualian: terbuka di tengah di atas latar tembus pandang dengan kisi 5×5 yang mudah disentuh. Tidak menunggu papan ketik tertutup; memilih ukuran menyisipkan satu tabel lalu menutup pemilih.
+
+Atur `--nabi-mobile-breakpoint` pada `:root`, leluhur, atau `.nabi` tertentu untuk mengubah ambang. Gunakan panjang CSS nonnegatif seperti `rem`, `px`, atau `calc()`. Perubahan nilai CSS, ukuran font akar, atau lebar layar otomatis memperbarui panel yang sudah terbuka. Panel input yang dipindahkan ke bawah `body` tetap mengikuti ambang editor asal.
 
 ```css
 .article-editor {
@@ -77,7 +88,7 @@ Atur `--nabi-mobile-breakpoint` pada `:root`, elemen leluhur, atau satu `.nabi`.
 }
 ```
 
-Perangkat sentuh tetap menggunakan kontrol yang lebih besar di atas ambang ini.
+Wilayah mengambang memiliki ambang satu kolom tersendiri. Satu kolom digunakan ketika kontainer teks, bukan layar, lebih sempit dari `36rem`; pencetakan memakai tata letak yang sama.
 
 ## Mode gelap
 
@@ -91,7 +102,7 @@ Mode terang adalah bawaan. Tambahkan `.dark` pada `html` atau `body`, atau atur 
 Gunakan `data-nabi-theme="light"` untuk tidak mengikuti `.dark` pada ancestor. Aplikasi Anda mengendalikan pergantian tema; paket tidak otomatis mengikuti `prefers-color-scheme`.
 
 ```css
-.dark .brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
   --nabi-fg: #f3f4f6;
   --nabi-muted: #a1a1aa;
   --nabi-bg: #18181b;
@@ -111,7 +122,7 @@ HTML terbitan juga memerlukan `.nabi-content` dan CSS yang sama. Tabel, blok kod
 
 ```css
 .article-body {
-  --nabi-font: "Source Serif 4", Georgia, serif;
+  --nabi-font: "Noto Serif KR", serif;
   --nabi-bg: transparent;
 }
 ```

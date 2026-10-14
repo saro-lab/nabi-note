@@ -25,6 +25,12 @@ const selected = wings()
 
 اگر آپ صرف `upload` منتخب کریں تو یہ image یا link dependencies میں سے جو غائب ہو اسے خودکار طور پر فراہم کرتا ہے۔ منتقلی `mountUpload()` سے منسلک ہوتی ہے، اور ترمیمی اسکرین کا progress UI عموماً `mountUploadView()` سے جوڑا جاتا ہے۔ اگر سرور HTTPS URLs واپس کرے تو مقامی URL اختیار کی ضرورت نہیں۔
 
+## اپ لوڈ شامل ہونے کا مقام
+
+فائل منتخب کرنے کی کھڑکی کھولنے یا اپ لوڈ شروع کرنے کا مقام یاد رکھا جاتا ہے۔ اگر صرف کرسر منتقل ہو تو اندراج اصل مقام پر ہوتا ہے۔ اگر اپ لوڈ جدول کے خانے میں شروع ہو تو پیش رفت اور مکمل مواد اسی خانے میں رہتے ہیں۔ تیرتے حصے میں شروع ہونے والے اپ لوڈ کا نتیجہ بھی اسی حصے میں آتا ہے۔ کئی خانوں کی حدود پار کرنے والے انتخاب میں اپ لوڈ شامل نہیں کیا جا سکتا۔
+
+فائل کے انتخاب یا غیر ہم وقت کارروائی کے دوران دستاویز میں ترمیم یا اسے تبدیل کرنے سے اندراج منسوخ ہوتا ہے اور اطلاع دکھائی جاتی ہے۔ کالعدم کرنے سے وہی مواد لوٹ آئے تب بھی پرانے مقام پر اندراج نہیں ہوتا۔ تکمیل کو صرف منتقلی کی کامیابی سے نہ جانچیں: `onDone` کو ملنے والے `committed` اور `cancelled` دیکھیں۔ `committed` دراصل دستاویز میں شامل ہونے والی فائلوں کی تعداد ہے۔
+
 ## سرور API معاہدہ
 
 NABI NOTE خود سے آپ کے سرور کو فائلیں نہیں بھیجتا۔ `uploader` فنکشن ایک فائل سرور کو بھیجتا ہے، اور کامیابی پر صرف عوامی یا authenticated `https:` URL واپس کرتا ہے۔ سب سے سادہ API معاہدہ یوں ہے۔
@@ -58,6 +64,7 @@ Failure: 4xx or 5xx response
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -67,7 +74,7 @@ import {
 const content = document.querySelector<HTMLElement>('#content')!
 const { nabi, registry } = createNabiWith(
   wings().use('img').use('a').use('upload').build(),
-  { locale: 'en' },
+  { locale: 'ur' },
 )
 
 function sendUpload(task: UploadTask): Promise<{ uri: string } | null> {
@@ -105,25 +112,34 @@ const upload = mountUpload({
   extensions: ['png', 'jpg', 'jpeg', 'webp', 'pdf'],
   maxFileSize: 10 * 1024 * 1024,
   maxTotalSize: 20 * 1024 * 1024,
-  locale: 'en',
+  locale: 'ur',
   onStart: (tasks) => uploadView.start(tasks),
   onProgress: (id, percent) => uploadView.progress(id, percent),
   onSettle: () => uploadView.settle(),
   onDone: () => uploadView.done(),
 })
 
-uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'en' })
+uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'ur' })
 
 const surface = mountSurface({
   nabi,
   registry,
   root: content,
   fileSink: upload.take,
-  locale: 'en',
+  locale: 'ur',
+})
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'ur',
 })
 ```
 
-`fileSink: upload.take` جوڑیں تاکہ drag and drop، اور صرف فائلوں پر مشتمل paste کارروائیاں اپ لوڈ flow میں داخل ہوں۔ upload wing UI، فائل انتخاب بٹن کے نتائج `upload.take()` کو دیتا ہے۔ اپ لوڈ جاری رہنے کے دوران ایڈیٹر مقفل رہتا ہے، اور ہر batch کی کامیاب فائلیں ایک undo قدم کے طور پر شامل ہوتی ہیں۔ `upload.cancel()` یا `uploadView` میں cancel بٹن، جاری درخواستوں کو `AbortSignal` کے ذریعے ختم کرتا ہے۔
+`fileSink: upload.take` جوڑیں تاکہ گھسیٹ کر چھوڑنا اور صرف فائلیں چسپاں کرنا اپ لوڈ کے عمل میں آئیں۔ فائل انتخاب کے بٹن کو ٹول بار کے `onFiles: upload.take` سے جوڑیں۔ اپ لوڈ کے دوران ایڈیٹر مقفل رہتا ہے اور ہر مجموعے کی کامیاب فائلیں کالعدم کرنے کے ایک مرحلے میں شامل ہوتی ہیں۔ `upload.cancel()` یا `uploadView` کا منسوخ بٹن جاری درخواستوں کو `AbortSignal` کے ذریعے روکتا ہے۔
 
 ## ناکامی اور صفائی
 
@@ -131,6 +147,7 @@ const surface = mountSurface({
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

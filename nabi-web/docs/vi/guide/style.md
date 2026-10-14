@@ -17,22 +17,20 @@ import 'nabi-note/nabi.css'
   --nabi-bg: #fff;
   --nabi-accent: #5b4ee8;
   --nabi-content-min-height: 20rem;
-  --nabi-font: Inter, system-ui, sans-serif;
+  --nabi-font: Pretendard, system-ui, sans-serif;
   --nabi-sticky-top: 4rem;
 }
 ```
 
-Đặt token dùng chung trên phần tử cha chung để trình soạn thảo và chế độ xem đã xuất bản giữ cùng ngôn ngữ hình ảnh.
+Gán cùng lớp giao diện cho `.nabi` của trình soạn thảo và `.nabi-content` của trang xuất bản để áp dụng cùng biến cho cả hai. Nạp CSS dịch vụ sau CSS gói và chỉ định giao diện hiện tại bằng `data-nabi-theme`.
 
 ```html
-<section class="brand-note">
-  <div class="nabi">...</div>
-  <article class="nabi-content">...</article>
-</section>
+<div class="nabi brand-note" data-nabi-theme="light">...</div>
+<article class="nabi-content brand-note" data-nabi-theme="light">...</article>
 ```
 
 ```css
-.brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-fg: #1f2937;
   --nabi-muted: #6b7280;
   --nabi-bg: #fff;
@@ -56,20 +54,33 @@ import 'nabi-note/nabi.css'
 | Điều khiển cảm ứng | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
 | Chiều rộng chuyển sang chế độ di động | `--nabi-mobile-breakpoint` |
 
-Token tô sáng và màu văn bản dùng `--nabi-hl-<name>` và `--nabi-tc-<name>`. Ví dụ, đổi `--nabi-hl-yellow` sẽ đổi màu hiển thị của phần tô sáng `yellow` đã lưu mà không thay đổi dữ liệu tài liệu.
+Tô sáng và màu chữ dùng `--nabi-hl-<name>` và `--nabi-tc-<name>`. Nền ô bảng dùng `--nabi-cell-<name>` với `yellow`, `green`, `cyan`, `pink`, `purple`, `orange`. Biến chỉ đổi màu hiển thị, không đổi tên màu đã lưu.
 
 ```css
-.article-editor {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-hl-yellow: #fff0a6;
   --nabi-tc-blue: #2563eb;
+  --nabi-cell-cyan: #e2f4f7;
+}
+```
+
+Giao diện mặc định dùng nền ô màu nhạt. Chế độ tối giữ tên màu nhưng dùng bộ màu riêng sáng hơn và ít bão hòa hơn để dễ phân biệt trên nền tối. Các màu bán trong suốt để lộ nền phía dưới; khi tùy chỉnh, hãy kiểm tra độ tương phản chữ trên nền trang thực tế. Muốn ghi đè biến màu mặc định, hãy gán lớp giao diện vào chính phần tử soạn thảo hoặc nội dung xuất bản như trên, thay vì một phần tử cha bên ngoài bất kỳ.
+
+```css
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
+  --nabi-cell-cyan: #183b43;
 }
 ```
 
 ## Ngưỡng chế độ di động
 
-Chế độ di động bật khi chiều rộng thanh công cụ, hàng ngữ cảnh hoặc vùng nhìn nhỏ hơn `36rem`. Ở đúng `36rem`, bố cục thông thường được giữ nguyên. Trong chế độ di động, thanh công cụ và hàng ngữ cảnh cuộn ngang, các bảng nằm giữa và lưới chọn bảng giảm còn 5×5 ô phù hợp với thao tác chạm.
+Thanh công cụ mặc định `layout: 'compact'` chuyển thành một hàng di động khi màn hình hẹp hơn `36rem`. Đúng `36rem` vẫn giữ bố cục máy tính. Trên máy tính, mọi công cụ xuống hàng ngay cả khi trình soạn thảo hẹp. Thuộc tính đối tượng cũng xuống hàng bên dưới; cả hai hàng chiếm chỗ phía trên nội dung. Toàn màn hình mở mọi công cụ bất kể độ rộng màn hình.
 
-Đặt `--nabi-mobile-breakpoint` trên `:root`, phần tử tổ tiên hoặc từng `.nabi`. Dùng độ dài CSS không âm như `rem`, `px` hoặc `calc()`. Thay đổi giá trị CSS, cỡ chữ gốc, chiều rộng vùng chứa hoặc vùng nhìn cũng tự động cập nhật các bảng đang mở. Bảng nhập liệu được chuyển xuống dưới `body` vẫn dùng ngưỡng của trình soạn thảo ban đầu.
+Trên di động, công cụ nhanh, nút tất cả công cụ và các nút xem trước/toàn màn hình đã kết nối vẫn ở thanh chính. Chúng vẫn dùng được khi công cụ thuộc tính xuất hiện. Bảng tất cả công cụ dùng cùng thứ tự nhóm và vạch ngăn như máy tính. `layout: 'wrap'` luôn hiển thị mọi công cụ có xuống hàng.
+
+Bảng di động mở trong khoảng trống quanh thanh công cụ và thuộc tính. Bộ chọn kích thước bảng là ngoại lệ: mở ở giữa trên nền bán trong suốt, với lưới 5×5 dễ chạm. Không chờ bàn phím đóng; chọn kích thước sẽ chèn một bảng rồi đóng bộ chọn.
+
+Đặt `--nabi-mobile-breakpoint` trên `:root`, phần tử tổ tiên hoặc từng `.nabi` để đổi ngưỡng. Dùng độ dài CSS không âm như `rem`, `px`, `calc()`. Khi giá trị CSS, cỡ chữ gốc hoặc độ rộng màn hình thay đổi, bảng đang mở cũng tự cập nhật. Bảng nhập chuyển xuống dưới `body` vẫn theo ngưỡng của trình soạn thảo gốc.
 
 ```css
 .article-editor {
@@ -77,7 +88,7 @@ Chế độ di động bật khi chiều rộng thanh công cụ, hàng ngữ c�
 }
 ```
 
-Thiết bị cảm ứng vẫn giữ các điều khiển lớn hơn khi vượt ngưỡng này.
+Vùng nổi có ngưỡng một cột riêng. Nó dùng một cột khi container nội dung, không phải màn hình, hẹp hơn `36rem`; khi in cũng dùng bố cục này.
 
 ## Chế độ tối
 
@@ -91,7 +102,7 @@ Chế độ sáng là mặc định. Thêm `.dark` vào `html` hoặc `body`, ho
 Dùng `data-nabi-theme="light"` để không áp dụng `.dark` của phần tử tổ tiên. Ứng dụng của bạn điều khiển việc đổi chủ đề; gói không tự động theo `prefers-color-scheme`.
 
 ```css
-.dark .brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
   --nabi-fg: #f3f4f6;
   --nabi-muted: #a1a1aa;
   --nabi-bg: #18181b;
@@ -111,7 +122,7 @@ HTML đã xuất bản cũng cần `.nabi-content` và cùng CSS. Bảng, khối
 
 ```css
 .article-body {
-  --nabi-font: "Source Serif 4", Georgia, serif;
+  --nabi-font: "Noto Serif KR", serif;
   --nabi-bg: transparent;
 }
 ```

@@ -38,6 +38,15 @@ Use root-relative paths such as `/icons/...` or full HTTPS URLs. Relative paths 
 
 Prefix an icon element's `data-nabi-icon` value with `--nabi-icon-` to get its CSS variable. For example, `diff-close` uses `--nabi-icon-diff-close`. See the <a href="/llms/icons.md" target="_blank" rel="noopener">icon contract</a> for all context, menu, save, history, and other key rules, including special-character encoding.
 
+The float insertion button uses `toolbar-float`; its property-tool unwrap button uses `context-float-unwrap`. The default files are `float-float.svg` and `float-unwrap.svg`, with dark-theme variants also provided. The unwrap button appears beside the width value; replacing its image preserves its name and tooltip.
+
+```css
+.paper-note {
+  --nabi-icon-toolbar-float: url("/icons/float.svg");
+  --nabi-icon-context-float-unwrap: url("/icons/float-unwrap.svg");
+}
+```
+
 ## Dark mode and panels
 
 Changing a theme class or CSS variable updates icons without mounting again. Default icons follow light/dark themes. Custom files do not inherit `currentColor`; assign dark variants as above when needed. Panels opened under `body` also follow the source editor's icon theme and class/style changes. Put variables on the editor or a shared parent, not only inside the toolbar.

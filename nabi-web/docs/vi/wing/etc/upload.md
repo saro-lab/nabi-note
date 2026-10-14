@@ -25,6 +25,12 @@ const selected = wings()
 
 Nếu chỉ chọn `upload`, một phụ thuộc còn thiếu trong ảnh và liên kết sẽ được tự động bổ sung. Kết nối truyền tệp bằng `mountUpload()`, và thường kết nối hiển thị tiến độ trên màn hình chỉnh sửa bằng `mountUploadView()`. Nếu máy chủ trả URL HTTPS, không cần tùy chọn cho phép URL cục bộ.
 
+## Vị trí chèn tệp tải lên
+
+Vị trí mở hộp chọn tệp hoặc bắt đầu tải lên được ghi nhớ. Nếu chỉ di chuyển con trỏ, nội dung vẫn được chèn tại vị trí ban đầu. Nếu bắt đầu trong ô bảng, cả tiến trình và nội dung hoàn tất đều nằm trong ô đó. Kết quả tải lên bắt đầu từ vùng nổi cũng được chèn vào vùng đó. Không thể chèn tệp tải lên vào vùng chọn vượt qua ranh giới nhiều ô.
+
+Chỉnh sửa hoặc thay thế tài liệu trong lúc chọn tệp hay xử lý bất đồng bộ sẽ hủy chèn và hiện thông báo. Dù hoàn tác đưa về cùng nội dung, tệp cũng không được chèn vào vị trí cũ. Đừng chỉ dựa vào truyền tệp thành công để kết luận hoàn tất: hãy kiểm tra `committed` và `cancelled` mà `onDone` nhận được. `committed` là số tệp thực sự được chèn vào tài liệu.
+
 ## Cam kết API máy chủ
 
 NABI NOTE không gửi tệp tới máy chủ. Hàm `uploader` gửi một tệp tới máy chủ và khi thành công chỉ trả URL `https:` công khai hoặc đã xác thực. Cam kết API đơn giản nhất như sau.
@@ -58,6 +64,7 @@ Ví dụ dưới đây là kết nối thực tế mà NABI NOTE mong đợi. D�
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -67,7 +74,7 @@ import {
 const content = document.querySelector<HTMLElement>('#content')!
 const { nabi, registry } = createNabiWith(
   wings().use('img').use('a').use('upload').build(),
-  { locale: 'ko' },
+  { locale: 'vi' },
 )
 
 function sendUpload(task: UploadTask): Promise<{ uri: string } | null> {
@@ -105,25 +112,34 @@ const upload = mountUpload({
   extensions: ['png', 'jpg', 'jpeg', 'webp', 'pdf'],
   maxFileSize: 10 * 1024 * 1024,
   maxTotalSize: 20 * 1024 * 1024,
-  locale: 'ko',
+  locale: 'vi',
   onStart: (tasks) => uploadView.start(tasks),
   onProgress: (id, percent) => uploadView.progress(id, percent),
   onSettle: () => uploadView.settle(),
   onDone: () => uploadView.done(),
 })
 
-uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'ko' })
+uploadView = mountUploadView({ nabi, surface: content, upload, locale: 'vi' })
 
 const surface = mountSurface({
   nabi,
   registry,
   root: content,
   fileSink: upload.take,
-  locale: 'ko',
+  locale: 'vi',
+})
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'vi',
 })
 ```
 
-Bạn phải kết nối `fileSink: upload.take` để kéo thả và dán chỉ có tệp đi vào quá trình tải lên. Nút chọn tệp trong UI của upload wing chuyển tệp qua `upload.take()`. Trong khi tải lên, trình soạn thảo bị khóa và các tệp thành công được thêm một lần hoàn tác cho mỗi lô. Nút hủy của `upload.cancel()` hoặc `uploadView` ngắt yêu cầu đang chạy qua `AbortSignal`.
+Kết nối `fileSink: upload.take` để kéo thả và dán chỉ có tệp đi vào luồng tải lên. Kết nối nút chọn tệp qua `onFiles: upload.take` của thanh công cụ. Khi tải lên, trình soạn thảo bị khóa và các tệp thành công được chèn với một bước hoàn tác cho mỗi lô. `upload.cancel()` hoặc nút hủy của `uploadView` ngắt yêu cầu đang chạy qua `AbortSignal`.
 
 ## Thất bại và giải phóng giao diện
 
@@ -131,6 +147,7 @@ Nếu máy chủ trả phản hồi lỗi hoặc `uploader` trả `null`, tệp 
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

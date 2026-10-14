@@ -38,6 +38,15 @@ Usa rutas desde la raíz como `/icons/...` o URL HTTPS completas. No se garantiz
 
 Añade `--nabi-icon-` al valor `data-nabi-icon` del elemento para obtener su variable CSS. Por ejemplo, `diff-close` usa `--nabi-icon-diff-close`. El <a href="/llms/icons.md" target="_blank" rel="noopener">contrato de iconos</a> explica las claves de contexto, menús, guardado, historial y otras, incluida la codificación de caracteres especiales.
 
+El botón para insertar una región flotante usa `toolbar-float`; el botón para quitar su envoltura en las propiedades usa `context-float-unwrap`. Los archivos predeterminados son `float-float.svg` y `float-unwrap.svg`, también disponibles para el tema oscuro. El botón para quitar la envoltura aparece junto al ancho; cambiar su imagen conserva el nombre y la descripción emergente.
+
+```css
+.paper-note {
+  --nabi-icon-toolbar-float: url("/icons/float.svg");
+  --nabi-icon-context-float-unwrap: url("/icons/float-unwrap.svg");
+}
+```
+
 ## Modo oscuro y paneles
 
 Cambiar la clase de tema o una variable CSS actualiza los iconos sin volver a montar. Los iconos predeterminados siguen el tema claro/oscuro. Los archivos propios no heredan `currentColor`; define variantes oscuras como arriba cuando sea necesario. Los paneles abiertos bajo `body` también siguen el tema de iconos y los cambios de clase/estilo del editor de origen. Coloca las variables en el editor o un padre común, no solo dentro de la barra.

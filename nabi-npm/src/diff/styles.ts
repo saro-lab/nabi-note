@@ -165,8 +165,8 @@ export const DIFF_CSS = `${ICON_CSS}
 
 /* 접기 — 안 바뀐 구간은 숨고, 구간마다 첫 블록이 줄임 표시 한 줄로 남는다. */
 /* Fold mode: unchanged spans hide, leaving each span's first block as a one-line ellipsis marker. */
-.nabi-diff-only .nabi-diff-cut { display: none; }
-.nabi-diff-only .nabi-diff-gap > * { display: none; }
+.nabi-diff-only .nabi-diff-doc > .nabi-diff-block.nabi-diff-cut { display: none; }
+.nabi-diff-only .nabi-diff-doc > .nabi-diff-gap > * { display: none; }
 .nabi-diff-only .nabi-diff-gap {
   background: var(--nabi-soft, rgb(0 0 0 / 4.5%));
   padding-block: 0;

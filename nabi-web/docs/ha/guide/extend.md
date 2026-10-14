@@ -95,6 +95,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -108,6 +110,8 @@ export const exCallout: Wing = {
 ```
 
 Wannan declaration kaɗai ba ya samar da command da zai sanya paragraph cikin callout. Dole a ƙara pure command mai kewaye paragraphs da aka zaɓa zuwa `commands`, kuma a bayyana `button` mai gudanar da shi kafin a iya amfani da shi a UI na edita.
+
+`isolating: true` yana ba da sakin layi da yawa amma yana hana gogewa ketare iyakar akwatin bayani ta haɗa shi da abin da ke kusa. Umarnin da ke `scopedCommands` suna aiki a kan takardar cikin akwatin, don haka saka hoto/tebur da sauya jeri/zance suna kasancewa a ciki.
 
 ### 5. Feature mai ƙirƙirar list da items tare
 
@@ -167,10 +171,10 @@ A bayyana waɗanda ake bukata kawai. Lokacin amfani da factory, kada a maimaita 
 | Rukuni | Option | Amfani |
 | --- | --- | --- |
 | Asali | `w`, `place`, `basic`, `styles` | Suna, nau'in tsari, ko a haɗa shi da basic wing, da asalin CSS |
-| Tsari | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | Nau'in child, halayen Enter, attributes da aka yarda da su, boolean attributes |
+| Tsari | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | Nau'in yara, halayyar Enter, kare iyakar gyara, attributes da aka yarda, attributes na boolean |
 | Tsari | `parts`, `allows`, `noAlign`, `requiresAnyOf` | Part na ciki, child da aka yarda da su, hana alignment, dependency wings |
 | Zaɓin ƙima | `attrKey`, `attrValues`, `currentValue` | Maɓalli da jeri na ƙimar ajiya da gano ƙimar da aka zaɓa |
-| Commands/input | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Command, sarrafa keys, Escape, keys masu jere, auto-conversion |
+| Commands/input | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Umarni, umarnin takardar ciki, sarrafa maɓalli, Escape/dannawa biyu, sauyawa ta atomatik |
 | Haɗin allo | `attach` | DOM behavior da tsaftacewa da surface ke bukata |
 | Juyawa | `toHtml`, `partHtml`, `toMd`, `partMd` | Fitar HTML da Markdown |
 | Shigo da gyara | `claim`, `ioFilter`, `repair`, `partRepair` | Shigo da HTML, sarrafa fayil, tantancewa da gyaran JSON |
@@ -192,6 +196,30 @@ Command pure function ne wanda ke karɓar takarda da wurin selection, ya dawo da
 Halayen allo da ba su da sauƙin bayyana su da command, kamar drag selection na tebur, a sanya su cikin `attach(host)`. Da zarar an canza event listener ko attribute, a yi rajistar aikin mayarwa da `host.onDispose()` domin a tsaftace ko da setup ya gaza daga baya. Kada ka canza composing text DOM ko selection mapping na surface kai tsaye.
 
 Ana bayyana toolbar da context tools da `button`, `buttons`, da `context`. Idan aka sake aiwatar da dokokin command daban a application UI, toolbar da document model na iya rabuwa.
+
+### Gudanar da umarni cikin block
+
+Bayyana `scopedCommands` a container mai `holds: 'blocks'` da `parts` masu ɗaukar blocks. Idan ƙarshen zaɓi biyu suna yanki ɗaya, umarni yana karɓar takardar yaran yankin da hanyoyin zaɓi dangane da shi, sannan a mayar da sakamakon cikin takardar waje. Ana ƙin zaɓin da ya ketare iyakar yanki; a wajen yankin, umarni yana bin halayyarsa ta asali. Yankunan iyo da cells na tebur ma suna amfani da wannan hanya wajen iyakance sakawa, sauyawa da lodawa.
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+Jerin yana karɓar umarnin fuka-fuki kawai. Ana tsallake umarnin da ba a yi rajista ba, don haka ba lallai a haɗa rajistar fuka-fukin hoto ko lodawa ba. Zaɓi umarnin da ke aiki da takardar ciki da hanyoyin dangantaka da aka bayar kawai; kar a saka masu buƙatar cikakkun hanyoyin takardar gaba ɗaya ko masu maye gurbin duk takardar. Umarnin core ma ba su shiga wannan jeri.
+
+`singleParagraph` yana iyakance abun ciki zuwa sakin layi ɗaya; `isolating` yana riƙe da sakin layi da yawa yana hana Backspace/Delete ketare iyakar gyara. `parts` masu ɗaukar blocks ma suna iya bayyana `isolating: true`.
+
+### Sarrafa maɓalli cikin blocks masu juna
+
+`KeyIntent.shift` da `onKey` yake karɓa yana bambanta Enter da Shift+Enter. Idan fuka-fukin ciki ya dawo da `null` a yankin gyara mai zaman kansa, ana mika sarrafawa ga fuka-fukin iyaye bisa jeri har zuwa wannan yanki. Saboda haka jeri da code cikin cell suna fara sarrafa tazara; Tab da ba a sarrafa ba zai iya sauya cell. Ba a kiran fuka-fuki ɗaya sau biyu don shigar maɓalli guda.
 
 ## CSS styles
 

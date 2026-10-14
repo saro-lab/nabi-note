@@ -13,6 +13,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Dil adı, sözdizimi vurgulamada kullanılan bir tanımlayıcıdır; kayıtlı listenin dışındaki adlar da elle girilebilir. Kod içeriği ve girintiler korunması gerektiğinden kod bloklarında paragraf hizalaması uygulanmaz.
 
+Tablo hücrelerinde de çok satırlı kod ve Tab ile girintileme kullanabilirsiniz. Shift+Tab bir satırın girintisini daha fazla azaltamasa bile önceki hücreye geçmez, kodun içinde kalır.
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

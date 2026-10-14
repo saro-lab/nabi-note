@@ -93,6 +93,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -106,6 +108,8 @@ export const exCallout: Wing = {
 ```
 
 Chỉ khai báo này chưa tạo cách bọc các đoạn đã chọn. Hãy thêm một lệnh thuần trong `commands` và `button` gọi nó trước khi đưa tính năng vào UI trình soạn thảo.
+
+`isolating: true` cho phép nhiều đoạn văn nhưng ngăn thao tác xóa vượt qua ranh giới hộp chú thích và gộp với nội dung bên cạnh. Các lệnh trong `scopedCommands` chạy trên tài liệu bên trong hộp, nên việc chèn ảnh, bảng và chuyển đổi danh sách, trích dẫn đều nằm trong hộp.
 
 ### 5. Cặp danh sách và mục tương ứng
 
@@ -165,10 +169,10 @@ Chỉ khai báo những gì wing cần. Factory đã cung cấp sẵn một số
 | Phạm vi | Tùy chọn | Mục đích |
 | --- | --- | --- |
 | Cơ bản | `w`, `place`, `basic`, `styles` | Tên, loại cấu trúc, thuộc catalog cơ bản, CSS mặc định |
-| Cấu trúc | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | Loại phần tử con, hành vi Enter, thuộc tính được phép, thuộc tính Boolean |
+| Cấu trúc | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | Loại nút con, hành vi Enter, bảo vệ ranh giới soạn thảo, thuộc tính được phép, thuộc tính boolean |
 | Cấu trúc | `parts`, `allows`, `noAlign`, `requiresAnyOf` | Phần bên trong, phần tử con được phép, loại trừ căn chỉnh, phụ thuộc wing |
 | Giá trị | `attrKey`, `attrValues`, `currentValue` | Khóa và danh sách giá trị lưu trữ, phát hiện giá trị hiện tại |
-| Lệnh và đầu vào | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Lệnh, xử lý phím, hành vi Escape/phím đôi, quy tắc tự định dạng |
+| Lệnh và đầu vào | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Lệnh, lệnh chạy trong tài liệu bên trong, xử lý phím, Escape/nhấn kép, tự động chuyển đổi |
 | Hành vi bề mặt | `attach` | Hành vi DOM và dọn dẹp cho bề mặt |
 | Chuyển đổi | `toHtml`, `partHtml`, `toMd`, `partMd` | Đầu ra HTML và Markdown |
 | Nhập và sửa | `claim`, `ioFilter`, `repair`, `partRepair` | Nhập HTML, xử lý tệp, xác thực và sửa JSON |
@@ -190,6 +194,30 @@ Lệnh là hàm thuần của tài liệu và vùng chọn, trả về tài li�
 Đặt hành vi chỉ dành cho DOM, như kéo để chọn bảng, trong `attach(host)`. Đăng ký ngay việc dọn dẹp cho mọi listener hoặc thuộc tính thay đổi bằng `host.onDispose()` để thiết lập thất bại vẫn được dọn. Không sửa DOM văn bản đang soạn hoặc ánh xạ vùng chọn của bề mặt.
 
 Khai báo điều khiển thanh công cụ và ngữ cảnh bằng `button`, `buttons` và `context`; sao chép quy tắc lệnh của chúng trong UI ứng dụng có thể khiến UI và mô hình tài liệu lệch nhau.
+
+### Chạy lệnh bên trong khối
+
+Khai báo `scopedCommands` trên container có `holds: 'blocks'` và `parts` chứa khối. Khi hai đầu vùng chọn cùng nằm trong một vùng, lệnh nhận tài liệu con của vùng đó và đường dẫn chọn tương đối; kết quả sau đó được áp dụng lại vào tài liệu bên ngoài. Vùng chọn vượt ranh giới bị từ chối; bên ngoài vùng, lệnh giữ hành vi ban đầu. Vùng nổi và ô bảng cũng dùng cơ chế này để giới hạn chèn, chuyển đổi và tải lên.
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+Danh sách chỉ nhận lệnh của cánh. Lệnh chưa đăng ký được bỏ qua, nên không bắt buộc đăng ký kèm cánh ảnh hay tải lên. Chọn lệnh chỉ làm việc với tài liệu bên trong và đường dẫn tương đối được truyền vào; không thêm lệnh cần đường dẫn tuyệt đối của toàn tài liệu hoặc thay thế toàn bộ tài liệu. Lệnh lõi cũng không được đưa vào danh sách.
+
+`singleParagraph` giới hạn nội dung trong một đoạn; `isolating` giữ nhiều đoạn nhưng ngăn Backspace/Delete vượt ranh giới soạn thảo. `parts` chứa khối cũng có thể khai báo `isolating: true`.
+
+### Xử lý phím trong khối lồng nhau
+
+`KeyIntent.shift` mà `onKey` nhận giúp phân biệt Enter và Shift+Enter. Nếu cánh bên trong trả về `null` trong vùng soạn thảo độc lập, việc xử lý được chuyển lần lượt lên các cánh tổ tiên đến vùng đó. Vì vậy, danh sách và mã trong ô xử lý thụt lề trước; Tab chưa được xử lý có thể chuyển ô. Một cánh không bị gọi hai lần cho cùng một lần nhập phím.
 
 ## Kiểu CSS
 

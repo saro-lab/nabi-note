@@ -13,6 +13,8 @@ Membuat item yang urutannya penting menjadi daftar bernomor. Pada paragraf koson
 
 Nomor yang ditampilkan dihitung dari posisi item, sehingga tetap berlanjut otomatis saat Anda menambah atau menjorokkan item. Fitur untuk menyimpan angka awal yang diketik dan menghitung dari nomor sembarang tidak tersedia.
 
+Enter membuat item berikutnya, sedangkan Shift+Enter hanya menambah baris baru di dalam item saat ini. Tab dan Shift+Tab menambah dan mengurangi inden; di dalam sel tabel, inden daftar juga diprioritaskan daripada perpindahan antarsel.
+
 <WingDemo path="/wing/block/ordered-list" />
 
 ```ts

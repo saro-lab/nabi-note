@@ -59,6 +59,8 @@ const toolbar = mountToolbar({
 
 Fermer le panneau ou démonter la barre d’outils interrompt `signal` et appelle la fonction de nettoyage. `run()` ferme le panneau et applique une commande une seule fois à la sélection enregistrée à son ouverture. Si le panneau est déjà fermé ou si le contenu du document a changé depuis son ouverture, il renvoie `false` sans exécuter la commande.
 
+Si vous déplacez seulement le curseur, l'image est insérée à la position d'origine où le panneau a été ouvert. Si vous l'avez ouvert dans une cellule ou une zone flottante, l'image y est insérée. Modifier ou remplacer le document annule l'insertion avec un message, même si l'annulation rétablit le même contenu ; rouvrez le panneau pour choisir à nouveau une image.
+
 ## Styles CSS
 
 Stylisez les images avec `.nabi-content img`. Conservez la largeur et l'alignement stockés intacts, et modifiez uniquement les détails visuels tels que les bordures ou les ombres.

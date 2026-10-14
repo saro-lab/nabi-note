@@ -59,6 +59,8 @@ const toolbar = mountToolbar({
 
 Panel kapatıldığında veya araç çubuğu kaldırıldığında `signal` iptal edilir ve temizleme işlevi çağrılır. `run()` paneli kapatır ve açılırken kaydedilen seçime komutu bir kez uygular. Panel zaten kapalıysa veya açıldıktan sonra belge içeriği değiştiyse komutu çalıştırmadan `false` döndürür.
 
+Yalnızca imleci başka yere taşırsanız görsel, panelin açıldığı ilk konuma eklenir. Panel bir tablo hücresinde veya yüzen alanda açıldıysa görsel oraya yerleşir. Belge düzenlenir veya değiştirilirse, geri alma aynı içeriği getirse bile ekleme iptal edilir ve bildirim gösterilir; paneli yeniden açıp görseli tekrar seçin.
+
 ## CSS stilleri
 
 Görselleri `.nabi-content img` ile biçimlendirin. Saklanan genişliği ve hizalamayı bozmadan yalnızca kenarlık veya gölge gibi görsel ayrıntıları değiştirin.

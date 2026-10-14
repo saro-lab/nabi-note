@@ -11,6 +11,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Yana sanya harafin farko na sakin layi da girma, sauran layuka kuma su gudana kusa da shi. Tsari ne na sakin layi, saboda haka ba a amfani da shi idan an zaɓi wani ɓangaren haruffa kaɗai.
 
+A tebur, babban harafin farko yana shafar sakin layin ciki, ba sel ɗin kansa ba. Zaɓar sel da yawa yana sauya duk sakin layin da ya dace a cikinsu; yanayin sandar kayan aiki ma yana bin wannan zaɓin sakin layi.
+
 Shafin da aka wallafa da allon edita suna riƙe kamanni iri ɗaya. Lokacin gyarawa, ana nannade harafin farko da sinadari na ainihi domin wurin alama da gogewa kada su kauce; wannan sinadari ba ya cikin abun daftarin da ake adanawa.
 
 <WingDemo path="/wing/etc/dropcap" />

@@ -11,6 +11,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Đặt chữ cái đầu của đoạn lớn để các dòng còn lại chảy bên cạnh nó. Đây là định dạng ở cấp đoạn, nên không áp dụng bằng cách chỉ chọn một phần chữ.
 
+Trong bảng, chữ cái đầu lớn áp dụng cho các đoạn bên trong, không phải chính ô. Khi chọn nhiều ô, các đoạn phù hợp trong đó được đổi cùng nhau; trạng thái thanh công cụ cũng dựa trên cùng vùng chọn đoạn.
+
 Trang xuất bản và màn hình chỉnh sửa giữ cùng diện mạo. Khi chỉnh sửa, chữ cái đầu được bọc trong phần tử thực để vị trí con trỏ và xóa không bị lệch; phần tử này không thuộc nội dung tài liệu được lưu.
 
 <WingDemo path="/wing/etc/dropcap" />

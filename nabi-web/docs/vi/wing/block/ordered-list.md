@@ -13,6 +13,8 @@ Tạo danh sách đánh số cho các mục có thứ tự quan trọng. Trong �
 
 Số hiển thị được tính theo vị trí của mục, nên tự động nối tiếp khi bạn thêm hoặc thụt mục. Tính năng lưu số bắt đầu đã nhập để đếm từ một số tùy ý không được cung cấp.
 
+Enter tạo mục tiếp theo, còn Shift+Enter chỉ xuống dòng trong mục hiện tại. Tab và Shift+Tab tăng và giảm thụt lề; trong ô bảng, thụt lề danh sách cũng được ưu tiên hơn chuyển ô.
+
 <WingDemo path="/wing/block/ordered-list" />
 
 ```ts

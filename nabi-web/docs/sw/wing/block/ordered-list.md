@@ -13,6 +13,8 @@ Huunda orodha yenye namba kwa vipengee ambavyo mpangilio wake ni muhimu. Katika 
 
 Namba zinazoonyeshwa hukokotolewa kutokana na nafasi ya kipengee, kwa hiyo huendelea kiotomatiki hata unapoongeza au kuingiza vipengee. Kipengele cha kuhifadhi namba ya kuanzia uliyoandika na kuhesabu kuanzia namba yoyote hakitolewi.
 
+Enter huunda kipengee kinachofuata, na Shift+Enter huingiza tu mstari mpya ndani ya kipengee cha sasa. Tab na Shift+Tab huongeza na kupunguza ujongezaji; hata ndani ya seli, ujongezaji wa orodha hupewa kipaumbele kuliko kuhamia seli nyingine.
+
 <WingDemo path="/wing/block/ordered-list" />
 
 ```ts

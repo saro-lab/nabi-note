@@ -11,7 +11,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Kısa bir özeti ve gövdeyi tek blokta gruplandırın. Araç çubuğundan oluşturduğunuzda önce özeti girer, sonra altındaki içeriği yazmayı sürdürürsünüz.
 
-Üçgenle belirlenen açık durum belgede saklanır ve yayımlanmış görünümün başlangıç durumu olur. Düzenlerken gövde değiştirilebilmesi için açık tutulur, ancak saklanan durum değeri korunur.
+Üçgenle belirlenen açık durumu belgeye kaydedilir ve yayımlanan görünümün başlangıç durumunu belirler. Düzenleme sırasında da üçgene tıklayarak bloğu açıp kapatabilirsiniz.
+
+Tablo hücresinin veya başka bir bloğun içinde yalnızca ilgili açılır blok açılır ve kapanır. İmleç ya da seçim kapanan içeriğin içindeyse dışarı taşınır; başka yerdeki seçim korunur.
 
 <WingDemo path="/wing/block/details" />
 

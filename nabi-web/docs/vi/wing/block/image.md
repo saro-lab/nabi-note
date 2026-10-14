@@ -59,6 +59,8 @@ const toolbar = mountToolbar({
 
 Khi đóng cửa sổ hoặc tháo thanh công cụ, `signal` bị hủy và hàm dọn dẹp được gọi. `run()` đóng cửa sổ rồi áp dụng lệnh một lần tại vùng chọn được lưu khi mở. Nếu cửa sổ đã đóng hoặc nội dung tài liệu thay đổi từ lúc mở, hàm trả về `false` mà không thực thi lệnh.
 
+Nếu chỉ chuyển con trỏ, ảnh được chèn ở vị trí ban đầu khi mở bảng chọn. Nếu bảng chọn được mở trong ô bảng hoặc vùng nổi, ảnh được chèn vào đó. Chỉnh sửa hoặc thay thế tài liệu sẽ hủy chèn và hiện thông báo, ngay cả khi hoàn tác khôi phục nội dung giống trước; hãy mở lại bảng chọn để chọn ảnh lần nữa.
+
 ## Kiểu CSS
 
 Tạo kiểu cho ảnh bằng `.nabi-content img`. Giữ nguyên chiều rộng và căn chỉnh đã lưu, chỉ thay đổi diện mạo như viền hoặc bóng.

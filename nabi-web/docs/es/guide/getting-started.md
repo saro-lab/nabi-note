@@ -61,7 +61,35 @@ const toolbar = mountToolbar({
 
 `locale` controla la barra de herramientas y los textos auxiliares; pasa el mismo valor a todos los montajes de UI. `placeholder` solo aparece cuando el editor está vacío. `onError` recibe fallos aislados de comandos y callbacks. `undoLimit` es la cantidad de entradas de deshacer (200 por defecto). `typingMergeMs` es el intervalo que fusiona escritura consecutiva en un solo paso de deshacer; ponlo en `0` si quieres que cada inserción quede separada.
 
+El intervalo predeterminado entre pulsaciones consecutivas de Enter para salir de un contenedor de bloques es 180ms. La doble pulsación de Esc y Shift conserva los 350ms. Definir `doubleEnterMs` explícitamente en `mountSurface()` cambia tanto el intervalo de Enter como el de doble Esc.
+
 Cada editor necesita raíces de contenido y barra de herramientas propias, sin solaparse. En una página con varios editores, pasa a cada barra su propia superficie mediante `surface`, para que el foco y los atajos no se crucen.
+
+## Configurar la barra de herramientas
+
+La barra predeterminada agrupa títulos, formato de texto, alineación, listas, inserción y herramientas del documento, en ese orden y con separadores verticales. En escritorio muestra todas las herramientas en varias filas; en móvil, las rápidas y el botón de todas las herramientas en una fila. Las propiedades de tablas, imágenes y regiones flotantes aparecen debajo y se pueden usar junto con las herramientas del texto.
+
+`groups` cambia el orden de los grupos y `quick` el de las herramientas rápidas móviles. Por ejemplo, un editor que inserta imágenes a menudo puede mover el grupo `media` al principio.
+
+```ts
+import { TOOLBAR_GROUPS, mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  locale: 'es',
+  groups: ['media', ...TOOLBAR_GROUPS.filter((group) => group !== 'media')],
+  quick: ['b', 'i', 'tc', 'img'],
+})
+```
+
+Las herramientas rápidas respetan el orden indicado y no añaden separadores. Dentro de cada grupo se sigue el orden de registro de las alas. Al prerenderizar la barra con SSR, pasa el mismo orden de grupos al servidor y al navegador. [Temas CSS](./style#umbral-del-modo-movil) explica la disposición según el ancho de pantalla.
+
+Conecta `mountHints()` para elegir herramientas con el teclado pulsando Shift dos veces. Tab cambia de grupo y las flechas se desplazan entre iconos del mismo grupo. En escritorio y pantalla completa se usa la barra visible; en móvil, la paleta de todas las herramientas.
+
+Los paneles de imagen, campos de URL y selectores de archivo recuerdan la selección al abrirse. Si solo mueves el cursor, insertan en la posición original; si editas o reemplazas el documento, cancelan la entrada y muestran un aviso. Deshacer hasta recuperar el mismo contenido no permite reutilizar la selección anterior.
 
 ## Elegir wings
 

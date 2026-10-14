@@ -11,6 +11,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Weka herufi ya kwanza ya aya kwa ukubwa zaidi na uruhusu mistari inayofuata ipite kandokando yake. Huu ni uumbizaji wa kiwango cha aya, kwa hiyo hautumiki kwa sehemu tu ya neno lililochaguliwa.
 
+Katika jedwali, herufi kubwa ya mwanzo hutumika kwa aya za ndani, si seli zenyewe. Kuchagua seli kadhaa hubadilisha aya zote zinazokubali umbizo hilo ndani yake; hali ya upau wa zana huonyesha uteuzi huo huo wa aya.
+
 Mwonekano uliochapishwa na mwonekano wa kuhariri huhifadhi umbo lilelile. Wakati wa kuhariri, herufi ya kwanza hufungwa katika elementi halisi ili nafasi za kielekezi na kufuta zisihame; elementi hiyo haijumuishwi kwenye maudhui ya hati yaliyohifadhiwa.
 
 <WingDemo path="/wing/etc/dropcap" />

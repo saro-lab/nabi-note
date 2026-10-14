@@ -13,6 +13,8 @@ Ni orodha yenye hali ya kukamilika. Katika aya tupu, andika `[ ]` au `[x]` kisha
 
 Hali ya kuteuliwa huhifadhiwa kwenye hati kama sifa ya kipengee. Unapogawa kipengee, hali ya kuteuliwa hufuata kipengee chenye maandishi badala ya kipengee tupu kilicho kabla yake, kwa hiyo hali haibadiliki ukigawa kazi iliyokamilika mara mbili.
 
+Enter hugawanya kipengee, na Shift+Enter huingiza tu mstari mpya ndani yake. Tab na Shift+Tab huongeza na kupunguza ujongezaji. Kanuni hizo hizo hutumika ndani ya seli, na hali ya kutiwa alama pia huhifadhiwa.
+
 <WingDemo path="/wing/block/task-list" />
 
 ```ts

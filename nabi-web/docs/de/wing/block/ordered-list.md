@@ -13,6 +13,8 @@ Verwandeln Sie Elemente, bei denen die Reihenfolge wichtig ist, in eine nummerie
 
 Die angezeigten Zahlen werden aus der Position der Elemente berechnet, sodass sie automatisch fortgesetzt werden, wenn Sie Elemente hinzufügen oder einrücken. Das Speichern einer benutzerdefinierten Startnummer und das Zählen ab dieser Zahl wird nicht unterstützt.
 
+Enter erstellt den nächsten Eintrag, Shift+Enter fügt nur einen Zeilenumbruch im aktuellen Eintrag ein. Tab und Shift+Tab rücken ein und aus. Auch in Tabellenzellen hat das Einrücken der Liste Vorrang vor dem Wechsel zwischen Zellen.
+
 <WingDemo path="/wing/block/ordered-list" />
 
 ```ts

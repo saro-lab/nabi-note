@@ -93,6 +93,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -106,6 +108,8 @@ export const exCallout: Wing = {
 ```
 
 یہ declaration اکیلا منتخب پیراگراف لپیٹنے کا راستہ نہیں بناتا۔ خصوصیت کو ایڈیٹر UI میں ظاہر کرنے سے پہلے `commands` میں pure command اور اسے چلانے والا `button` شامل کریں۔
+
+`isolating: true` کئی پیراگراف کی اجازت دیتا ہے، مگر حذف کو معلوماتی باکس کی حد پار کر کے ساتھ کے مواد سے ملنے سے روکتا ہے۔ `scopedCommands` میں درج کمانڈز باکس کے اندر کی دستاویز پر چلتی ہیں، اس لیے تصویر یا جدول داخل کرنا اور فہرست یا اقتباس میں بدلنا باکس کے اندر رہتا ہے۔
 
 ### 5. ملتی ہوئی فہرست اور item جوڑی
 
@@ -165,10 +169,10 @@ const exNote = {
 | حصہ | اختیارات | مقصد |
 | --- | --- | --- |
 | بنیاد | `w`, `place`, `basic`, `styles` | نام، ساختی قسم، بنیادی کیٹلاگ رکنیت، طے شدہ CSS |
-| ساخت | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | بچے کی قسم، Enter رویہ، اجازت یافتہ اوصاف، boolean اوصاف |
+| ساخت | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | بچوں کی قسم، Enter کا رویہ، ترمیمی حدود کی حفاظت، مجاز attributes، boolean attributes |
 | ساخت | `parts`, `allows`, `noAlign`, `requiresAnyOf` | اندرونی حصے، اجازت یافتہ بچے، سیدھ سے اخراج، ونگ انحصار |
 | قدریں | `attrKey`, `attrValues`, `currentValue` | محفوظ قدر کی key اور فہرست، موجودہ قدر کی شناخت |
-| commands اور input | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | commands، key handling، Escape/double-key رویہ، autoformat قواعد |
+| commands اور input | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | کمانڈز، اندرونی دستاویز پر چلنے والی کمانڈز، کلید کی ہینڈلنگ، Escape/دو بار دبانا، خودکار تبدیلی |
 | surface رویہ | `attach` | surface کے لیے DOM رویہ اور صفائی |
 | تبدیلی | `toHtml`, `partHtml`, `toMd`, `partMd` | HTML اور Markdown آؤٹ پٹ |
 | امپورٹ اور مرمت | `claim`, `ioFilter`, `repair`, `partRepair` | HTML امپورٹ، فائل handling، JSON توثیق اور مرمت |
@@ -190,6 +194,30 @@ command، دستاویز اور انتخاب کا pure function ہے جو اگل
 صرف DOM والا رویہ، جیسے جدول drag selection، `attach(host)` میں رکھیں۔ ہر listener یا بدلے ہوئے attribute کے لیے فوراً `host.onDispose()` سے cleanup رجسٹر کریں تاکہ ناکام setup کی بھی صفائی ہو۔ composing متن DOM یا surface کی selection mapping نہ بدلیں۔
 
 ٹول بار اور سیاق controls کو `button`، `buttons` اور `context` سے declare کریں؛ ان کے command قواعد کو application UI میں دہرانے سے UI اور دستاویزی ماڈل مختلف ہو سکتے ہیں۔
+
+### بلاک کے اندر کمانڈ چلانا
+
+`scopedCommands` کو `holds: 'blocks'` والے کنٹینرز اور بلاکس رکھنے والے `parts` پر بیان کریں۔ اگر انتخاب کے دونوں سرے ایک ہی علاقے میں ہوں تو کمانڈ کو اس علاقے کی ذیلی دستاویز اور انتخاب کے نسبتی راستے ملتے ہیں، اور نتیجہ واپس بیرونی دستاویز میں لگایا جاتا ہے۔ علاقے کی حد پار کرنے والا انتخاب مسترد ہوتا ہے؛ باہر کمانڈ کا اصل رویہ برقرار رہتا ہے۔ فلوٹ علاقے اور جدول کے سیلز بھی اسی طریقے سے اندراج، تبدیلی اور اپ لوڈ کی حدود برقرار رکھتے ہیں۔
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+فہرست میں صرف وِنگ کمانڈز دی جا سکتی ہیں۔ غیر رجسٹرڈ کمانڈز چھوڑ دی جاتی ہیں، اس لیے تصویر یا اپ لوڈ وِنگ کو ساتھ رجسٹر کرنا لازم نہیں۔ ایسی کمانڈز منتخب کریں جو صرف دی گئی اندرونی دستاویز اور نسبتی راستوں سے کام کریں؛ پوری دستاویز کے مطلق راستے مانگنے یا پوری دستاویز بدلنے والی کمانڈز شامل نہ کریں۔ کور کمانڈز بھی اس فہرست میں نہیں آ سکتیں۔
+
+`singleParagraph` مواد کو ایک پیراگراف تک محدود کرتا ہے؛ `isolating` کئی پیراگراف برقرار رکھ کر Backspace/Delete کو ترمیمی حد پار کرنے سے روکتا ہے۔ بلاکس رکھنے والے `parts` پر بھی `isolating: true` دیا جا سکتا ہے۔
+
+### اندر در اندر بلاکس میں کلید سنبھالنا
+
+`onKey` کو ملنے والا `KeyIntent.shift`، Enter اور Shift+Enter میں فرق کرتا ہے۔ آزاد ترمیمی علاقے میں اندرونی وِنگ `null` لوٹائے تو ہینڈلنگ بالترتیب بالائی وِنگز کو اس علاقے تک دی جاتی ہے۔ اس لیے سیل کی فہرست اور کوڈ پہلے indentation سنبھالتے ہیں؛ غیر سنبھالا گیا Tab سیلز کے درمیان جا سکتا ہے۔ ایک کلید کے ان پٹ پر ایک ہی وِنگ دو بار نہیں بلائی جاتی۔
 
 ## CSS طرزیں
 

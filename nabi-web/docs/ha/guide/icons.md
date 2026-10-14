@@ -38,6 +38,15 @@ Yi amfani da hanyoyi daga tushe kamar `/icons/...` ko cikakkun URL na HTTPS. Ba 
 
 Ƙara `--nabi-icon-` a gaban ƙimar `data-nabi-icon` ta sinadarin gunkin don samun mai canjin CSS. Misali, `diff-close` yana amfani da `--nabi-icon-diff-close`. Duba <a href="/llms/icons.md" target="_blank" rel="noopener">ƙa’idar gumaka</a> don dokokin maɓallan mahalli, menu, adanawa, tarihi da sauransu, har da yadda ake sanya lambar haruffa na musamman.
 
+Maɓallin saka yankin iyo yana amfani da `toolbar-float`; maɓallin cire murfi cikin properties yana amfani da `context-float-unwrap`. Fayilolin asali su ne `float-float.svg` da `float-unwrap.svg`, tare da na jigon duhu. Maɓallin cire murfi yana kusa da ƙimar faɗi; sauya hotonsa yana barin suna da tooltip.
+
+```css
+.paper-note {
+  --nabi-icon-toolbar-float: url("/icons/float.svg");
+  --nabi-icon-context-float-unwrap: url("/icons/float-unwrap.svg");
+}
+```
+
 ## Yanayin duhu da bangarori
 
 Sauya ajin jigo ko mai canjin CSS yana sabunta gumaka ba tare da sake mount ba. Gumakan asali suna bin jigon haske/duhu. Fayilolinka ba sa gado `currentColor`; sa nau’in duhu kamar misalin sama idan ana buƙata. Bangarorin da aka buɗe ƙarƙashin `body` su ma suna bin jigon gumaka da sauyin aji/salo na editan asali. Sanya masu canjin a editan ko mahaifin da suka haɗa, ba cikin sandar kayan aiki kaɗai ba.

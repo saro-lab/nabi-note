@@ -25,6 +25,12 @@ const selected = wings()
 
 Wenn Sie nur `upload` auswählen, wird automatisch die jeweils fehlende Abhängigkeit von Image oder Link bereitgestellt. Die Übertragung wird mit `mountUpload()` verbunden, und die Fortschritts-UI des Bearbeitungsbildschirms wird normalerweise mit `mountUploadView()` verbunden. Wenn der Server HTTPS-URLs zurückgibt, ist die lokale URL-Option nicht erforderlich.
 
+## Einfügeposition für Uploads
+
+Die Position, an der die Dateiauswahl geöffnet oder der Upload gestartet wird, bleibt gespeichert. Wird nur der Cursor versetzt, erfolgt das Einfügen weiterhin an der ursprünglichen Position. Beginnt der Upload in einer Tabellenzelle, bleiben Fortschrittsanzeige und fertiger Inhalt in dieser Zelle. Auch Uploads aus einem Float-Bereich werden dort eingefügt. Eine Auswahl über mehrere Zellen hinweg kann keine Uploads aufnehmen.
+
+Wird das Dokument während der Dateiauswahl oder asynchronen Verarbeitung bearbeitet oder ersetzt, wird das Einfügen mit einem Hinweis abgebrochen. Auch wenn Rückgängig denselben Inhalt wiederherstellt, wird nicht an der alten Position eingefügt. Bewerten Sie den Abschluss nicht allein anhand der erfolgreichen Übertragung: Prüfen Sie `committed` und `cancelled`, die `onDone` erhält. `committed` zählt die tatsächlich ins Dokument eingefügten Dateien.
+
 ## Server-API-Vertrag
 
 NABI NOTE sendet keine Dateien selbst an Ihren Server. Die Funktion `uploader` sendet eine Datei an den Server und gibt im Erfolgsfall nur eine öffentliche oder authentifizierte `https:`-URL zurück. Der einfachste API-Vertrag sieht wie folgt aus.
@@ -58,6 +64,7 @@ Das folgende Beispiel ist die echte Verbindung, die NABI NOTE erwartet. Es verwe
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -121,9 +128,18 @@ const surface = mountSurface({
   fileSink: upload.take,
   locale: 'de',
 })
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'de',
+})
 ```
 
-Verbinden Sie `fileSink: upload.take`, damit Drag & Drop und Einfügeoperationen, die nur Dateien enthalten, in den Upload-Vorgang gehen. Die UI der Upload-Wing übergibt Ergebnisse der Dateiauswahl-Schaltfläche an `upload.take()`. Während des Uploads ist der Editor gesperrt, und erfolgreiche Dateien aus jedem Batch werden als ein Undo-Schritt eingefügt. `upload.cancel()` oder die Abbrechen-Schaltfläche in `uploadView` bricht laufende Anfragen über `AbortSignal` ab.
+Verbinden Sie `fileSink: upload.take`, damit Drag & Drop und das Einfügen ausschließlich von Dateien den Upload auslösen. Verbinden Sie die Dateiauswahl über `onFiles: upload.take` an der Werkzeugleiste. Während des Uploads ist der Editor gesperrt; erfolgreiche Dateien werden pro Stapel in einem Rückgängig-Schritt eingefügt. `upload.cancel()` oder die Abbrechen-Schaltfläche in `uploadView` beendet laufende Anfragen über `AbortSignal`.
 
 ## Fehlerbereinigung
 
@@ -131,6 +147,7 @@ Wenn der Server eine Fehlerantwort zurückgibt oder `uploader` `null` zurückgib
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

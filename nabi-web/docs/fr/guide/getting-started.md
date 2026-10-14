@@ -61,7 +61,35 @@ const toolbar = mountToolbar({
 
 `locale` contrôle la barre d'outils et le texte d'aide ; transmettez la même valeur à chaque montage de l'interface utilisateur. `placeholder` est affiché uniquement pour un éditeur vide. `onError` reçoit les échecs isolés des commandes et des rappels. `undoLimit` est le nombre d'entrées d'annulation (200 par défaut). `typingMergeMs` est l'intervalle qui fusionne les frappes consécutives en une seule étape d'annulation ; définissez-le sur `0` pour garder chaque insertion séparée.
 
+L'intervalle par défaut entre deux appuis sur Enter pour quitter un conteneur de blocs est de 180ms. Les doubles appuis sur Esc et Shift gardent leur valeur de 350ms. Définir explicitement `doubleEnterMs` dans `mountSurface()` modifie aussi l'intervalle du double Esc, et pas seulement celui d'Enter.
+
 Chaque éditeur a besoin de ses propres racines de contenu et de barre d'outils non chevauchantes. Sur une page avec plusieurs éditeurs, donnez à chaque barre d'outils sa propre surface d'éditeur via `surface` afin que le focus et les raccourcis ne se croisent pas.
+
+## Configurer la barre d'outils
+
+La barre d'outils par défaut regroupe, dans l'ordre, titres, mise en forme du texte, alignement, listes, insertion et outils de document, avec des séparateurs verticaux entre les groupes. Sur ordinateur, tous les outils se déploient sur plusieurs lignes ; sur mobile, les outils rapides et le bouton de tous les outils occupent une ligne. Les propriétés des tableaux, images et zones flottantes apparaissent dessous et restent utilisables avec les outils du texte.
+
+`groups` modifie l'ordre des groupes et `quick` celui des outils rapides sur mobile. Par exemple, un éditeur qui insère souvent des images peut placer le groupe `media` en premier.
+
+```ts
+import { TOOLBAR_GROUPS, mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  locale: 'fr',
+  groups: ['media', ...TOOLBAR_GROUPS.filter((group) => group !== 'media')],
+  quick: ['b', 'i', 'tc', 'img'],
+})
+```
+
+Les outils rapides suivent exactement l'ordre indiqué, sans séparateur. Dans un groupe, l'ordre est celui de l'enregistrement des ailes. Pour pré-rendre la barre en SSR, fournissez le même ordre de groupes au serveur et au navigateur. Les [thèmes CSS](./style#seuil-du-mode-mobile) expliquent la disposition selon la largeur d'écran.
+
+Connectez `mountHints()` pour choisir des outils au clavier en appuyant deux fois sur Shift. Tab change de groupe et les flèches déplacent la sélection entre les icônes d'un même groupe. Sur ordinateur et en plein écran, la barre visible est utilisée ; sur mobile, c'est la palette de tous les outils.
+
+Les panneaux d'image, champs d'URL et sélecteurs de fichiers mémorisent la sélection à leur ouverture. Si seul le curseur est déplacé, l'insertion utilise la position initiale. Si le document est modifié ou remplacé, la saisie est annulée avec un message. Même si l'annulation rétablit un contenu identique, l'ancienne sélection n'est pas réutilisée.
 
 ## Choisir des wings
 

@@ -15,7 +15,7 @@ The official catalog lists wings in a stable order. `defaultWings` and `wings().
 | `tf` | `typefaceWing` | `a.v`: `sans|serif|mono|cursive` |
 | `fs` | `fontSizeWing` | `a.v`: `xs|sm|lg|xl`; absence means default |
 | `tc` | `textColorWing` | `a.c`: `green|coral|violet|amber|blue` |
-| `hl` | `highlightWing` | `a.c`: six named highlight colors |
+| `hl` | `highlightWing` | `a.c`: named highlight colors |
 | `a` | `linkWing` | Strict `href`; attachment links also carry `file` |
 
 Value factories are `makeTypefaceWing`, `makeFontSizeWing`, `makeTextColorWing`, and `makeHighlightWing`, each with `{ values }`.
@@ -54,6 +54,10 @@ Headings and drop caps target inner text paragraphs. Header cells (`td.a.th === 
 
 `tableWings` is an array containing the assembled table wing. Code coloring can be replaced with `{ ...codeWing, attach: makeCodeAttach({ highlight, version }) }`. The token DOM is transient and composition-aware.
 
+Leaving a container with double-Enter uses a 180 ms window by default. Double-Escape and double-Shift retain their 350 ms defaults. An explicit `mountSurface({ doubleEnterMs })` also sets the double-Escape window.
+
+Nested details blocks, including details inside table cells, toggle only the clicked block. Closing a block moves the selection to its wrapper only when either selection endpoint reaches into the body being closed. A selection in its summary or elsewhere remains in place; the open state is stored in `a.o` as numeric `1` when open.
+
 Below the viewport's `--nabi-mobile-breakpoint`, the table button closes the Tools palette and opens a centered size picker over a translucent backdrop. It follows the visual viewport and shows a 5x5 grid with touch-sized cells, including in fullscreen and `layout: 'wrap'`. Selecting a size inserts one table at the current editing selection and closes the picker. Escape or an outside interaction cancels without inserting. Arrow keys stay within the visible grid; Enter or Space confirms. Desktop keeps its existing nonmodal picker.
 
 Copying a cell range uses its highlighted rectangle, including merged-cell expansion, in every clipboard format. Internal data and HTML preserve the cropped table structure and formatting; plain text contains only the selected cell contents. Cutting the range clears only those cells and supports one-step undo. A text selection inside a single cell keeps ordinary text-copy behavior. See `io-security.md`.
@@ -63,7 +67,7 @@ Copying a cell range uses its highlighted rectangle, including merged-cell expan
 Cells contain multiple paragraphs and built-in blocks, including images, lists, quotes, code, details, dividers, and video. Nested tables and floats are not allowed. JSON, HTML, and paste normalization unwrap those prohibited descendants while preserving their content in order. Ordinary cells permit headings; header cells remove heading attributes recursively while preserving text and other formatting.
 
 - Block insertion and conversion stay within the current cell. Commands crossing cell boundaries are rejected.
-- Enter creates a paragraph; Shift+Enter inserts a line break. List and code handlers keep their own Enter and Tab behavior. Tab/Shift+Tab in ordinary cell content moves between cells, using the first/last actual editable holder. Deletion does not merge neighboring cells or pull cell contents into an outside paragraph.
+- Enter creates a paragraph; Shift+Enter inserts a line break. In a list, Shift+Enter keeps the same list item. List and code handlers process indentation before cell navigation; Shift+Tab in code stays there even when no further outdent is possible. Tab/Shift+Tab in ordinary cell content moves between cells, using their actual editable holders; Tab in the final cell adds a row. Deletion does not merge neighboring cells or pull cell contents into an outside paragraph.
 - Heading and drop cap target eligible inner paragraphs. Heading is unavailable in header cells.
 - Horizontal alignment targets the current inner paragraph or object wrapper. A rectangular cell selection applies alignment to every eligible inner paragraph and object in the selected cells, including images. Code remains unaligned.
 - `selectTable()` selects the table's wrapper range 0..1. The table property row provides this action. Table alignment is available for that exact object selection and for a collapsed caret at either table wrapper boundary, never for a caret inside a cell or a selection spanning the table and other blocks.
@@ -83,6 +87,53 @@ Cells contain multiple paragraphs and built-in blocks, including images, lists, 
 - Clearing/cutting content and `clearFormat` preserve cell backgrounds. The dedicated Default control removes the background.
 - HTML preserves the name as `data-nabi-cell-color` on `td` or `th`. Arbitrary external background styles are not imported. Colored tables use the HTML fallback for Markdown export, preserving the color metadata.
 - Clipboard JSON/HTML, SSR, preview, viewer, and diff preserve the same cell attributes. A background-only change counts as a document change in diff. See `styling.md` for theme tokens.
+
+### Table example: rich cells and separate alignment targets
+
+This self-contained document keeps a title row, multiple paragraphs, and an image inside the table. Mount the context toolbar from `quickstart-npm.md` to expose cell background swatches, merge/split, and Select table controls.
+
+```ts
+import { createNabiWith, wings } from 'nabi-note';
+
+const { nabi } = createNabiWith(wings().allBasic(), {
+  doc: [{
+    w: 'p',
+    ch: [{
+      w: 'table',
+      ch: [
+        { w: 'tr', ch: [
+          { w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['Plan'] }] },
+          { w: 'td', a: { th: 1 }, ch: [{ w: 'p', ch: ['Reference'] }] },
+        ] },
+        { w: 'tr', ch: [
+          { w: 'td', ch: [
+            { w: 'p', ch: ['Review the draft.'] },
+            { w: 'p', ch: ['Keep each decision in its own paragraph.'] },
+          ] },
+          { w: 'td', ch: [
+            { w: 'p', ch: ['Design reference'] },
+            { w: 'p', ch: [{ w: 'img', a: { src: '/images/reference.png', w: 60 }, ch: [] }] },
+          ] },
+        ] },
+      ],
+    }],
+  }],
+});
+
+const first = { path: [0, 0, 1, 0, 0], offset: 0 };
+const last = { path: [0, 0, 1, 1, 0], offset: 0 };
+nabi.select({ anchor: first, focus: last });
+nabi.applyCommand('setCellColor', { bg: 'cyan' });
+nabi.applyCommand('setAlign', { value: 'c' });
+
+nabi.applyCommand('selectTable');
+nabi.applyCommand('setAlign', { value: 'r' });
+
+const json = nabi.getJson();
+const html = nabi.getHtml();
+```
+
+The rectangle colors both body cells and centers their eligible inner paragraphs and image. `selectTable` then changes the target so right alignment applies to the whole table. The paths above refer to this exact sample tree; host controls normally operate on the editor's current selection. With a cell selection restored, `setCellColor({ bg: '' })` clears its background. `getHtml()` preserves rich cells and their color metadata; the Markdown exporter uses HTML for this table.
 
 ### Float regions
 
@@ -109,6 +160,32 @@ Editor regions have a dotted outline only in `.nabi-editing`. Published HTML and
 
 Below a document container width of 36rem, editor and reader regions stack at full width while keeping stored attributes. Print also stacks regions and removes editor outlines. Diff does not use the reader's narrow-container override: it preserves left/right and relative maximum width within each pane, contains each float in its comparison row, and starts the next block below it. Diff continues to compare top-level blocks; side/width-only changes count as changes without requiring character highlights.
 
+### Float example: a note beside an article
+
+```ts
+import { createNabiWith, wings } from 'nabi-note';
+
+const { nabi } = createNabiWith(wings().allBasic(), {
+  doc: [
+    { w: 'p', ch: ['Key idea: keep the supporting note close to the article.'] },
+    { w: 'p', ch: ['The article continues beside the note and returns to full width below it.'] },
+  ],
+});
+
+nabi.select({
+  anchor: { path: [0], offset: 0 },
+  focus: { path: [0], offset: 8 },
+});
+nabi.applyCommand('insertFloat', { side: 'right', w: 40 });
+nabi.applyCommand('setFloatSide', { side: 'left' });
+nabi.applyCommand('setFloatWidth', { w: 30 });
+nabi.applyCommand('insertImage', { src: '/images/reference.png', w: 100 });
+
+const html = nabi.getHtml();
+```
+
+The partial text selection wraps the whole touched paragraph. The caret moves into the new region, so the image is inserted there and its width is relative to that region. Render `html` inside `.nabi-content` with the same wing CSS. While the selection remains inside the region, `unwrapFloat` returns its text and image to ordinary document blocks; undo restores the region. A table can also be inserted there with `insertTable({ rows: 2, cols: 2 })` when the current selection is an inner paragraph, but a table cell cannot contain a float or another table.
+
 ## Void objects
 
 | `w` | Export | Notes |
@@ -132,7 +209,7 @@ The image button's default URL prompt can be replaced with host UI through `moun
 | `diff` | `diffWing` | `mountDiffWing` and toolbar `onHost` |
 | `clearFormat` | `clearFormatWing` | None |
 
-`clearFormat` removes all 11 built-in marks and the `h`, `a`, and `dc` paragraph attributes. It preserves object-wrapper alignment and attachment link shells. Pressing Escape twice within the surface double-key window invokes it.
+`clearFormat` removes built-in marks and the `h`, `a`, and `dc` paragraph attributes. It preserves object-wrapper alignment, attachment link shells, and table cell backgrounds. Pressing Escape twice within the surface double-key window invokes it.
 
 ## Picker behavior
 
@@ -182,5 +259,7 @@ The registry exposes core commands plus registered wing commands. The default wi
 `setTypeface`, `setFontSize`, `setTextColor`, `setHighlight`, `setLink`, `renameLink`, `setHeading`, `setAlign`, `toggleDropCap`, list toggles, `toggleQuote`, `toggleDetails`, `setDetailsOpen`, `toggleCode`, `setCodeLanguage`, `insertDivider`, table edit commands, `insertImage`, `setImageWidth`, `insertYoutube`, `setYoutubeWidth`, `commitUpload`, `saveFile`, `openFile`, `restoreHistory`, and `clearFormat`.
 
 Float commands are `insertFloat`, `unwrapFloat`, `setFloatSide`, and `setFloatWidth`.
+
+Cell background and table-selection commands are `setCellColor` and `selectTable`. Invoke wing commands through `nabi.applyCommand(name, args)`; names followed by argument objects in this document are shorthand for that call, not instance methods on `nabi`.
 
 Use wing button/context declarations rather than hard-coding command arguments when building a generic UI.

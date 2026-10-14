@@ -17,22 +17,20 @@ import 'nabi-note/nabi.css'
   --nabi-bg: #fff;
   --nabi-accent: #5b4ee8;
   --nabi-content-min-height: 20rem;
-  --nabi-font: Inter, system-ui, sans-serif;
+  --nabi-font: Pretendard, system-ui, sans-serif;
   --nabi-sticky-top: 4rem;
 }
 ```
 
-Platzieren Sie gemeinsame Token auf einem gemeinsamen übergeordneten Element, damit der Editor und seine veröffentlichte Ansicht dieselbe visuelle Sprache beibehalten.
+Weise `.nabi` des Editors und `.nabi-content` der veröffentlichten Ansicht dieselbe Theme-Klasse zu, um auf beide dieselben Variablen anzuwenden. Lade das Service-CSS nach dem Paket-CSS und lege das aktuelle Theme mit `data-nabi-theme` fest.
 
 ```html
-<section class="brand-note">
-  <div class="nabi">...</div>
-  <article class="nabi-content">...</article>
-</section>
+<div class="nabi brand-note" data-nabi-theme="light">...</div>
+<article class="nabi-content brand-note" data-nabi-theme="light">...</article>
 ```
 
 ```css
-.brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-fg: #1f2937;
   --nabi-muted: #6b7280;
   --nabi-bg: #fff;
@@ -56,20 +54,33 @@ Platzieren Sie gemeinsame Token auf einem gemeinsamen übergeordneten Element, d
 | Touch-Steuerung | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
 | Umschaltbreite für den Mobilmodus | `--nabi-mobile-breakpoint` |
 
-Highlight- und Textfarb-Token verwenden `--nabi-hl-<name>` und `--nabi-tc-<name>`. Das Ändern von `--nabi-hl-yellow` ändert beispielsweise die Anzeigefarbe gespeicherter `yellow`-Highlights, ohne die Dokumentdaten zu ändern.
+Hervorhebung und Textfarbe verwenden `--nabi-hl-<name>` bzw. `--nabi-tc-<name>`. Zellhintergründe verwenden `--nabi-cell-<name>` mit `yellow`, `green`, `cyan`, `pink`, `purple` und `orange`. Die Variablen ändern nur die angezeigte Farbe, nicht den gespeicherten Farbnamen.
 
 ```css
-.article-editor {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-hl-yellow: #fff0a6;
   --nabi-tc-blue: #2563eb;
+  --nabi-cell-cyan: #e2f4f7;
+}
+```
+
+Das Standard-Theme zeigt Zellhintergründe in blassen Farben. Der Dunkelmodus behält die Farbnamen, verwendet jedoch eigene hellere, weniger gesättigte Farben, damit sie auf dunklen Flächen gut unterscheidbar bleiben. Diese halbtransparenten Farben lassen den Hintergrund durchscheinen; prüfe bei Anpassungen den Textkontrast auf dem tatsächlichen Seitenhintergrund. Die Theme-Klasse muss wie oben am eigentlichen Editor- bzw. Veröffentlichungselement statt an einem beliebigen äußeren Elternknoten stehen, damit sie dessen Standardfarbvariablen überschreibt.
+
+```css
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
+  --nabi-cell-cyan: #183b43;
 }
 ```
 
 ## Umschaltbreite für den Mobilmodus
 
-Der Mobilmodus beginnt, wenn die Breite der Werkzeug- oder Kontextleiste oder des Viewports unter `36rem` liegt. Bei genau `36rem` bleibt das normale Layout erhalten. Im Mobilmodus scrollen Werkzeug- und Kontextleiste horizontal, Panels stehen mittig und die Tabellenauswahl wird auf 5×5 berührungsfreundliche Zellen verkleinert.
+Die Standard-Toolbar mit `layout: 'compact'` wechselt bei einer Bildschirmbreite unter `36rem` zur einzeiligen Mobilansicht. Genau `36rem` behält das Desktoplayout. Auf dem Desktop werden alle Werkzeuge umgebrochen, auch wenn der Editor selbst schmal ist. Objekteigenschaften umbrechen darunter; beide Zeilen belegen Platz oberhalb des Inhalts. Im Vollbild werden unabhängig von der Bildschirmbreite alle Werkzeuge aufgeklappt.
 
-Setzen Sie `--nabi-mobile-breakpoint` auf `:root`, einem Vorfahren oder einer einzelnen `.nabi`. Verwenden Sie eine nicht negative CSS-Länge wie `rem`, `px` oder `calc()`. Änderungen des CSS-Werts, der Schriftgröße des Wurzelelements, der Containerbreite oder der Viewportbreite aktualisieren auch offene Panels automatisch. Unter `body` verschobene Eingabepanels verwenden weiterhin den Schwellenwert ihres ursprünglichen Editors.
+Mobil bleiben Schnellwerkzeuge, die Schaltfläche für alle Werkzeuge sowie verbundene Vorschau-/Vollbildschaltflächen in der Haupt-Toolbar. Sie bleiben nutzbar, wenn Eigenschaftswerkzeuge erscheinen. Die Werkzeugpalette übernimmt Gruppenreihenfolge und Trennlinien des Desktops. `layout: 'wrap'` zeigt immer alle Werkzeuge mit Zeilenumbruch.
+
+Mobile Panels öffnen sich im verfügbaren Platz rund um Toolbar und Eigenschaftswerkzeuge. Die Tabellengrößenauswahl ist eine Ausnahme: Sie öffnet sich mittig vor einem halbtransparenten Hintergrund mit einem gut berührbaren 5×5-Raster. Sie wartet nicht auf das Schließen der Tastatur; die Größenwahl fügt eine Tabelle ein und schließt die Auswahl.
+
+Setze `--nabi-mobile-breakpoint` auf `:root`, einem Vorfahren oder einer einzelnen `.nabi`, um die Grenze zu ändern. Verwende eine nichtnegative CSS-Länge wie `rem`, `px` oder `calc()`. Änderungen am CSS-Wert, an der Root-Schriftgröße oder der Bildschirmbreite aktualisieren auch offene Panels automatisch. Unter `body` verschobene Eingabepanels behalten die Grenze ihres ursprünglichen Editors.
 
 ```css
 .article-editor {
@@ -77,7 +88,7 @@ Setzen Sie `--nabi-mobile-breakpoint` auf `:root`, einem Vorfahren oder einer ei
 }
 ```
 
-Auf Touch-Geräten bleiben die Bedienelemente auch oberhalb dieser Breite größer.
+Für die einspaltige Darstellung von Float-Bereichen gilt eine separate Grenze: Entscheidend ist eine Breite des Inhaltscontainers unter `36rem`, nicht die Bildschirmbreite. Beim Drucken wird dasselbe Layout verwendet.
 
 ## Dunkelmodus
 
@@ -91,7 +102,7 @@ Der Hellmodus ist standardmäßig aktiv. Fügen Sie `.dark` zu `html` oder `body
 Verwenden Sie `data-nabi-theme="light"`, um sich vom `.dark` eines übergeordneten Elements abzumelden. Ihre Anwendung steuert das Umschalten des Themas; das Paket folgt nicht automatisch `prefers-color-scheme`.
 
 ```css
-.dark .brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
   --nabi-fg: #f3f4f6;
   --nabi-muted: #a1a1aa;
   --nabi-bg: #18181b;
@@ -111,7 +122,7 @@ Veröffentlichtes HTML benötigt ebenfalls `.nabi-content` und dasselbe CSS. Tab
 
 ```css
 .article-body {
-  --nabi-font: "Source Serif 4", Georgia, serif;
+  --nabi-font: "Noto Serif KR", serif;
   --nabi-bg: transparent;
 }
 ```

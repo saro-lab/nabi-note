@@ -59,6 +59,8 @@ const toolbar = mountToolbar({
 
 Kufunga dirisha au kuondoa upau wa zana kunakatisha `signal` na kuita chaguo la kukokotoa la kusafisha. `run()` inafunga dirisha na kutumia amri mara moja kwenye uteuzi uliohifadhiwa wakati wa kufungua. Ikiwa dirisha tayari limefungwa au maudhui ya hati yamebadilika tangu kufunguliwa, inarudisha `false` bila kutekeleza amri.
 
+Ukihamisha kishale pekee, picha huingizwa mahali pa awali ambapo paneli ilifunguliwa. Ikiwa ilifunguliwa ndani ya seli au eneo linaloelea, picha huingizwa humo. Kuhariri au kubadilisha hati hughairi uingizaji na kuonyesha taarifa hata kama kutendua kunarudisha maudhui yale yale; fungua paneli tena uchague picha upya.
+
 ## Mitindo ya CSS
 
 Tia mtindo kwenye picha kwa `.nabi-content img`. Dumisha upana na mpangilio uliohifadhiwa, na ubadilishe maelezo ya mwonekano pekee kama mipaka au vivuli.

@@ -23,17 +23,15 @@ import 'nabi-note/nabi.css'
 }
 ```
 
-Aynı token'ları düzenleyici ve yayın ekranının ortak üst öğesine koyarsanız, iki ekran aynı görünümü korur.
+Editörün `.nabi` ve yayın görünümünün `.nabi-content` öğelerine aynı tema sınıfını atayarak aynı değişkenleri uygulayın. Hizmet CSS'sini paket CSS'sinden sonra yükleyin ve geçerli temayı `data-nabi-theme` ile belirtin.
 
 ```html
-<section class="brand-note">
-  <div class="nabi">...</div>
-  <article class="nabi-content">...</article>
-</section>
+<div class="nabi brand-note" data-nabi-theme="light">...</div>
+<article class="nabi-content brand-note" data-nabi-theme="light">...</article>
 ```
 
 ```css
-.brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-fg: #1f2937;
   --nabi-muted: #6b7280;
   --nabi-bg: #fff;
@@ -57,21 +55,33 @@ Aynı token'ları düzenleyici ve yayın ekranının ortak üst öğesine koyars
 | Dokunmatik denetimler | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
 | Mobil moda geçiş genişliği | `--nabi-mobile-breakpoint` |
 
-Vurgulama ve metin rengi token'ları `--nabi-hl-<name>` ve `--nabi-tc-<name>` kullanır. Örneğin
-`--nabi-hl-yellow` değerini değiştirmek, belgede saklanan `yellow` vurgusunun ekran rengini yalnızca değiştirir.
+Vurgulayıcı ve metin rengi sırasıyla `--nabi-hl-<name>` ve `--nabi-tc-<name>` kullanır. Tablo hücre arka planları `--nabi-cell-<name>` ile `yellow`, `green`, `cyan`, `pink`, `purple`, `orange` değerlerini destekler. Değişkenler kayıtlı renk adını değil, yalnızca ekranda görünen rengi değiştirir.
 
 ```css
-.article-editor {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-hl-yellow: #fff0a6;
   --nabi-tc-blue: #2563eb;
+  --nabi-cell-cyan: #e2f4f7;
+}
+```
+
+Varsayılan tema hücre arka planlarını açık tonlarda gösterir. Koyu mod aynı renk adlarını korur; koyu zemin üzerinde ayırt edilmeleri için daha açık ve daha düşük doygunluklu ayrı renkler kullanır. Yarı saydam renklerden zemin göründüğünden, özelleştirirken gerçek sayfa arka planında metin kontrastını kontrol edin. Varsayılan renk değişkenlerini geçersiz kılmak için tema sınıfını herhangi bir dış üst öğeye değil, yukarıdaki gibi gerçek editör veya yayın öğesine atayın.
+
+```css
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
+  --nabi-cell-cyan: #183b43;
 }
 ```
 
 ## Mobil mod eşiği
 
-Araç çubuğu, bağlam satırı veya görünüm alanı genişliği `36rem` değerinden küçük olduğunda mobil mod etkinleşir. Tam `36rem` genişlikte normal düzen korunur. Mobil modda araç çubuğu ve bağlam satırı yatay kayar, paneller ortalanır ve tablo seçici dokunmaya uygun 5×5 hücreye küçülür.
+Varsayılan `layout: 'compact'` araç çubuğu ekran genişliği `36rem` altındayken mobil tek satıra geçer. Tam `36rem` masaüstü düzenini korur. Masaüstünde editör dar olsa bile bütün araçlar satırlara bölünür. Nesne özellik araçları da altta satırlara bölünür; iki satır da metnin üzerinde yer kaplar. Tam ekranda genişlikten bağımsız olarak bütün araçlar açılır.
 
-`--nabi-mobile-breakpoint` değerini `:root`, bir üst öğe veya tek bir `.nabi` üzerinde ayarlayın. `rem`, `px` veya `calc()` gibi negatif olmayan bir CSS uzunluğu kullanın. CSS değeri, kök yazı boyutu, kapsayıcı veya görünüm alanı genişliği değiştiğinde açık paneller de otomatik güncellenir. `body` altına taşınan giriş panelleri asıl düzenleyicinin eşiğini kullanmayı sürdürür.
+Mobilde hızlı araçlar, tüm araçlar düğmesi ve bağlı önizleme/tam ekran düğmeleri ana araç çubuğunda kalır. Özellik araçları göründüğünde de birlikte kullanılabilirler. Tüm araçlar paleti masaüstüyle aynı grup sırasını ve ayraçları kullanır. `layout: 'wrap'` bütün araçları her zaman satırlara bölerek gösterir.
+
+Mobil paneller araç çubuğu ve özellik araçlarının çevresindeki kullanılabilir alanda açılır. Tablo boyutu seçici istisnadır: yarı saydam zemin üzerinde ortada, dokunması kolay 5×5 ızgarayla açılır. Klavyenin kapanmasını beklemez; boyut seçilince bir tablo ekler ve kapanır.
+
+Eşiği değiştirmek için `--nabi-mobile-breakpoint` değerini `:root`, bir üst öğe veya tek bir `.nabi` üzerinde ayarlayın. `rem`, `px`, `calc()` gibi negatif olmayan CSS uzunlukları kullanın. CSS değeri, kök yazı boyutu veya ekran genişliği değiştiğinde açık paneller de otomatik güncellenir. `body` altına taşınan giriş panelleri özgün editörün eşiğini korur.
 
 ```css
 .article-editor {
@@ -79,7 +89,7 @@ Araç çubuğu, bağlam satırı veya görünüm alanı genişliği `36rem` değ
 }
 ```
 
-Dokunmatik cihazlar bu eşiğin üzerinde de daha büyük denetimleri korur.
+Yüzen bölgelerin tek sütuna geçme eşiği ayrıdır. Ekran değil, metin container'ı `36rem` altına indiğinde tek sütun kullanılır; yazdırmada da aynı düzen uygulanır.
 
 ## Koyu mod
 
@@ -95,7 +105,7 @@ Bir üst öğedeki `.dark` etkisinden çıkmak için `data-nabi-theme="light"` k
 yönetir; paket `prefers-color-scheme` seçeneğini otomatik olarak izlemez.
 
 ```css
-.dark .brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
   --nabi-fg: #f3f4f6;
   --nabi-muted: #a1a1aa;
   --nabi-bg: #18181b;

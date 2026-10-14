@@ -73,9 +73,37 @@ const toolbar = mountToolbar({
 içinde yalıtılmış hataları alır. `undoLimit`, geri alma sayısıdır ve varsayılanı 200'dür. `typingMergeMs`,
 ardışık yazımı tek bir geri alma işleminde birleştiren süredir; `0` olursa her karakter ayrı olur.
 
+Blok container'dan çıkmak için art arda Enter basışlarının varsayılan aralığı 180ms'dir. Çift Esc ve Shift için 350ms korunur. `mountSurface()` içinde `doubleEnterMs` açıkça verilirse yalnızca Enter değil, çift Esc aralığı da bu değere değişir.
+
 Her düzenleyici için çakışmayan içerik ve araç çubuğu root'ları kullanın. Birden çok düzenleyicinin bulunduğu
 ekranda da kısayolların ve odağın karışmaması için araç çubuğunun `surface` alanına kendi düzenleme alanını
 iletmelisiniz.
+
+## Araç çubuğunu yapılandırma
+
+Varsayılan araç çubuğu başlık, metin biçimi, hizalama, liste, ekleme ve belge araçlarını bu sırayla gruplar; grupların arasında dikey ayraçlar bulunur. Masaüstünde tüm araçlar birden fazla satırda, mobilde hızlı araçlar ve tüm araçlar düğmesi tek satırda gösterilir. Tablo, resim ve yüzen bölge özellik araçları altta görünür; metin araçlarıyla birlikte kullanılabilir.
+
+`groups` grup sırasını, `quick` mobil hızlı araç sırasını değiştirir. Örneğin sık resim eklenen bir editörde `media` grubu başa alınabilir.
+
+```ts
+import { TOOLBAR_GROUPS, mountToolbar } from 'nabi-note'
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: toolbarRoot,
+  surface: content,
+  locale: 'tr',
+  groups: ['media', ...TOOLBAR_GROUPS.filter((group) => group !== 'media')],
+  quick: ['b', 'i', 'tc', 'img'],
+})
+```
+
+Hızlı araçlar belirtilen sırayı ayraçsız kullanır. Grup içinde kanatların kayıt sırası izlenir. Araç çubuğunu SSR ile önceden oluşturuyorsanız sunucu ve tarayıcıya aynı grup sırasını verin. Ekran genişliğine göre yerleşim [CSS temalarında](./style#mobil-mod-esigi) açıklanır.
+
+`mountHints()` bağlandığında Shift'e iki kez basarak klavyeyle araç seçebilirsiniz. Tab grup değiştirir; ok tuşları aynı grubun simgeleri arasında ilerler. Masaüstü ve tam ekran görünür araç çubuğunu, mobil ise tüm araçlar paletini kullanır.
+
+Resim panelleri, URL girişleri ve dosya seçiciler açıldıkları andaki seçimi hatırlar. Yalnızca imleci taşıdıysanız özgün konuma eklerler; belgeyi düzenlediyseniz veya değiştirdiyseniz girdiyi iptal edip bildirim gösterirler. Geri alma aynı içeriği getirse bile eski seçim yeniden kullanılmaz.
 
 ## Kanatları seçme
 

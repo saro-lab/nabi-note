@@ -13,6 +13,8 @@ Sisipkan kode multibaris terpisah dari teks isi biasa. Ketik tiga tanda backtick
 
 Nama bahasa adalah pengenal untuk penyorotan sintaks; nama di luar daftar terdaftar pun dapat diketik manual. Karena isi kode dan indentasi harus dipertahankan, blok kode tidak menerima perataan paragraf.
 
+Anda juga dapat menggunakan kode multibaris dan inden Tab di dalam sel tabel. Meski Shift+Tab tidak dapat mengurangi inden baris lagi, kursor tetap di dalam kode dan tidak berpindah ke sel sebelumnya.
+
 <WingDemo path="/wing/block/code" />
 
 ```ts

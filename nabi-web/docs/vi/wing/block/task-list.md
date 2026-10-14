@@ -13,6 +13,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Trạng thái đã kiểm được lưu cùng tài liệu như thuộc tính của mục. Khi tách một mục, trạng thái kiểm đi theo mục còn chữ thay vì mục trống phía trước, nên trạng thái không bị đảo ngay cả khi bạn tách công việc đã hoàn thành làm hai.
 
+Enter tách mục, còn Shift+Enter chỉ xuống dòng bên trong mục. Tab và Shift+Tab tăng và giảm thụt lề. Các quy tắc này cũng áp dụng trong ô bảng và trạng thái đánh dấu cũng được lưu.
+
 <WingDemo path="/wing/block/task-list" />
 
 ```ts

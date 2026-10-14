@@ -11,7 +11,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Regroupez un court résumé et un corps en un seul bloc. Lorsque vous le créez depuis la barre d'outils, vous saisissez d'abord le résumé, puis continuez à écrire le contenu en dessous.
 
-L'état ouvert défini avec le triangle est stocké dans le document et devient l'état initial dans la vue publiée. Pendant l'édition, le corps reste ouvert afin qu'il puisse être modifié, mais la valeur d'état stockée est conservée.
+L'état d'ouverture défini avec le triangle est enregistré dans le document et devient l'état initial de la vue publiée. Pendant l'édition aussi, vous pouvez cliquer sur le triangle pour ouvrir et fermer le bloc.
+
+Dans une cellule ou un autre bloc, seul le bloc dépliable concerné s'ouvre ou se ferme. Si le curseur ou la sélection se trouve dans le contenu en cours de fermeture, il est déplacé à l'extérieur ; une sélection située ailleurs est conservée.
 
 <WingDemo path="/wing/block/details" />
 

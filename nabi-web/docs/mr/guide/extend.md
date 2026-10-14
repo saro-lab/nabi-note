@@ -93,6 +93,8 @@ export const exCallout: Wing = {
   w: 'exCallout',
   place: 'container',
   holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'insertTable', 'toggleBulletList', 'toggleQuote'],
   toHtml: (_node, children, ctx) =>
     ctx.element('aside', children(), { class: 'ex-callout' }),
   styles: `
@@ -106,6 +108,8 @@ export const exCallout: Wing = {
 ```
 
 हे declaration एकटे निवडलेले paragraphs wrap करण्याचा मार्ग तयार करत नाही. feature editor UI मध्ये उघड करण्यापूर्वी `commands` मध्ये pure command आणि तो invoke करणारे `button` जोडा.
+
+`isolating: true` अनेक परिच्छेदांना परवानगी देते, पण मजकूर हटवताना सूचना चौकटीची सीमा ओलांडून शेजारच्या मजकुराशी जोडला जाणे रोखते. `scopedCommands` मधील कमांड चौकटीतील दस्तऐवजावर चालतात, त्यामुळे प्रतिमा/तक्ता घालणे आणि यादी/उद्धरणात रूपांतर चौकटीतच राहते.
 
 ### 5. जुळणारी list आणि item जोडी
 
@@ -165,10 +169,10 @@ wing ला लागते तेवढेच घोषित करा. का
 | क्षेत्र | Options | उद्देश |
 | --- | --- | --- |
 | मूलभूत | `w`, `place`, `basic`, `styles` | नाव, रचनात्मक प्रकार, basic-catalog सदस्यता, default CSS |
-| रचना | `holds`, `singleParagraph`, `attrs`, `boolAttrs` | Child प्रकार, Enter behavior, परवानगीचे attributes, boolean attributes |
+| रचना | `holds`, `singleParagraph`, `isolating`, `attrs`, `boolAttrs` | मुलांचा प्रकार, Enter चे वर्तन, संपादन सीमांचे संरक्षण, अनुमत attributes, boolean attributes |
 | रचना | `parts`, `allows`, `noAlign`, `requiresAnyOf` | अंतर्गत parts, परवानगीचे children, alignment वगळणे, wing dependency |
 | Values | `attrKey`, `attrValues`, `currentValue` | साठवलेली value key व list, current-value detection |
-| Commands आणि input | `commands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | Commands, key handling, Escape/double-key behavior, autoformat rules |
+| Commands आणि input | `commands`, `scopedCommands`, `onKey`, `escapeKeys`, `doubleKeys`, `inputRules` | कमांड, अंतर्गत दस्तऐवजात चालणाऱ्या कमांड, कळ हाताळणी, Escape/दुहेरी दाब, स्वयंचलित रूपांतर |
 | Surface behavior | `attach` | surface साठी DOM behavior व cleanup |
 | Conversion | `toHtml`, `partHtml`, `toMd`, `partMd` | HTML व Markdown output |
 | Import आणि repair | `claim`, `ioFilter`, `repair`, `partRepair` | HTML import, file handling, JSON validation व repair |
@@ -190,6 +194,30 @@ command हा document आणि selection चा pure function असून �
 table drag selection सारखे फक्त DOM मधील behavior `attach(host)` मध्ये ठेवा. अयशस्वी setup सुद्धा साफ होण्यासाठी प्रत्येक listener किंवा बदललेल्या attribute चे cleanup `host.onDispose()` ने लगेच नोंदवा. composing text DOM किंवा surface चे selection mapping बदलू नका.
 
 toolbar आणि context controls `button`, `buttons` आणि `context` ने घोषित करा; त्यांच्या command rules ची application UI मध्ये पुनरावृत्ती केल्यास UI आणि document model वेगळे होऊ शकतात.
+
+### ब्लॉकमध्ये कमांड चालवणे
+
+`scopedCommands` हे `holds: 'blocks'` असलेल्या कंटेनरवर आणि ब्लॉक ठेवणाऱ्या `parts` वर घोषित करा. निवडीची दोन्ही टोके एकाच क्षेत्रात असल्यास कमांडला त्या क्षेत्राचा उपदस्तऐवज आणि सापेक्ष निवड मार्ग मिळतात; निकाल बाहेरील दस्तऐवजात पुन्हा लागू होतो. क्षेत्राची सीमा ओलांडणारी निवड नाकारली जाते; क्षेत्राबाहेर मूळ कमांडचे वर्तन कायम राहते. फ्लोट क्षेत्रे आणि तक्त्याच्या पेशीही याच पद्धतीने घालणे, रूपांतर आणि अपलोडची व्याप्ती जपतात.
+
+```ts
+const exMediaBox: Wing = {
+  w: 'exMediaBox',
+  place: 'container',
+  holds: 'blocks',
+  isolating: true,
+  scopedCommands: ['insertImage', 'commitUpload', 'toggleCode'],
+  toHtml: (_node, children, ctx) =>
+    ctx.element('aside', children(), { class: 'ex-media-box' }),
+}
+```
+
+यादीत फक्त विंग कमांड देता येतात. नोंदणी नसलेल्या कमांड वगळल्या जातात, त्यामुळे प्रतिमा किंवा अपलोड विंग सोबत नोंदवणे बंधनकारक नाही. फक्त दिलेल्या अंतर्गत दस्तऐवज आणि सापेक्ष मार्गांवर चालणाऱ्या कमांड निवडा; संपूर्ण दस्तऐवजाचे निरपेक्ष मार्ग लागणाऱ्या किंवा संपूर्ण दस्तऐवज बदलणाऱ्या कमांड घालू नका. कोर कमांडही या यादीत देता येत नाहीत.
+
+`singleParagraph` सामग्री एका परिच्छेदापुरती मर्यादित करते; `isolating` अनेक परिच्छेद ठेवून Backspace/Delete ला संपादन सीमा ओलांडण्यापासून रोखते. ब्लॉक ठेवणाऱ्या `parts` वरही `isolating: true` देता येते.
+
+### आतल्या ब्लॉकमध्ये कळ हाताळणी
+
+`onKey` ला मिळणाऱ्या `KeyIntent.shift` मुळे Enter आणि Shift+Enter वेगळे ओळखता येतात. स्वतंत्र संपादन क्षेत्रातील अंतर्गत विंगने `null` परत केल्यास हाताळणी क्रमाने त्या क्षेत्रापर्यंतच्या वरच्या विंगना दिली जाते. म्हणून पेशीतील यादी आणि कोड आधी इंडेंट हाताळतात; न हाताळलेला Tab पेशी बदलण्यासाठी वापरता येतो. एका कळ इनपुटसाठी तीच विंग दोनदा बोलावली जात नाही.
 
 ## CSS styles
 

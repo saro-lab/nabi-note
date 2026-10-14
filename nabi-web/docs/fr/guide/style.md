@@ -17,22 +17,20 @@ import 'nabi-note/nabi.css'
   --nabi-bg: #fff;
   --nabi-accent: #5b4ee8;
   --nabi-content-min-height: 20rem;
-  --nabi-font: Inter, system-ui, sans-serif;
+  --nabi-font: Pretendard, system-ui, sans-serif;
   --nabi-sticky-top: 4rem;
 }
 ```
 
-Placez les jetons partagés sur un ancêtre commun afin que l'éditeur et sa vue publiée conservent le même langage visuel.
+Attribuez la même classe de thème au `.nabi` de l'éditeur et au `.nabi-content` de la vue publiée pour leur appliquer les mêmes variables. Chargez votre CSS après celui du paquet et indiquez le thème courant avec `data-nabi-theme`.
 
 ```html
-<section class="brand-note">
-  <div class="nabi">...</div>
-  <article class="nabi-content">...</article>
-</section>
+<div class="nabi brand-note" data-nabi-theme="light">...</div>
+<article class="nabi-content brand-note" data-nabi-theme="light">...</article>
 ```
 
 ```css
-.brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-fg: #1f2937;
   --nabi-muted: #6b7280;
   --nabi-bg: #fff;
@@ -56,20 +54,33 @@ Placez les jetons partagés sur un ancêtre commun afin que l'éditeur et sa vue
 | Contrôles tactiles | `--nabi-touch-font-size`, `--nabi-touch-control-size` |
 | Largeur de passage au mode mobile | `--nabi-mobile-breakpoint` |
 
-Les jetons de surlignage et de couleur de texte utilisent `--nabi-hl-<name>` et `--nabi-tc-<name>`. Par exemple, modifier `--nabi-hl-yellow` change la couleur d'affichage des surlignages `yellow` stockés sans modifier les données du document.
+Le surlignage et la couleur du texte utilisent respectivement `--nabi-hl-<name>` et `--nabi-tc-<name>`. Les fonds de cellule utilisent `--nabi-cell-<name>`, avec `yellow`, `green`, `cyan`, `pink`, `purple` et `orange`. Ces variables changent uniquement la couleur affichée, pas son nom enregistré.
 
 ```css
-.article-editor {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="light"] {
   --nabi-hl-yellow: #fff0a6;
   --nabi-tc-blue: #2563eb;
+  --nabi-cell-cyan: #e2f4f7;
+}
+```
+
+Le thème par défaut utilise des fonds de cellule pâles. Le mode sombre conserve les noms, mais emploie des couleurs distinctes, plus claires et moins saturées, pour mieux les distinguer sur un fond sombre. Ces couleurs translucides laissent voir le fond ; si vous les personnalisez, vérifiez le contraste du texte sur le fond réel de la page. Pour remplacer les variables de couleur par défaut, appliquez la classe de thème à l'élément réel de l'éditeur ou du contenu publié, comme ci-dessus, plutôt qu'à un parent extérieur quelconque.
+
+```css
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
+  --nabi-cell-cyan: #183b43;
 }
 ```
 
 ## Seuil du mode mobile
 
-Le mode mobile s’active lorsque la largeur de la barre d’outils, de la barre contextuelle ou de la fenêtre est strictement inférieure à `36rem`. À exactement `36rem`, la disposition normale est conservée. En mode mobile, les deux barres défilent horizontalement, les panneaux sont centrés et le sélecteur de tableau passe à 5×5 cellules adaptées au toucher.
+La barre par défaut `layout: 'compact'` passe sur une ligne mobile lorsque l'écran mesure moins de `36rem`. À exactement `36rem`, la disposition de bureau reste active. Sur ordinateur, tous les outils reviennent à la ligne même si l'éditeur est étroit. Les propriétés d'objet reviennent aussi à la ligne dessous ; les deux rangées occupent de la place au-dessus du texte. Le plein écran déploie tous les outils quelle que soit la largeur.
 
-Définissez `--nabi-mobile-breakpoint` sur `:root`, un ancêtre ou une `.nabi` particulière. Utilisez une longueur CSS positive ou nulle, comme `rem`, `px` ou `calc()`. Les changements de valeur CSS, de taille de police racine, de largeur du conteneur ou de la fenêtre actualisent aussi automatiquement les panneaux ouverts. Les panneaux de saisie déplacés sous `body` conservent le seuil de leur éditeur d’origine.
+Sur mobile, les outils rapides, le bouton de tous les outils et les boutons d'aperçu/plein écran connectés restent dans la barre principale. Ils restent utilisables lorsque les propriétés apparaissent. La palette de tous les outils conserve l'ordre des groupes et les séparateurs du bureau. `layout: 'wrap'` affiche toujours tous les outils avec retour à la ligne.
+
+Les panneaux mobiles s'ouvrent dans l'espace disponible autour de la barre et des propriétés. Le sélecteur de dimensions de tableau fait exception : il s'ouvre au centre sur un fond translucide, avec une grille tactile de 5×5. Il n'attend pas la fermeture du clavier ; choisir une taille insère un tableau puis ferme le sélecteur.
+
+Définissez `--nabi-mobile-breakpoint` sur `:root`, un ancêtre ou un `.nabi` particulier pour changer le seuil. Utilisez une longueur CSS positive ou nulle, telle que `rem`, `px` ou `calc()`. Les changements de valeur CSS, de taille de police racine ou de largeur d'écran actualisent automatiquement les panneaux ouverts. Les panneaux de saisie déplacés sous `body` conservent le seuil de leur éditeur d'origine.
 
 ```css
 .article-editor {
@@ -77,7 +88,7 @@ Définissez `--nabi-mobile-breakpoint` sur `:root`, un ancêtre ou une `.nabi` p
 }
 ```
 
-Les appareils tactiles conservent des commandes plus grandes au-delà de ce seuil.
+Les zones flottantes ont un seuil distinct pour passer sur une colonne. Elles s'empilent quand le conteneur du texte, et non l'écran, mesure moins de `36rem`. L'impression utilise la même disposition.
 
 ## Mode sombre
 
@@ -91,7 +102,7 @@ Le mode clair est le défaut. Ajoutez `.dark` à `html` ou `body`, ou définisse
 Utilisez `data-nabi-theme="light"` pour vous soustraire au `.dark` d'un ancêtre. Votre application contrôle le changement de thème ; le package ne suit pas automatiquement `prefers-color-scheme`.
 
 ```css
-.dark .brand-note {
+.brand-note:is(.nabi, .nabi-content)[data-nabi-theme="dark"] {
   --nabi-fg: #f3f4f6;
   --nabi-muted: #a1a1aa;
   --nabi-bg: #18181b;
@@ -111,7 +122,7 @@ Le HTML publié a également besoin de `.nabi-content` et du même CSS. Les tabl
 
 ```css
 .article-body {
-  --nabi-font: "Source Serif 4", Georgia, serif;
+  --nabi-font: "Noto Serif KR", serif;
   --nabi-bg: transparent;
 }
 ```

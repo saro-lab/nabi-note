@@ -60,20 +60,18 @@
 import Icon from './Icon.vue'
 import { useData } from 'vitepress'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { NAV, isLink, type NavEntry } from '../src/nav.ts'
+import { navFor, isLink, type NavEntry } from '../src/nav.ts'
 import { PROJECTS } from '../src/projects.ts'
 import { useRoot, useTranslate } from '../src/langs.ts'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [boolean] }>()
 
-const { page } = useData()
+const { page, lang } = useData()
 const { t } = useTranslate()
 const root = useRoot()
 
-// 메뉴는 모든 로케일이 나눠 쓰는 한 벌이다 — 줄마다 그 페이지가 전 로케일에 선다.
-// One menu serves every locale — each row's page stands in all of them.
-const nav = NAV
+const nav = computed(() => navFor(lang.value))
 
 // 헤더 햄버거와 같은 문턱을 써야 한다 — 어긋나면 버튼 없이 층만 뜨는 폭이 생긴다.
 // Must use the header hamburger's breakpoint exactly, or some widths get a drawer with no button.

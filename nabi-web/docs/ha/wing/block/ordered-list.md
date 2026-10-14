@@ -13,6 +13,8 @@ Yana yin jerin lambobi don abubuwan da tsarinsu yake da muhimmanci. A sakin layi
 
 Ana ƙididdige lambar da ake gani daga matsayin abu, don haka tana ci gaba da kanta ko da ka ƙara abu ko ka shigar da shi ciki. Ba ya samar da aikin adana lambar farawa da aka shigar don a fara ƙirga daga kowace lamba.
 
+Enter yana ƙirƙirar abu na gaba, Shift+Enter kuma yana sauya layi kawai a cikin abu na yanzu. Tab da Shift+Tab suna ƙara da rage zurfin jeri; a sel na tebur ma, zurfin jeri yana da fifiko kan matsawa tsakanin sel.
+
 <WingDemo path="/wing/block/ordered-list" />
 
 ```ts

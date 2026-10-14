@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 import { GA_ID } from './src/ga.ts'
 import { DEFAULT_LOCALE, localeCodes, vitepressLocales } from './locales/index.ts'
+import { hasLocalePage } from './src/nav.ts'
 
 // nabi-note 는 아직 dist·exports 없는 프로토타입이라 vite가 옆 저장소 TS 소스를 직접 문다.
 // nabi-note has no dist/exports yet, so vite points straight at the sibling repo's TS source.
@@ -102,9 +103,11 @@ export default defineConfig({
 
     if (locale) {
       for (const code of localeCodes) {
+        if (!hasLocalePage(path, code)) continue
         head.push(['link', { rel: 'alternate', hreflang: code, href: `${SITE_HOST}/${code}${path}` }])
       }
-      head.push(['link', { rel: 'alternate', hreflang: 'x-default', href: `${SITE_HOST}/${DEFAULT_LOCALE}${path}` }])
+      const defaultLocale = hasLocalePage(path, DEFAULT_LOCALE) ? DEFAULT_LOCALE : locale
+      head.push(['link', { rel: 'alternate', hreflang: 'x-default', href: `${SITE_HOST}/${defaultLocale}${path}` }])
     }
 
     if (pageData.title) {

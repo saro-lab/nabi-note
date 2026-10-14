@@ -25,6 +25,12 @@ const selected = wings()
 
 `upload` だけを選ぶと、画像またはリンクのうち不足している依存関係を自動で補います。転送は `mountUpload()` で接続し、編集画面の進行状態表示は通常 `mountUploadView()` で接続します。サーバーが HTTPS URL を返すなら、ローカル URL の許可オプションは必要ありません。
 
+## アップロードの挿入位置
+
+ファイル選択画面を開いた位置やアップロードを開始した位置を記憶します。カーソルだけを別の場所へ移した場合は元の位置に挿入します。表のセルから開始した場合、進捗表示も完了した内容もそのセル内にとどまります。フロート領域から開始したアップロード結果も、その領域内に入ります。複数セルの境界をまたぐ選択には挿入できません。
+
+ファイル選択や非同期処理の途中で文書を編集・置換すると、挿入を中止して通知します。元に戻す操作で同じ内容に戻っても、以前の位置には挿入しません。転送の成功だけで完了を判断せず、`onDone` が受け取る `committed` と `cancelled` を確認してください。`committed` は実際に文書へ挿入されたファイル数です。
+
 ## サーバー API の約束
 
 NABI NOTE はファイルをサーバーへ自動送信しません。`uploader` 関数がファイル 1 つをサーバーへ送り、成功したら公開 URL または認証が必要な `https:` URL だけを返す構造です。もっとも単純な API の約束は次のようになります。
@@ -58,6 +64,7 @@ Failure: 4xx or 5xx response
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -121,9 +128,18 @@ const surface = mountSurface({
   fileSink: upload.take,
   locale: 'ja',
 })
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'ja',
+})
 ```
 
-`fileSink: upload.take` を接続すると、ドラッグ & ドロップと、ファイルだけを含む貼り付けがアップロードに入ります。ファイル選択ボタンは `upload` wing の UI が `upload.take()` へ渡します。アップロード中はエディターがロックされ、成功したファイルは 1 バッチにつき 1 回の undo として挿入されます。`upload.cancel()` または `uploadView` のキャンセルボタンは、`AbortSignal` を通じて進行中のリクエストを中断します。
+`fileSink: upload.take` を接続すると、ドラッグ＆ドロップとファイルだけの貼り付けがアップロードに入ります。ファイル選択ボタンはツールバーの `onFiles: upload.take` で接続します。アップロード中はエディターがロックされ、成功したファイルはバッチごとに1回の元に戻す操作として挿入されます。`upload.cancel()` または `uploadView` のキャンセルボタンは、`AbortSignal` を通じて進行中のリクエストを中断します。
 
 ## 失敗と画面の解放
 
@@ -131,6 +147,7 @@ const surface = mountSurface({
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

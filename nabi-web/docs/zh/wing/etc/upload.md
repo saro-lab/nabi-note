@@ -25,6 +25,12 @@ const selected = wings()
 
 如果只选择 `upload`，它会自动补上图片或链接依赖中缺少的一个。传输通过 `mountUpload()` 连接，编辑画面中的进度 UI 通常通过 `mountUploadView()` 连接。如果服务器返回 HTTPS URL，就不需要本地 URL 选项。
 
+## 上传内容的插入位置
+
+会记住打开文件选择器或开始上传时的位置。如果只是移动光标，仍会插入原始位置。如果从表格单元格内开始上传，进度显示和完成的内容都会留在该单元格内。从浮动区域开始的上传结果也会插入该区域。无法向跨越多个单元格边界的选区插入上传内容。
+
+在选择文件或异步处理期间编辑或替换文档，会取消插入并提示。即使撤销恢复了相同内容，也不会插入旧位置。不要仅凭传输成功判断完成情况，请检查 `onDone` 收到的 `committed` 和 `cancelled`。`committed` 表示实际插入文档的文件数量。
+
 ## 服务器 API 约定
 
 NABI NOTE 不会自行把文件发送到你的服务器。`uploader` 函数负责把一个文件发送到服务器，并在成功时只返回一个公开或需要认证的 `https:` URL。最简单的 API 约定如下。
@@ -58,6 +64,7 @@ Failure: 4xx or 5xx response
 import {
   createNabiWith,
   mountSurface,
+  mountToolbar,
   mountUpload,
   mountUploadView,
   wings,
@@ -121,9 +128,18 @@ const surface = mountSurface({
   fileSink: upload.take,
   locale: 'zh',
 })
+
+const toolbar = mountToolbar({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#toolbar')!,
+  surface: content,
+  onFiles: upload.take,
+  locale: 'zh',
+})
 ```
 
-连接 `fileSink: upload.take`，让拖放和只包含文件的粘贴操作进入上传流程。上传 wing UI 会把文件选择按钮的结果传给 `upload.take()`。上传进行期间编辑器会被锁定，每批成功上传的文件会作为一个 undo 步骤插入。`upload.cancel()` 或 `uploadView` 中的取消按钮会通过 `AbortSignal` 中止进行中的请求。
+连接 `fileSink: upload.take`，让拖放和仅包含文件的粘贴操作进入上传流程。文件选择按钮通过工具栏的 `onFiles: upload.take` 连接。上传期间编辑器会锁定，每批成功的文件会作为一个撤销步骤插入。`upload.cancel()` 或 `uploadView` 的取消按钮会通过 `AbortSignal` 中止进行中的请求。
 
 ## 失败和清理
 
@@ -131,6 +147,7 @@ const surface = mountSurface({
 
 ```ts
 function dispose() {
+  toolbar.unmount()
   surface.unmount()
   uploadView.unmount()
   upload.unmount()

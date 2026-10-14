@@ -11,6 +11,8 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 Coloca a primeira letra de um parágrafo em tamanho maior e permite que as linhas seguintes fluam ao lado dela. É uma formatação de nível de parágrafo, portanto não é aplicada apenas a parte de uma palavra selecionada.
 
+Dentro de uma tabela, a capitular se aplica aos parágrafos internos, não às células. Ao selecionar várias células, todos os parágrafos compatíveis nelas são alterados; o estado da barra reflete a mesma seleção de parágrafos.
+
 A vista publicada e a vista de edição mantêm a mesma forma. Durante a edição, a primeira letra é envolvida por um elemento real para que posições de cursor e apagar não se desloquem; esse elemento não é incluído no conteúdo salvo do documento.
 
 <WingDemo path="/wing/etc/dropcap" />
