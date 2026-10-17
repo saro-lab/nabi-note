@@ -100,7 +100,7 @@ body {
 
 
 .g-frame-full {
-  max-width: 72rem;
+  max-width: 64rem;
 }
 
 /* No border — the shadow says it floats. Width is 0 but color and style stay, so a one-sided `border-b` still gets the right color */

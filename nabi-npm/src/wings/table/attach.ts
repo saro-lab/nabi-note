@@ -65,7 +65,13 @@ export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey, env }) => 
 
   let fromKey: string | null = null;
 
+  const onMouseUp = (): void => {
+    fromKey = null;
+    root.classList.remove('nabi-cell-dragging');
+  };
+
   const onMouseDown = (ev: MouseEvent): void => {
+    onMouseUp();
     fromKey = ev.button === 0 ? cellKeyAt(ev.target) : null;
   };
 
@@ -74,7 +80,7 @@ export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey, env }) => 
     // 단추를 놓은 채 지나가는 건 드래그가 아니다 — 창 밖에서 놓았을 때 여기로 돌아온다.
     // Passing through with the button already released isn't a drag — catches a mouseup that happened outside the window.
     if ((ev.buttons & 1) === 0) {
-      fromKey = null;
+      onMouseUp();
       return;
     }
     const overKey = cellKeyAt(ev.target);
@@ -86,14 +92,13 @@ export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey, env }) => 
     // Suppresses the browser's own selection — without this, its next gesture would immediately overwrite the range just set.
     ev.preventDefault();
     nabi.select({ anchor, focus });
-  };
-
-  const onMouseUp = (): void => {
-    fromKey = null;
+    root.classList.toggle('nabi-cell-dragging', selectionBox(doc(), nabi.getSelection()) !== null);
   };
 
   const onKeyDown = (ev: KeyboardEvent): void => {
-    if (ev.key !== 'Escape' || painted.length === 0) return;
+    if (ev.key !== 'Escape') return;
+    onMouseUp();
+    if (painted.length === 0) return;
     // 상자가 서 있을 때의 Escape — 범위를 focus 칸의 캐럿으로 접는다(드래그로만 다시 선다).
     // Escape while a box is up collapses the range to a caret at the focus cell — only a new drag can re-establish it.
     const sel = nabi.getSelection();
@@ -111,9 +116,12 @@ export const attachCellRange: Attach = ({ root, nabi, doc, pathOfKey, env }) => 
   // A mouseup can happen outside the editor entirely — dragging past the table and releasing there, root would never hear it.
   const owner = root.ownerDocument;
   owner.addEventListener('mouseup', onMouseUp);
+  owner.defaultView?.addEventListener('blur', onMouseUp);
   paint();
 
   return () => {
+    onMouseUp();
+    owner.defaultView?.removeEventListener('blur', onMouseUp);
     owner.removeEventListener('mouseup', onMouseUp);
     root.removeEventListener('mousemove', onMouseMove);
     root.removeEventListener('mousedown', onMouseDown);

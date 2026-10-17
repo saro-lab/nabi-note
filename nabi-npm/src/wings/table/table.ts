@@ -847,6 +847,8 @@ ${CELL_COLORS.map((color) => `.nabi-content :is(td, th)[data-nabi-cell-color="${
 .nabi-content :is(td, th)[data-nabi-cell-selected] {
   outline: 2px solid var(--nabi-accent); outline-offset: -2px;
 }
+.nabi-content.nabi-cell-dragging,
+.nabi-content.nabi-cell-dragging * { cursor: crosshair !important; }
 /* 상자가 선 표에서는 브라우저의 글 선택을 지운다 — 두 겹으로 칠해지면 어디까지가 상자인지
    안 읽힌다. 상자는 칸 단위이고 글 선택은 글자 단위라, 경계가 서로 어긋나 보인다.
    **칸이 아니라 표에 건다**: 선택은 첫 칸에서 끝 칸까지 문서 순서로 이어져 있어서, 상자 밖인데

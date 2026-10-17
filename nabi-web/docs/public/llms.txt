@@ -10,7 +10,7 @@ Use this file as a router. Read only the document that owns your question.
 - npm setup and complete browser assembly: `llms/quickstart-npm.md`
 - CDN setup with the browser bundle: `llms/quickstart-cdn.md`
 - Public export and type index: `llms/api-reference.md`
-- Table cell formatting, multi-block table examples, and editable float examples for 1.4.0: `llms/wings.md`
+- Table cell formatting, crosshair cursor during cell-range dragging, multi-block table examples, and editable float examples for 1.4.0: `llms/wings.md`
 
 ## Contracts by topic
 

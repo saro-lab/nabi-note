@@ -60,6 +60,8 @@ Nested details blocks, including details inside table cells, toggle only the cli
 
 Below the viewport's `--nabi-mobile-breakpoint`, the table button closes the Tools palette and opens a centered size picker over a translucent backdrop. It follows the visual viewport and shows a 5x5 grid with touch-sized cells, including in fullscreen and `layout: 'wrap'`. Selecting a size inserts one table at the current editing selection and closes the picker. Escape or an outside interaction cancels without inserting. Arrow keys stay within the visible grid; Enter or Space confirms. Desktop keeps its existing nonmodal picker.
 
+Dragging across table cells shows a crosshair cursor inside the editor until mouse release, Escape, or window blur. A text selection within a single cell keeps its normal cursor.
+
 Copying a cell range uses its highlighted rectangle, including merged-cell expansion, in every clipboard format. Internal data and HTML preserve the cropped table structure and formatting; plain text contains only the selected cell contents. Cutting the range clears only those cells and supports one-step undo. A text selection inside a single cell keeps ordinary text-copy behavior. See `io-security.md`.
 
 ### Table cell editing
