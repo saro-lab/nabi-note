@@ -117,6 +117,16 @@ ok(
   ok('ssr 엔트리도 나비트리가 아니면 null 이다', ssrEntry.renderStoredHtml({ w: 'p' }, registry) === null);
 }
 
+const diffFiles = closure('src/diff/index.ts');
+ok(
+  'diff 순수 머지는 편집 가능한 세 버전 화면을 가져오지 않는다',
+  !diffFiles.includes('src/merge/mount.ts') && !diffFiles.includes('src/merge/session.ts'),
+);
+ok(
+  '기본 엔트리에는 세 버전 머지를 싣지 않는다',
+  !coreFiles.includes('src/merge/mount.ts') && !coreFiles.includes('src/merge/session.ts'),
+);
+
 // --- 2. 코어 엔트리 스모크 ---------------------------------------------------------------------
 const isFn = (value: unknown): boolean => typeof value === 'function';
 
@@ -252,7 +262,7 @@ ok(
 );
 // 발행되는 엔트리(코어·viewer·diff)만 허용한다 — 층 소스를 직접 파는 것만 막는 규칙이라 이 셋은 열려 있다.
 // Only the published entries (core, viewer, diff) are allowed — the rule blocks reaching into layer source directly, so these three stay open.
-const DEMO_ENTRIES = ['../src/index.js', '../src/viewer/index.js', '../src/diff/index.js'];
+const DEMO_ENTRIES = ['../src/index.js', '../src/viewer/index.js', '../src/diff/index.js', '../src/merge/index.js'];
 ok(
   '데모: 선언부가 발행 엔트리만 문다 (층 소스를 직접 안 판다)',
   [...strip(read('demo/editor.ts')).matchAll(/\bfrom\s*['"](\.\.[^'"]+)['"]/g)].every((m) =>

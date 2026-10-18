@@ -14,6 +14,7 @@ import {
   HostElementLease,
 } from '../lifecycle.js';
 import { ensureCss } from './styles.js';
+import { applyDiffMerge, diffMergeChanges, type DiffMergePlan, type DiffMergeProposal } from './merge.js';
 
 export interface DiffMountOptions {
   readonly root: HTMLElement;
@@ -22,10 +23,12 @@ export interface DiffMountOptions {
   readonly registry: Registry;
   readonly allowLocalUrls?: boolean;
   readonly locale?: LocaleInput;
+  readonly onMerge?: (proposal: DiffMergeProposal) => void | Promise<void>;
+  readonly onError?: (error: unknown) => void;
 }
 
 export interface DiffMount {
-  update(before: unknown, after: unknown): void;
+  update(before: unknown, after: unknown, expectedRevision?: number): boolean;
   unmount(): void;
 }
 
@@ -68,6 +71,7 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
     attributes.className('nabi-diff', true);
     attributes.attribute('role', 'region');
     attributes.attribute('aria-label', t('diff.region'));
+    if (options.onMerge && !root.hasAttribute('tabindex')) attributes.attribute('tabindex', '-1');
     if (locale !== undefined) attributes.attribute('dir', localeDirection(localeValue(locale)));
 
     const el = (cls: string, tag = 'div'): HTMLElement => {
@@ -109,11 +113,16 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
     });
 
     let model: DocDiff | null = null;
+    let mergePlan: DiffMergePlan | null = null;
+    let revision = 0;
+    let pendingMerge: AbortController | null = null;
+    let mergeButtons: HTMLButtonElement[] = [];
     let beforeEls: HTMLElement[] = [];
     let afterEls: HTMLElement[] = [];
     let cursor = -1;
     let folded = true;
     let unmounted = false;
+    lifecycle.add(() => pendingMerge?.abort());
     // 매칭 블록 쌍 기준 세로 앵커 — [i] 끼리 같은 자리다. 양 끝(0·문서 끝)이 늘 들어 있다.
     let anchorsB: number[] = [];
     let anchorsA: number[] = [];
@@ -304,6 +313,120 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
         if (entry.kind === 'changed') path.style.fill = `url(#${gradId})`;
         svg.appendChild(path);
       }
+      placeMergeButtons();
+    };
+
+    const placeMergeButtons = (): void => {
+      if (!mergePlan || !model) return;
+      let lastTop = -Infinity;
+      mergeButtons.forEach((button, at) => {
+        const change = mergePlan!.changes[at]!;
+        const beforeIndex = change.beforeBlocks[0];
+        const afterIndex = change.afterBlocks[0];
+        const beforeBlock = beforeIndex === undefined ? undefined : beforeEls[beforeIndex];
+        const afterBlock = afterIndex === undefined ? undefined : afterEls[afterIndex];
+        const block = visible(afterBlock) ? afterBlock : visible(beforeBlock) ? beforeBlock : undefined;
+        if (!block) {
+          button.hidden = true;
+          return;
+        }
+        const pane = block === afterBlock ? afterPane : beforePane;
+        const position = block === afterBlock ? change.afterPosition : change.beforePosition;
+        const desired = mergeLineTop(block, position?.offset ?? 0, pane) - pane.scrollTop;
+        if (desired < -28 || desired >= gutter.clientHeight) {
+          button.hidden = true;
+          return;
+        }
+        const top = Math.max(desired, lastTop + 28);
+        lastTop = top;
+        button.hidden = top < -28 || top >= gutter.clientHeight;
+        button.style.top = `${top}px`;
+      });
+    };
+
+    const mergeLineTop = (block: HTMLElement, offset: number, pane: HTMLElement): number => {
+      if (offset === 0) return block.offsetTop;
+      let remaining = offset;
+      let found: number | undefined;
+      const walk = (node: Node): void => {
+        if (found !== undefined) return;
+        if (node.nodeType === 3) {
+          const length = node.textContent?.length ?? 0;
+          if (remaining < length) {
+            const range = doc.createRange();
+            range.setStart(node, remaining);
+            range.setEnd(node, Math.min(remaining + 1, length));
+            const rect = range.getClientRects?.()[0];
+            if (rect) found = rect.top - pane.getBoundingClientRect().top + pane.scrollTop;
+            return;
+          }
+          remaining -= length;
+          return;
+        }
+        if (node.nodeType === 1 && (node as Element).tagName === 'BR') {
+          if (remaining > 0) remaining -= 1;
+          return;
+        }
+        for (const child of node.childNodes) walk(child);
+      };
+      walk(block);
+      return found ?? block.offsetTop;
+    };
+
+    const mergeOptions = allowLocalUrls ? { allowLocalUrls: true } : undefined;
+    const rebuildMergeButtons = (): void => {
+      for (const button of mergeButtons) button.remove();
+      mergeButtons = [];
+      if (!mergePlan || !options.onMerge) return;
+      const plan = mergePlan;
+      const buttonRevision = revision;
+      plan.changes.forEach((change, at) => {
+        const button = doc.createElement('button');
+        button.type = 'button';
+        button.className = 'nabi-diff-btn nabi-diff-merge-action';
+        button.dataset['mergeChange'] = change.id;
+        button.textContent = '>>';
+        button.title = `${t('diff.mergePrevious')} ${at + 1}`;
+        button.setAttribute('aria-label', button.title);
+        button.addEventListener('click', () => {
+          if (unmounted || pendingMerge || revision !== buttonRevision || mergePlan !== plan) return;
+          const result = applyDiffMerge(plan.before, plan.after, change.id, registry, mergeOptions);
+          if (!result) return;
+          const controller = new AbortController();
+          pendingMerge = controller;
+          for (const current of mergeButtons) current.disabled = true;
+          const finish = (): void => {
+            if (pendingMerge !== controller) return;
+            pendingMerge = null;
+            if (!unmounted && revision === buttonRevision) {
+              for (const current of mergeButtons) current.disabled = false;
+            }
+          };
+          const fail = (error: unknown): void => {
+            if (!controller.signal.aborted && !unmounted && revision === buttonRevision) {
+              try {
+                options.onError?.(error);
+              } catch {}
+            }
+            finish();
+          };
+          try {
+            const reply = options.onMerge!({
+              before: structuredClone(plan.before) as unknown[],
+              after: structuredClone(plan.after) as unknown[],
+              result,
+              changeId: change.id,
+              revision: buttonRevision,
+              signal: controller.signal,
+            });
+            Promise.resolve(reply).then(finish, fail);
+          } catch (error) {
+            fail(error);
+          }
+        });
+        gutter.append(button);
+        mergeButtons.push(button);
+      });
     };
 
     let raf = 0;
@@ -443,7 +566,12 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
 
     const paint = (before: unknown, after: unknown): void => {
       if (unmounted) return;
+      const mergeFocusIndex = mergeButtons.indexOf(doc.activeElement as HTMLButtonElement);
+      pendingMerge?.abort();
+      pendingMerge = null;
+      revision += 1;
       model = diffDocs(before, after, registry, allowLocalUrls ? { allowLocalUrls: true } : undefined);
+      mergePlan = options.onMerge ? diffMergeChanges(before, after, registry, mergeOptions) : null;
       beforeDocEl.innerHTML = model ? paneHtml(model.before, model.entries) : '';
       afterDocEl.innerHTML = model ? paneHtml(model.after, model.entries) : '';
       openLinksInNewTab(beforeDocEl);
@@ -451,11 +579,20 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
       beforeEls = [...beforeDocEl.children] as HTMLElement[];
       afterEls = [...afterDocEl.children] as HTMLElement[];
       cursor = -1;
+      rebuildMergeButtons();
       applyFold();
       measure();
       placeMarks();
       setCount();
       requestDraw();
+      if (mergeFocusIndex >= 0) {
+        const next = mergeButtons[Math.min(mergeFocusIndex, mergeButtons.length - 1)];
+        (
+          next ??
+          [...bar.querySelectorAll<HTMLButtonElement>('button')].find((button) => !button.disabled) ??
+          root
+        ).focus({ preventScroll: true });
+      }
     };
 
     // 그림·글꼴이 늦게 얹혀 높이가 바뀌면 앵커·선이 함께 낡는다 — 재서 다시 긋는다.
@@ -484,13 +621,19 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
         button.title = t(key);
         button.setAttribute('aria-label', t(key));
       }
+      mergeButtons.forEach((button, at) => {
+        button.title = `${t('diff.mergePrevious')} ${at + 1}`;
+        button.setAttribute('aria-label', button.title);
+      });
     };
     if (translator.onChange) lifecycle.add(translator.onChange(localize));
     paint(before, after);
 
     return {
-      update(before, after) {
-        if (!unmounted) paint(before, after);
+      update(before, after, expectedRevision) {
+        if (unmounted || (expectedRevision !== undefined && expectedRevision !== revision)) return false;
+        paint(before, after);
+        return true;
       },
       unmount() {
         if (unmounted) return;

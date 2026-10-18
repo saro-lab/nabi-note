@@ -10,6 +10,7 @@ This is an index, not a tutorial. Import paths are public package exports; inter
 | `nabi-note/ssr` | DOM-free rendering and toolbar HTML; see `ssr.md` |
 | `nabi-note/viewer` | Reader behavior; see `viewer-diff.md` |
 | `nabi-note/diff` | Document diff; see `viewer-diff.md` |
+| `nabi-note/merge` | Three-way merge model, session, and editable UI; see `merge.md` |
 | `nabi-note/nabi.css` | Bundled stylesheet |
 | `nabi-note/icons/*` | Packaged SVG assets, including dark variants |
 | `nabi-note/package.json` | Package metadata |
@@ -468,7 +469,8 @@ The root entry exports these public type names. Earlier sections and the topic d
 
 - `nabi-note/ssr`: `Registry`, `StoredHtmlOptions`, `ToolbarHtmlOptions`, `ToolbarSlot`, `WingName`, `WingsBuilder`, `Wing`, `AttrValue`, `Attrs`, `ElementNode`, `NabiNode`, `NabiDoc`, `Translator`, `LocaleInput`, `LocaleSource`, `LocaleController`.
 - `nabi-note/viewer`: `ViewerAttachment`, `ViewerOptions`, `TableSortOptions`, `SortDirection`, `SortState`, `CodePaintOptions`, `CodeHighlighter`, `CodeToken`.
-- `nabi-note/diff`: `CharRange`, `DiffEntry`, `DiffKind`, `DiffPaneBlock`, `DocDiff`, `DiffOptions`, `DiffMountOptions`, `DiffMount`, `DiffWingMountOptions`, `DiffWingMount`.
+- `nabi-note/diff`: `CharRange`, `DiffEntry`, `DiffKind`, `DiffPaneBlock`, `DocDiff`, `DiffOptions`, `DiffMountOptions`, `DiffMount`, `DiffWingMountOptions`, `DiffWingMount`, `DiffMergeRange`, `DiffMergeChange`, `DiffMergePlan`, `DiffMergeProposal`.
+- `nabi-note/merge`: `MergeUnit`, `MergeOptions`, `MergeConflict`, `DocMerge`, `MergeResolution`, `MergeSource`, `MergeChange`, `MergeConflictState`, `MergeState`, `MergeSessionOptions`, `MergeSession`, `MergeMountOptions`, `MergeMount`, `MergeResult`. See `merge.md` for the entry's functions and state contract.
 
 ## Icon themes and view-tool visibility
 

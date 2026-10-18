@@ -186,13 +186,17 @@ header.g-glass::before {
   padding: 1.5rem;
 }
 
-.md h1 {
+.md :is(h1, h2, h3, h4, h5, h6):not(:where(.not-md *)) {
+  overflow-wrap: anywhere;
+}
+
+.md h1:not(:where(.not-md *)) {
   font-size: 1.9rem;
   font-weight: 700;
   margin: 0 0 1rem;
 }
 
-.md h2 {
+.md h2:not(:where(.not-md *)) {
   font-size: 1.35rem;
   font-weight: 700;
   margin: 2rem 0 0.75rem;
@@ -202,31 +206,31 @@ header.g-glass::before {
   border-top: 1px solid color-mix(in srgb, var(--g-border) 55%, transparent);
 }
 
-.md h3 {
+.md h3:not(:where(.not-md *)) {
   font-size: 1.1rem;
   font-weight: 600;
   margin: 1.5rem 0 0.5rem;
 }
 
-.md p,
-.md ul,
-.md ol {
+.md p:not(:where(.not-md *)),
+.md ul:not(:where(.not-md *)),
+.md ol:not(:where(.not-md *)) {
   margin: 0.75rem 0;
 }
 
-.md ul,
-.md ol {
+.md ul:not(:where(.not-md *)),
+.md ol:not(:where(.not-md *)) {
   padding-left: 1.25rem;
 }
 
-.md ul { list-style: disc; }
-.md ol { list-style: decimal; }
+.md ul:not(:where(.not-md *)) { list-style: disc; }
+.md ol:not(:where(.not-md *)) { list-style: decimal; }
 
-.md a {
+.md a:not(:where(.not-md *)) {
   color: var(--g-accent);
 }
 
-.md code {
+.md code:not(:where(.not-md *)) {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 0.9em;
   padding: 0.1em 0.35em;
@@ -234,7 +238,7 @@ header.g-glass::before {
   background: color-mix(in srgb, var(--g-fg) 8%, transparent);
 }
 
-.md pre {
+.md pre:not(:where(.not-md *)) {
   margin: 1rem 0;
   padding: 1rem;
   overflow-x: auto;
@@ -242,12 +246,16 @@ header.g-glass::before {
   background: color-mix(in srgb, var(--g-fg) 6%, transparent);
 }
 
-.md pre code {
+.md code:not(:where(pre *, .not-md *)) {
+  overflow-wrap: anywhere;
+}
+
+.md pre code:not(:where(.not-md *)) {
   padding: 0;
   background: none;
 }
 
-.md table {
+.md table:not(:where(.not-md *)) {
   width: 100%;
   margin: 1rem 0;
   border-collapse: collapse;
@@ -257,13 +265,13 @@ header.g-glass::before {
 
 /* Table rules stay — a line dividing cells carries meaning, it isn't decoration */
 /* 표의 선은 남긴다 — 칸을 가르는 선은 장식이 아니라 뜻이다 */
-.md :where(th, td) {
+.md :where(th, td):not(:where(.not-md *)) {
   padding: 0.5rem 0.75rem;
   border: 1px solid color-mix(in srgb, var(--g-border) 75%, transparent);
   text-align: left;
 }
 
-.md blockquote {
+.md blockquote:not(:where(.not-md *)) {
   margin: 1rem 0;
   padding-left: 1rem;
   border-left: 2px solid color-mix(in srgb, var(--g-border) 80%, transparent);

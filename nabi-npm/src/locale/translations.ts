@@ -1658,13 +1658,457 @@ Bild anzeigen
 `),
 };
 
+const MERGE_KEYS = rows(String.raw`
+Apply previous content
+Base version
+Editable result
+Incoming version
+{count} conflicts remaining
+All conflicts resolved
+Previous conflict
+Next conflict
+Confirm
+Submitting...
+Confirmed
+Restore base version
+Accept incoming version
+Resolve with current content
+The conflict range changed during editing. Review it and resolve with current content.
+Conflict {index} of {count}
+Submission failed. Your edits are preserved. Please try again.
+`);
+
+const MERGE_BY_LOCALE: Readonly<Record<string, readonly string[]>> = {
+  zh: rows(String.raw`
+应用先前内容
+编辑开始时的版本
+可编辑的结果
+新保存的版本
+剩余 {count} 处冲突
+所有冲突已解决
+上一处冲突
+下一处冲突
+确认
+正在提交...
+已确认
+恢复编辑开始时的版本
+采用新保存的版本
+使用当前内容解决
+编辑过程中冲突范围发生了变化。请检查后使用当前内容解决。
+第 {index} 处冲突，共 {count} 处
+提交失败。您的编辑内容已保留。请重试。
+`),
+  hi: rows(String.raw`
+पिछली सामग्री लागू करें
+संपादन शुरू करते समय का संस्करण
+संपादन योग्य परिणाम
+नया सहेजा गया संस्करण
+{count} टकराव शेष हैं
+सभी टकराव हल हो गए
+पिछला टकराव
+अगला टकराव
+पुष्टि करें
+जमा किया जा रहा है...
+पुष्टि हो गई
+संपादन शुरू करते समय का संस्करण बहाल करें
+नया सहेजा गया संस्करण अपनाएँ
+वर्तमान सामग्री से हल करें
+संपादन के दौरान टकराव का दायरा बदल गया। जाँचकर वर्तमान सामग्री से हल करें।
+टकराव {index} / {count}
+जमा नहीं हो पाया। आपके संपादन सुरक्षित हैं। कृपया फिर से प्रयास करें।
+`),
+  es: rows(String.raw`
+Aplicar el contenido anterior
+Versión al empezar a editar
+Resultado editable
+Nueva versión guardada
+Quedan {count} conflictos
+Todos los conflictos están resueltos
+Conflicto anterior
+Conflicto siguiente
+Confirmar
+Enviando...
+Confirmado
+Restaurar la versión inicial
+Aceptar la nueva versión guardada
+Resolver con el contenido actual
+El alcance del conflicto cambió durante la edición. Revíselo y resuélvalo con el contenido actual.
+Conflicto {index} de {count}
+No se pudo enviar. Sus cambios se conservan. Vuelva a intentarlo, por favor.
+`),
+  ar: rows(String.raw`
+تطبيق المحتوى السابق
+الإصدار عند بدء التحرير
+النتيجة القابلة للتحرير
+الإصدار المحفوظ حديثًا
+عدد التعارضات المتبقية: {count}
+تم حل جميع التعارضات
+التعارض السابق
+التعارض التالي
+تأكيد
+جارٍ الإرسال...
+تم التأكيد
+استعادة الإصدار عند بدء التحرير
+اعتماد الإصدار المحفوظ حديثًا
+الحل بالمحتوى الحالي
+تغير نطاق التعارض أثناء التحرير. يرجى مراجعته وحله بالمحتوى الحالي.
+التعارض {index} من {count}
+تعذر الإرسال. تعديلاتك محفوظة. يرجى المحاولة مرة أخرى.
+`),
+  fr: rows(String.raw`
+Appliquer le contenu précédent
+Version au début de la modification
+Résultat modifiable
+Nouvelle version enregistrée
+{count} conflits restants
+Tous les conflits sont résolus
+Conflit précédent
+Conflit suivant
+Confirmer
+Envoi en cours...
+Confirmé
+Restaurer la version initiale
+Accepter la nouvelle version enregistrée
+Résoudre avec le contenu actuel
+La zone du conflit a changé pendant la modification. Vérifiez-la et résolvez le conflit avec le contenu actuel.
+Conflit {index} sur {count}
+Échec de l’envoi. Vos modifications sont conservées. Veuillez réessayer.
+`),
+  bn: rows(String.raw`
+আগের বিষয়বস্তু প্রয়োগ করুন
+সম্পাদনা শুরুর সংস্করণ
+সম্পাদনাযোগ্য ফলাফল
+নতুন সংরক্ষিত সংস্করণ
+{count}টি বিরোধ বাকি আছে
+সব বিরোধ সমাধান হয়েছে
+আগের বিরোধ
+পরের বিরোধ
+নিশ্চিত করুন
+জমা দেওয়া হচ্ছে...
+নিশ্চিত করা হয়েছে
+সম্পাদনা শুরুর সংস্করণ ফিরিয়ে আনুন
+নতুন সংরক্ষিত সংস্করণ গ্রহণ করুন
+বর্তমান বিষয়বস্তু দিয়ে সমাধান করুন
+সম্পাদনার সময় বিরোধের পরিসর বদলেছে। পরীক্ষা করে বর্তমান বিষয়বস্তু দিয়ে সমাধান করুন।
+বিরোধ {index} / {count}
+জমা দেওয়া যায়নি। আপনার সম্পাদনা সংরক্ষিত আছে। অনুগ্রহ করে আবার চেষ্টা করুন।
+`),
+  pt: rows(String.raw`
+Aplicar o conteúdo anterior
+Versão no início da edição
+Resultado editável
+Nova versão guardada
+Restam {count} conflitos
+Todos os conflitos resolvidos
+Conflito anterior
+Conflito seguinte
+Confirmar
+A enviar...
+Confirmado
+Restaurar a versão inicial
+Aceitar a nova versão guardada
+Resolver com o conteúdo atual
+A área do conflito mudou durante a edição. Reveja-a e resolva o conflito com o conteúdo atual.
+Conflito {index} de {count}
+Não foi possível enviar. As suas alterações foram preservadas. Por favor, tente novamente.
+`),
+  ru: rows(String.raw`
+Применить прежнее содержимое
+Версия на момент начала редактирования
+Редактируемый результат
+Новая сохранённая версия
+Осталось конфликтов: {count}
+Все конфликты разрешены
+Предыдущий конфликт
+Следующий конфликт
+Подтвердить
+Отправка...
+Подтверждено
+Восстановить исходную версию
+Принять новую сохранённую версию
+Разрешить с текущим содержимым
+Область конфликта изменилась при редактировании. Проверьте её и разрешите конфликт с текущим содержимым.
+Конфликт {index} из {count}
+Не удалось отправить. Ваши изменения сохранены. Повторите попытку.
+`),
+  id: rows(String.raw`
+Terapkan isi sebelumnya
+Versi saat mulai menyunting
+Hasil yang dapat disunting
+Versi baru yang tersimpan
+Tersisa {count} konflik
+Semua konflik telah diselesaikan
+Konflik sebelumnya
+Konflik berikutnya
+Konfirmasi
+Mengirim...
+Dikonfirmasi
+Pulihkan versi awal
+Terima versi baru yang tersimpan
+Selesaikan dengan isi saat ini
+Cakupan konflik berubah selama penyuntingan. Tinjau dan selesaikan dengan isi saat ini.
+Konflik {index} dari {count}
+Pengiriman gagal. Suntingan Anda tetap tersimpan. Silakan coba lagi.
+`),
+  ur: rows(String.raw`
+پچھلا مواد لاگو کریں
+ترمیم شروع کرتے وقت کا ورژن
+قابل ترمیم نتیجہ
+نیا محفوظ شدہ ورژن
+{count} ٹکراؤ باقی ہیں
+تمام ٹکراؤ حل ہو گئے
+پچھلا ٹکراؤ
+اگلا ٹکراؤ
+تصدیق کریں
+جمع کیا جا رہا ہے...
+تصدیق ہو گئی
+ترمیم شروع کرتے وقت کا ورژن بحال کریں
+نیا محفوظ شدہ ورژن قبول کریں
+موجودہ مواد سے حل کریں
+ترمیم کے دوران ٹکراؤ کی حد بدل گئی ہے۔ جائزہ لے کر موجودہ مواد سے حل کریں۔
+ٹکراؤ {index} از {count}
+جمع نہیں ہو سکا۔ آپ کی ترامیم محفوظ ہیں۔ براہ کرم دوبارہ کوشش کریں۔
+`),
+  de: rows(String.raw`
+Vorherigen Inhalt übernehmen
+Version zu Beginn der Bearbeitung
+Bearbeitbares Ergebnis
+Neu gespeicherte Version
+{count} Konflikte verbleiben
+Alle Konflikte gelöst
+Vorheriger Konflikt
+Nächster Konflikt
+Bestätigen
+Wird übermittelt...
+Bestätigt
+Ausgangsversion wiederherstellen
+Neu gespeicherte Version übernehmen
+Mit aktuellem Inhalt lösen
+Der Konfliktbereich hat sich bei der Bearbeitung geändert. Prüfen Sie ihn und lösen Sie den Konflikt mit dem aktuellen Inhalt.
+Konflikt {index} von {count}
+Übermittlung fehlgeschlagen. Ihre Änderungen bleiben erhalten. Bitte versuchen Sie es erneut.
+`),
+  ja: rows(String.raw`
+以前の内容を反映
+編集開始時のバージョン
+編集可能な結果
+新しく保存されたバージョン
+残りの競合 {count} 件
+すべての競合を解決しました
+前の競合
+次の競合
+確認
+送信中...
+確認済み
+編集開始時のバージョンに戻す
+新しく保存されたバージョンを採用
+現在の内容で解決
+編集中に競合の範囲が変わりました。内容を確認し、現在の内容で解決してください。
+競合 {index} / {count}
+送信できませんでした。編集内容は保持されています。もう一度お試しください。
+`),
+  fa: rows(String.raw`
+اعمال محتوای قبلی
+نسخه هنگام شروع ویرایش
+نتیجه قابل ویرایش
+نسخه تازه ذخیره‌شده
+{count} تعارض باقی مانده است
+همه تعارض‌ها حل شدند
+تعارض قبلی
+تعارض بعدی
+تأیید
+در حال ارسال...
+تأیید شد
+بازگردانی نسخه آغاز ویرایش
+پذیرش نسخه تازه ذخیره‌شده
+حل با محتوای فعلی
+محدوده تعارض هنگام ویرایش تغییر کرد. آن را بررسی کنید و با محتوای فعلی حل کنید.
+تعارض {index} از {count}
+ارسال ناموفق بود. ویرایش‌های شما حفظ شده‌اند. لطفاً دوباره تلاش کنید.
+`),
+  mr: rows(String.raw`
+मागील मजकूर लागू करा
+संपादन सुरू करतानाची आवृत्ती
+संपादन करता येणारा परिणाम
+नव्याने जतन केलेली आवृत्ती
+{count} विरोध बाकी आहेत
+सर्व विरोध सोडवले
+मागील विरोध
+पुढील विरोध
+पुष्टी करा
+सादर करत आहे...
+पुष्टी झाली
+संपादन सुरू करतानाची आवृत्ती पुनर्संचयित करा
+नव्याने जतन केलेली आवृत्ती स्वीकारा
+सध्याच्या मजकुराने सोडवा
+संपादनादरम्यान विरोधाची व्याप्ती बदलली. ती तपासा आणि सध्याच्या मजकुराने सोडवा.
+विरोध {index} / {count}
+सादर करता आले नाही. तुमचे बदल सुरक्षित आहेत. कृपया पुन्हा प्रयत्न करा.
+`),
+  vi: rows(String.raw`
+Áp dụng nội dung trước đó
+Phiên bản khi bắt đầu chỉnh sửa
+Kết quả có thể chỉnh sửa
+Phiên bản mới được lưu
+Còn {count} xung đột
+Đã giải quyết tất cả xung đột
+Xung đột trước
+Xung đột tiếp theo
+Xác nhận
+Đang gửi...
+Đã xác nhận
+Khôi phục phiên bản ban đầu
+Chấp nhận phiên bản mới được lưu
+Giải quyết bằng nội dung hiện tại
+Phạm vi xung đột đã thay đổi trong khi chỉnh sửa. Hãy kiểm tra và giải quyết bằng nội dung hiện tại.
+Xung đột {index} trên {count}
+Gửi không thành công. Các chỉnh sửa của bạn được giữ nguyên. Vui lòng thử lại.
+`),
+  te: rows(String.raw`
+మునుపటి విషయాన్ని వర్తింపజేయండి
+సవరణ ప్రారంభించినప్పటి సంస్కరణ
+సవరించగల ఫలితం
+కొత్తగా సేవ్ చేసిన సంస్కరణ
+{count} వైరుధ్యాలు మిగిలి ఉన్నాయి
+అన్ని వైరుధ్యాలు పరిష్కరించబడ్డాయి
+మునుపటి వైరుధ్యం
+తదుపరి వైరుధ్యం
+నిర్ధారించండి
+సమర్పిస్తోంది...
+నిర్ధారించబడింది
+సవరణ ప్రారంభించినప్పటి సంస్కరణను పునరుద్ధరించండి
+కొత్తగా సేవ్ చేసిన సంస్కరణను అంగీకరించండి
+ప్రస్తుత విషయంతో పరిష్కరించండి
+సవరణ సమయంలో వైరుధ్యం పరిధి మారింది. దాన్ని పరిశీలించి ప్రస్తుత విషయంతో పరిష్కరించండి.
+వైరుధ్యం {index} / {count}
+సమర్పించడం విఫలమైంది. మీ సవరణలు అలాగే ఉన్నాయి. దయచేసి మళ్లీ ప్రయత్నించండి.
+`),
+  ha: rows(String.raw`
+Aiwatar da abin da ke ciki a baya
+Sigar lokacin fara gyarawa
+Sakamakon da za a iya gyarawa
+Sabuwar sigar da aka adana
+Saɓani {count} sun rage
+An warware duk saɓani
+Saɓanin da ya gabata
+Saɓani na gaba
+Tabbatar
+Ana miƙawa...
+An tabbatar
+Maido da sigar farko
+Karɓi sabuwar sigar da aka adana
+Warware da abin da ke ciki yanzu
+Yankin saɓanin ya canza yayin gyarawa. A duba shi sannan a warware da abin da ke ciki yanzu.
+Saɓani na {index} cikin {count}
+Miƙawa ta kasa. An kiyaye gyare-gyarenku. Da fatan za a sake gwadawa.
+`),
+  tr: rows(String.raw`
+Önceki içeriği uygula
+Düzenlemeye başlanan sürüm
+Düzenlenebilir sonuç
+Yeni kaydedilen sürüm
+{count} çakışma kaldı
+Tüm çakışmalar çözüldü
+Önceki çakışma
+Sonraki çakışma
+Onayla
+Gönderiliyor...
+Onaylandı
+Başlangıç sürümünü geri yükle
+Yeni kaydedilen sürümü kabul et
+Mevcut içerikle çöz
+Düzenleme sırasında çakışma aralığı değişti. İnceleyip mevcut içerikle çözün.
+Çakışma {index} / {count}
+Gönderilemedi. Düzenlemeleriniz korundu. Lütfen tekrar deneyin.
+`),
+  sw: rows(String.raw`
+Tumia maudhui ya awali
+Toleo la wakati uhariri ulipoanza
+Matokeo yanayoweza kuhaririwa
+Toleo jipya lililohifadhiwa
+Migongano {count} imesalia
+Migongano yote imetatuliwa
+Mgongano uliotangulia
+Mgongano unaofuata
+Thibitisha
+Inawasilisha...
+Imethibitishwa
+Rejesha toleo la mwanzo
+Kubali toleo jipya lililohifadhiwa
+Tatua kwa maudhui ya sasa
+Eneo la mgongano limebadilika wakati wa kuhariri. Likague na utatue kwa maudhui ya sasa.
+Mgongano wa {index} kati ya {count}
+Imeshindwa kuwasilisha. Mabadiliko yako yamehifadhiwa. Tafadhali jaribu tena.
+`),
+  ta: rows(String.raw`
+முந்தைய உள்ளடக்கத்தைப் பயன்படுத்து
+திருத்தத் தொடங்கியபோதுள்ள பதிப்பு
+திருத்தக்கூடிய முடிவு
+புதிதாகச் சேமிக்கப்பட்ட பதிப்பு
+{count} முரண்பாடுகள் மீதமுள்ளன
+அனைத்து முரண்பாடுகளும் தீர்க்கப்பட்டன
+முந்தைய முரண்பாடு
+அடுத்த முரண்பாடு
+உறுதிப்படுத்து
+சமர்ப்பிக்கிறது...
+உறுதிப்படுத்தப்பட்டது
+தொடக்கப் பதிப்பை மீட்டமை
+புதிதாகச் சேமிக்கப்பட்ட பதிப்பை ஏற்றுக்கொள்
+தற்போதைய உள்ளடக்கத்துடன் தீர்க்கவும்
+திருத்தும்போது முரண்பாட்டின் வரம்பு மாறிவிட்டது. அதைச் சரிபார்த்து தற்போதைய உள்ளடக்கத்துடன் தீர்க்கவும்.
+முரண்பாடு {index} / {count}
+சமர்ப்பிக்க முடியவில்லை. உங்கள் திருத்தங்கள் பாதுகாக்கப்பட்டுள்ளன. மீண்டும் முயற்சிக்கவும்.
+`),
+  th: rows(String.raw`
+ใช้เนื้อหาก่อนหน้า
+เวอร์ชันเมื่อเริ่มแก้ไข
+ผลลัพธ์ที่แก้ไขได้
+เวอร์ชันที่บันทึกใหม่
+เหลือข้อขัดแย้ง {count} จุด
+แก้ไขข้อขัดแย้งทั้งหมดแล้ว
+ข้อขัดแย้งก่อนหน้า
+ข้อขัดแย้งถัดไป
+ยืนยัน
+กำลังส่ง...
+ยืนยันแล้ว
+คืนค่าเวอร์ชันเริ่มต้น
+ยอมรับเวอร์ชันที่บันทึกใหม่
+แก้ข้อขัดแย้งด้วยเนื้อหาปัจจุบัน
+ขอบเขตข้อขัดแย้งเปลี่ยนไประหว่างการแก้ไข โปรดตรวจสอบแล้วแก้ข้อขัดแย้งด้วยเนื้อหาปัจจุบัน
+ข้อขัดแย้งที่ {index} จาก {count}
+ส่งไม่สำเร็จ การแก้ไขของคุณยังคงอยู่ โปรดลองอีกครั้ง
+`),
+  it: rows(String.raw`
+Applica il contenuto precedente
+Versione all'inizio della modifica
+Risultato modificabile
+Nuova versione salvata
+{count} conflitti rimanenti
+Tutti i conflitti sono risolti
+Conflitto precedente
+Conflitto successivo
+Conferma
+Invio in corso...
+Confermato
+Ripristina la versione iniziale
+Accetta la nuova versione salvata
+Risolvi con il contenuto attuale
+L'area del conflitto è cambiata durante la modifica. Controllala e risolvi il conflitto con il contenuto attuale.
+Conflitto {index} di {count}
+Invio non riuscito. Le modifiche sono state conservate. Riprova.
+`),
+};
+
 export function catalogTranslation(source: string, locale: string): string | undefined {
   const values = BY_LOCALE[locale];
   const index = KEYS.indexOf(source);
   if (values && index >= 0) return values[index];
   const oldValues = OLD_BY_LOCALE[locale];
   const oldIndex = OLD_KEYS.indexOf(source);
-  return oldValues && oldIndex >= 0 ? oldValues[oldIndex] : undefined;
+  if (oldValues && oldIndex >= 0) return oldValues[oldIndex];
+  const mergeValues = MERGE_BY_LOCALE[locale];
+  const mergeIndex = MERGE_KEYS.indexOf(source);
+  return mergeValues && mergeIndex >= 0 ? mergeValues[mergeIndex] : undefined;
 }
 
 export function catalogDiagnostics(): Readonly<Record<string, number>> {

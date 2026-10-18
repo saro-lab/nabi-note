@@ -169,6 +169,50 @@ test('fullscreen backgrounds inherit overrides and long paper scrolls in both th
   await expect(surface).toHaveCSS('background-color', 'rgb(34, 34, 34)');
 });
 
+test('fullscreen escapes a contained host and restores its position, inherited styles, and selection', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await setupToolbar(page);
+  const root = page.locator('#fullscreen-editor');
+  const surface = page.locator('#fullscreen-surface');
+  await root.evaluate((el) => {
+    const host = document.createElement('section');
+    host.id = 'contained-editor';
+    host.style.cssText =
+      'transform:translate(50px,80px);contain:paint;container-type:inline-size;width:600px;height:500px;--nabi-fullscreen-bg:rgb(20,30,40);--nabi-fullscreen-content-bg:rgb(240,230,220);';
+    el.before(host);
+    host.append(el, document.createElement('aside'));
+    (el as HTMLElement).style.cssText +=
+      ';height:320px;max-width:532px;max-height:420px;margin:12px;padding:10px;border:2px solid red;border-radius:16px;';
+    const surface = el.querySelector<HTMLElement>('#fullscreen-surface')!;
+    surface.focus();
+    const text = surface.querySelector('p')!.firstChild!;
+    document.getSelection()!.setBaseAndExtent(text, 7, text, 4);
+  });
+  const before = (await root.boundingBox())!;
+  const style = await root.getAttribute('style');
+  await enterFullscreen(root);
+  await expect(root).toHaveClass(/is-fullscreen/);
+  await expect.poll(() => root.boundingBox()).toEqual({ x: 0, y: 0, width: 1280, height: 900 });
+  await expect(root).toHaveCSS('background-color', 'rgb(20, 30, 40)');
+  await expect(surface).toHaveCSS('background-color', 'rgb(240, 230, 220)');
+  await expect(surface).toBeFocused();
+  expect(await page.evaluate(() => document.getSelection()!.toString())).toBe('two');
+  await page.locator('#contained-editor').evaluate((el) => {
+    (el as HTMLElement).style.setProperty('--nabi-fullscreen-bg', 'rgb(40,50,60)');
+  });
+  await expect(root).toHaveCSS('background-color', 'rgb(40, 50, 60)');
+  await surface.press('Escape');
+  await expect(root).not.toHaveClass(/is-fullscreen/);
+  await expect(page.locator('#contained-editor > #fullscreen-editor + aside')).toHaveCount(1);
+  await expect(page.locator('.nabi-fullscreen-host')).toHaveCount(0);
+  await expect(root).toHaveAttribute('style', style!);
+  await expect(surface).toBeFocused();
+  expect(await root.boundingBox()).toEqual(before);
+  expect(await page.evaluate(() => document.getSelection()!.toString())).toBe('two');
+});
+
 for (const width of [1280, 390]) {
   test(`fullscreen keeps all tools and selected object properties visible at the top at ${width}px`, async ({
     page,

@@ -7,3 +7,5 @@ export type { DiffMount, DiffMountOptions } from './mount.js';
 export { mountDiffWing } from './wing.js';
 export type { DiffWingMount, DiffWingMountOptions } from './wing.js';
 export { DIFF_CSS } from './styles.js';
+export { diffMergeChanges, applyDiffMerge } from './merge.js';
+export type { DiffMergeChange, DiffMergePlan, DiffMergeProposal, DiffMergeRange } from './merge.js';

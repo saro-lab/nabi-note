@@ -1234,7 +1234,7 @@ packages:
     resolution: {integrity: sha512-dqT2XBYUOZOiC5t2HRnwADjhNS2cecp9u+TJRiJ1Qp/f5qjkeT5APcGPjHw+bz89Ms8Jp+cG4AlE+QZ/QnDglg==}
 
   nabi-note@file:nabi-note-1.4.0.tgz:
-    resolution: {integrity: sha512-7e74WPSf8kcocVkmsycaOmJPR1+NcWSPoD4TGSh2OjIxZtOSD/A8XqoqtqTOs/fkNZpeCJItcQQQtzS9k8zOww==, tarball: file:nabi-note-1.4.0.tgz}
+    resolution: {integrity: sha512-ulvAvS+Sj14I51L4uOOEg+3ZEoagIAB6/vC0/AyQ2IbBNcYScwluvXU4sBe5ZCLZnyol9/eyylxaVa/NLHIsvA==, tarball: file:nabi-note-1.4.0.tgz}
     version: 1.4.0
     engines: {node: '>=20'}
 

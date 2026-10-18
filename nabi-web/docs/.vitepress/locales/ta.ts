@@ -10,6 +10,8 @@ export const ta = {
   menu_cdn: 'CDN பயன்படுத்துதல்',
   menu_features: 'சிறகுகள்',
   menu_style_guide: 'CSS தோற்றங்கள்',
+  menu_style: 'பாணி',
+  menu_addons: 'கூடுதல் அம்சங்கள்',
   menu_icon_theme: "ஐகான் தீம்கள்",
   menu_rendering: 'SSR அமைப்பு',
   menu_extend_guide: 'தனிப்பயன் சிறகுகள்',

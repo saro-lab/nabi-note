@@ -7,6 +7,12 @@ import type { Command } from './commands.js';
 import type { Nabi } from './nabi.js';
 import type { Toast } from './toast.js';
 
+export interface HistoryExtension {
+  capture(): unknown;
+  restore(value: unknown): void;
+  change(before: NabiDoc, after: NabiDoc): unknown;
+}
+
 export interface NabiHost {
   doc(): NabiDoc;
   readonly env: EditEnv;
@@ -20,6 +26,8 @@ export interface NabiHost {
   bindLocale(locale: LocaleInput): () => void;
   locale(): string;
   applyRaw(run: Command, name?: string): boolean;
+  applyHistory(run: Command, state: unknown): boolean;
+  bindHistory(extension: HistoryExtension): () => void;
   markSaved(saved: NabiDoc): void;
   registerCommand(name: string, command: Command): () => void;
   lock(reason: string): () => void;

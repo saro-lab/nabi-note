@@ -3,6 +3,8 @@ import { withLocaleTypefaceSample } from './typeface-lines.ts'
 export const sw = {
   label: 'Kiswahili', lang: 'sw', link: '/sw/', description: 'NABI NOTE — kihariri huria cha WYSIWYG.',
   menu_docs: 'Nyaraka', menu_start: 'Mwongozo', menu_getting_started: 'Matumizi ya msingi', menu_cdn: 'Kutumia CDN', menu_features: 'Mabawa', menu_style_guide: 'Mandhari ya CSS', menu_rendering: 'Usanidi wa SSR', menu_extend_guide: 'Mabawa maalum', menu_intro_vibe_coding: 'Uandishi wa vibe kwa AI',
+  menu_style: 'Mtindo',
+  menu_addons: 'Vipengele vya ziada',
   menu_icon_theme: "Mandhari ya aikoni",
 menu_projects: 'Miradi',
   menu_inline: 'Ndani ya mstari', menu_inline_bold: 'Herufi nzito', menu_inline_italic: 'Mlalo', menu_inline_underline: 'Mstari wa chini', menu_inline_strikethrough: 'Mstari wa kufuta', menu_inline_superscript: 'Kiambishi cha juu', menu_inline_subscript: 'Kiambishi cha chini', menu_inline_link: 'Kiungo', menu_inline_highlight: 'Rangi ya kuangazia', menu_inline_text_color: 'Rangi ya maandishi',

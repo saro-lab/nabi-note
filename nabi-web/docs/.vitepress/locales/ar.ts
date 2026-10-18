@@ -10,6 +10,8 @@ export const ar = {
   description: 'NABI NOTE — محرّر WYSIWYG مفتوح المصدر.',
 
   menu_docs: 'التوثيق',
+  menu_style: 'المظهر',
+  menu_addons: 'ميزات إضافية',
   menu_icon_theme: "سمات الأيقونات",
   menu_intro_vibe_coding: 'برمجة الأجواء بالذكاء الاصطناعي',
 

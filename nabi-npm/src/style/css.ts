@@ -930,10 +930,17 @@ export const CORE_CSS = `${ICON_CSS}
    The selected table's outline goes inward; the wrapper clips overflow, so an outward outline showed only one edge */
 .nabi-content .nabi-scroll > [data-nabi-picked] { outline-offset: -2px; }
 
-/* 전체화면은 Fullscreen API가 아니라 클래스 하나다 — iframe 안에서도 동작한다
-   Fullscreen is a plain class, not the Fullscreen API, so it also works inside an iframe */
 .nabi.is-fullscreen {
-  position: fixed; inset: 0; inset-block-end: var(--nabi-keyboard-bottom, 0px);
+  position: fixed !important; inset: 0 !important;
+  inset-block-end: var(--nabi-keyboard-bottom, 0px) !important;
+  box-sizing: border-box;
+  width: auto !important; height: auto !important;
+  inline-size: auto !important; block-size: auto !important;
+  min-width: 0 !important; min-height: 0 !important;
+  min-inline-size: 0 !important; min-block-size: 0 !important;
+  max-width: none !important; max-height: none !important;
+  max-inline-size: none !important; max-block-size: none !important;
+  margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important;
   z-index: var(--nabi-z-overlay); overflow: auto;
   background: var(--nabi-fullscreen-bg, color-mix(in srgb, var(--nabi-bg) 94%, var(--nabi-fg)));
 }

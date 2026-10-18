@@ -31,7 +31,7 @@ import { diffParagraphs, type NabiChange } from './signal.js';
 import { toastAsk, type Ask, type Choose } from './ask.js';
 import { TOAST_MAX, TOAST_MS, type Toast } from './toast.js';
 import { localeValue, translate } from '../locale/index.js';
-import { bindHost, type NabiHost } from './host.js';
+import { bindHost, type NabiHost, type HistoryExtension } from './host.js';
 import {
   callbackEnv,
   callbackSelection,
@@ -152,6 +152,12 @@ export function createNabi(options: NabiCoreOptions): Nabi {
   let groupDepth = 0;
   let groupPushed = false;
   let groupSelection: Selection | null = null;
+  let historyExtension: HistoryExtension | null = null;
+  const snapshot = (at: Selection = selection): Snapshot => ({
+    doc,
+    selection: at,
+    ...(historyExtension ? { extension: { owner: historyExtension, value: historyExtension.capture() } } : {}),
+  });
   const listeners = new Set<(change: NabiChange) => void>();
   const pushSnapshot = (stack: Snapshot[], snapshot: Snapshot): void => {
     stack.push(snapshot);
@@ -272,7 +278,13 @@ export function createNabi(options: NabiCoreOptions): Nabi {
   };
 
   // --- 커맨드의 유일한 문 --------------------------------------------------------------------
-  const door = (name: string, command: Command, rawArgs: CommandArgs, by: CommandHand = 'keyboard'): boolean => {
+  const door = (
+    name: string,
+    command: Command,
+    rawArgs: CommandArgs,
+    by: CommandHand = 'keyboard',
+    extensionState?: { readonly value: unknown },
+  ): boolean => {
     // 진행 중 잠금 — 업로드·색칠이 도는 동안 문서는 아무도 못 바꾼다. 예약도 안 선다.
     // An in-progress lock: while an upload or paint is running, no one can change the doc, and arming is blocked too.
     if (locks.length > 0) return false;
@@ -382,13 +394,17 @@ export function createNabi(options: NabiCoreOptions): Nabi {
 
       const treeChanged = cocooned !== doc;
       const selChanged = !sameSelection(nextSel, selection);
-      if (!treeChanged && !selChanged) {
+      if (!treeChanged && !selChanged && !extensionState) {
         // 침묵 — 스냅샷도 신호도 없다.
         pendingArmed = takeArmedFlag();
         return false;
       }
 
-      if (treeChanged) {
+      const nextExtension =
+        extensionState ??
+        (treeChanged && historyExtension ? { value: historyExtension.change(doc, cocooned) } : undefined);
+
+      if (treeChanged || extensionState) {
         // 이어 친 글자는 스냅샷을 안 쌓는다 — undo 한 번에 방금 친 말이 통째로 걷힌다.
         // Consecutive typed characters skip pushing a snapshot, so one undo clears the whole run just typed.
         const now = Date.now();
@@ -402,7 +418,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
         if (!coalesce && !(grouped && groupPushed)) {
           // 묶음의 스냅샷은 묶음이 시작될 때의 캐럿을 담는다 — 되돌리기가 그 자리에 선다.
           // A group's snapshot carries the caret from when the group started, so undo lands there.
-          pushSnapshot(past, { doc, selection: grouped && groupSelection ? groupSelection : selection });
+          pushSnapshot(past, snapshot(grouped && groupSelection ? groupSelection : selection));
           future = [];
           if (grouped) groupPushed = true;
         }
@@ -417,6 +433,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
       const before = doc;
       doc = cocooned;
       selection = nextSel;
+      if (nextExtension) historyExtension?.restore(nextExtension.value);
       const diff = treeChanged ? diffParagraphs(before, doc) : { paragraphs: [], removed: [] };
       emit({
         doc: treeChanged,
@@ -444,12 +461,14 @@ export function createNabi(options: NabiCoreOptions): Nabi {
   const load = (next: NabiDoc): void => {
     inDoor = true;
     try {
-      pushSnapshot(past, { doc, selection });
+      const nextExtension = historyExtension?.change(doc, next);
+      pushSnapshot(past, snapshot());
       future = [];
       const before = doc;
       doc = next;
       cleanDoc = next;
       selection = startAt(next);
+      historyExtension?.restore(nextExtension);
       typingAt = null;
       typingTime = 0;
       armed.clear();
@@ -475,12 +494,17 @@ export function createNabi(options: NabiCoreOptions): Nabi {
     if (!snap) return false;
     inDoor = true;
     try {
-      pushSnapshot(to, { doc, selection });
+      pushSnapshot(to, snapshot());
       const before = doc;
       const beforeSel = selection;
       doc = snap.doc;
       const normalized = normalizeSelection(doc, snap.selection, env);
       selection = normalized ? frozenSelection(normalized) : startAt(doc);
+      if (historyExtension) {
+        historyExtension.restore(
+          snap.extension?.owner === historyExtension ? snap.extension.value : historyExtension.change(before, doc),
+        );
+      }
       typingAt = null;
       typingTime = 0;
       armed.clear();
@@ -667,6 +691,17 @@ export function createNabi(options: NabiCoreOptions): Nabi {
     locale: localeNow,
     applyRaw(run, name = 'raw') {
       return door(name, run, {});
+    },
+    applyHistory(run, state) {
+      if (!historyExtension) return false;
+      return door('history', run, {}, 'keyboard', { value: state });
+    },
+    bindHistory(extension) {
+      if (historyExtension) throw new Error('Editor history already has an owner');
+      historyExtension = extension;
+      return () => {
+        if (historyExtension === extension) historyExtension = null;
+      };
     },
     markSaved(saved) {
       cleanDoc = saved;

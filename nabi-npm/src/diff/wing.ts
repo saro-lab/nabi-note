@@ -5,6 +5,11 @@ import { followIconTheme } from '../icon-theme.js';
 // 대조 상태는 문서를 실은 순간(setJson·setHtml)마다 갈린다 — 타자·붙여넣기·undo 는 안 건드려, 판은 "실은 뒤 무엇이 달라졌나"만 답한다.
 // The compare snapshot resets only when a doc is loaded (setJson/setHtml); typing, paste, and undo leave it alone, so the pane always answers "what changed since load."
 import type { Nabi } from '../editor/index.js';
+import { hostOf } from '../editor/host.js';
+import { caretAt, docStart, normalizeSelection } from '../caret/index.js';
+import { normalizeMergeInput } from '../merge/input.js';
+import { mergeNodeKey } from '../merge/units.js';
+import type { NabiDoc } from '../schema/types.js';
 import type { Registry } from '../wing/index.js';
 import { localeDirection, localeValue, makeTranslator } from '../locale/index.js';
 import { inertDocumentBackground, pushDocumentLayer, topLayerFocus, type DocumentLayer } from '../layer.js';
@@ -18,6 +23,8 @@ export interface DiffWingMountOptions {
   readonly surface: HTMLElement;
   readonly allowLocalUrls?: boolean;
   readonly locale?: LocaleInput;
+  readonly merge?: boolean;
+  readonly onError?: (error: unknown) => void;
 }
 
 export interface DiffWingMount {
@@ -40,8 +47,17 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
   const releaseCss = ensureCss(doc);
 
   let base: unknown = nabi.getJson();
+  let editorRevision = 0;
+  let displayedEditorRevision = 0;
   const offChange = nabi.onChange((change) => {
     if (change.loaded) base = nabi.getJson();
+    if (change.doc) {
+      editorRevision += 1;
+      if (options.merge && inner) {
+        displayedEditorRevision = editorRevision;
+        inner.update(base, nabi.getJson());
+      }
+    }
   });
 
   let stopTheme = () => {};
@@ -144,6 +160,7 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
     if (disposed) return;
     // 이미 떠 있으면 그 자리에서 지금 상태로 다시 그린다 — 판이 둘로 겹치지 않는다.
     if (screen) {
+      displayedEditorRevision = editorRevision;
       inner?.update(base, nabi.getJson());
       return;
     }
@@ -167,6 +184,7 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
     const opening = screen;
     try {
       stopTheme = followIconTheme(surface, screen);
+      displayedEditorRevision = editorRevision;
       const mounted = mountDiff({
         root: host,
         before: base,
@@ -174,6 +192,46 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
         registry,
         ...(allowLocalUrls ? { allowLocalUrls: true } : {}),
         ...(locale ? { locale } : {}),
+        ...(options.onError ? { onError: options.onError } : {}),
+        ...(options.merge
+          ? {
+              onMerge(proposal) {
+                if (
+                  disposed ||
+                  screen !== opening ||
+                  proposal.signal.aborted ||
+                  displayedEditorRevision !== editorRevision
+                )
+                  return;
+                const host = hostOf(nabi);
+                if (host.lockedBy() !== null) return;
+                const inputOptions = allowLocalUrls ? { allowLocalUrls: true } : undefined;
+                const original = normalizeMergeInput(proposal.after, registry, inputOptions);
+                const originalBase = normalizeMergeInput(proposal.before, registry, inputOptions);
+                const currentBase = normalizeMergeInput(base, registry, inputOptions);
+                const result = normalizeMergeInput(proposal.result, registry, inputOptions);
+                const key = (value: NabiDoc): string => JSON.stringify(value.map(mergeNodeKey));
+                if (
+                  !original ||
+                  !originalBase ||
+                  !currentBase ||
+                  !result ||
+                  key(original) !== key(host.doc()) ||
+                  key(originalBase) !== key(currentBase)
+                )
+                  return;
+                host.applyRaw(
+                  (_doc, selection, _args, env) => ({
+                    doc: result,
+                    selection:
+                      normalizeSelection(result, selection, env) ??
+                      caretAt(docStart(result, env) ?? { path: [0], offset: 0 }),
+                  }),
+                  'diffMerge',
+                );
+              },
+            }
+          : {}),
       });
       if (screen !== opening || disposed) {
         mounted.unmount();

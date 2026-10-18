@@ -78,7 +78,7 @@
 
       <div class="mt-4 g-frame g-frame-full" :class="hasMenu ? 'flex items-start justify-center gap-[1rem]' : ''">
         <Menu v-if="hasMenu" v-model="onMenu" />
-        <main v-if="hasPage" :class="hasMenu ? 'g-glass rd-box g-frame flex-1 md' : ''">
+        <main v-if="hasPage" :class="hasMenu ? 'g-glass rd-box g-frame flex-1 min-w-0 md' : ''">
           <Content />
         </main>
         <div v-else class="flex-1 g-glass rd-box">

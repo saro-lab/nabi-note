@@ -1,7 +1,5 @@
 import { Translations } from './parts/translation.js';
 import type { LocaleInput } from '../locale/index.js';
-// 미리보기·전체화면·라이트박스는 모두 scrim 부품 위에 선다(전체화면만 클래스일 뿐 덮개가 아니다). 미리보기는 renderHtml + nabi.css 그대로라, 보는 사람이 볼 것과 글자 하나까지 같아야 한다.
-// Preview, fullscreen, and lightbox all sit on the scrim part (fullscreen alone is just a class, not an overlay). Preview renders raw renderHtml output styled by nabi.css, so it must match the real output byte for byte.
 import { hostOf, type Nabi } from '../editor/index.js';
 import { localeDirection, makeTranslator, type Translator } from '../locale/index.js';
 import { make } from './parts/dom.js';
@@ -18,9 +16,129 @@ export const FULLSCREEN_CLASS = 'is-fullscreen';
 // The icon set and view-tool copy live in wing/toolbar-html.ts — the server must render the same row, and the ssr entry never imports ui. Re-exported here for existing callers.
 export { FULLSCREEN_ENTER_ICON, FULLSCREEN_EXIT_ICON, PREVIEW_ICON } from '../wing/toolbar-html.js';
 
-// --- 전체화면 ---------------------------------------------------------------------------------
-// Fullscreen API가 아니라 클래스 하나다 — iframe 안이나 API가 막힌 자리에서도 산다. 크롬과 편집기가 함께 커져야 한다.
-// Just a class, not the Fullscreen API — works inside an iframe or wherever the API is blocked. The chrome and editor must grow together.
+// 조상의 transform·contain이 fixed 기준을 바꾸므로 전체화면 동안 body 아래로 옮긴다.
+// Move fullscreen below body because ancestor transform and containment change the fixed containing block.
+const fullscreenHosts = new WeakMap<HTMLElement, () => void>();
+
+function moveFullscreenRoot(root: HTMLElement, move: () => void): void {
+  const owner = root.ownerDocument;
+  const focused = owner.activeElement as HTMLElement | null;
+  const restoreFocus = focused && root.contains(focused) ? focused : null;
+  const selection = owner.getSelection();
+  const saved =
+    selection?.anchorNode &&
+    selection.focusNode &&
+    root.contains(selection.anchorNode) &&
+    root.contains(selection.focusNode)
+      ? {
+          anchor: selection.anchorNode,
+          anchorOffset: selection.anchorOffset,
+          focus: selection.focusNode,
+          focusOffset: selection.focusOffset,
+        }
+      : null;
+  move();
+  if (restoreFocus?.isConnected) restoreFocus.focus({ preventScroll: true });
+  if (saved?.anchor.isConnected && saved.focus.isConnected)
+    selection?.setBaseAndExtent(saved.anchor, saved.anchorOffset, saved.focus, saved.focusOffset);
+}
+
+function syncFullscreenHost(root: HTMLElement): void {
+  if (!isFullscreen(root)) {
+    fullscreenHosts.get(root)?.();
+    return;
+  }
+  if (fullscreenHosts.has(root)) return;
+  const owner = root.ownerDocument;
+  const source = root.parentElement;
+  const view = owner.defaultView;
+  if (!source || !view || source === owner.body || !root.isConnected) return;
+  const marker = owner.createComment('');
+  const host = owner.createElement('div');
+  host.className = 'nabi-fullscreen-host';
+  host.style.display = 'contents';
+  const inherited = [
+    'color',
+    'color-scheme',
+    'direction',
+    'font-family',
+    'font-size',
+    'font-style',
+    'font-weight',
+    'font-stretch',
+    'line-height',
+    'letter-spacing',
+    'text-align',
+    'text-transform',
+    'word-spacing',
+  ];
+  const copied = new Set<string>();
+  const sync = (): void => {
+    const style = view.getComputedStyle(source);
+    const names = new Set(inherited);
+    for (let at = 0; at < style.length; at += 1) {
+      const name = style.item(at);
+      if (name.startsWith('--')) names.add(name);
+    }
+    for (const name of names) {
+      const value = style.getPropertyValue(name);
+      if (host.style.getPropertyValue(name) !== value) host.style.setProperty(name, value);
+    }
+    for (const name of copied) if (!names.has(name)) host.style.removeProperty(name);
+    copied.clear();
+    for (const name of names) copied.add(name);
+    const language = source.closest('[lang]')?.getAttribute('lang');
+    if (language !== null && language !== undefined) host.lang = language;
+    else host.removeAttribute('lang');
+  };
+  const observer = new view.MutationObserver((records) => {
+    if (
+      records.some(
+        ({ target }) =>
+          target === source ||
+          (target.nodeType === 1 && (target as Element).contains(source)) ||
+          owner.head?.contains(target),
+      )
+    )
+      sync();
+  });
+  let released = false;
+  const release = (): void => {
+    if (released) return;
+    released = true;
+    fullscreenHosts.delete(root);
+    observer.disconnect();
+    view.removeEventListener('resize', sync);
+    owner.removeEventListener('load', sync, true);
+    if (root.parentNode === host) {
+      moveFullscreenRoot(root, () => {
+        if (marker.parentNode) marker.parentNode.insertBefore(root, marker);
+        else source.append(root);
+      });
+    }
+    marker.remove();
+    host.remove();
+  };
+  try {
+    sync();
+    root.before(marker);
+    owner.body.append(host);
+    moveFullscreenRoot(root, () => host.append(root));
+    observer.observe(owner.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'style', 'dir', 'lang', 'data-nabi-theme'],
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    view.addEventListener('resize', sync);
+    owner.addEventListener('load', sync, true);
+    fullscreenHosts.set(root, release);
+  } catch (error) {
+    release();
+    throw error;
+  }
+}
 
 export function isFullscreen(root: HTMLElement): boolean {
   return root.classList.contains(FULLSCREEN_CLASS);
@@ -28,6 +146,7 @@ export function isFullscreen(root: HTMLElement): boolean {
 
 export function setFullscreen(root: HTMLElement, on: boolean): void {
   root.classList.toggle(FULLSCREEN_CLASS, on);
+  syncFullscreenHost(root);
 }
 
 // --- 미리보기 ---------------------------------------------------------------------------------
@@ -242,6 +361,7 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
   const releaseRoot = showFullscreen ? acquireGestureRoot(root, [surface]) : () => {};
   const rootLease = new HostElementLease(root);
   let fullscreenSurfaceLease: HostElementLease | null = null;
+  let releaseFullscreenHost: (() => void) | null = null;
   let fullscreenObserver: ResizeObserver | null = null;
   let unmounted = false;
   let preview: Overlay | null = null;
@@ -274,6 +394,8 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
       fullscreenSurfaceLease.className('nabi-fullscreen-content', true);
     }
     rootLease.className(FULLSCREEN_CLASS, on);
+    syncFullscreenHost(root);
+    releaseFullscreenHost = fullscreenHosts.get(root) ?? null;
     if (!on) {
       fullscreenSurfaceLease?.dispose();
       fullscreenSurfaceLease = null;
@@ -302,6 +424,8 @@ export function mountViewTools(options: ViewToolsOptions): ViewTools {
     finish(() => preview?.close(), failure);
     preview = null;
     finish(() => rootLease.dispose(), failure);
+    finish(() => releaseFullscreenHost?.(), failure);
+    releaseFullscreenHost = null;
     finish(() => fullscreenSurfaceLease?.dispose(), failure);
     fullscreenSurfaceLease = null;
     finish(() => previewButton?.remove(), failure);

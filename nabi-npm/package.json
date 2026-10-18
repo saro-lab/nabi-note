@@ -31,6 +31,10 @@
       "types": "./dist/diff/index.d.ts",
       "default": "./dist/diff/index.js"
     },
+    "./merge": {
+      "types": "./dist/merge/index.d.ts",
+      "default": "./dist/merge/index.js"
+    },
     "./nabi.css": "./dist/nabi.css",
     "./package.json": "./package.json",
     "./icons/*": "./dist/icons/*"

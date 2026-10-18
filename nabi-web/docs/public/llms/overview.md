@@ -9,7 +9,8 @@ NABI NOTE separates the stored document, pure editing commands, DOM input handli
 | `nabi-note` | Browser, with DOM-free assembly helpers | Editor, wings, surface, UI, IO mounts, rendering, locale, style helpers |
 | `nabi-note/ssr` | Node.js or any DOM-free runtime | Registry creation, stored/editor HTML rendering, toolbar HTML, locale and tree basics |
 | `nabi-note/viewer` | Browser, read-only | Table sorting and code painting on published HTML |
-| `nabi-note/diff` | Browser for UI; pure JSON comparison is otherwise DOM-free | Stored-document comparison and two-pane diff UI |
+| `nabi-note/diff` | Browser for UI; pure JSON comparison is otherwise DOM-free | Stored-document comparison, two-pane diff UI, and controlled previous-to-current merge |
+| `nabi-note/merge` | Browser for UI; JSON merge model and session are DOM-free | Three-way merge, editable result, conflict resolution, and guarded confirmation |
 | `nabi-note/nabi.css` | CSS | Core CSS plus all built-in wing styles |
 | `nabi-note/icons/*` | Image files | Default light/dark SVG icons; see `icons.md` |
 
@@ -33,7 +34,7 @@ The registry is part of the document contract. The same stored tree renders diff
 - the editor instance;
 - server rendering and hydration;
 - stored rendering outside an editor;
-- diff rendering;
+- diff rendering and three-way merge;
 - CSS collection when using runtime injection.
 
 Unknown or unowned node types are not a plugin preservation mechanism. Normalization/import may unwrap or remove them.

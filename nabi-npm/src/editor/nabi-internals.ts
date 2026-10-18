@@ -5,10 +5,12 @@ import { isElement, type NabiNode, type NabiDoc } from '../schema/index.js';
 import type { EditEnv, Position } from '../doc/index.js';
 import type { Selection } from '../caret/index.js';
 import type { CommandArgs, CommandOutcome } from './commands.js';
+import type { HistoryExtension } from './host.js';
 
 export interface Snapshot {
   readonly doc: NabiDoc;
   readonly selection: Selection;
+  readonly extension?: { readonly owner: HistoryExtension; readonly value: unknown };
 }
 
 export interface CommandResultSnapshot {

@@ -30,9 +30,6 @@ export const NAV: readonly NavGroup[] = [
       { path: '/guide/rendering', key: 'menu_rendering' },
       { path: '/guide/cdn', key: 'menu_cdn' },
       { path: '/intro/vibe-coding', key: 'menu_intro_vibe_coding' },
-      { path: '/guide/style', key: 'menu_style_guide' },
-      { path: '/guide/icons', key: 'menu_icon_theme' },
-      { path: '/guide/extend', key: 'menu_extend_guide' },
     ],
   },
   {
@@ -80,6 +77,21 @@ export const NAV: readonly NavGroup[] = [
           { path: '/wing/etc/upload', key: 'menu_etc_upload' },
         ],
       },
+      { path: '/guide/extend', key: 'menu_extend_guide' },
+    ],
+  },
+  {
+    key: 'menu_style',
+    entries: [
+      { path: '/guide/style', key: 'menu_style_guide' },
+      { path: '/guide/icons', key: 'menu_icon_theme' },
+    ],
+  },
+  {
+    key: 'menu_addons',
+    entries: [
+      { path: '/guide/compare', key: 'menu_compare' },
+      { path: '/guide/merge', key: 'menu_merge' },
     ],
   },
 ]
@@ -101,5 +113,5 @@ export function navFor(locale: string): readonly NavGroup[] {
       const items = entry.items.filter((item) => hasLocalePage(item.path, locale))
       return items.length ? [{ ...entry, items }] : []
     }),
-  }))
+  })).filter((group) => group.entries.length > 0)
 }

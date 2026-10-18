@@ -11,9 +11,10 @@ import { hasLocalePage } from './src/nav.ts'
 // nabi-note 는 아직 dist·exports 없는 프로토타입이라 vite가 옆 저장소 TS 소스를 직접 문다.
 // nabi-note has no dist/exports yet, so vite points straight at the sibling repo's TS source.
 const NABI_NOTE_SRC = fileURLToPath(new URL('../../../nabi-npm/src/index.ts', import.meta.url))
-// 문자열 alias는 접두사로 맞으므로, 아래 셋은 'nabi-note' 보다 먼저 서야 한다.
-// String aliases match by prefix, so these three must precede 'nabi-note' below.
+// 문자열 alias는 접두사로 맞으므로, 아래 하위 경로는 'nabi-note' 보다 먼저 서야 한다.
+// String aliases match by prefix, so these subpaths must precede 'nabi-note' below.
 const NABI_VIEWER_SRC = fileURLToPath(new URL('../../../nabi-npm/src/viewer/index.ts', import.meta.url))
+const NABI_MERGE_SRC = fileURLToPath(new URL('../../../nabi-npm/src/merge/index.ts', import.meta.url))
 const NABI_DIFF_SRC = fileURLToPath(new URL('../../../nabi-npm/src/diff/index.ts', import.meta.url))
 const NABI_SSR_SRC = fileURLToPath(new URL('../../../nabi-npm/src/ssr.ts', import.meta.url))
 // 형제 저장소의 dist/ 는 git에 안 올라가 CI엔 없으니, 없으면 설치된 패키지 것으로 대체한다.
@@ -217,6 +218,7 @@ export default defineConfig({
       alias: {
         'nabi-note/viewer': NABI_VIEWER_SRC,
         'nabi-note/diff': NABI_DIFF_SRC,
+        'nabi-note/merge': NABI_MERGE_SRC,
         'nabi-note/nabi.css': NABI_CSS,
         'nabi-note/ssr': NABI_SSR_SRC,
         'nabi-note': NABI_NOTE_SRC,

@@ -1,5 +1,7 @@
 # Viewer and diff
 
+The unreleased 1.4.0 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
+
 These features live in separate package entry points so a published page does not pay for the editor.
 
 ## Published-page viewer
@@ -105,6 +107,45 @@ The mount creates a read-only two-pane view, previous/next navigation, change co
 
 `unmount()` removes generated content and the `.nabi-diff` class. The final reference also removes the package-owned injected diff style; a matching style supplied by the host is never removed.
 
+### Previous-to-current click merge
+
+Add `onMerge` to expose `>>` controls for changed paragraph/line groups. Omitting it keeps the existing read-only behavior. Structural blocks are replaced atomically; character highlights do not define independent merge actions. Applying an added group removes the current-only addition; applying a removed group restores the previous content. A detected move groups its removal and insertion so the content is not duplicated.
+
+```ts
+const diff = mountDiff({
+  root,
+  before,
+  after,
+  registry,
+  onMerge(proposal) {
+    if (proposal.signal.aborted) return;
+    if (!diff.update(proposal.before, proposal.result, proposal.revision)) return;
+    currentDocument = proposal.result;
+  },
+  onError(error) {
+    report(error);
+  },
+});
+```
+
+`DiffMergeProposal` contains serializable `before`, `after`, and `result` JSON arrays, `changeId`, the current comparison `revision`, and `signal: AbortSignal`. The callback returns `void | Promise<void>` and only receives a proposal: the mount neither persists nor accepts it automatically. Call `update(before, result, proposal.revision)` to accept it. `update()` returns a boolean; a stale expected revision rejects the update. The optional revision parameter does not change existing two-argument callers.
+
+Merge buttons stay disabled while the callback is pending. An update or unmount aborts the old proposal signal. Exceptions and promise rejections go to `onError`; callbacks cannot overwrite a newer view through a stale revision. Hosts performing asynchronous persistence must also validate their server document version; aborting a signal does not roll back a completed server write.
+
+Headless hosts may use the same patch grouping without a mount:
+
+```ts
+import { diffMergeChanges, applyDiffMerge } from 'nabi-note/diff';
+
+const plan = diffMergeChanges(before, after, registry);
+const change = plan?.changes[0];
+const result = change ? applyDiffMerge(before, after, change.id, registry) : null;
+```
+
+`DiffMergePlan` has normalized serializable `before` and `after` documents and `changes`. Each `DiffMergeChange` has an input-sensitive `id`, `kind`, logical-unit `beforeRanges`/`afterRanges`, and document-level `beforeBlocks`/`afterBlocks`. `beforePosition` and `afterPosition` are first affected `{ block, offset }` positions, or `null` when that side has no affected content. A range is `{ start, end }` with an exclusive end; it is not a text offset into serialized HTML. `applyDiffMerge()` applies one group from previous to current and returns stored JSON, or `null` for invalid inputs or a stale/unknown change ID. These functions share the stricter merge input validation described in `merge.md`.
+
+For automatic combination of concurrent changes against an editing-start base, use `nabi-note/merge`; see `merge.md`.
+
 ### Diff tool wing integration
 
 The `diff` wing has a host action. Wire it with:
@@ -115,6 +156,7 @@ const mounted = mountDiffWing({
   registry,
   surface: content,
   locale: 'en',
+  merge: true,
 });
 
 mountToolbar({
@@ -129,6 +171,8 @@ mountToolbar({
 ```
 
 The integration stores the last loaded document as its baseline. It updates that baseline only on a `NabiChange` with `loaded: true`; typing, paste commands, undo, and redo do not move it. `baseline()` returns the current baseline. The screen closes on Escape and restores focus to the surface.
+
+`merge: true` enables the previous-to-current controls and applies accepted changes to the connected editor in one undoable edit. It does not call `setJson()` or move the baseline. Editor document changes refresh an open comparison and invalidate old controls. Omit `merge` for the original read-only behavior. Optional `onError` reports integration failures; use standalone `mountDiff({ onMerge })` for a custom acceptance/persistence callback.
 
 Unmount both the toolbar and diff integration.
 

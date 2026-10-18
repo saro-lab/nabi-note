@@ -12,6 +12,8 @@ export const zh = {
   menu_cdn: 'CDN 的使用方法',
   menu_features: 'wing',
   menu_style_guide: 'CSS 主题',
+  menu_style: '样式',
+  menu_addons: '附加功能',
   menu_icon_theme: "图标主题",
   menu_rendering: 'SSR 设置',
   menu_extend_guide: '自定义 wing',

@@ -116,6 +116,8 @@ export const DIFF_CSS = `${ICON_CSS}
 
 .nabi-diff-gutter { position: relative; overflow: hidden; background: var(--nabi-soft, rgb(0 0 0 / 4.5%)); }
 .nabi-diff-gutter svg { position: absolute; inset: 0; display: block; }
+.nabi-diff-merge-action { position: absolute; inset-inline: 0; inline-size: 100%; padding: 0; font-size: .625rem; background: var(--nabi-bg, #fff); z-index: 1; }
+.nabi-diff-merge-action[hidden] { display: none; }
 /* 선은 소속 색 그대로다 — 지움(빨강)·추가(초록)·이동(파랑), changed 는 왼쪽 빨강에서 오른쪽 초록 그라디언트(fill은 마운트별 id를 물어 JS 인라인). 테두리(stroke)는 겹친 선 속에서 금을 그어 걷었다. */
 /* Lines carry their own color — red for removed, green for added, blue for moved; changed lines gradient red-to-green (fill is set inline in JS since it references a per-mount id). Stroke is dropped since it drew a line through neighboring overlapping lines. */
 .nabi-diff-line { stroke: none; }

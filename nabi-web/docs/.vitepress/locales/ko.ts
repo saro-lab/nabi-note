@@ -10,8 +10,12 @@ export const ko = {
   menu_cdn: 'CDN 이용하기',
   menu_features: '날개',
   menu_style_guide: 'CSS 테마',
+  menu_style: '스타일',
+  menu_addons: '부가기능',
   menu_icon_theme: "아이콘 테마",
   menu_rendering: 'SSR 설정',
+  menu_compare: '비교',
+  menu_merge: '병합',
   menu_extend_guide: '커스텀 날개',
   menu_intro_vibe_coding: 'AI 바이브 코딩',
 

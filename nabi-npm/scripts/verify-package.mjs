@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process';
 const root = new URL('..', import.meta.url).pathname;
 const dist = join(root, 'dist');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-const expectedExports = ['.', './diff', './icons/*', './nabi.css', './package.json', './ssr', './viewer'];
+const expectedExports = ['.', './diff', './icons/*', './merge', './nabi.css', './package.json', './ssr', './viewer'];
 
 const fail = (message) => {
   throw new Error(message);
@@ -74,7 +74,7 @@ try {
     [
       '--input-type=module',
       '-e',
-      "await import('nabi-note'); await import('nabi-note/ssr'); await import('nabi-note/viewer'); await import('nabi-note/diff'); console.log(import.meta.resolve('nabi-note/nabi.css'))",
+      "await import('nabi-note'); await import('nabi-note/ssr'); await import('nabi-note/viewer'); await import('nabi-note/diff'); await import('nabi-note/merge'); console.log(import.meta.resolve('nabi-note/nabi.css'))",
     ],
     { cwd: consumer, encoding: 'utf8' },
   );

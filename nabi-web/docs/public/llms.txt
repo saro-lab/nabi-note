@@ -20,6 +20,7 @@ Use this file as a router. Read only the document that owns your question.
 - Custom wing contract and registry validation: `llms/custom-wing.md`
 - Server rendering, toolbar pre-rendering, hydration: `llms/ssr.md`
 - Published-page viewer and document diff: `llms/viewer-diff.md`
+- Three-way automatic merge, editable conflict resolution, and confirmation: `llms/merge.md`
 - CSS delivery, theme tokens, dark-mode cell tints, fullscreen paper backgrounds, mobile breakpoint, host markup, drop caps: `llms/styling.md`
 - SVG/WebP/PNG icon themes and individual preview/fullscreen visibility: `llms/icons.md`
 
@@ -30,7 +31,8 @@ Use this file as a router. Read only the document that owns your question.
 - Use `nabi-note` for editor assembly and browser UI.
 - Use `nabi-note/ssr` in a DOM-free server process.
 - Use `nabi-note/viewer` for optional behavior on published HTML.
-- Use `nabi-note/diff` for comparing two stored documents.
+- Use `nabi-note/diff` for comparing two stored documents. Optional `onMerge` proposes previous-to-current changes; the host accepts with revision-checked `update()`. See `llms/viewer-diff.md`.
+- Use `nabi-note/merge` for three-way merging. The left pane is the editing-start base, the middle is the editable local/merged result, and the right is the incoming version. Automatic merge runs first; per-line gutter arrows apply individual source changes, and confirmation requires zero unresolved conflicts. See `llms/merge.md`.
 - Diff opens in only-changes mode by default. With zero changes, it shows both complete documents and disables folding. See `llms/viewer-diff.md`.
 - Load `nabi-note/nabi.css` on editor and published pages unless all required sheets are injected.
 - The `float` wing adds editable left/right float regions with maximum widths 20, 30, 40, or 50 percent (default: right, 40). Pasted text, tables, images, and rich fragments stay inside the region. Editor-only dotted outlines disappear in stored HTML and preview; diff keeps placement but isolates each block. See `llms/wings.md`.
@@ -59,8 +61,8 @@ Use this file as a router. Read only the document that owns your question.
 
 ## Package facts
 
-- Package contract documented here: 1.4.0. Package and CDN publication are separate from this contract version.
+- Package contract documented here: 1.4.0 (unreleased). Package and CDN publication are separate from this contract version.
 - Runtime dependencies: zero.
 - Node.js for package tooling and SSR: 20 or newer.
 - Declared browser baseline: Chrome and Edge 120, Firefox 120, Safari 17.
-- Public subpaths: `.`, `./ssr`, `./viewer`, `./diff`, `./nabi.css`, `./icons/*`, `./package.json`.
+- Public subpaths: `.`, `./ssr`, `./viewer`, `./diff`, `./merge`, `./nabi.css`, `./icons/*`, `./package.json`.

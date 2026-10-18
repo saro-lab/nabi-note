@@ -81,7 +81,7 @@ The host normally supplies:
 - `.nabi-content`: editing or published document body.
 - `mountSurface()` adds `.nabi-editing` and `contenteditable`.
 - `.nabi-tools`: preview/fullscreen controls created by `mountViewTools()`.
-- `.is-fullscreen`: class-based fullscreen, not the browser Fullscreen API.
+- `.is-fullscreen`: viewport fullscreen managed by `setFullscreen()` or `mountViewTools()`, without the browser Fullscreen API.
 
 Mount the main toolbar and context toolbar on the two separate child roots, not on their shared `.nabi-toolbar` wrapper. Pass that wrapper to `mountSticky()` and as the `mountViewTools()` container. Keep each mount root dedicated to package-owned UI.
 
@@ -202,6 +202,8 @@ The core reads these but does not always declare the host-facing value:
 Fallback font and placeholder tokens are declared internally. Prefer the host-facing names above.
 
 ## Fullscreen paper
+
+`setFullscreen(root, true)` and the fullscreen control temporarily move a nested editor root into a host under `body`, so transformed, contained, or container-query ancestors cannot constrain the fullscreen viewport. The editor's inline width, height, maximum sizes, margins, borders, and padding do not constrain fullscreen. The temporary host follows inherited custom properties, typography, direction, and language from the original parent. Focus and document selection survive the move. Exit and view-tool unmount restore the original DOM position and layout. Keep editor-specific styling on the editor itself or use inherited custom properties; ancestor-dependent selectors no longer match while its root is outside that ancestor. Use the API instead of toggling `.is-fullscreen` directly when the editor is nested.
 
 `mountViewTools()` measures the edit surface's border-box width before entering fullscreen and keeps that width centered, capped at the available viewport width. When the measured paper is narrower than the fullscreen container's available width, exposing workspace background on its sides, it receives `1.5rem` top and bottom margins (24px at the default root font size) and subtle shadows above and below. When the paper fills the available width, both margins are zero and there is no shadow. This follows the actual paper and container widths, not the mobile breakpoint; a narrow viewport can still show the margins when its paper is narrower. A short document fills the remaining height below the toolbar after subtracting any margins. Long content grows normally, and scrolling to the end reveals any bottom margin. The toolbar keeps its usual background. Exiting fullscreen or unmounting restores the surface's previous layout. These spacing and shadow changes apply to fullscreen editing; preview layout is unchanged.
 

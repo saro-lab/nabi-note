@@ -5,10 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
-## [1.4.0] - 2026-10-14
+## [1.4.0] - Unreleased
 
 ### Added
 
+- Added previous-to-current click merge to the standalone comparison view. Callbacks receive paragraph/line-group proposals, and hosts can update the view after checking its revision. Pending callbacks prevent duplicate clicks and stale proposal acceptance; pure functions expose change groups and applied results. Enable it in an editor comparison with `mountDiffWing({ merge: true })`; applied changes are undoable and preserve the baseline.
+- Added independent three-way merging through `nabi-note/merge` for the editing-start base, local edit, and newly saved incoming version. Non-overlapping changes merge automatically first. Remaining conflicts can use the base or incoming version, or accept the editable middle result. Normal editing features remain available, and undo/redo restores document content and resolution status together. Confirmation callbacks run only when no unresolved conflicts remain.
+- Added comparison and merge guides in every documentation language with working API examples for click merge, complete automatic merging, and partial automatic merging with manual conflict resolution. Demo messages and sample documents follow the page language. Updated the public AI documentation with the new APIs and persistence/version-check contracts.
 - Added pale table cell backgrounds with light and dark theme values. Apply a color to one cell or a selected rectangle, restore the default background, and undo the change. Colors survive merge, split, clipboard, JSON, and HTML; colored tables use HTML in Markdown exports to preserve their backgrounds.
 - Table cells now support multiple paragraphs and built-in blocks such as images, lists, quotes, code, details, and video. Nested tables and floats are unwrapped while preserving content; header cells remove heading formatting only. Cell alignment targets inner paragraphs and images, including selected cell rectangles. Align the table itself from the main toolbar after using the new Select table control or placing the caret at either boundary of its wrapper paragraph. Boundary carets also show the dashed table outline; copy and cut include the entire paragraph and table in that state.
 - Added float regions (`floatWing`) whose text, images, and tables can be edited directly in the same editor. Regions support left/right placement and maximum widths of 20, 30, 40, or 50 percent, defaulting to right at 40 percent.
@@ -20,6 +23,7 @@ Dates use Korea Standard Time (KST).
 
 ### Changed
 
+- The merge view now highlights changed lines and text, with gutter arrows that apply only the corresponding base or incoming content. The middle result stays editable, and individual line applications support undo/redo. Automatically merged changes can also be revised individually.
 - Document comparison now shows only changes and surrounding context by default. With no changes, folding is disabled and both complete documents remain visible.
 - Reduced the default double-Enter window for leaving a container from 350 ms to 180 ms. Esc and Shift double-tap defaults remain unchanged.
 - Grouped the default toolbar into headings, text formatting, alignment, lists, insertion, and document tools, with vertical separators between groups. Custom group order and quick-tool settings remain supported, as do the mobile single-row toolbar and complete Tools palette.
@@ -33,6 +37,8 @@ Dates use Korea Standard Time (KST).
 
 ### Fixed
 
+- Removed unnecessary spacing between the instruction row and the top controls in the web comparison example.
+- Fixed editor fullscreen being constrained by ancestor sizing, transforms, and containment. Fullscreen fills the browser viewport and restores the original position and styles on exit. The merge view also expands all three document panes to the available height.
 - Fixed float content remaining visible inside folded comparison regions.
 - Fixed pasting a single table or image inside a float placing it outside the region. Empty inner paragraphs are replaced by the pasted block while preserving table alignment, cell formatting, and outside paragraphs.
 - Fixed Backspace, Delete, and range deletion crossing cell boundaries to join contents or remove neighboring tables. Deletion keeps the caret inside its cell, and navigation through multi-block cells uses their first and last actual editable positions.
