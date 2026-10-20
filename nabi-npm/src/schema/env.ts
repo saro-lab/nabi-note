@@ -16,6 +16,9 @@ export interface SchemaEnv {
   // 속이 인라인인 블록 — 문단처럼 속을 직접 든다(summary·code 류).
   // A block whose content is inline, held directly like a paragraph (summary/code and the like).
   readonly inlineHolders: ReadonlySet<string>;
+  // 글자 사이에 서는 속 없는 단말 — br처럼 캐럿 한 칸을 차지한다(각주 표식).
+  // Childless terminals standing between characters; like br, each takes one caret unit (footnote markers).
+  readonly inlineTerminals?: ReadonlySet<string>;
   // 값이 1/0뿐인 불리언 attr 이름 — 0과 숫자 아닌 값은 "없음"으로 걷는다.
   // Boolean attr names whose only value is 1/0; 0 or a non-numeric value counts as absent.
   readonly boolAttrs: ReadonlySet<string>;
@@ -101,6 +104,7 @@ export function makeEnv(draft: {
   readonly voids?: readonly string[];
   readonly blockHolders?: readonly string[];
   readonly inlineHolders?: readonly string[];
+  readonly inlineTerminals?: readonly string[];
   readonly boolAttrs?: readonly string[];
   readonly attrSchemas?: ReadonlyMap<string, ReadonlySet<string>>;
   readonly boolAttrsByType?: ReadonlyMap<string, ReadonlySet<string>>;
@@ -114,6 +118,9 @@ export function makeEnv(draft: {
     voids: new Set(draft.voids ?? []),
     blockHolders: new Set(draft.blockHolders ?? []),
     inlineHolders: new Set(draft.inlineHolders ?? []),
+    ...(draft.inlineTerminals && draft.inlineTerminals.length > 0
+      ? { inlineTerminals: new Set(draft.inlineTerminals) }
+      : {}),
     boolAttrs: new Set(draft.boolAttrs ?? []),
     ...(draft.attrSchemas ? { attrSchemas: draft.attrSchemas } : {}),
     ...(draft.boolAttrsByType ? { boolAttrsByType: draft.boolAttrsByType } : {}),
@@ -128,6 +135,10 @@ export function isLump(node: NabiNode, env: SchemaEnv): node is ElementNode {
   return isElement(node) && env.lumps.has(node.w);
 }
 
+export function isInlineTerminal(w: string, env: SchemaEnv): boolean {
+  return env.inlineTerminals?.has(w) ?? false;
+}
+
 // 자식이 물건 하나뿐인 p다 — 저장 표식 없이 이 판별식만으로 정한다(결정 Q14).
 // A `p` with exactly one lump child; no stored flag, this predicate alone decides it (decision Q14).
 export function isWrapper(node: NabiNode, env: SchemaEnv): boolean {
@@ -138,10 +149,13 @@ export function refusesAlign(w: string, env: SchemaEnv): boolean {
   return env.noAlign?.has(w) ?? false;
 }
 
-// 글 문단은 언제나 정렬을 받고, 래퍼문단은 입은 물건에 달렸다 — ui·doc·cocoon이 다 이 한 문으로 답해야 판정이 안 어긋난다.
-// A text paragraph always takes alignment; a wrapper depends on its lump. UI, doc commands, and cocoon must all defer to this one function or their judgments drift apart.
+// 제목은 정렬을 받지 않고, 래퍼문단은 안의 물건을 따른다.
+// Headings reject alignment; wrappers defer to their object.
 export function takesAlign(node: NabiNode, env: SchemaEnv): boolean {
   if (!isElement(node) || node.w !== P) return false;
-  if (!isWrapper(node, env)) return true;
+  if (!isWrapper(node, env)) {
+    const heading = node.a?.['h'];
+    return !(typeof heading === 'number' && Number.isInteger(heading) && heading >= 1 && heading <= 6);
+  }
   return !refusesAlign((node.ch[0] as ElementNode).w, env);
 }

@@ -13,9 +13,11 @@ Affianca due documenti salvati per vedere le modifiche. Il confronto può aprirs
 
 ## Applicare contenuto precedente selezionato
 
+I confronti autonomi sono di sola lettura per impostazione predefinita e non mostrano i pulsanti **&gt;&gt;** per applicare le modifiche. Collega un callback `onMerge` per visualizzarli.
+
 A sinistra c’è il documento precedente, a destra quello attuale. **&gt;&gt;** accanto a una modifica applica il contenuto precedente del relativo paragrafo o gruppo di righe. La selezione non avviene carattere per carattere. Puoi anche ripristinare contenuto eliminato o rimuovere quello appena aggiunto.
 
-Prova a ripristinare solo l’orario o gli oggetti da portare. Apri **Documento attuale aggiornato dal callback** per vedere il risultato. **Ricomincia** ripristina l’esempio iniziale.
+L’esempio seguente è di sola lettura. Controlla come sono cambiati l’orario dell’incontro e gli oggetti da portare. **Ricomincia** ripristina l’esempio originale.
 
 <CompareDemo />
 
@@ -85,7 +87,6 @@ const comparison = mountDiffWing({
   registry,
   surface: content,
   locale: 'it',
-  merge: true,
 })
 const toolbar = mountToolbar({
   nabi,
@@ -98,6 +99,6 @@ const toolbar = mountToolbar({
 })
 ```
 
-Con `merge: true`, il contenuto precedente scelto viene applicato all’editor. L’operazione è annullabile e conserva il riferimento. Se l’editor originale cambia a vista aperta, il confronto viene ricalcolato. Omettere `merge` mantiene la sola lettura.
+`merge` è `true` per impostazione predefinita, quindi il contenuto precedente scelto può essere applicato all’editor. L’operazione è annullabile e conserva il riferimento. Se l’editor originale cambia a vista aperta, il confronto viene ricalcolato. Imposta `merge: false` per un confronto di sola lettura.
 
 Quando rimuovi la vista, chiama `toolbar.unmount()` e `comparison.unmount()`. Per includere la versione iniziale e combinare automaticamente le modifiche di entrambe le parti, usa [Unione](./merge).

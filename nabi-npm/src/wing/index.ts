@@ -29,6 +29,8 @@ export {
 } from './registry.js';
 export type { RegisteredRule, Registry, RegistryExtra, StoredHtmlOptions } from './registry.js';
 export { keyOwnerAt, routeKey } from './owner.js';
+export { $inlineTerminalOf, $markInlineTerminal } from './inline.js';
+export type { InlineTerminalDecl } from './inline.js';
 export type { KeyOwner } from './owner.js';
 export { boxObject, listFamily, simpleMark, valueMark } from './factories.js';
 export type { BoxObjectSpec, ListFamilySpec, SimpleMarkSpec, ValueMarkSpec } from './factories.js';

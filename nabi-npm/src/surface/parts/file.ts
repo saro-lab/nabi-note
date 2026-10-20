@@ -211,6 +211,7 @@ export function mountFile(options: FileMountOptions): FileMount {
       `${renderMarkdown(hostOf(nabi).doc(), {
         env: hostOf(nabi).env,
         builders: registry.mdBuilders,
+        appendices: registry.mdAppendices,
         html: {
           env: hostOf(nabi).env,
           builders: registry.builders,

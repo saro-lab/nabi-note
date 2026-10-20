@@ -1,4 +1,5 @@
 export const ko = {
+  menu_inline_footnote: "각주",
   label: '한국어',
   lang: 'ko',
   link: '/ko/',

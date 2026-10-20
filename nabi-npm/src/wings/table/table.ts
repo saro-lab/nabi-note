@@ -29,7 +29,7 @@ import {
   type TableGrid,
 } from './grid.js';
 import { emptyCell, emptyCells, headerCell } from './helpers.js';
-import { cellBoundary, cellCtxOf, selectionBox, type CellCtx } from './selection.js';
+import { cellBoundary, cellCtxOf, selectionBox, tableWrapperOf, type CellCtx } from './selection.js';
 import {
   CELL_COLOR_CHOICES,
   CELL_COLOR_LABEL,
@@ -42,6 +42,7 @@ import {
 export { selectionBox } from './selection.js';
 export const TH = 'th';
 export const SORTABLE = 'sort';
+const FULL_WIDTH = 'full';
 function rebuilt(node: ElementNode, ch: readonly NabiNode[]): ElementNode {
   return { w: node.w, ch, ...(node.a ? { a: node.a } : {}), ...(node._id !== undefined ? { _id: node._id } : {}) };
 }
@@ -354,6 +355,25 @@ const clampDim = (raw: unknown, fallback: number): number => {
 
 const commands: Readonly<Record<string, Command>> = {
   setCellColor,
+  toggleTableFullWidth(doc, sel) {
+    const wrapper = tableWrapperOf(doc, sel);
+    const anchor = cellCtxOf(doc, sel.anchor);
+    const focus = cellCtxOf(doc, sel.focus);
+    const tablePath = wrapper
+      ? [...wrapper.path, 0]
+      : anchor && focus && anchor.table === focus.table
+        ? focus.tablePath
+        : null;
+    if (!tablePath) return null;
+    const table = nodeAt(doc, tablePath);
+    if (!table) return null;
+    const a: Record<string, AttrValue> = { ...table.a };
+    if (a[FULL_WIDTH] === 1) delete a[FULL_WIDTH];
+    else a[FULL_WIDTH] = 1;
+    const { a: _attrs, ...rest } = table;
+    const next = Object.keys(a).length > 0 ? { ...rest, a } : rest;
+    return { doc: replaceAt(doc, tablePath, [next]), selection: sel };
+  },
   selectTable(doc, sel) {
     const anchor = cellCtxOf(doc, sel.anchor);
     const focus = cellCtxOf(doc, sel.focus);
@@ -561,7 +581,10 @@ const spanAttr = (value: AttrValue | undefined): string | undefined => {
 const tableHtml: HtmlBuilder = (node, children, ctx) =>
   ctx.wrap(
     'div',
-    ctx.element('table', children(), { 'data-nabi-sortable': node.a?.[SORTABLE] === 1 ? '' : undefined }),
+    ctx.element('table', children(), {
+      'data-nabi-sortable': node.a?.[SORTABLE] === 1 ? '' : undefined,
+      'data-nabi-table-full': node.a?.[FULL_WIDTH] === 1 ? '' : undefined,
+    }),
     { class: 'nabi-scroll' },
   );
 
@@ -579,6 +602,7 @@ const tdHtml: HtmlBuilder = (node, children, ctx) =>
 // 파이프 표는 md에서 격자 하나뿐이다 — 머리가 통째로 첫 줄, 병합 없음, 줄마다 칸 수 동일. 하나라도 어긋나면 html로 낸다.
 // A pipe table in md handles exactly one shape — first row all-header, no merges, equal cell counts per row; any mismatch falls back to html entirely.
 function pipeable(node: ElementNode): boolean {
+  if (node.a?.[FULL_WIDTH] === 1) return false;
   let cols = -1;
   for (let r = 0; r < node.ch.length; r += 1) {
     const row = node.ch[r];
@@ -619,9 +643,12 @@ const tdMd: MdBuilder = (_node, ctx) => ctx.children(' ').replace(/\s+/g, ' ').t
 // 들여오기 — 기본 대응은 th를 td로만 누이므로, 제목 표식은 여기서 주장한다.
 // Import claim — the default mapping just flattens th to td, so the header flag must be asserted here instead.
 function claim(el: ParseElement, inner: (block: boolean) => NabiNode[]): NabiNode[] | null {
-  // 정렬 표식을 단 표 — 표식만 되읽고 속은 기본 대응이 읽게 둔다.
-  if (el.tag === 'table' && el.attrs['data-nabi-sortable'] !== undefined) {
-    return [{ w: 'table', a: { [SORTABLE]: 1 }, ch: inner(true) }];
+  if (el.tag === 'table') {
+    const a: Record<string, AttrValue> = {};
+    if (el.attrs['data-nabi-sortable'] !== undefined) a[SORTABLE] = 1;
+    if (el.attrs['data-nabi-table-full'] !== undefined) a[FULL_WIDTH] = 1;
+    if (Object.keys(a).length > 0) return [{ w: 'table', a, ch: inner(true) }];
+    return null;
   }
   if (el.tag !== 'th' && el.tag !== 'td') return null;
   const a: Record<string, AttrValue> = el.tag === 'th' ? { [TH]: 1 } : {};
@@ -832,7 +859,12 @@ const TABLE_TEXT: Readonly<Record<string, LocaleText>> = {
 const TABLE_CSS = `
 /* 표는 자리를 꽉 채우지 않는다 — 폭을 안 적어야 속 글에 맞춰 자동 배치가 줄어들고, 안 그러면 칸 둘짜리 표가 빈 칸만 늘어난다. */
 /* A table never fills its space by default — leaving width unset lets it shrink to content; setting it explicitly would stretch a two-column table into empty space. */
-.nabi-content table { border-collapse: collapse; }
+.nabi-content table {
+  border-collapse: collapse;
+  font-family: var(--nabi-font, var(--nabi-font-fallback));
+}
+.nabi-content .nabi-scroll:has(> table[data-nabi-table-full]),
+.nabi-content table[data-nabi-table-full] { min-inline-size: 100%; }
 /* 칸의 최소 폭 — 없으면 갓 만든 표가 폭 0으로 접혀 캐럿이 설 자리가 없어진다("셀을 클릭해도 커서가 안 생김"). */
 /* A cell's minimum width — without it, a freshly created table collapses to zero width, leaving no room for a caret to land. */
 .nabi-content th,.nabi-content td {
@@ -939,7 +971,10 @@ export const tableWing: Wing = {
   // 이 wing은 여러 급(표·행·칸)을 소유하고 상태도 급마다 나뉜다(칸: merged/th, 표: sort) — 상황 줄이 조상 줄기 전부의 토큰을 합쳐 읽어 칸 안 단추가 표의 상태를 보여줄 수 있다.
   // This wing owns several levels (table/row/cell), each with its own state (cell: merged/th, table: sort) — the context bar reads tokens up the whole ancestor chain, so a button inside a cell can still reflect the table's own state.
   currentValue: (node) => {
-    if (node.w === 'table') return node.a?.[SORTABLE] === 1 ? SORTABLE : undefined;
+    if (node.w === 'table') {
+      const tokens = [SORTABLE, FULL_WIDTH].filter((key) => node.a?.[key] === 1);
+      return tokens.length > 0 ? tokens.join(' ') : undefined;
+    }
     if (node.w !== 'td') return undefined;
     const tokens: string[] = [];
     if (spanOf(node.a?.[SPAN_COL]) > 1 || spanOf(node.a?.[SPAN_ROW]) > 1) tokens.push('merged');
@@ -990,6 +1025,39 @@ export const tableWing: Wing = {
           ta: 'முழு அட்டவணையையும் தேர்ந்தெடு',
           th: 'เลือกทั้งตาราง',
           it: 'Seleziona tabella',
+        },
+      },
+      {
+        kind: 'toggle',
+        name: 'fullWidth',
+        command: 'toggleTableFullWidth',
+        token: FULL_WIDTH,
+        icon: 'table-full-width',
+        label: {
+          ko: '너비 채우기',
+          en: 'Full width',
+          ja: '幅100%',
+          zh: '全宽',
+          de: 'Volle Breite',
+          fr: 'Pleine largeur',
+          es: 'Ancho completo',
+          pt: 'Largura total',
+          ru: 'На всю ширину',
+          ar: 'العرض الكامل',
+          hi: 'पूरी चौड़ाई',
+          bn: 'পূর্ণ প্রস্থ',
+          ur: 'مکمل چوڑائی',
+          id: 'Lebar penuh',
+          fa: 'تمام عرض',
+          mr: 'पूर्ण रुंदी',
+          vi: 'Toàn bộ chiều rộng',
+          te: 'పూర్తి వెడల్పు',
+          ha: 'Cikakken faɗi',
+          tr: 'Tam genişlik',
+          sw: 'Upana kamili',
+          ta: 'முழு அகலம்',
+          th: 'เต็มความกว้าง',
+          it: 'Larghezza piena',
         },
       },
       {

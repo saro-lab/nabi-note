@@ -4,8 +4,12 @@ export { attachViewer } from './attach.js';
 export type { ViewerAttachment, ViewerOptions } from './attach.js';
 export { CODE_LANG_ATTR, attachCodePaint, codeLanguageOf } from './code-paint.js';
 export type { CodePaintOptions } from './code-paint.js';
+export { FOOTNOTE_ATTR, attachFootnotes } from './footnotes.js';
 export { SORTABLE_ATTR, attachTableSort, hasMergedCells, nextSortState, rankRows } from './table-sort.js';
 export type { SortDirection, SortState, TableSortOptions } from './table-sort.js';
 // 색칠에 넘기는 훅의 모양 — 코어 엔트리를 안 실은 페이지에서도 타입을 쓸 수 있어야 한다
 // The shape of the highlighting hook; its type must be usable even on a page that never loads the core entry
 export type { CodeHighlighter, CodeToken } from '../code/index.js';
+
+export { mountOutline } from './outline.js';
+export type { OutlineItem, OutlineState, OutlineOptions, OutlineAttachment, OutlineCloseReason } from './outline.js';

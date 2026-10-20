@@ -1756,6 +1756,45 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
 }
 
 {
+  const dom = new JSDOM(
+    '<!doctype html><html><body><button id="anchor"></button><button id="outside"></button></body></html>',
+  );
+  const owner = dom.window.document;
+  const anchor = owner.getElementById('anchor') as HTMLElement;
+  const saved: string[] = [];
+  const open = (): ReturnType<typeof openPrompt> =>
+    openPrompt(owner, {
+      anchor,
+      fields: [{ name: 'text', label: 'Text', kind: 'textarea', value: 'saved text' }],
+      okLabel: 'OK',
+      submitOnOutside: true,
+      onSubmit: (values) => saved.push(values['text']!),
+    });
+  const panel = open();
+  const noButton = panel.root.querySelector('button') === null;
+  panel.root.dispatchEvent(new dom.window.Event('pointerdown', { bubbles: true }));
+  const stayed = panel.root.isConnected && saved.length === 0;
+  owner.getElementById('outside')!.dispatchEvent(new dom.window.Event('pointerdown', { bubbles: true }));
+  open().close();
+  const cancelled = open();
+  cancelled.root
+    .querySelector('textarea')!
+    .dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  const blank = open();
+  blank.root.querySelector('textarea')!.value = ' ';
+  owner.getElementById('outside')!.dispatchEvent(new dom.window.Event('pointerdown', { bubbles: true }));
+  ok(
+    'prompt - outside submits once without a button; Escape, teardown, and invalid input do not submit',
+    noButton &&
+      stayed &&
+      saved.length === 1 &&
+      saved[0] === 'saved text' &&
+      owner.querySelector('.nabi-prompt') === null,
+  );
+  dom.window.close();
+}
+
+{
   const dom = new JSDOM('<!doctype html><html><body><button id="anchor"></button></body></html>');
   const owner = dom.window.document;
   const anchor = owner.getElementById('anchor') as HTMLElement;

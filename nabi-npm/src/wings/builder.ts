@@ -14,6 +14,7 @@ import {
   typefaceWing,
 } from './values/values.js';
 import { linkWing } from './link/link.js';
+import { footnoteWing } from './footnote/footnote.js';
 import { alignWing, dropCapWing, headingWing } from './attrs/attrs.js';
 import { bulletListWing, orderedListWing, taskListWing } from './list/list.js';
 import { quoteWing } from './quote/quote.js';
@@ -48,6 +49,7 @@ const CATALOG = [
   { w: 'tc', wing: textColorWing, make: makeTextColorWing, takes: { values: 'list' } },
   { w: 'hl', wing: highlightWing, make: makeHighlightWing, takes: { values: 'list' } },
   { w: 'a', wing: linkWing },
+  { w: 'fn', wing: footnoteWing },
   { w: 'h', wing: headingWing },
   { w: 'align', wing: alignWing },
   { w: 'dc', wing: dropCapWing },

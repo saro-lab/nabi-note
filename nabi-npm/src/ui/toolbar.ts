@@ -306,6 +306,7 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
       let changed = false;
       picker = openPrompt(owner, {
         anchor,
+        ...(action.submitOnOutside ? { submitOnOutside: true } : {}),
         restore: options.surface ?? null,
         translator: t,
         get okLabel() {
@@ -322,6 +323,8 @@ export function mountToolbar(options: ToolbarOptions): Toolbar {
             },
             ...(filled !== undefined && filled !== '' ? { value: filled } : {}),
             ...(field.optional ? { optional: true } : {}),
+            ...(field.kind ? { kind: field.kind } : {}),
+            ...(field.singleLine ? { singleLine: true } : {}),
             // 형식 검사는 wing의 것이다 — ui는 나르기만 한다. 없으면 "빈 것만 막는다"가 답이다.
             // Validation belongs to the wing — ui just carries it through; without one, "only block blank" is the rule.
             ...(field.validate ? { validate: field.validate } : {}),

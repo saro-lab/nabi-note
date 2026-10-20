@@ -3,7 +3,7 @@
 import { isWrapper, takesAlign, type ElementNode, type NabiDoc } from '../schema/index.js';
 import { isolationPath, nodeAt, type EditEnv, type Position } from '../doc/index.js';
 import type { Selection } from '../caret/index.js';
-import type { Registry, Wing } from '../wing/index.js';
+import { $inlineTerminalOf, type Registry, type Wing } from '../wing/index.js';
 import { paragraphTargets } from '../wing/paragraph-target.js';
 
 const policies = new WeakMap<
@@ -133,6 +133,9 @@ export function visibleAt(reach: ReachAt, wing: Wing): boolean {
       if (!reach.topIsWrapper) return true;
       return wing.attrKey === 'a' && reach.topTakesAlign;
     default:
+      // 글자 사이에 서는 단말(각주)은 마크처럼 글 속에 서고, 평문 상자(코드) 안에서만 숨는다.
+      // A terminal standing between characters (a footnote) sits inside text like a mark and hides only inside a plain-text box (code).
+      if ($inlineTerminalOf(wing)) return !(reach.inline && reach.holderIsOwnNode);
       // void·container — 글 속에는 못 서고, 품을 쪽의 allows 밖이면 숨는다.
       // void/container — can't stand inside inline content, and hides outside the parent's allows.
       return !reach.inline && admits(reach, wing.w);

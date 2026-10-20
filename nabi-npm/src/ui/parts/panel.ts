@@ -4,6 +4,7 @@ import { focusQuiet, make } from './dom.js';
 import { closeOnOutside } from './outside.js';
 import { watchNarrow } from '../narrow.js';
 import { hostedPanel } from './panel-host.js';
+import { visibleViewportRect } from '../dock.js';
 
 // --- 순수 산수 — 뷰포트 안으로 밀어 넣기 (DOM 없이 그물에 잡힌다) ------------------------------
 
@@ -75,6 +76,7 @@ export interface PanelOptions {
   // Where focus goes after closing (the edit surface).
   readonly restore?: HTMLElement | null;
   readonly onClose?: () => void;
+  readonly onOutside?: () => void;
   // 켜면 판의 자리 잡기만 쓰고 문서 모달 층은 부르는 쪽이 대신 맡는다.
   // When set, only the panel's positioning is used; the caller supplies its own document modal layer.
   readonly modal?: boolean;
@@ -104,6 +106,7 @@ export function openPanel(owner: Document, options: PanelOptions): Panel {
     owner.removeEventListener('keydown', onKey, true);
     visual?.removeEventListener('resize', follow);
     visual?.removeEventListener('scroll', follow);
+    owner.defaultView?.removeEventListener('resize', follow);
     root.remove();
     if (anchor.getAttribute('aria-expanded') === 'true') {
       if (expandedBefore === null) anchor.removeAttribute('aria-expanded');
@@ -129,13 +132,16 @@ export function openPanel(owner: Document, options: PanelOptions): Panel {
   // 가운데는 보이는 뷰포트의 가운데다 — 고정 배치는 레이아웃 뷰포트 좌표계라, iOS에서 키보드가 오르면 50%가 이미 키보드 뒤에 있다. 스크롤로는 못 피하니(고정 배치는 안 움직인다) 여기서 자리를 옮겨 그 뜻을 지킨다.
   // "Center" means the visual viewport's center — fixed positioning uses layout-viewport coordinates, so on iOS with the keyboard up, 50% already sits behind it. Scrolling can't fix a fixed element, so this repositions it manually instead.
   const follow = (): void => {
-    if (!visual) return;
-    root.style.setProperty(MID_VAR, `${Math.round(visual.offsetTop + visual.height / 2)}px`);
-    root.style.setProperty(ROOM_VAR, `${Math.round(visual.height * 0.9)}px`);
+    if (visual) {
+      root.style.setProperty(MID_VAR, `${Math.round(visual.offsetTop + visual.height / 2)}px`);
+      root.style.setProperty(ROOM_VAR, `${Math.round(visual.height * 0.9)}px`);
+    }
+    if (!closed && root.classList.contains('nabi-prompt-wide')) place(owner, root, anchor);
   };
 
   try {
-    (anchor.parentElement ?? owner.body).append(root);
+    const toolbar = root.classList.contains('nabi-prompt-wide') ? promptToolbar(anchor) : null;
+    (toolbar ?? anchor.parentElement ?? owner.body).append(root);
     stopNarrow = watchNarrow(
       root,
       anchor.closest<HTMLElement>('.nabi-toolbar-row, .nabi-context, .nabi') ?? anchor.parentElement ?? owner.body,
@@ -154,7 +160,16 @@ export function openPanel(owner: Document, options: PanelOptions): Panel {
     // Rotating the window or toggling the keyboard moves the center too — on large screens nothing reads this variable, so it just updates quietly with no visible effect.
     visual?.addEventListener('resize', follow);
     visual?.addEventListener('scroll', follow);
-    if (!options.modal) stopOutside = closeOnOutside(owner, () => [root, anchor], close);
+    owner.defaultView?.addEventListener('resize', follow);
+    if (!options.modal)
+      stopOutside = closeOnOutside(
+        owner,
+        () => [root, anchor],
+        () => {
+          close();
+          options.onOutside?.();
+        },
+      );
     return { root, close, reposition: () => place(owner, root, anchor) };
   } catch (error) {
     stopNarrow();
@@ -169,6 +184,7 @@ export function openPanel(owner: Document, options: PanelOptions): Panel {
     } catch {}
     try {
       visual?.removeEventListener('scroll', follow);
+      owner.defaultView?.removeEventListener('resize', follow);
     } catch {}
     try {
       root.remove();
@@ -183,9 +199,45 @@ export function openPanel(owner: Document, options: PanelOptions): Panel {
 
 // 자리 값은 버튼의 부모 좌표로 적어(그래야 툴바가 움직여도 따라간다) 넘침만 뷰포트 좌표로 잰다 — 자리를 뷰포트 좌표로 다시 적으면 부모를 따라다니는 성질이 죽는다. 작은 화면에서는 시트의 !important가 이 값을 덮어 판이 가운데 선다.
 // Position is written in the anchor's parent coordinates (so it keeps following a moving toolbar), while overflow is measured in viewport coordinates — rewriting position itself in viewport coordinates would break the parent-following behavior. On small screens, the stylesheet's !important overrides this inline value to center the panel.
+function promptToolbar(anchor: HTMLElement): HTMLElement | null {
+  return (
+    anchor.closest<HTMLElement>('.nabi-toolbar') ??
+    anchor.closest<HTMLElement>('.nabi-toolbar-row, .nabi-context, .nabi')
+  );
+}
+
 function place(owner: Document, panel: HTMLElement, anchor: HTMLElement): void {
-  const start = anchor.offsetLeft;
-  const head = anchor.offsetTop + anchor.offsetHeight + PANEL_GAP;
+  const view = owner.documentElement;
+  const toolbar = panel.classList.contains('nabi-prompt-wide') ? promptToolbar(anchor)?.getBoundingClientRect() : null;
+  let start = anchor.offsetLeft;
+  const visible = toolbar ? visibleViewportRect(owner) : { top: 0, bottom: view.clientHeight };
+  let head = anchor.offsetTop + anchor.offsetHeight + PANEL_GAP;
+  if (toolbar) {
+    const left = Math.max(PANEL_EDGE, toolbar.left);
+    const right = Math.min(view.clientWidth - PANEL_EDGE, toolbar.right);
+    panel.style.inlineSize = `${Math.max(0, right - left)}px`;
+    const style = owner.defaultView?.getComputedStyle(panel);
+    const padding = style
+      ? [style.paddingTop, style.paddingBottom, style.borderTopWidth, style.borderBottomWidth].reduce(
+          (sum, value) => sum + (parseFloat(value) || 0),
+          0,
+        )
+      : 0;
+    const room = Math.min(
+      visible.bottom - visible.top - 2 * PANEL_EDGE,
+      Math.max(
+        80,
+        visible.bottom - PANEL_EDGE - toolbar.bottom - PANEL_GAP,
+        toolbar.top - PANEL_GAP - visible.top - PANEL_EDGE,
+      ),
+    );
+    panel.style.setProperty('--nabi-prompt-room', `${Math.max(0, room - padding)}px`);
+    panel.style.left = '0px';
+    panel.style.top = '0px';
+    const origin = panel.getBoundingClientRect();
+    start = left - origin.left;
+    head = toolbar.bottom + PANEL_GAP - origin.top;
+  }
   // 물리 속성(left·top)으로 적는다 — 재는 값(offsetLeft·getBoundingClientRect)이 전부 화면의 왼쪽 기준 물리 좌표이기 때문이다. inset-inline-start에 적으면 RTL에서 그것이 오른쪽에서 잰 거리로 읽혀 판이 반대편에 서고, 밀어 넣기(dx)의 부호까지 뒤집힌다.
   // Written as physical properties (left, top) because everything measured (offsetLeft, getBoundingClientRect) is already physical, left-of-screen coordinates. Writing to inset-inline-start instead would read as distance-from-right in RTL, placing the panel on the wrong side and flipping the sign of the edge-shift (dx) too.
   panel.style.left = `${start}px`;
@@ -193,23 +245,22 @@ function place(owner: Document, panel: HTMLElement, anchor: HTMLElement): void {
 
   const box = panel.getBoundingClientRect();
   const seat = anchor.getBoundingClientRect();
-  const view = owner.documentElement;
 
   // 가로로 갇히는 자리는 편집기의 좌우다 — 화면이 아니다. 편집기가 화면보다 좁으면(두 단 레이아웃, 좁은 사이드바) 화면만 보고 민 판이 편집기 밖으로 삐져나간다. 화면과의 교집합을 쓰는 까닭은 편집기가 화면 밖으로 걸쳐 있어도 판은 보이는 데 서야 하기 때문이다.
   // The horizontal band is the editor's own left/right edges, not the screen's. If the editor is narrower than the screen (two-column layout, narrow sidebar), clamping to the screen alone would push the panel outside the editor. Intersecting with the viewport too keeps the panel visible even if the editor extends offscreen.
-  const frame = anchor.closest('.nabi')?.getBoundingClientRect() ?? null;
+  const frame = toolbar ? null : (anchor.closest('.nabi')?.getBoundingClientRect() ?? null);
   const bandStart = frame ? Math.max(frame.left, 0) : 0;
   const bandEnd = frame ? Math.min(frame.right, view.clientWidth) : view.clientWidth;
 
   const { dx, dy } = panelShift({
     left: box.left,
-    top: box.top,
+    top: box.top - visible.top,
     width: box.width,
     height: box.height,
-    anchorTop: seat.top,
+    anchorTop: (toolbar?.top ?? seat.top) - visible.top,
     viewLeft: bandStart,
     viewWidth: Math.max(0, bandEnd - bandStart),
-    viewHeight: view.clientHeight,
+    viewHeight: visible.bottom - visible.top,
   });
   if (dx !== 0) panel.style.left = `${start + dx}px`;
   if (dy !== 0) panel.style.top = `${head + dy}px`;

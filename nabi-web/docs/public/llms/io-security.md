@@ -58,6 +58,8 @@ Valid generated tag names match `[a-z][a-z0-9]*`. Attribute names match `[a-z][a
 
 A custom builder that returns raw unsafe markup defeats these guarantees. Use the context helpers.
 
+Footnote text (`fn` `a.t`) is plain text only. It is written through the shared attribute and text escaping into `data-nabi-fn` and the document-end list, so `<`, `>`, quotes, and `&` never become markup. The viewer bubble and the editing list use `textContent` or escaped builder output, never raw HTML.
+
 ## HTML import
 
 The browser assembly factory wires an internal `DOMParser` adapter automatically. Parser adapters and the low-level parse tree are package-private.
@@ -71,6 +73,8 @@ These tags and their entire subtrees are dropped:
 `script`, `style`, `noscript`, `template`, `head`, `title`, `meta`, `link`, `base`, `object`, `embed`, `applet`, `form`, `input`, `button`, `select`, `option`, `textarea`, `svg`, `canvas`, `audio`, `video`, `source`, `track`, `param`, `frame`, `frameset`, `map`, and `area`.
 
 Dropping the subtree prevents script/style text from reappearing as document text.
+
+The footnote claim reads only the `data-nabi-fn` attribute of a `sup` or `span`, applies the plain-text rules, and ignores the element's children, including the generated `[n]` number. A `section[data-nabi-footnotes]` list is generated output and is dropped, so reloading published HTML restores each footnote once. A plain `<sup>` without that attribute stays an ordinary superscript mark.
 
 ## Paste
 
@@ -127,6 +131,8 @@ Filter IDs must be non-empty and unique. Built-in IDs are reserved. Runtime asse
 | `.html`, `.htm`, `.xhtml`, `.shtml` | No | Yes | Ordinary external HTML |
 | `.md` | Yes | Yes | Deterministic lossy export/import; unsupported registered nodes fall back to HTML |
 | `.markdown` | No | Yes | Read-only Markdown extension alias |
+
+Markdown writes footnotes in GFM syntax: `[^n]` in the body and one `[^n]: text` definition line per footnote after the last block, numbered in document order. Markdown import reads only single-line definitions and the matching `[^label]` references when the `fn` wing is registered. Definition lines inside code fences, references without a definition, and escaped `\[^1\]` text stay literal. Without the `fn` wing, footnote syntax stays literal text.
 
 `readNabiFile()` unwraps an envelope and also accepts a bare JSON value. The later document loader still requires a valid tree array. The current `version` marker is written as package major.minor but is not used to reject files yet.
 

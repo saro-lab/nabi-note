@@ -98,6 +98,9 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
 
     let views: ContextGroupView[] = [];
     let pending = false;
+    // 표면이 부탁한 판 열기(각주 번호 클릭) — 새 선택으로 줄이 지어진 직후에 연다.
+    // A prompt the surface asked for (a footnote number click); opened right after the row is built for the new selection.
+    let wanted: string | null = null;
     // 뜬 것 둘 — 판과 라이트박스. 줄이 다시 지어지면 함께 걷힌다(가리키던 노드가 사라졌을 수 있다).
     // Two things can be open — a panel and a lightbox. Both close when the row rebuilds, since their target node may be gone.
     let panel: Panel | null = null;
@@ -188,6 +191,7 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
       const node = group?.node;
       panel = openPrompt(owner, {
         anchor,
+        ...(control.submitOnOutside ? { submitOnOutside: true } : {}),
         restore: options.surface ?? null,
         translator: t,
         get okLabel() {
@@ -202,6 +206,8 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
           // This is an edit, so the current value must be prefilled — the only difference from inserting.
           ...(field.attr && node ? { value: String(node.a?.[field.attr] ?? '') } : {}),
           ...(field.optional ? { optional: true } : {}),
+          ...(field.kind ? { kind: field.kind } : {}),
+          ...(field.singleLine ? { singleLine: true } : {}),
           // 고치러 여는 판도 같은 문이다 — 넣을 때 못 지나던 값이 고칠 때 지나가면 안 된다.
           // The edit panel shares the same gate — a value insert would reject must not pass on edit either.
           ...(field.validate ? { validate: field.validate } : {}),
@@ -261,6 +267,22 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
       }
       attributes.attribute('hidden', views.length === 0 ? '' : null);
       refreshCompactContext(nabi);
+      const w = wanted;
+      wanted = null;
+      if (w !== null) openWanted(w);
+    };
+
+    const openWanted = (w: string): void => {
+      const view = views.find((candidate) => candidate.w === w);
+      const control = registry
+        .wingOf(w)
+        ?.context?.controls.find(
+          (candidate): candidate is Extract<ContextControl, { kind: 'prompt' }> => candidate.kind === 'prompt',
+        );
+      const button = control
+        ? view?.buttons.find((each) => each.getAttribute('data-name') === control.name)
+        : undefined;
+      if (button && control) ask(button, control);
     };
 
     const refresh = (): void => {
@@ -278,6 +300,13 @@ export function mountContextToolbar(options: ContextToolbarOptions): ContextTool
 
     const stopChange = nabi.onChange(refresh);
     lifecycle.add(stopChange);
+    lifecycle.add(
+      hostOf(nabi).bindContextRequest((w) => {
+        if (unmounted) return;
+        wanted = w;
+        refresh();
+      }),
+    );
     const stopSettle = settle.onSettle(() => {
       if (unmounted) return;
       if (!pending) return;

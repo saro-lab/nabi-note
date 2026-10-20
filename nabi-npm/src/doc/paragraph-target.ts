@@ -19,6 +19,13 @@ export type ParagraphTargets = (
 
 const TARGETS = Symbol('nabi.paragraphTargets');
 type TargetEnv = EditEnv & { readonly [TARGETS]?: readonly ParagraphTargets[] };
+export type ParagraphTargetFilter = (doc: NabiDoc, target: HolderAt, key: string) => boolean;
+const FILTERS = Symbol('nabi.paragraphTargetFilters');
+type FilterEnv = EditEnv & { readonly [FILTERS]?: readonly ParagraphTargetFilter[] };
+
+export function $setParagraphTargetFilters(env: EditEnv, filters: readonly ParagraphTargetFilter[]): void {
+  if (filters.length) Object.defineProperty(env, FILTERS, { value: Object.freeze([...filters]) });
+}
 
 export function $setParagraphTargetResolvers(env: EditEnv, resolvers: readonly ParagraphTargets[]): void {
   if (resolvers.length) Object.defineProperty(env, TARGETS, { value: Object.freeze([...resolvers]) });
@@ -27,6 +34,8 @@ export function $setParagraphTargetResolvers(env: EditEnv, resolvers: readonly P
 export function $copyParagraphTargets(source: EditEnv, target: EditEnv): void {
   const resolvers = (source as TargetEnv)[TARGETS];
   if (resolvers) $setParagraphTargetResolvers(target, resolvers);
+  const filters = (source as FilterEnv)[FILTERS];
+  if (filters) $setParagraphTargetFilters(target, filters);
 }
 
 const ordered = (selection: DocRange): readonly [Position, Position] =>
@@ -74,9 +83,15 @@ export function $defaultParagraphTargets(
 }
 
 export function paragraphTargets(doc: NabiDoc, selection: DocRange, key: string, env: EditEnv): readonly HolderAt[] {
+  let selected: readonly HolderAt[] | undefined;
   for (const resolve of (env as TargetEnv)[TARGETS] ?? []) {
     const targets = resolve(doc, selection, key, env);
-    if (targets !== undefined) return targets;
+    if (targets !== undefined) {
+      selected = targets;
+      break;
+    }
   }
-  return $defaultParagraphTargets(doc, selection, key, env);
+  const targets = selected ?? $defaultParagraphTargets(doc, selection, key, env);
+  const filters = (env as FilterEnv)[FILTERS] ?? [];
+  return filters.length ? targets.filter((target) => filters.every((filter) => filter(doc, target, key))) : targets;
 }

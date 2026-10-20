@@ -1,5 +1,5 @@
-// 등록된 wing만 세우고(html 들여오기와 달리 미등록 문법은 원문 글자 그대로 남긴다), 나머지는 의도적 부분집합(중첩 인용·참조 링크·HTML 블록·엔티티·setext·각주 없음)이다.
-// Only registered wings get built (unlike html import, unmatched syntax stays literal text); everything else is a deliberate subset (no nested quotes, reference links, HTML blocks, entities, setext, footnotes).
+// 등록된 wing만 세우고(html 들여오기와 달리 미등록 문법은 원문 글자 그대로 남긴다), 나머지는 의도적 부분집합(중첩 인용·참조 링크·HTML 블록·엔티티·setext 없음)이다. 각주는 한 줄 정의([^이름]: 내용)만 읽는다.
+// Only registered wings get built (unlike html import, unmatched syntax stays literal text); everything else is a deliberate subset (no nested quotes, reference links, HTML blocks, entities, setext). Footnotes read only one-line definitions ([^label]: text).
 import { BR, P, type AttrValue, type Attrs, type ElementNode, type NabiNode } from '../../schema/index.js';
 import { safeUrl } from '../../html/index.js';
 
@@ -9,6 +9,9 @@ export interface MdEnv {
   // Checks the value too, for value marks — `` `x` `` maps to tf:mono, else stays literal.
   hasValue?(w: string, value: string): boolean;
   readonly allowLocalUrls?: boolean;
+  // 문서에서 미리 걷어 낸 각주 정의(이름 → 내용) — parseMarkdown이 채운다.
+  // Footnote definitions lifted out of the document beforehand (label -> text); filled by parseMarkdown.
+  readonly footnotes?: ReadonlyMap<string, string>;
 }
 
 // 값 없는 attr는 안 싣는다 — html/import와 같은 규칙.
@@ -192,6 +195,17 @@ export function parseInline(text: string, env: MdEnv): NabiNode[] {
         flush();
         out.push(node('img', { src }, []));
         i = link.next;
+        continue;
+      }
+    }
+
+    if (ch === '[' && text[i + 1] === '^' && env.footnotes) {
+      const ref = /^\[\^([^\]\s]+)\]/.exec(text.slice(i));
+      const t = ref ? env.footnotes.get(ref[1] as string) : undefined;
+      if (ref && t !== undefined) {
+        flush();
+        out.push(node('fn', { t }, []));
+        i += ref[0].length;
         continue;
       }
     }
@@ -505,6 +519,43 @@ function parseBlocks(lines: readonly string[], cx: BlockCtx): ElementNode[] {
   return out;
 }
 
+const FOOTNOTE_DEF = /^ {0,3}\[\^([^\]\s]+)\]:[ \t]*(.*)$/;
+const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+
+// 각주 정의 줄을 본문에서 걷어 이름표로 모은다 — 코드 울타리 속 줄은 글자 그대로라 건드리지 않는다. 같은 이름은 처음 것이 이긴다.
+// Lifts footnote definition lines out of the body into a label map; lines inside a code fence are literal and left alone. The first definition of a label wins.
+function liftFootnotes(lines: readonly string[]): { lines: string[]; footnotes: Map<string, string> } {
+  const footnotes = new Map<string, string>();
+  const kept: string[] = [];
+  let fence: string | null = null;
+  for (const line of lines) {
+    const opener = FENCE.exec(line)?.[1];
+    if (fence !== null) {
+      if (opener !== undefined && opener[0] === fence[0] && opener.length >= fence.length) fence = null;
+      kept.push(line);
+      continue;
+    }
+    if (opener !== undefined) {
+      fence = opener;
+      kept.push(line);
+      continue;
+    }
+    const def = FOOTNOTE_DEF.exec(line);
+    if (!def) {
+      kept.push(line);
+      continue;
+    }
+    const label = def[1] as string;
+    const t = unescape(def[2] as string).trim();
+    if (t !== '' && !footnotes.has(label)) footnotes.set(label, t);
+  }
+  return { lines: kept, footnotes };
+}
+
 export function parseMarkdown(text: string, env: MdEnv): readonly ElementNode[] {
-  return parseBlocks(text.replace(/\r\n?/g, '\n').split('\n'), { env, quote: false });
+  const lines = text.replace(/\r\n?/g, '\n').split('\n');
+  if (!env.has('fn')) return parseBlocks(lines, { env, quote: false });
+  const lifted = liftFootnotes(lines);
+  const withNotes: MdEnv = lifted.footnotes.size > 0 ? { ...env, footnotes: lifted.footnotes } : env;
+  return parseBlocks(lifted.lines, { env: withNotes, quote: false });
 }

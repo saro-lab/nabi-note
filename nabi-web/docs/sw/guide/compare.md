@@ -13,9 +13,11 @@ Weka hati mbili zilizohifadhiwa kando kwa kando kuona mabadiliko. Mwonekano unaw
 
 ## Kutumia maudhui ya zamani yaliyochaguliwa
 
+Ulinganisho wa kujitegemea ni wa kusoma tu kwa chaguomsingi na hauonyeshi vitufe vya kutumia **&gt;&gt;**. Unganisha callback ya `onMerge` ili kuonyesha vitufe hivyo.
+
 Kushoto ni hati ya zamani, kulia hati ya sasa. Bonyeza **&gt;&gt;** karibu na badiliko kutumia maudhui ya zamani ya aya au kundi hilo la mistari. Uchaguzi si herufi moja moja. Unaweza pia kurejesha maudhui yaliyofutwa au kuondoa yaliyoongezwa katika hati ya sasa.
 
-Jaribu kurejesha muda wa mkutano au vitu vya kuleta pekee. Fungua **Hati ya sasa iliyosasishwa na callback** kuona matokeo. **Anza upya** hurudisha mfano wa awali.
+Mfano ulio hapa chini ni wa kusoma tu. Angalia jinsi muda wa mkutano na vitu vya kuleta vilivyobadilika. **Anza upya** hurejesha mfano wa asili.
 
 <CompareDemo />
 
@@ -85,7 +87,6 @@ const comparison = mountDiffWing({
   registry,
   surface: content,
   locale: 'sw',
-  merge: true,
 })
 const toolbar = mountToolbar({
   nabi,
@@ -98,6 +99,6 @@ const toolbar = mountToolbar({
 })
 ```
 
-Kwa `merge: true`, maudhui ya zamani yaliyochaguliwa huwekwa kwenye kihariri. Kitendo kinaweza kutenguliwa, msingi unabaki. Kihariri cha asili kikibadilika mwonekano ukiwa wazi, ulinganisho huhesabiwa upya. Bila `merge`, hubaki wa kusoma tu.
+`merge` ni `true` kwa chaguomsingi, kwa hiyo maudhui ya awali yaliyochaguliwa yanaweza kutumika kwenye kihariri. Mabadiliko yanaweza kutenguliwa na hati ya msingi huhifadhiwa. Kihariri cha asili kikibadilika wakati ulinganisho uko wazi, ulinganisho huhesabiwa upya. Weka `merge: false` kwa ulinganisho wa kusoma tu.
 
 Ita `toolbar.unmount()` na `comparison.unmount()` unapoondoa mwonekano. Kujumuisha toleo la mwanzo wa uhariri na kuunganisha pande zote kiotomatiki, tumia [Kuunganisha](./merge).

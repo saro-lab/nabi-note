@@ -50,7 +50,13 @@ assert.equal(button.getAttribute('title'), '', 'native title is suppressed while
 assert.equal(button.getAttribute('aria-describedby'), `existing ${visible.id}`);
 assert.equal(visible.style.getPropertyValue('--nabi-fg'), '#123456');
 assert.equal(visible.style.getPropertyValue('--nabi-bg'), '#abcdef');
-assert.equal(visible.style.fontFamily, 'serif');
+assert.equal(visible.style.fontFamily, 'sans-serif');
+root.style.setProperty('--nabi-font-fallback', 'Arial, sans-serif');
+mounted.refresh();
+assert.equal(visible.style.fontFamily, 'Arial, sans-serif');
+root.style.setProperty('--nabi-font', 'Verdana, sans-serif');
+mounted.refresh();
+assert.equal(visible.style.fontFamily, 'Verdana, sans-serif');
 assert.equal(visible.style.direction, 'rtl');
 assert.equal(visible.style.zIndex, '901');
 assert.equal(visible.style.top, '80px', 'a bottom-edge button flips the tooltip above itself');

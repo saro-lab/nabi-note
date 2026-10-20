@@ -41,6 +41,7 @@ const EXPECTED_WINGS = [
   'tc',
   'hl',
   'a',
+  'fn',
   'h',
   'align',
   'dc',
@@ -180,7 +181,7 @@ if (
   defaultWings.length !== EXPECTED_WINGS.length
 )
   failures.push('defaultWings-coverage');
-if (typedDeclarations !== 71) failures.push(`source-LocaleText-coverage:${typedDeclarations}`);
+if (typedDeclarations !== 76) failures.push(`source-LocaleText-coverage:${typedDeclarations}`);
 for (const key of CORE_KEYS) if (!found.has(`DICTIONARY.${key}`)) failures.push(`core-key:${key}`);
 if (missing.length || invalid.length || fake.length || sourceFallback.length) {
   failures.push(

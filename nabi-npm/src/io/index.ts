@@ -4,6 +4,8 @@ export type {
   ClipFile,
   DocSource,
   IoFilter,
+  MdAppendices,
+  MdAppendix,
   MdBuilder,
   MdBuilders,
   MdContext,

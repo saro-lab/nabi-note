@@ -5,6 +5,7 @@ import {
   P,
   cocoon,
   isElement,
+  isInlineTerminal,
   isWrapper,
   runsOf,
   type ElementNode,
@@ -54,6 +55,7 @@ function pressToInline(fragment: readonly ElementNode[], env: SchemaEnv): NabiNo
       }
       if (!isElement(node)) continue;
       if (node.w === BR) inline.push({ w: BR, ch: [] });
+      else if (isInlineTerminal(node.w, env)) inline.push(node);
       else if (
         !env.lumps.has(node.w) &&
         !env.blockHolders.has(node.w) &&
@@ -74,6 +76,7 @@ function pressToInline(fragment: readonly ElementNode[], env: SchemaEnv): NabiNo
     }
     if (env.inlineHolders.has(node.w)) return [inlineOf(node.ch)];
     if (env.blockHolders.has(node.w)) return node.ch.flatMap(linesOf);
+    if (isInlineTerminal(node.w, env)) return [[node]];
     if (env.lumps.has(node.w) || node.ch.length === 0) return [];
     return [[node]];
   };

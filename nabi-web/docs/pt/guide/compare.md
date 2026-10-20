@@ -13,9 +13,11 @@ Compare dois documentos salvos lado a lado para ver as alterações. A comparaç
 
 ## Aplicar conteúdo anterior selecionado
 
+Comparações independentes são somente leitura por padrão e não mostram botões **&gt;&gt;** para aplicar alterações. Conecte um callback `onMerge` para mostrar esses botões.
+
 À esquerda está o documento anterior; à direita, o atual. Clique em **&gt;&gt;** junto de uma alteração para aplicar o conteúdo anterior daquele parágrafo ou grupo de linhas. A seleção não é caractere por caractere. Também pode restaurar conteúdo excluído ou remover conteúdo recém-adicionado.
 
-Experimente restaurar apenas o horário ou os itens a levar. Abra **Documento atual atualizado pelo callback** para ver o resultado. **Recomeçar** restaura o exemplo original.
+O exemplo abaixo é somente leitura. Confira as mudanças no horário do encontro e nos itens a trazer. **Recomeçar** restaura o exemplo original.
 
 <CompareDemo />
 
@@ -85,7 +87,6 @@ const comparison = mountDiffWing({
   registry,
   surface: content,
   locale: 'pt',
-  merge: true,
 })
 const toolbar = mountToolbar({
   nabi,
@@ -98,6 +99,6 @@ const toolbar = mountToolbar({
 })
 ```
 
-Com `merge: true`, o conteúdo anterior selecionado é aplicado ao editor. É possível desfazer, mantendo a base. Alterações no editor original com a comparação aberta provocam novo cálculo. Omitir `merge` mantém a comparação somente leitura.
+`merge` é `true` por padrão, permitindo aplicar o conteúdo anterior selecionado ao editor. É possível desfazer a alteração, mantendo a base. Alterações no editor original com a comparação aberta provocam novo cálculo. Use `merge: false` para uma comparação somente leitura.
 
 Ao remover a tela, chame `toolbar.unmount()` e `comparison.unmount()`. Para incluir a versão inicial da edição e combinar automaticamente os dois lados, use [Mesclagem](./merge).

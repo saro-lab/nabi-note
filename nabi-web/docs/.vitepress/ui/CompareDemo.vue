@@ -5,7 +5,7 @@
       <button class="chip" type="button" :disabled="!ready" @click="reset">{{ copy.reset }}</button>
     </div>
     <div ref="root" class="demo-host nabi compare-host"></div>
-    <details>
+    <details v-if="merge">
       <summary>{{ copy.compareResult }}</summary>
       <div class="nabi-content demo-result" v-html="resultHtml"></div>
     </details>
@@ -18,9 +18,10 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useData } from 'vitepress'
 import { comparisonCopy, demoDocument } from '../src/compare-merge.ts'
 import { localeFromPath } from '../src/langs.ts'
-import type { DiffMount } from 'nabi-note/diff'
+import type { DiffMergeProposal, DiffMount } from 'nabi-note/diff'
 import 'nabi-note/nabi.css'
 
+const props = defineProps<{ merge?: boolean }>()
 const { lang } = useData()
 const locale = computed(() => localeFromPath(`/${lang.value}/`))
 const copy = computed(() => comparisonCopy[locale.value])
@@ -49,7 +50,7 @@ onMounted(async () => {
       const before = demoDocument(text.compareTitle, [text.beforeTime, text.place, text.cup])
       const after = demoDocument(text.compareTitle, [text.afterTime, text.place, text.laptop, text.free])
       let accepted = 0
-      message.value = text.compareHint
+      message.value = props.merge ? text.compareHint : text.compareLabel
       resultHtml.value = after
       mounted = diff.mountDiff({
         root: root.value!,
@@ -57,11 +58,13 @@ onMounted(async () => {
         after,
         registry,
         locale: locale.value,
-        onMerge(proposal) {
-          if (proposal.signal.aborted || !mounted?.update(proposal.before, proposal.result, proposal.revision)) return
-          resultHtml.value = core.renderStoredHtml(proposal.result, registry) ?? ''
-          message.value = text.applied.replace('{count}', String(++accepted))
-        },
+        ...(props.merge ? {
+          onMerge(proposal: DiffMergeProposal) {
+            if (proposal.signal.aborted || !mounted?.update(proposal.before, proposal.result, proposal.revision)) return
+            resultHtml.value = core.renderStoredHtml(proposal.result, registry) ?? ''
+            message.value = text.applied.replace('{count}', String(++accepted))
+          },
+        } : {}),
         onError() {
           error.value = copy.value.error
         },
@@ -74,7 +77,7 @@ onMounted(async () => {
   }
 })
 
-watch(locale, () => start?.())
+watch([locale, () => props.merge], () => start?.())
 
 onBeforeUnmount(() => {
   disposed = true

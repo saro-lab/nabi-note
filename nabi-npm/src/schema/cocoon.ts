@@ -8,6 +8,7 @@ import {
   $hasClosedBuiltinAttrs,
   $isKnownType,
   $usesClosedBuiltinAttrs,
+  isInlineTerminal,
   isLump,
   refusesAlign,
   type SchemaEnv,
@@ -41,20 +42,21 @@ const BUILTIN_ATTRS: Readonly<Record<string, ReadonlySet<string>>> = {
   summary: new Set(),
   code: new Set(['lang']),
   hr: new Set(),
-  table: new Set(['sort']),
+  table: new Set(['sort', 'full']),
   tr: new Set(),
   td: new Set(['colspan', 'rowspan', 'th', 'bg']),
   img: new Set(['src', 'w']),
   youtube: new Set(['v', 'w']),
+  fn: new Set(['t']),
 };
 
 const BUILTIN_BOOL_ATTRS: Readonly<Record<string, ReadonlySet<string>>> = {
   tli: new Set(['ck']),
   details: new Set(['o']),
-  table: new Set(['sort']),
+  table: new Set(['sort', 'full']),
   td: new Set(['th']),
 };
-const BUILTIN_BOOL_KEYS: ReadonlySet<string> = new Set(['ck', 'o', 'sort', 'th']);
+const BUILTIN_BOOL_KEYS: ReadonlySet<string> = new Set(['ck', 'o', 'sort', 'full', 'th']);
 
 export function $hasBuiltinAttrSchema(w: string): boolean {
   return Object.prototype.hasOwnProperty.call(BUILTIN_ATTRS, w);
@@ -83,6 +85,7 @@ function paragraphAttrs(a: Attrs | undefined, wrapper: boolean, align = true): A
       out['h'] = value;
     if (key === 'dc' && value === 1) out['dc'] = 1;
   }
+  if (out['h'] !== undefined) delete out['a'];
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
@@ -145,11 +148,12 @@ function repairResult(
     throw new TypeError(`invalid repair result for ${original.w}`);
   }
   const attrs = wingAttrs(copied.w, copied.a, env);
-  const children = env.voids.has(copied.w)
-    ? []
-    : env.blockHolders.has(copied.w)
-      ? blockChildren(copied.ch, env)
-      : inlineChildren(copied.ch, env);
+  const children =
+    env.voids.has(copied.w) || isInlineTerminal(copied.w, env)
+      ? []
+      : env.blockHolders.has(copied.w)
+        ? blockChildren(copied.ch, env)
+        : inlineChildren(copied.ch, env);
   return rebuild(copied, copied.w, attrs, children);
 }
 
@@ -202,6 +206,15 @@ function inlineChildren(nodes: readonly NabiNode[], env: SchemaEnv): NabiNode[] 
     // 인라인 자리의 물건 — 설 수 없는 자리라 걷는다.
     // A lump in an inline slot — it can't stand there, so it's dropped.
     if (env.lumps.has(node.w)) continue;
+    // 인라인 단말은 br처럼 속을 비워 세운다 — repair가 거절하면 남길 속이 없으니 통째로 걷는다.
+    // An inline terminal stands with its content emptied like br; if repair rejects it there is nothing to keep, so it goes entirely.
+    if (isInlineTerminal(node.w, env)) {
+      const fixed = rebuild(node, node.w, wingAttrs(node.w, node.a, env), node.ch.length === 0 ? node.ch : []);
+      const repair = repairOf(env, fixed.w);
+      const kept = repair ? runRepair(repair, fixed, env) : fixed;
+      if (kept !== null) push(kept);
+      continue;
+    }
     if (node.w === P) {
       // 문단 속 문단 — 그 모양은 불가능하므로 껍데기를 벗기고 속만 이 자리로 푼다.
       // A paragraph inside a paragraph is an impossible shape, so its wrapper is dropped and only its content unfolds here.

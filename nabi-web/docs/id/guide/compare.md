@@ -13,9 +13,11 @@ Bandingkan dua dokumen tersimpan untuk melihat perubahan. Tampilan dapat dibuka 
 
 ## Menerapkan konten lama yang dipilih
 
+Perbandingan mandiri secara bawaan hanya dapat dibaca dan tidak menampilkan tombol penerapan **&gt;&gt;**. Hubungkan callback `onMerge` untuk menampilkan tombol tersebut.
+
 Kiri adalah dokumen lama, kanan dokumen saat ini. Klik **&gt;&gt;** di samping perubahan untuk menerapkan konten lama paragraf atau kelompok baris tersebut. Pemilihan bukan per karakter. Konten yang dihapus dapat dipulihkan, dan konten baru dapat dibuang.
 
-Coba pulihkan hanya waktu pertemuan atau barang bawaan. Buka **Dokumen saat ini yang diperbarui callback** untuk melihat hasil. **Mulai ulang** mengembalikan contoh awal.
+Contoh di bawah hanya dapat dibaca. Periksa perubahan waktu pertemuan dan barang yang perlu dibawa. **Mulai ulang** mengembalikan contoh semula.
 
 <CompareDemo />
 
@@ -85,7 +87,6 @@ const comparison = mountDiffWing({
   registry,
   surface: content,
   locale: 'id',
-  merge: true,
 })
 const toolbar = mountToolbar({
   nabi,
@@ -98,6 +99,6 @@ const toolbar = mountToolbar({
 })
 ```
 
-Dengan `merge: true`, konten lama terpilih diterapkan ke editor. Tindakan dapat diurungkan dan acuan tetap. Perubahan editor asal selama tampilan terbuka menghitung ulang perbandingan. Tanpa `merge`, tampilan tetap hanya baca.
+Nilai bawaan `merge` adalah `true`, sehingga konten lama terpilih dapat diterapkan ke editor. Tindakan dapat diurungkan dan acuan tetap dipertahankan. Perubahan editor asal selama tampilan terbuka menghitung ulang perbandingan. Gunakan `merge: false` untuk perbandingan hanya baca.
 
 Panggil `toolbar.unmount()` dan `comparison.unmount()` saat melepas tampilan. Untuk menyertakan versi awal pengeditan dan otomatis menggabungkan kedua sisi, gunakan [Penggabungan](./merge).

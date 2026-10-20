@@ -13,9 +13,11 @@ import CompareDemo from '../../.vitepress/ui/CompareDemo.vue'
 
 ## Chọn và áp dụng nội dung cũ
 
+Giao diện so sánh độc lập mặc định chỉ đọc và không hiển thị nút áp dụng **&gt;&gt;**. Kết nối callback `onMerge` để hiển thị các nút này.
+
 Bên trái là tài liệu cũ, bên phải là tài liệu hiện tại. Nhấn **&gt;&gt;** cạnh thay đổi để áp dụng nội dung cũ của đoạn hoặc nhóm dòng đó. Không chọn theo từng ký tự. Bạn cũng có thể khôi phục nội dung đã xóa hoặc bỏ nội dung mới thêm.
 
-Thử khôi phục riêng giờ họp hoặc đồ cần mang theo. Mở **Tài liệu hiện tại được callback cập nhật** để xem kết quả. **Bắt đầu lại** khôi phục ví dụ ban đầu.
+Ví dụ bên dưới chỉ đọc. Hãy xem giờ gặp và các vật dụng cần mang theo đã thay đổi thế nào. **Bắt đầu lại** khôi phục ví dụ ban đầu.
 
 <CompareDemo />
 
@@ -85,7 +87,6 @@ const comparison = mountDiffWing({
   registry,
   surface: content,
   locale: 'vi',
-  merge: true,
 })
 const toolbar = mountToolbar({
   nabi,
@@ -98,6 +99,6 @@ const toolbar = mountToolbar({
 })
 ```
 
-Với `merge: true`, nội dung cũ đã chọn được áp dụng vào trình soạn thảo. Có thể hoàn tác và mốc vẫn giữ nguyên. Nếu trình soạn thảo gốc thay đổi khi giao diện đang mở, so sánh được tính lại. Bỏ `merge` để giữ chế độ chỉ đọc.
+`merge` mặc định là `true`, nên có thể áp dụng nội dung cũ đã chọn vào trình soạn thảo. Có thể hoàn tác thay đổi và mốc vẫn được giữ nguyên. Nếu trình soạn thảo gốc thay đổi khi giao diện đang mở, so sánh được tính lại. Đặt `merge: false` để so sánh ở chế độ chỉ đọc.
 
 Gọi `toolbar.unmount()` và `comparison.unmount()` khi gỡ giao diện. Để thêm phiên bản lúc bắt đầu sửa và tự gộp thay đổi hai bên, dùng [Gộp](./merge).

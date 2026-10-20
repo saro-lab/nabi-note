@@ -153,6 +153,12 @@ function attrCommand(key: string, parse: (raw: unknown) => AttrValue | null): Co
 // 셋이 시트 하나를 나눠 쓴다 — 옛 판은 wing마다 시트를 셌지만 이제 글자가 키라 한 번만 싣는다.
 // The three wings share one stylesheet now, keyed by tag instead of once per wing as before.
 const PARAGRAPH_CSS = `
+.nabi-content { counter-reset: nabi-h1; }
+.nabi-content h1:where(:not(:empty):not(:has(> br:only-child)):not([data-nabi-heading-empty]):not(details *, [hidden], [hidden] *)) { counter-increment: nabi-h1; }
+.nabi-content h1:where(:not(:empty):not(:has(> br:only-child)):not([data-nabi-heading-empty]):not(details *, [hidden], [hidden] *))::before { content: counter(nabi-h1) ". "; font-variant-numeric: tabular-nums; color: var(--nabi-muted); }
+.nabi-content h1[data-nabi-outline-number]::before { content: attr(data-nabi-outline-number) ". "; }
+.nabi-content h1[data-nabi-outline-number=""] { counter-increment: none; }
+.nabi-content h1[data-nabi-outline-number=""]::before { content: none; }
 .nabi-content h1 { font-size: 1.9em; }
 .nabi-content h2 { font-size: 1.6em; }
 .nabi-content h3 { font-size: 1.35em; }
@@ -160,7 +166,7 @@ const PARAGRAPH_CSS = `
 .nabi-content h5 { font-size: 1.05em; }
 .nabi-content h6 { font-size:.95em; color: var(--nabi-muted); }
 .nabi-content h1,.nabi-content h2,.nabi-content h3,
-.nabi-content h4,.nabi-content h5,.nabi-content h6 { font-weight: 650; line-height: 1.3; margin-block: 0; padding-block: 0 .4em; }
+.nabi-content h4,.nabi-content h5,.nabi-content h6 { font-weight: 650; line-height: 1.3; text-align: start; margin-block: 0; padding-block: 0 .4em; }
 /* 제목 앞 간격은 제목이 아니라 앞 블록의 padding-block-end로 준다 — 제목 쪽에 주면 그 띠가 제목의
    몸이 되어, 브라우저가 줄 시작을 그 위의 점으로 세는 바람에 오른쪽을 눌러도 캐럿이 왼쪽에 선다.
    :has 미지원 브라우저에서는 이 줄만 안 걸려 간격이 좁아질 뿐 깨지지는 않는다. */

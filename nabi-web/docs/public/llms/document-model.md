@@ -38,13 +38,17 @@ Every load and every successful command passes through the same normalization la
 - A paragraph mixing text and block objects is split.
 - Adjacent text nodes merge; empty strings disappear.
 - Void objects lose children.
+- Inline terminals (the official `fn` footnote) stay between characters, lose children, and run their wing repair; a rejected one is removed. At the root they are wrapped in a paragraph like other inline content.
 - Wing repair hooks validate wing-specific values and structures.
 - Unregistered wrappers are removed, their children are normalized in place, and their attributes are discarded.
 - A text paragraph keeps only `h` 1..6, `a` `l|c|r`, and `dc` 1.
+- A valid heading removes `a`; headings never retain paragraph alignment.
 - An object wrapper paragraph keeps only alignment, unless the object declares `noAlign`.
 - Boolean attributes declared by a wing keep numeric `1` only.
 - Non-finite numbers and `_`-prefixed attributes are removed.
 - Internal IDs are unique and deterministic from document paths when no valid ID is preserved.
+
+Tables can carry `a.full: 1` to fill at least 100% of their containing width; absent means content-based sizing. The flag preserves wrapper alignment and sorting. See `wings.md#table-full-width`.
 
 Table cells can carry `a.bg` with `yellow|green|cyan|pink|purple|orange`; absent means the default cell/header background. Invalid names are removed. This is a cell attribute, so text-format clearing and content deletion preserve it. See `wings.md` for `setCellColor` and selection rules.
 
@@ -66,7 +70,7 @@ interface Selection {
 }
 ```
 
-A path descends by child indices and must end at a caret holder: a paragraph or an inline holder such as a code block or details summary. The offset is a UTF-16 text/unit offset in that holder. Text offsets are normalized to Unicode grapheme boundaries with `Intl.Segmenter` and a built-in fallback. A `br` or object terminal occupies one unit. An object wrapper paragraph has only offsets 0 and 1, before and after the object.
+A path descends by child indices and must end at a caret holder: a paragraph or an inline holder such as a code block or details summary. The offset is a UTF-16 text/unit offset in that holder. Text offsets are normalized to Unicode grapheme boundaries with `Intl.Segmenter` and a built-in fallback. A `br`, an object terminal, or an inline terminal such as a footnote occupies one unit. An object wrapper paragraph has only offsets 0 and 1, before and after the object.
 
 A selection may be backward. A collapsed selection has equal anchor and focus. Object selection is the ordinary 0..1 range over one wrapper paragraph; it is not separate state.
 
@@ -104,8 +108,8 @@ HTML import is described in `io-security.md`.
 
 ## Published and editor HTML
 
-- `getHtml()` creates published/storage HTML.
-- `getEditorHtml()` creates editing HTML with deterministic `data-key`, content seals, fillers, and edit-only markup.
+- `getHtml()` creates published/storage HTML. When the document has footnotes, it numbers them in tree order and appends one `section[data-nabi-footnotes]` list after the last block. Rendering a single block (diff, merge, Markdown fallback) never appends that list.
+- `getEditorHtml()` creates editing HTML with deterministic `data-key`, content seals, fillers, and edit-only markup. Footnote markers there are sealed, empty, and unnumbered; the editing surface numbers them and draws the footnote list outside `contenteditable`.
 - `renderStoredHtml(json, registry)` and `renderStoredEditorHtml(json, registry)` are the detached equivalents.
 - Leading paragraph spaces (including inside inline formatting), multiple spaces, and trailing spaces are protected in HTML output so browser whitespace collapse does not change visible content.
 - Copy/cut HTML also protects spaces at the selected fragment's edges, even when the selection splits a run of spaces. Whitespace-only fragments containing protected spaces survive HTML paste. Storage reloads and preview retain the visible spaces.

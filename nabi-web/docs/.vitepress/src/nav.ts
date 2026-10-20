@@ -45,6 +45,7 @@ export const NAV: readonly NavGroup[] = [
           { path: '/wing/inline/superscript', key: 'menu_inline_superscript' },
           { path: '/wing/inline/subscript', key: 'menu_inline_subscript' },
           { path: '/wing/inline/link', key: 'menu_inline_link' },
+          { path: '/wing/inline/footnote', key: 'menu_inline_footnote' },
           { path: '/wing/inline/highlight', key: 'menu_inline_highlight' },
           { path: '/wing/inline/text-color', key: 'menu_inline_text_color' },
         ],

@@ -8,6 +8,10 @@ import { language, name, span, text, width } from './values.js';
 // A screen-only filler that doesn't count; caret mapping (surface/map.ts) sees this marker and skips it.
 export const FILLER_ATTR = 'data-nabi-filler';
 
+// 편집기 화면의 인라인 단말 표식 — 속 글자와 상관없이 캐럿 한 칸으로 센다(surface/map.ts).
+// Marks an inline terminal on the editor screen; it counts as one caret unit whatever its content (surface/map.ts).
+export const TERMINAL_ATTR = 'data-nabi-terminal';
+
 // --- 마크 ------------------------------------------------------------------------------------
 
 function mark(tag: string): HtmlBuilder {

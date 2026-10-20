@@ -20,6 +20,7 @@ import {
 import {
   renderEditorHtml,
   renderHtml,
+  type HtmlAppendices,
   type HtmlBuilders,
   type HtmlOptions,
   type ImportOptions,
@@ -81,6 +82,7 @@ export interface NabiCoreOptions extends NabiOptions {
   readonly env: EditEnv;
   readonly commands?: Readonly<Record<string, Command>>;
   readonly builders?: HtmlBuilders;
+  readonly appendices?: HtmlAppendices;
   readonly parseHtml?: (html: string) => readonly ParseNode[];
   readonly claim?: ImportOptions['claim'];
 }
@@ -122,6 +124,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
   const htmlOptions: HtmlOptions = {
     env,
     ...(options.builders ? { builders: options.builders } : {}),
+    ...(options.appendices ? { appendices: options.appendices } : {}),
     ...(options.allowLocalUrls ? { allowLocalUrls: true } : {}),
   };
 
@@ -175,6 +178,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
   const localeSinks: { readonly value: LocaleInput }[] = [];
   const toastSinks: { readonly value: Toast }[] = [];
   const chooseSinks: { readonly value: Choose }[] = [];
+  const contextSinks: { readonly value: (w: string) => void }[] = [];
   const bindSink = <T>(sinks: { readonly value: T }[], value: T): (() => void) => {
     const entry = { value };
     sinks.push(entry);
@@ -682,6 +686,12 @@ export function createNabi(options: NabiCoreOptions): Nabi {
     },
     bindChoose(sink) {
       return bindSink(chooseSinks, sink);
+    },
+    requestContext(w) {
+      contextSinks.at(-1)?.value(w);
+    },
+    bindContextRequest(sink) {
+      return bindSink(contextSinks, sink);
     },
     toastMs: options.toastMs ?? TOAST_MS,
     toastMax: options.toastMax ?? TOAST_MAX,

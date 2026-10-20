@@ -29,6 +29,12 @@ const detachStyles = injectSheets(document, sheets);
 
 Do not use runtime injection in SSR. Link or bundle `nabi-note/nabi.css`.
 
+## Typeface defaults
+
+`--nabi-typeface-base` selects the editor body typeface. UI text (toolbars, tooltips, panels and their inputs, dialogs, notices, and comparison/merge controls) uses `var(--nabi-font, var(--nabi-font-fallback))` independently of that body setting. Keep `--nabi-font` as the host's sans stack; use `--nabi-typeface-base` to choose a different body default. Typeface picker samples retain the face they represent.
+
+Tables use the same sans stack as their default in editing and published `.nabi-content`, even when surrounding text is serif, monospace, or cursive. This is an inherited table default, not a forced font on every descendant: explicit `tf` marks inside cells still apply, and clearing them returns to sans. Code blocks retain their monospace formatting. Do not insert synthetic typeface marks into stored JSON or HTML to implement this default.
+
 ## Table cell colors
 
 Cell backgrounds use dedicated `--nabi-cell-yellow`, `--nabi-cell-green`, `--nabi-cell-cyan`, `--nabi-cell-pink`, `--nabi-cell-purple`, and `--nabi-cell-orange` tokens. The property swatches and document cells read the same tokens. Light mode uses the corresponding highlight RGB values at 14% opacity. Dark mode uses separate, lighter, less saturated tints at 20% opacity, preserving the same color names and stored values. The explicit light override restores the light values inside a dark host.
@@ -275,7 +281,18 @@ A read-only body needs `.nabi-content` plus CSS:
 <article class="nabi-content">...</article>
 ```
 
-CSS handles layout, check states, drop caps, code colors, tables, images, and attachments. JavaScript is optional. Use `nabi-note/viewer` only for table sorting and code token painting.
+CSS handles layout, check states, drop caps, code colors, tables, images, attachments, and footnotes. JavaScript is optional. Use `nabi-note/viewer` only for table sorting, code token painting, and footnote bubbles.
+
+## Footnotes
+
+Footnote formatting is fixed and is not a document or toolbar option:
+
+- list and bubble text: the base sans stack `var(--nabi-font, var(--nabi-font-fallback))`, weight 400, normal style, at `.875em` of the body font size (one step below the default, matching the `fs` `sm` step);
+- body numbers: the same sans stack, superscript at `.75em` of the surrounding text, accent color, unaffected by typeface, bold, or italic marks.
+
+The size follows the body font size the host sets on `.nabi-content`. The published list is a direct child of `.nabi-content`; the editing list is a separate `.nabi-content.nabi-footnote-area` element placed directly after the surface root, so host font-size rules for `.nabi-content` apply to both. The bubble is appended inside the nearest `.nabi-content`. Editing input prompts keep the regular input size, including the 16px touch size, regardless of footnote formatting.
+
+Stable hooks: `[data-nabi-fn]` (body number), `[data-nabi-footnotes]` (list section), `[data-nabi-fn-n]` (list item), `[data-nabi-fn-num]` (list number), `.nabi-footnote-area` (editing list), and `.nabi-fn-tip` (viewer bubble). In fullscreen editing, the list area follows the paper width and background. Do not change `display` or generated content of the editing marker; its number comes from `::before` and it must remain a single sealed unit.
 
 ## Safe overrides
 
@@ -302,3 +319,13 @@ Those rules can change caret geometry or DOM-to-tree mapping, not just appearanc
 ## Icon themes
 
 Use `--nabi-icon-<key>: url("/icons/name.svg")` for SVG, WebP, or PNG replacements. Default icons are external files in `dist/icons/`; copy this directory alongside a manually hosted `nabi.css`. Runtime CSS injection resolves assets from the browser module or script. Use the published CSS for SSR, not server `file:` URLs. See `icons.md` for all control families, dark variants, open-panel inheritance, and visibility options.
+
+## Heading numbers and outline panel
+
+Nonempty H1 headings inside `.nabi-content` display sequential `1.`, `2.` prefixes in editor, published HTML, and preview. H2 is unnumbered. The heading wing CSS supplies counters even without JavaScript; separate content roots reset counters. Empty generated H1 elements have `data-nabi-heading-empty` so whitespace-only headings do not consume a number. Details descendants do not participate. The prefix is CSS content, never editable text or a stored JSON number. Diff panes number their complete document before folding, so hidden unchanged sections do not renumber visible headings or become content differences.
+
+An attached outline projects `data-nabi-outline-number` onto H1 DOM elements to use the same visible-heading sequence as its items. These attributes are temporary and removed/restored on unmount. Nested `.nabi-content` and `[data-nabi-outline-root]` elements define independent boundaries. Avoid a second host H1 counter when adopting this behavior.
+
+The outline panel uses the UI sans stack independently of the article typeface. Style `.nabi-outline`, `.nabi-outline-list`, `.nabi-outline-item`, `.nabi-outline-number`, and `.nabi-outline-edge`. H2 items have `data-level="2"`; the current item has `aria-current="location"`. The panel uses `data-state="opening|open|closing|closed"`, transitions through closing before hiding, and honors reduced motion. No heading or close button is inserted.
+
+Available CSS properties are `--nabi-outline-width` (20rem), `--nabi-outline-height` (26rem), `--nabi-outline-radius` (.75rem), `--nabi-outline-z` (1100), `--nabi-outline-duration` (150ms), `--nabi-outline-enter`, and `--nabi-outline-exit` (both translateY(.5rem)). Theme colors, fonts, and shadow use the normal `--nabi-*` properties copied from the document root. `--nabi-outline-available-height` is calculated from the visual viewport and anchor. For host-controlled position, set `placement: 'css'` and style the panel's position yourself; automatic placement otherwise clamps it within the viewport. Put a custom container outside transformed/clipped ancestors when using fixed coordinates.

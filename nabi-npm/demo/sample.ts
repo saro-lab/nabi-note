@@ -12,7 +12,7 @@
 // 말은 영어다. 데모의 표시 언어는 칩으로 바꿀 수 있지만 **문서 자체**는 한 벌이라, 가장 많은
 // 사람이 읽는 말로 둔다. 언어 칩이 바꾸는 것은 툴바·상황 줄이지 이 글이 아니다.
 export const SAMPLE: unknown[] = [
-  { w: 'p', a: { h: 1 }, ch: ['NABI NOTE'] },
+  { w: 'p', ch: [{ w: 'fs', a: { v: 'xl' }, ch: [{ w: 'b', ch: ['NABI NOTE'] }] }] },
 
   // 마크 아홉을 한 줄에 — b· i· u· s· sup· sub· hl· tc· a
   {

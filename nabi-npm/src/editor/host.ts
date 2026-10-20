@@ -21,6 +21,10 @@ export interface NabiHost {
   readonly toast: Toast;
   bindToast(sink: Toast): () => void;
   bindChoose(sink: Choose): () => void;
+  // 표면 attach가 상황 줄에 "이 wing의 입력 판을 열어 달라"고 부탁하는 문 — 표면은 ui를 모르므로 ui가 받을 자리를 건다.
+  // How a surface attach asks the context row to open this wing's prompt; the surface doesn't know ui, so ui binds the receiving end.
+  requestContext(w: string): void;
+  bindContextRequest(sink: (w: string) => void): () => void;
   readonly toastMs: number;
   readonly toastMax: number;
   bindLocale(locale: LocaleInput): () => void;

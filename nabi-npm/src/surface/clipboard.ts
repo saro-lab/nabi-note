@@ -65,7 +65,14 @@ export function clipboardBodyOf(doc: NabiDoc, selection: Selection, env: EditEnv
 
 // 화면 전용 표식(contenteditable·draggable·data-nabi-picked·data-nabi-dropcap-letter)은 밖으로 나가는 글자에서 걷는다 — data-key는 남아도 무해하다(들여오기가 모르는 속성은 조용히 흘린다)
 // Screen-only markers (contenteditable, draggable, data-nabi-picked, data-nabi-dropcap-letter) are stripped from outgoing text; data-key is harmless to leave (import silently drops attributes it doesn't recognize)
-const DISPLAY_ONLY = ['contenteditable', 'draggable', 'data-nabi-picked', 'data-nabi-dropcap-letter'];
+const DISPLAY_ONLY = [
+  'contenteditable',
+  'draggable',
+  'data-nabi-picked',
+  'data-nabi-dropcap-letter',
+  'data-nabi-terminal',
+  'data-nabi-n',
+];
 const DISPLAY_ATTR = new RegExp(`\\s+(?:${DISPLAY_ONLY.join('|')})(?:\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]*))?`, 'gi');
 
 // 태그 하나를 매치 — 따옴표 안 `>`도 삼킨다. 우리가 조립한 HTML에만 적용하므로 이 정도로 충분하다(외부 HTML 판정에는 안 쓴다)

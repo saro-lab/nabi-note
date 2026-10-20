@@ -1,6 +1,7 @@
 // 그릇은 parts 없는 컨테이너(인용·접기·코드)다 — 첫 엔터가 남긴 흔적(마지막 빈 문단·끝 라인) 위에서 빠르게 한 번 더 치면(이중 엔터, 048) 그 흔적을 걷고 래퍼문단 뒤 새 빈 문단으로 나간다
 // A vessel is a part-less container (quote/details/code); a quick second Enter (double-tap, 048) on the trace of the first (a trailing empty paragraph or line) removes that trace and exits to a fresh empty paragraph after the wrapper
 import {
+  BR,
   P,
   isElement,
   isWrapper,
@@ -47,7 +48,9 @@ export function canEscape(doc: NabiDoc, focus: Position, vessel: VesselAt, env: 
     const terminal = terminalOf(env);
     const runs = runsOf(node, terminal);
     const last = runs[runs.length - 1];
-    return last !== undefined && last.kind === 'node' && focus.offset === lengthOf(node, terminal);
+    return (
+      last !== undefined && last.kind === 'node' && last.node.w === BR && focus.offset === lengthOf(node, terminal)
+    );
   }
 
   if (focus.path.length !== vessel.path.length + 1 || focus.offset !== 0) return false;

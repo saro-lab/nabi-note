@@ -43,6 +43,42 @@ export function collectSheets(source: SheetSource, core: string = CORE_CSS): rea
 // Core sheet: paragraph/wrapper/nabi-scroll/editor chrome; each wing's own look is its own sheet.
 export const CORE_CSS = `${ICON_CSS}
 
+.nabi-outline {
+  position: fixed; z-index: var(--nabi-outline-z, 1100); box-sizing: border-box;
+  display: flex; flex-direction: column; width: var(--nabi-outline-width, 20rem);
+  max-height: min(var(--nabi-outline-height, 26rem), var(--nabi-outline-available-height, 80dvh));
+  padding: .375rem; border: 1px solid var(--nabi-line, #e2e2e8);
+  border-radius: var(--nabi-outline-radius, .75rem); background: var(--nabi-bg, #fff);
+  color: var(--nabi-fg, #1b1b1f); box-shadow: var(--nabi-shadow, 0 8px 24px #10182820);
+  font: 400 .875rem/1.5 var(--nabi-font, var(--nabi-font-fallback, sans-serif));
+  text-align: start; user-select: none; -webkit-user-select: none; touch-action: none;
+  opacity: 0; transform: var(--nabi-outline-enter, translateY(.5rem));
+  transition: opacity var(--nabi-outline-duration, 150ms), transform var(--nabi-outline-duration, 150ms);
+}
+.nabi-outline[data-state="open"] { opacity: 1; transform: translateY(0); }
+.nabi-outline[data-state="closing"] { transform: var(--nabi-outline-exit, translateY(.5rem)); pointer-events: none; }
+.nabi-outline[hidden], .nabi-outline [hidden] { display: none !important; }
+.nabi-outline-list {
+  flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain;
+  list-style: none; margin: 0; padding: 0; scrollbar-width: thin;
+}
+.nabi-outline-list > li { margin: 0; padding: 0; list-style: none; }
+.nabi-outline-item, .nabi-outline-edge {
+  box-sizing: border-box; appearance: none; display: flex; align-items: baseline;
+  width: 100%; margin: 0; padding: .5rem .625rem; border: 0; border-radius: .375rem;
+  background: transparent; color: inherit; font: inherit; text-align: start; cursor: pointer;
+}
+.nabi-outline-item { gap: .5rem; }
+.nabi-outline-item bdi { overflow-wrap: anywhere; }
+.nabi-outline-item[data-level="2"] { padding-inline-start: 2rem; color: var(--nabi-muted, #6b6b76); }
+.nabi-outline-item:hover, .nabi-outline-edge:hover { background: var(--nabi-soft, #0000000b); }
+.nabi-outline-item[aria-current="location"] { background: var(--nabi-soft, #0000000b); color: var(--nabi-accent, #3b6fe0); }
+.nabi-outline :focus-visible { outline: 2px solid var(--nabi-accent, #3b6fe0); outline-offset: -2px; }
+.nabi-outline-number { flex: none; font-variant-numeric: tabular-nums; }
+.nabi-outline-edge { flex: none; justify-content: center; padding: .25rem; min-height: 2rem; }
+.nabi-outline-edge[aria-disabled="true"] { opacity: .3; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .nabi-outline { transition: none; } }
+
 /* 덮개(미리보기·라이트박스)는 body 의 자식이라 .nabi 상속이 안 닿아 토큰을 여기서도 선언한다
    Overlays (preview/lightbox) are children of body, not .nabi, so tokens are declared here too */
 :is(.nabi, .nabi-scrim, .nabi-content:where(:not(.nabi *))) {
@@ -181,6 +217,12 @@ export const CORE_CSS = `${ICON_CSS}
   display: flex; flex-direction: column; min-height: 0;
 }
 
+.nabi-toolbar, .nabi-toolbar-row, .nabi-context, .nabi-tools,
+.nabi-panel, .nabi-toolbox, .nabi-toast,
+.nabi-card:not(.nabi-preview):not(.nabi-content), .nabi-content nabi-upload {
+  font-family: var(--nabi-font, var(--nabi-font-fallback, sans-serif));
+}
+
 /* 툴바 줄과 상황 줄을 하나로 묶어 sticky 시킨다 — 따로 붙이면 상황 줄이 뜰 때 글이 밀려 화면이 흔들린다
    Toolbar row and context row stick together as one block; sticking them separately shakes content when the context row appears */
 .nabi-toolbar {
@@ -291,6 +333,7 @@ export const CORE_CSS = `${ICON_CSS}
   transform: translate(-50%, 4px); background: var(--nabi-fg); color: var(--nabi-bg);
   font-size: 11px; line-height: 1.6; padding: 2px 6px; border-radius: 4px; white-space: nowrap;
   pointer-events: none; z-index: 2;
+  font-family: var(--nabi-font, var(--nabi-font-fallback, sans-serif));
 }
 [data-nabi-tip][aria-expanded="true"]::after { content: none; }
 [data-nabi-tooltips] [data-nabi-tip]:hover::after { content: none !important; }
@@ -298,6 +341,7 @@ export const CORE_CSS = `${ICON_CSS}
   position: fixed; box-sizing: border-box; inline-size: max-content; max-inline-size: calc(100vw - 16px);
   padding: 2px 6px; border-radius: 4px; background: var(--nabi-fg); color: var(--nabi-bg);
   font-size: 11px; line-height: 1.6; white-space: normal; overflow-wrap: anywhere; pointer-events: none;
+  font-family: var(--nabi-font, var(--nabi-font-fallback, sans-serif));
 }
 
 /* 피커 판 — 격자·차림표·주소 상자가 모두 이 판 위에 선다
@@ -359,7 +403,8 @@ export const CORE_CSS = `${ICON_CSS}
 .nabi-field { display: flex; align-items: center; gap: 6px; }
 .nabi-field > span { font-size: 11px; color: var(--nabi-muted); min-inline-size: 44px; }
 
-.nabi-panel.nabi-narrow:not(.nabi-custom-panel-inline), .nabi-narrow .nabi-panel:not(.nabi-custom-panel-inline) {
+.nabi-panel.nabi-narrow:not(.nabi-custom-panel-inline):not(.nabi-prompt-wide),
+.nabi-narrow .nabi-panel:not(.nabi-custom-panel-inline):not(.nabi-prompt-wide) {
   position: fixed !important;
   inset-inline: 5vw !important;
   inset-block-start: var(--nabi-panel-mid, 50%) !important;
@@ -558,6 +603,19 @@ export const CORE_CSS = `${ICON_CSS}
 .nabi-toolbox-body .nabi-field { flex: 1 1 100%; min-inline-size: 0; }
 .nabi-toolbox-body .nabi-input, .nabi-toolbox-body .nabi-range { block-size: 1.75rem; }
 .nabi-toolbox-body .nabi-field > .nabi-input { inline-size: 0; }
+.nabi-prompt.nabi-prompt-wide {
+  flex-wrap: nowrap; box-sizing: border-box; max-inline-size: calc(100vw - 16px);
+}
+.nabi-prompt.nabi-prompt-wide > textarea.nabi-input {
+  flex: 1 1 0; inline-size: 0; min-inline-size: 0; min-block-size: 0; block-size: calc(6em + 1rem + 2px);
+  max-block-size: var(--nabi-prompt-room, none);
+  padding: .5rem; line-height: 1.5; resize: none; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.nabi-prompt.nabi-prompt-wide.nabi-narrow > textarea.nabi-input,
+.nabi-narrow .nabi-prompt.nabi-prompt-wide > textarea.nabi-input,
+.nabi-toolbox-mobile .nabi-prompt.nabi-prompt-wide > textarea.nabi-input {
+  block-size: calc(9em + 1rem + 2px);
+}
 .nabi-toolbox .nabi-panel.nabi-hosted-panel {
   position: static !important; inset: auto !important; inset-inline: auto !important;
   inset-block: auto !important; transform: none !important;

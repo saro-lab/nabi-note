@@ -1,7 +1,7 @@
 // html/render.ts와 뼈대는 같지만 md에 자리가 없는 노드(밑줄·유튜브·접기·병합된 표·정렬 문단)는
 // 그 노드만 html로 떨어진다(잃는 것보다 섞는 게 낫다) — 이스케이프도 여기 한 곳이라 파서의 `\` 처리와 짝을 이뤄 왕복이 닫힌다.
 // Same skeleton as html/render.ts, but a node md can't express (underline, youtube, details, merged table, aligned paragraph) falls back to raw html for just that node — mixing beats losing it. Escaping lives only here, pairing with the parser's `\` handling to close the round trip.
-import { renderParagraphHtml, type HtmlOptions } from '../../html/index.js';
+import { inlineTerminalsOf, ordinalsOf, renderParagraphHtml, type HtmlOptions } from '../../html/index.js';
 import {
   BR,
   P,
@@ -12,7 +12,7 @@ import {
   type NabiNode,
   type SchemaEnv,
 } from '../../schema/index.js';
-import type { MdBuilders, MdContext } from '../contract.js';
+import type { MdAppendices, MdBuilders, MdContext } from '../contract.js';
 
 export interface MdOptions {
   readonly env: SchemaEnv;
@@ -23,6 +23,7 @@ export interface MdOptions {
   // Where a node with no toMd lands.
   readonly html: HtmlOptions;
   readonly indent?: string;
+  readonly appendices?: MdAppendices;
 }
 
 // --- 이스케이프 (이 모듈 전용) ------------------------------------------------------------------
@@ -66,6 +67,7 @@ interface Job {
   readonly builders: MdBuilders;
   readonly html: HtmlOptions;
   readonly indent: string;
+  readonly ordinals?: ReadonlyMap<ElementNode, number>;
 }
 
 const ALIGNS: ReadonlySet<string> = new Set(['l', 'c', 'r']);
@@ -97,6 +99,7 @@ function contextFor(node: ElementNode, job: Job): MdContext {
     html: () => renderParagraphHtml(node, job.html),
     indent: job.indent,
     env: job.env,
+    ...(job.ordinals?.has(node) ? { ordinal: job.ordinals.get(node) as number } : {}),
   };
 }
 
@@ -136,16 +139,27 @@ function renderParagraph(p: ElementNode, job: Job): string {
 // --- 문 ----------------------------------------------------------------------------------------
 
 export function renderMarkdown(doc: NabiDoc, options: MdOptions): string {
+  const found = inlineTerminalsOf(doc, options.env);
+  const ordinals = ordinalsOf(found);
   const job: Job = {
     env: options.env,
     builders: options.builders ?? {},
-    html: options.html,
+    html: ordinals ? { ...options.html, ordinals } : options.html,
     indent: options.indent ?? '',
+    ...(ordinals ? { ordinals } : {}),
   };
   const blocks: string[] = [];
   for (const node of doc) {
     const text = renderNode(node, job);
     if (text !== '') blocks.push(text);
+  }
+  const appendices = options.appendices;
+  if (appendices) {
+    for (const [w, nodes] of found) {
+      const appendix = Object.prototype.hasOwnProperty.call(appendices, w) ? appendices[w] : undefined;
+      const text = appendix ? appendix(nodes, escapeMd) : '';
+      if (text !== '') blocks.push(text);
+    }
   }
   return indented(blocks.join('\n\n'), job.indent);
 }

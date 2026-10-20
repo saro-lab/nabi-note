@@ -144,6 +144,85 @@ for (const width of [1280, 390]) {
       await expect(page.locator('.nabi-prompt')).toHaveCount(0);
     });
 
+    test('footnote text wraps across a toolbar-wide textarea and stores one line', async ({ page }) => {
+      await setup(page, false);
+      const tools = page.locator('#panel-toolbar [data-name="tools"]');
+      if (await tools.isVisible()) {
+        await activate(tools, mobile);
+        await activate(page.locator('.nabi-toolbox-icons [data-name="fn"]'), mobile);
+      } else await activate(page.locator('#panel-toolbar .nabi-strip [data-name="fn"]'), mobile);
+      const input = page.locator('.nabi-prompt textarea');
+      await expect(input).toBeVisible();
+      await expect(input).toBeFocused();
+      await expect(page.locator('.nabi-prompt button')).toHaveCount(0);
+      const panelBox = (await page.locator('.nabi-prompt').boundingBox())!;
+      const toolbarBox = (await page.locator('#panel-toolbar').boundingBox())!;
+      expect(panelBox.width).toBeGreaterThan(toolbarBox.width - 24);
+      const lines = await input.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return (
+          (el.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)) /
+          parseFloat(style.lineHeight)
+        );
+      });
+      expect(lines).toBeCloseTo(mobile ? 6 : 4, 0);
+      await input.fill('first\nsecond\u2028third');
+      await expect(input).toHaveValue('first second third');
+      await input.evaluate((el) =>
+        el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true })),
+      );
+      await expect(input).toBeVisible();
+      await activate(page.locator('#outside-panel'), mobile);
+      const marker = page.locator('#panel-surface [data-nabi-fn]');
+      await expect(marker).toHaveAttribute('data-nabi-fn', 'first second third');
+      await activate(marker, mobile);
+      await expect(input).toHaveValue('first second third');
+      const editBox = (await page.locator('.nabi-prompt').boundingBox())!;
+      const chromeBox = (await page.locator('#panel-chrome').boundingBox())!;
+      expect(editBox.x).toBeGreaterThanOrEqual(chromeBox.x - 1);
+      expect(editBox.x + editBox.width).toBeLessThanOrEqual(chromeBox.x + chromeBox.width + 1);
+      expect(editBox.width).toBeGreaterThan(chromeBox.width - 24);
+      expect(editBox.y).toBeGreaterThanOrEqual(chromeBox.y + chromeBox.height - 1);
+      expect(editBox.y).toBeLessThan(chromeBox.y + chromeBox.height + 50);
+      await input.fill('edited\nnote');
+      await activate(page.locator('#outside-panel'), mobile);
+      await expect(page.locator('.nabi-prompt')).toHaveCount(0);
+      await expect(marker).toHaveAttribute('data-nabi-fn', 'edited note');
+      await page.evaluate(() => (globalThis as unknown as { panelTest: PanelState }).panelTest.nabi.undo());
+      await expect(marker).toHaveAttribute('data-nabi-fn', 'first second third');
+      await activate(marker, mobile);
+      await input.fill('cancelled edit');
+      await input.press('Escape');
+      await expect(marker).toHaveAttribute('data-nabi-fn', 'first second third');
+      await activate(marker, mobile);
+      await input.fill('edited\nnote');
+      await input.press('Enter');
+      await expect(marker).toHaveAttribute('data-nabi-fn', 'edited note');
+    });
+
+    test('footnote outside dismissal applies to the original note before selecting another', async ({ page }) => {
+      await setup(page, false);
+      await page.evaluate(() => {
+        document.getElementById('panel-surface')!.style.paddingTop = '180px';
+        const { nabi } = (globalThis as unknown as { panelTest: PanelState }).panelTest;
+        nabi.applyCommand('insertFootnote', { t: 'first note' });
+        nabi.select({ anchor: { path: [1], offset: 4 }, focus: { path: [1], offset: 4 } });
+        nabi.applyCommand('insertFootnote', { t: 'second note' });
+      });
+      const markers = page.locator('#panel-surface [data-nabi-fn]');
+      await activate(markers.first(), mobile);
+      const input = page.locator('.nabi-prompt textarea');
+      await input.fill('changed first note');
+      await activate(markers.nth(1), mobile);
+      await expect(markers.first()).toHaveAttribute('data-nabi-fn', 'changed first note');
+      await expect(markers.nth(1)).toHaveAttribute('data-nabi-fn', 'second note');
+      await expect(input).toHaveValue('second note');
+      await input.fill('  ');
+      await activate(page.locator('#outside-panel'), mobile);
+      await expect(page.locator('.nabi-prompt')).toHaveCount(0);
+      await expect(markers.nth(1)).toHaveAttribute('data-nabi-fn', 'second note');
+    });
+
     async function openTable(page: Page): Promise<void> {
       const tools = page.locator('#panel-toolbar [data-name="tools"]');
       if (await tools.isVisible()) {
@@ -210,6 +289,51 @@ for (const width of [1280, 390]) {
     });
 
     if (mobile) {
+      for (const fullscreen of [false, true]) {
+        test(`footnote textarea fits the keyboard and grows back (fullscreen: ${fullscreen})`, async ({ page }) => {
+          await page.addInitScript(() => {
+            Object.defineProperty(window, 'visualViewport', {
+              configurable: true,
+              value: Object.assign(new EventTarget(), {
+                height: window.innerHeight,
+                width: window.innerWidth,
+                offsetTop: 0,
+                offsetLeft: 0,
+                scale: 1,
+              }),
+            });
+          });
+          await setup(page, false);
+          if (fullscreen) await activate(page.locator('.nabi-compact-bar [data-name="fullscreen"]'), true);
+          await page.evaluate(() => {
+            (globalThis as unknown as { panelTest: PanelState }).panelTest.nabi.applyCommand('insertFootnote', {
+              t: 'note',
+            });
+          });
+          await activate(page.locator('#panel-surface [data-nabi-fn]'), true);
+          const input = page.locator('.nabi-prompt textarea');
+          await expect(input).toBeVisible();
+          const fullHeight = (await input.boundingBox())!.height;
+          expect(fullHeight).toBeGreaterThan(150);
+          await page.evaluate(() => {
+            Object.assign(window.visualViewport!, { height: 230 });
+            window.visualViewport!.dispatchEvent(new Event('resize'));
+          });
+          await expect.poll(async () => (await input.boundingBox())!.height).toBeLessThan(fullHeight);
+          const smaller = (await input.boundingBox())!;
+          expect(smaller.y).toBeGreaterThanOrEqual(0);
+          expect(smaller.y + smaller.height).toBeLessThanOrEqual(222);
+          await input.fill('A long footnote that wraps inside the textarea. '.repeat(30));
+          expect(await input.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+          await expect(input).toBeFocused();
+          await page.evaluate(() => {
+            Object.assign(window.visualViewport!, { height: 844 });
+            window.visualViewport!.dispatchEvent(new Event('resize'));
+          });
+          await expect.poll(async () => (await input.boundingBox())!.height).toBeCloseTo(fullHeight, 0);
+        });
+      }
+
       test('table layer follows the viewport in fullscreen and cleans up on resize and unmount', async ({ page }) => {
         await setup(page, false);
         await activate(page.locator('.nabi-compact-bar [data-name="fullscreen"]'), true);

@@ -21,6 +21,9 @@ export interface HtmlContext {
   // With no line box for the caret to land in, an empty slot would visually vanish.
   filled(inner: string): string;
   readonly keys: boolean;
+  // 문서 전체를 그릴 때만 서는 같은 타입 안의 차례(1부터) — 각주 번호처럼 저장하지 않고 순서로 정하는 값이 쓴다.
+  // The 1-based position among nodes of the same type, present only when the whole document renders; used for values derived from order rather than stored, like footnote numbers.
+  readonly ordinal?: number;
 }
 
 export type HtmlBuilder = (node: ElementNode, children: () => string, ctx: HtmlContext) => string;
@@ -29,10 +32,19 @@ export type HtmlBuilder = (node: ElementNode, children: () => string, ctx: HtmlC
 // A wing's toHtml overrides this map by name; the html layer stays unaware of wing implementations.
 export type HtmlBuilders = Readonly<Record<string, HtmlBuilder>>;
 
+// 문서 끝 덧붙임 — 인라인 단말 타입 하나의 노드들을 문서 순서로 받아 한 번 그린다(각주 목록).
+// A document-end appendix: receives one inline-terminal type's nodes in document order and renders once (the footnote list).
+export type HtmlAppendix = (nodes: readonly ElementNode[], ctx: HtmlContext) => string;
+export type HtmlAppendices = Readonly<Record<string, HtmlAppendix>>;
+
 export interface HtmlOptions {
   readonly env: SchemaEnv;
   readonly builders?: HtmlBuilders;
   // blob:/data:image/… 까지 받을지 — 업로드 중인 그림을 그리는 화면만 켠다.
   // Whether to accept blob:/data:image/… too — only the screen rendering an in-flight upload turns this on.
   readonly allowLocalUrls?: boolean;
+  readonly appendices?: HtmlAppendices;
+  // 문단 하나만 그리는 쪽(md의 html 탈출구·diff)이 문서 전체에서 센 차례를 넘길 때 쓴다.
+  // Lets a caller rendering one paragraph at a time (md's html fallback, diff) pass order counted over the whole document.
+  readonly ordinals?: ReadonlyMap<ElementNode, number>;
 }

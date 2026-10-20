@@ -67,6 +67,14 @@ export const ICON_ASSETS: Readonly<Record<string, readonly [string, string]>> = 
     new URL('./icons/file-save.svg?no-inline', import.meta.url).href,
     new URL('./icons/file-save-dark.svg?no-inline', import.meta.url).href,
   ],
+  'footnote-edit': [
+    new URL('./icons/footnote-edit.svg?no-inline', import.meta.url).href,
+    new URL('./icons/footnote-edit-dark.svg?no-inline', import.meta.url).href,
+  ],
+  'footnote-footnote': [
+    new URL('./icons/footnote-footnote.svg?no-inline', import.meta.url).href,
+    new URL('./icons/footnote-footnote-dark.svg?no-inline', import.meta.url).href,
+  ],
   'format-html': [
     new URL('./icons/format-html.svg?no-inline', import.meta.url).href,
     new URL('./icons/format-html-dark.svg?no-inline', import.meta.url).href,
@@ -218,6 +226,10 @@ export const ICON_ASSETS: Readonly<Record<string, readonly [string, string]>> = 
   'table-row-delete': [
     new URL('./icons/table-row-delete.svg?no-inline', import.meta.url).href,
     new URL('./icons/table-row-delete-dark.svg?no-inline', import.meta.url).href,
+  ],
+  'table-full-width': [
+    new URL('./icons/table-full-width.svg?no-inline', import.meta.url).href,
+    new URL('./icons/table-full-width-dark.svg?no-inline', import.meta.url).href,
   ],
   'table-sortable': [
     new URL('./icons/table-sortable.svg?no-inline', import.meta.url).href,

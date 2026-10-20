@@ -13,9 +13,11 @@ Stellen Sie zwei gespeicherte Dokumente gegenüber, um Änderungen zu sehen. Die
 
 ## Frühere Inhalte gezielt übernehmen
 
+Eigenständige Vergleiche sind standardmäßig schreibgeschützt und zeigen keine **&gt;&gt;**-Schaltflächen zum Übernehmen. Mit einem `onMerge`-Callback werden diese Schaltflächen angezeigt.
+
 Links steht das frühere, rechts das aktuelle Dokument. **&gt;&gt;** neben einer Änderung übernimmt den früheren Inhalt der betreffenden Absatz- oder Zeilengruppe. Die Auswahl erfolgt nicht zeichenweise. Auch gelöschte Inhalte können wiederhergestellt und neu hinzugefügte Inhalte entfernt werden.
 
-Setzen Sie unten nur die Uhrzeit oder die mitzubringenden Dinge zurück. Unter **Vom Callback aktualisiertes Dokument** sehen Sie das Ergebnis. **Neu beginnen** stellt das ursprüngliche Beispiel wieder her.
+Das folgende Beispiel ist schreibgeschützt. Sehen Sie sich an, wie sich die Treffzeit und die mitzubringenden Dinge geändert haben. **Neu beginnen** stellt das ursprüngliche Beispiel wieder her.
 
 <CompareDemo />
 
@@ -85,7 +87,6 @@ const comparison = mountDiffWing({
   registry,
   surface: content,
   locale: 'de',
-  merge: true,
 })
 const toolbar = mountToolbar({
   nabi,
@@ -98,6 +99,6 @@ const toolbar = mountToolbar({
 })
 ```
 
-Mit `merge: true` werden ausgewählte frühere Inhalte in den Editor übernommen. Die Änderung lässt sich rückgängig machen; die Grundlage bleibt erhalten. Ändert sich der ursprüngliche Editor bei geöffneter Ansicht, wird der Vergleich neu berechnet. Ohne `merge` bleibt er schreibgeschützt.
+`merge` ist standardmäßig `true`, sodass ausgewählte frühere Inhalte in den Editor übernommen werden können. Die Änderung lässt sich rückgängig machen; die Grundlage bleibt erhalten. Ändert sich der ursprüngliche Editor bei geöffneter Ansicht, wird der Vergleich neu berechnet. Mit `merge: false` ist der Vergleich schreibgeschützt.
 
 Rufen Sie beim Entfernen der Ansicht `toolbar.unmount()` und `comparison.unmount()` auf. Um auch die Version zu Bearbeitungsbeginn einzubeziehen und Änderungen beider Seiten automatisch zu kombinieren, verwenden Sie [Zusammenführen](./merge).

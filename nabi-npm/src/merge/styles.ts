@@ -43,6 +43,11 @@ export const MERGE_CSS = `
 .nabi-merge-actions { border-bottom: 1px solid var(--nabi-line, #8885); }
 .nabi-merge-detail { margin: 0; font-size: .8rem; }
 .nabi-merge-error { color: var(--nabi-merge-conflict); padding: .5rem .75rem; }
+.nabi-merge-bar, .nabi-merge-actions, .nabi-merge-error,
+.nabi-merge .nabi-merge-title, .nabi-merge-line-number,
+.nabi-merge button.nabi-merge-line-action {
+  font-family: var(--nabi-font, var(--nabi-font-fallback, sans-serif));
+}
 .nabi-merge [hidden] { display: none !important; }
 .nabi-merge-shell.is-fullscreen { display: flex; flex-direction: column; border: 0; border-radius: 0; padding: 0; }
 .nabi-merge-shell.is-fullscreen > .nabi-merge-grid { flex: 1; min-height: 0; }

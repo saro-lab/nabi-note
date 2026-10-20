@@ -1,6 +1,6 @@
 # Viewer and diff
 
-The unreleased 1.4.0 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
+The 1.5.0 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
 
 These features live in separate package entry points so a published page does not pay for the editor.
 
@@ -23,13 +23,56 @@ viewer.unmount();
 
 ```ts
 interface ViewerOptions {
-  readonly locale?: string;
+  readonly locale?: LocaleInput;
   readonly tables?: 'marked' | 'all';
   readonly highlight?: CodeHighlighter;
+  readonly footnotes?: boolean;
+  readonly outline?: OutlineOptions | false;
 }
 ```
 
+`footnotes` defaults to true. Set it to false to leave stored footnote markup without reader behavior.
+
 One viewer may be attached to a root at a time. `refresh()` first removes its current reader projection, then attaches to the current host HTML. `unmount()` is idempotent and restores the still-current code nodes, table row order, attributes, and controls without overwriting intervening host changes.
+
+### Heading outline
+
+`mountOutline(root, options)` from `nabi-note/viewer` works with editor or published DOM without importing editor modules. Load `nabi-note/nabi.css`. It collects nonempty visible H1/H2 elements in DOM order; H1 has sequential numbers and H2 is indented without numbering. It excludes all details descendants, hidden headings, footnote appendices, and nested document roots. Duplicate text is allowed because each item holds its actual heading element.
+
+```ts
+import { mountOutline } from 'nabi-note/viewer';
+
+const outline = mountOutline(article, {
+  trigger: contentsButton,
+  locale,
+  placement: 'above',
+  onChange: ({ items, activeIndex, available, open }) => {
+    contentsButton.hidden = !available;
+    // Update host state from this snapshot, including the initial empty one.
+  },
+});
+contentsButton.onclick = () => outline.toggle();
+// On route change or host disposal:
+// outline.unmount();
+```
+
+The trigger belongs to the host. `mountOutline` sets/restores its dialog ARIA attributes but does not attach a click listener or choose its icon. `onChange` receives the initial state even when it is `{ items: [], activeIndex: -1, available: false, open: false }`. Subsequent notifications describe changed items, active position, or open state. Deleting the last heading closes the panel and reports the empty state. `onAvailabilityChange` and `onOpenChange` also receive initial values. No headings means an empty-state notification, not a missing callback.
+
+`OutlineItem` has `element: HTMLElement`, `text: string`, `level: 1 | 2`, and `number: number | null`. `OutlineState` contains readonly `items`, `activeIndex` (-1 before the first heading), `available`, and `open`. `subscribe(listener)` immediately sends a snapshot and returns an unsubscribe function. Callback exceptions are isolated and passed to optional `onError(error)`.
+
+`OutlineAttachment` exposes `panel`, `getState()`, `getItems()`, `subscribe()`, `refresh()`, `goTo(index, behavior?)`, `setOpen(boolean)`, `toggle()`, and idempotent `unmount()`. One outline may be mounted on each root. `goTo` returns whether an attached target exists and defaults to smooth scrolling; pointer scrubbing uses immediate scrolling and reduced motion disables smooth scrolling. Scroll position changes never alter URL hashes, browser history, or saved content.
+
+Options also include `container` (outside the article, default its parent), `anchor` (default trigger), `placement: 'above' | 'beside' | 'css'`, `scrollContainer` (Window, HTMLElement, or a function returning one; default the owning window), and `offset` (pixels or a function returning pixels; default one root rem). Use a dynamic scroll container for fullscreen editors. The host can call `refresh()` after layout changes that do not produce observed DOM/resize events. `onRequestClose(reason)` notifies before automatic close for `selection`, `outside`, `escape`, or `empty`; it is a notification, not a veto.
+
+The supplied nonmodal panel has no backdrop, body scroll lock, heading bar, or close button. Pointer press selects immediately, dragging across items visits headings, and release closes. Long lists have top/bottom edge regions: pressing moves one heading from the current selection and holding repeats that step, revealing the selected item as needed. Mouse hover does nothing. Releasing or leaving an edge stops repetition; using an arrow alone does not close the panel. Edges disable only at the first or last selected heading, independently of list scroll position. Pointer cancellation/lost capture/window blur stops dragging. Keyboard arrows move one heading from the current selection even if keyboard focus is elsewhere; Home/End visit the first/last heading. Enter/Space on an edge moves one heading; on an item it selects and closes. Escape and outside press close. Focus returns to the trigger on selection or Escape, while outside interactions keep their destination. Touch dragging uses pointer capture, not native list scrolling.
+
+While open, scrolling the document reveals its current heading inside the outline without moving keyboard focus. This automatic list scrolling yields to pointer dragging and edge scrolling.
+
+Immediate navigation keeps the chosen heading selected until the document scroll position changes, including near the bottom where several headings may share the same clamped scroll position.
+
+Changes to content, ancestor visibility, size, images, details state, scroll, and locale refresh the appropriate projection. Attachment before DOM connection is supported. Unmount removes the panel, subscriptions, observers, animation work, and transient number attributes. Runtime items, numbers, open state and coordinates are never added to NABI TREE or `getHtml()`.
+
+To compose with the reader runtime, pass `attachViewer(article, { outline: { trigger, onChange }, locale })`, then call `viewer.outline?.toggle()`. Omitted/false `outline` leaves the feature off. `viewer.refresh()` preserves the outline attachment; `viewer.unmount()` removes it. The standalone `mountOutline()` also works on an editable surface. Do not attach both outlines to the same root.
 
 ### Table sorting
 
@@ -54,6 +97,21 @@ Every nonempty `pre > code` under the root is painted. Language is read from the
 A custom `CodeHighlighter` may return tokens. If it is missing or cannot answer, the zero-dependency built-in tokenizer runs. Token spans are transient viewer DOM and are not document content.
 
 Standalone exports include `CODE_LANG_ATTR`, `attachCodePaint`, and `codeLanguageOf`.
+
+### Footnotes
+
+Stored HTML already shows `sup[data-nabi-fn]` numbers and the `section[data-nabi-footnotes]` list without JavaScript. The viewer adds:
+
+- mouse hover or keyboard focus on a number opens a read-only bubble with the footnote text; leaving both the number and the bubble closes it;
+- a click or tap pins the bubble; pressing the same number again, pressing outside, or Escape closes it;
+- moving the pointer into the bubble or selecting its text keeps it open; opening another number closes the previous bubble;
+- each bubble starts with a `[n]` button; activating it closes the bubble and scrolls to and focuses the matching endnote in the same document;
+- a number in the list scrolls to its marker in the same document and focuses it;
+- a number inside a details summary does not toggle the details.
+
+There is no close button. The bubble content is inserted as plain text from the `data-nabi-fn` attribute, never parsed as HTML. Its numbered control is a native button; the bubble uses `role="group"` because it is interactive. The bubble is appended inside the nearest `.nabi-content`, inherits its tokens, and uses the fixed footnote formatting (base sans stack, 0.875 of the body size). Long text scrolls inside the bubble, which stays within the viewport. Each attachment is scoped to its root, so several documents on one page do not open each other's footnotes. `refresh()` and `unmount()` remove the bubble and listeners and restore the marker attributes. `openPreview()` does not attach the viewer by itself; call `attachViewer()` from its `onBody` hook.
+
+Standalone exports include `FOOTNOTE_ATTR` and `attachFootnotes`.
 
 ## Diff entry
 
@@ -88,6 +146,8 @@ const model = diffDocs(before, after, registry, {
 
 Changed blocks already contain escaped published HTML plus `.nabi-diff-del` or `.nabi-diff-ins` character ranges. These ranges cover inserted or deleted text and unchanged text whose rendered inline wrapper or inline attributes changed, such as bold, color, or link destination changes. A block-only attribute change can still have no character range. Matching does not depend on internal `_id`; stored snapshots do not share reliable internal identity.
 
+Blocks render one at a time, so footnote numbers are not part of the comparison. Footnote markers appear as `[*]` in diff and merge panes. A block whose footnote numbers shift only because a footnote was added or removed earlier stays `same`. Changing only a footnote's text marks its block `changed` and highlights the marker.
+
 ### Mounted two-pane diff
 
 ```ts
@@ -110,6 +170,8 @@ The mount creates a read-only two-pane view, previous/next navigation, change co
 ### Previous-to-current click merge
 
 Add `onMerge` to expose `>>` controls for changed paragraph/line groups. Omitting it keeps the existing read-only behavior. Structural blocks are replaced atomically; character highlights do not define independent merge actions. Applying an added group removes the current-only addition; applying a removed group restores the previous content. A detected move groups its removal and insertion so the content is not duplicated.
+
+The standalone documentation demo also opens read-only by default. Its optional `merge` prop explicitly enables the apply controls and callback result preview.
 
 ```ts
 const diff = mountDiff({
@@ -156,7 +218,6 @@ const mounted = mountDiffWing({
   registry,
   surface: content,
   locale: 'en',
-  merge: true,
 });
 
 mountToolbar({
@@ -172,7 +233,7 @@ mountToolbar({
 
 The integration stores the last loaded document as its baseline. It updates that baseline only on a `NabiChange` with `loaded: true`; typing, paste commands, undo, and redo do not move it. `baseline()` returns the current baseline. The screen closes on Escape and restores focus to the surface.
 
-`merge: true` enables the previous-to-current controls and applies accepted changes to the connected editor in one undoable edit. It does not call `setJson()` or move the baseline. Editor document changes refresh an open comparison and invalidate old controls. Omit `merge` for the original read-only behavior. Optional `onError` reports integration failures; use standalone `mountDiff({ onMerge })` for a custom acceptance/persistence callback.
+`merge` defaults to true: previous-to-current controls apply accepted changes to the connected editor in one undoable edit. It does not call `setJson()` or move the baseline. Editor document changes refresh an open comparison and invalidate old controls. Set `merge: false` for read-only behavior. Optional `onError` reports integration failures; use standalone `mountDiff({ onMerge })` for a custom acceptance/persistence callback.
 
 Unmount both the toolbar and diff integration.
 

@@ -276,11 +276,13 @@ Overlay/panel functions:
 - `openSavePanel({ file, surface, locale?, translator? })`;
 - `openHistoryPanel({ history, surface, render, locale?, translator?, sessionId? })`;
 - `openChoosePanel({ question, options, surface, locale?, translator? })`;
-- `openPanel(owner, { anchor, className?, restore?, onClose? })`;
+- `openPanel(owner, { anchor, className?, restore?, onClose?, onOutside? })`;
 - `openPrompt(owner, { anchor, fields, okLabel, onSubmit, ... })`;
 - `watchSettle(owner, { surface?, quietMs? })`.
 
 `openPanel()` and `openPrompt()` are tool layers without a page backdrop. Prompts retain input validation, submission, Escape/outside dismissal, and focus restoration; they do not make the rest of the page inert. Preview, lightbox, save, history, and choice dialogs use a separate full-page modal layer.
+
+`PanelOptions.onOutside` runs after closing for an outside pointer press, after `onClose`; it does not run for Escape or programmatic closure. `PromptOptions.submitOnOutside: true` hides the confirmation button and submits valid values on outside dismissal. Enter also submits; Escape, programmatic closure, and invalid outside submissions leave the document unchanged. Built-in footnote prompts use this option. Textarea prompts align below the whole toolbar, including the property row, and fit within its width and the viewport.
 
 Fullscreen exports: `FULLSCREEN_CLASS`, `isFullscreen`, and `setFullscreen`. UI constants: `TOOLBAR_GROUPS`.
 
@@ -327,7 +329,7 @@ Catalog exports:
 
 - marks: `boldWing`, `italicWing`, `underlineWing`, `strikeWing`, `superscriptWing`, `subscriptWing`, `simpleMarkWings`;
 - value marks: `typefaceWing`, `fontSizeWing`, `textColorWing`, `highlightWing`, `valueMarkWings`, `makeTypefaceWing`, `makeFontSizeWing`, `makeTextColorWing`, `makeHighlightWing`, and `TYPEFACES`, `FONT_SIZES`, `TEXT_COLORS`, `HIGHLIGHT_COLORS`;
-- inline/block: `linkWing`, `headingWing`, `alignWing`, `dropCapWing`, `paragraphAttrWings`, `bulletListWing`, `orderedListWing`, `taskListWing`, `listWings`, `quoteWing`, `floatWing`, `FLOAT_WIDTHS`, `detailsWing`, `codeWing`, `dividerWing`, `tableWings`;
+- inline/block: `linkWing`, `footnoteWing`, `headingWing`, `alignWing`, `dropCapWing`, `paragraphAttrWings`, `bulletListWing`, `orderedListWing`, `taskListWing`, `listWings`, `quoteWing`, `floatWing`, `FLOAT_WIDTHS`, `detailsWing`, `codeWing`, `dividerWing`, `tableWings`;
 - media/tools: `imageWing`, `youtubeWing`, `uploadWing`, `saveFileWing`, `openFileWing`, `localHistoryWing`, `diffWing`, `clearFormatWing`;
 - groups: `defaultWings`, `fileWings`;
 - picker: `wings`, `wingNames`.
@@ -468,7 +470,7 @@ The root entry exports these public type names. Earlier sections and the topic d
 ## Separate-entry type names
 
 - `nabi-note/ssr`: `Registry`, `StoredHtmlOptions`, `ToolbarHtmlOptions`, `ToolbarSlot`, `WingName`, `WingsBuilder`, `Wing`, `AttrValue`, `Attrs`, `ElementNode`, `NabiNode`, `NabiDoc`, `Translator`, `LocaleInput`, `LocaleSource`, `LocaleController`.
-- `nabi-note/viewer`: `ViewerAttachment`, `ViewerOptions`, `TableSortOptions`, `SortDirection`, `SortState`, `CodePaintOptions`, `CodeHighlighter`, `CodeToken`.
+- `nabi-note/viewer`: `ViewerAttachment`, `ViewerOptions`, `TableSortOptions`, `SortDirection`, `SortState`, `CodePaintOptions`, `CodeHighlighter`, `CodeToken`. Value exports for footnotes are `attachFootnotes` and `FOOTNOTE_ATTR`; `ViewerOptions.footnotes` defaults to true. Outline exports: `mountOutline`, `OutlineItem`, `OutlineState`, `OutlineOptions`, `OutlineAttachment`, `OutlineCloseReason`. `ViewerOptions.outline?: OutlineOptions | false` opts into the same attachment, exposed as `ViewerAttachment.outline`. See `viewer-diff.md#heading-outline` for callbacks, empty state, scrolling, and lifecycle.
 - `nabi-note/diff`: `CharRange`, `DiffEntry`, `DiffKind`, `DiffPaneBlock`, `DocDiff`, `DiffOptions`, `DiffMountOptions`, `DiffMount`, `DiffWingMountOptions`, `DiffWingMount`, `DiffMergeRange`, `DiffMergeChange`, `DiffMergePlan`, `DiffMergeProposal`.
 - `nabi-note/merge`: `MergeUnit`, `MergeOptions`, `MergeConflict`, `DocMerge`, `MergeResolution`, `MergeSource`, `MergeChange`, `MergeConflictState`, `MergeState`, `MergeSessionOptions`, `MergeSession`, `MergeMountOptions`, `MergeMount`, `MergeResult`. See `merge.md` for the entry's functions and state contract.
 

@@ -73,6 +73,11 @@ const isBr = (node: Node): boolean =>
 const isSealed = (node: Node): boolean =>
   node.nodeType === ELEMENT_NODE && (node as Element).getAttribute('contenteditable') === 'false';
 
+// 인라인 단말(각주 표식)은 속 글자와 상관없이 한 칸이다 — 트리의 terminalOf와 같은 셈이다
+// An inline terminal (a footnote marker) is one unit whatever it contains, matching the tree's terminalOf count
+const isTerminal = (node: Node): boolean =>
+  node.nodeType === ELEMENT_NODE && (node as Element).hasAttribute('data-nabi-terminal');
+
 // 홀더 el 속의 논리 오프셋 → DOM 점 — mount 소유 slot 외의 글자와 <br>은 한 칸씩 센다
 // Maps a logical offset inside holder `el` to a DOM point; text outside mount-owned slots and each <br> count as one unit
 export function toDomPoint(
@@ -147,7 +152,7 @@ export function toDomPoint(
 // Counts a subtree's logical units, used by fromDomPoint's counting
 function countAll(node: Node, caretSlot?: CaretSlot): number {
   if (node.nodeType === TEXT_NODE) return logicalLength(node as Text, caretSlot);
-  if (isBr(node)) return 1;
+  if (isBr(node) || isTerminal(node)) return 1;
   let total = 0;
   for (const child of Array.from(node.childNodes)) total += countAll(child, caretSlot);
   return total;
@@ -258,7 +263,7 @@ export function fromDomPoint(
       acc += logicalLength(cur as Text, caretSlot);
       return false;
     }
-    if (isBr(cur)) {
+    if (isBr(cur) || isTerminal(cur)) {
       acc += 1;
       return false;
     }
@@ -278,6 +283,7 @@ export function fromDomPoint(
 export function domTextOf(el: Element, caretSlot?: CaretSlot): string {
   let out = '';
   let hasFiller = false;
+  let terminals = 0;
   const walk = (node: Node): void => {
     if (node.nodeType === TEXT_NODE) {
       out += projectedText(node as Text, caretSlot);
@@ -291,10 +297,17 @@ export function domTextOf(el: Element, caretSlot?: CaretSlot): string {
       out += '\n';
       return;
     }
+    // 트리 쪽 평문(holderTextOf)과 같은 글자로 센다 — 속으로 내려가면 빈 글자가 되어 reconcile이 단말을 지운다
+    // Counted with the same character as the tree-side plain text (holderTextOf); descending would read it as empty and reconcile would delete the terminal
+    if (isTerminal(node)) {
+      out += '\n';
+      terminals += 1;
+      return;
+    }
     for (const child of Array.from(node.childNodes)) walk(child);
   };
   walk(el);
-  // 받침 규칙 — 혼자 선 br 하나는 빈 것이다(render의 FILLER와 같은 규칙)
-  // Filler rule: a single standalone br means empty (the same rule as FILLER in render)
-  return out === '\n' && !hasFiller ? '' : out;
+  // 받침 규칙 — 혼자 선 br 하나는 빈 것이다(render의 FILLER와 같은 규칙). 단말 하나뿐인 문단은 비지 않았다
+  // Filler rule: a single standalone br means empty (the same rule as FILLER in render); a paragraph holding only a terminal isn't empty
+  return out === '\n' && !hasFiller && terminals === 0 ? '' : out;
 }

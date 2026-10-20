@@ -13,6 +13,7 @@ const BRANCHES: readonly (readonly NavItem[])[] = [
     { path: '/wing/inline/superscript', key: 'menu_inline_superscript' },
     { path: '/wing/inline/subscript', key: 'menu_inline_subscript' },
     { path: '/wing/inline/link', key: 'menu_inline_link' },
+    { path: '/wing/inline/footnote', key: 'menu_inline_footnote' },
     { path: '/wing/inline/highlight', key: 'menu_inline_highlight' },
     { path: '/wing/inline/text-color', key: 'menu_inline_text_color' },
   ],
@@ -49,6 +50,7 @@ const ID_BY_PATH: Readonly<Record<string, string>> = {
   '/wing/inline/superscript': 'sup',
   '/wing/inline/subscript': 'sub',
   '/wing/inline/link': 'a',
+  '/wing/inline/footnote': 'fn',
   '/wing/inline/highlight': 'hl',
   '/wing/inline/text-color': 'tc',
 

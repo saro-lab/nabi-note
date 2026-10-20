@@ -13,9 +13,11 @@ Değişiklikleri görmek için kaydedilmiş iki belgeyi yan yana açın. Görün
 
 ## Seçilen eski içeriği uygulama
 
+Bağımsız karşılaştırmalar varsayılan olarak salt okunurdur ve **&gt;&gt;** uygulama düğmelerini göstermez. Bu düğmeleri göstermek için bir `onMerge` geri çağrısı bağlayın.
+
 Solda eski, sağda güncel belge bulunur. Değişikliğin yanındaki **&gt;&gt;**, ilgili paragraf veya satır grubunun eski içeriğini uygular. Karakter karakter seçim yapılmaz. Silinmiş içeriği geri getirmek veya yeni eklenen içeriği kaldırmak da mümkündür.
 
-Aşağıda yalnız toplantı saatini ya da getirilecek eşyaları geri alın. **Geri çağırımın güncellediği belge** bölümünü açarak sonucu görün. **Baştan başla**, özgün örneği geri getirir.
+Aşağıdaki örnek salt okunurdur. Toplantı saatinin ve getirilecek eşyaların nasıl değiştiğine bakın. **Baştan başla**, özgün örneği geri yükler.
 
 <CompareDemo />
 
@@ -85,7 +87,6 @@ const comparison = mountDiffWing({
   registry,
   surface: content,
   locale: 'tr',
-  merge: true,
 })
 const toolbar = mountToolbar({
   nabi,
@@ -98,6 +99,6 @@ const toolbar = mountToolbar({
 })
 ```
 
-`merge: true` ile seçilen eski içerik editöre uygulanır. İşlem geri alınabilir, temel korunur. Görünüm açıkken asıl editör değişirse karşılaştırma yeniden hesaplanır. `merge` verilmezse salt okunur görünüm korunur.
+`merge` varsayılan olarak `true` olduğundan, seçilen eski içerik editöre uygulanabilir. İşlem geri alınabilir ve temel korunur. Görünüm açıkken asıl editör değişirse karşılaştırma yeniden hesaplanır. Salt okunur karşılaştırma için `merge: false` belirtin.
 
 Görünümü kaldırırken `toolbar.unmount()` ve `comparison.unmount()` çağırın. Düzenleme başlangıcındaki sürümü de dahil edip iki tarafın değişikliklerini otomatik birleştirmek için [Birleştirme](./merge) kullanın.

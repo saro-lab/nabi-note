@@ -54,7 +54,7 @@ function inlineLength(nodes: readonly NabiNode[], registry: Registry): number {
       length +
       (typeof node === 'string'
         ? node.length
-        : node.w === 'br' || registry.env.voids.has(node.w)
+        : node.w === 'br' || registry.env.voids.has(node.w) || (registry.env.inlineTerminals?.has(node.w) ?? false)
           ? 1
           : inlineLength(node.ch, registry)),
     0,

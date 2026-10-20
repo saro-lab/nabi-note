@@ -71,7 +71,10 @@ export const DIFF_CSS = `${ICON_CSS}
   --nabi-diff-mark-ins: color-mix(in srgb, rgb(22 163 74) 30%, var(--nabi-bg, #fff));
 }
 
-.nabi-diff-bar { display: flex; align-items: center; gap: .25rem; }
+.nabi-diff-bar {
+  display: flex; align-items: center; gap: .25rem;
+  font-family: var(--nabi-font, var(--nabi-font-fallback, sans-serif));
+}
 .nabi-diff-spacer { flex: 1; }
 .nabi-diff-btn {
   appearance: none; border: 1px solid var(--nabi-line, #e2e2e8); border-radius: 0;
@@ -79,6 +82,7 @@ export const DIFF_CSS = `${ICON_CSS}
   block-size: 1.75rem; min-inline-size: 1.75rem; padding: 0 .375rem;
   display: inline-flex; align-items: center; justify-content: center;
   font: inherit; font-size: .8125rem;
+  font-family: var(--nabi-font, var(--nabi-font-fallback, sans-serif));
 }
 .nabi-diff-btn:hover:not(:disabled) { color: var(--nabi-accent, #3b6fe0); }
 .nabi-diff-btn:disabled { opacity: .4; cursor: default; }
@@ -177,5 +181,6 @@ export const DIFF_CSS = `${ICON_CSS}
   content: "\\00b7 \\00b7 \\00b7";
   display: block; text-align: center;
   color: var(--nabi-muted, #6b6b76); font-size: .75rem; line-height: 1.5;
+  font-family: var(--nabi-font, var(--nabi-font-fallback, sans-serif));
 }
 `;

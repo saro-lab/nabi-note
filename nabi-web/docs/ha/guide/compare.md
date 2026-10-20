@@ -13,9 +13,11 @@ Kwatanta takardu biyu da aka adana don ganin canje-canje. Ana buɗe kallon ba ta
 
 ## Saka tsohon abun da aka zaɓa
 
+Kwatantawa mai zaman kanta karantawa kawai ce ta asali, kuma ba ta nuna maɓallan amfani da **&gt;&gt;**. Haɗa callback na `onMerge` don nuna waɗannan maɓallan.
+
 Hagu tsohuwar takarda ce, dama ta yanzu. Danna **&gt;&gt;** kusa da canji don amfani da tsohon abun sakin layi ko rukunin layukan. Ba zaɓen harafi-harafi ba ne. Ana iya dawo da abin da aka goge ko cire sabon abin da aka ƙara.
 
-Gwada dawo da lokacin taro ko kayan da za a kawo kawai. Buɗe **Takardar yanzu da callback ya sabunta** don ganin sakamako. **Fara daga farko** yana dawo da misalin asali.
+Misalin da ke ƙasa karantawa kawai ne. Duba yadda lokacin taro da abubuwan da za a kawo suka canza. **Fara daga farko** yana dawo da misalin asali.
 
 <CompareDemo />
 
@@ -85,7 +87,6 @@ const comparison = mountDiffWing({
   registry,
   surface: content,
   locale: 'ha',
-  merge: true,
 })
 const toolbar = mountToolbar({
   nabi,
@@ -98,6 +99,6 @@ const toolbar = mountToolbar({
 })
 ```
 
-Da `merge: true`, ana saka tsohon abun da aka zaɓa cikin edita. Za a iya undo, tushe kuma ya kasance. Canjin editan asali yayin buɗe kallon yana sake lissafin kwatantawa. Barin `merge` yana riƙe karantawa kawai.
+Ƙimar asalin `merge` ita ce `true`, don haka za a iya saka tsohon abun da aka zaɓa cikin edita. Ana iya soke wannan canjin, kuma takardar tushe tana nan. Idan editan asali ya canza yayin buɗe kwatantawa, ana sake lissafinta. Sanya `merge: false` don kwatantawa ta karantawa kawai.
 
 Kira `toolbar.unmount()` da `comparison.unmount()` lokacin cire kallo. Don haɗa sigar farkon gyara da garwaya bangarorin biyu kai tsaye, yi amfani da [Garwayawa](./merge).

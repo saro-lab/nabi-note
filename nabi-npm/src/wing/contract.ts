@@ -111,7 +111,8 @@ export interface WingField {
   // Matches the command's argument name exactly; the UI passes it as `{ [name]: value }`.
   readonly name: string;
   readonly label?: LocaleText;
-  readonly kind?: 'text' | 'url';
+  readonly kind?: 'text' | 'url' | 'textarea';
+  readonly singleLine?: boolean;
   // 비어 있어도 되는 칸인가 — 필수 칸이 비면 확인이 안 눌린다.
   // Whether the field may stay empty; a required field left empty disables the confirm button.
   readonly optional?: boolean;
@@ -152,7 +153,12 @@ export type WingAction =
     }
   // 물어보기 — 칸을 채워 커맨드를 돌린다(링크 주소·유튜브 주소).
   // Prompt; fills in fields then runs the command (a link's address, a YouTube URL).
-  | { readonly kind: 'prompt'; readonly command: string; readonly fields: readonly WingField[] }
+  | {
+      readonly kind: 'prompt';
+      readonly command: string;
+      readonly fields: readonly WingField[];
+      readonly submitOnOutside?: boolean;
+    }
   // 파일 고르기 — 고른 파일은 호스트의 배선(mountUpload 류)으로 흘러간다.
   // File picker; the chosen file flows into the host's wiring (mountUpload and similar).
   | { readonly kind: 'file'; readonly accept?: string; readonly multiple?: boolean }
@@ -264,6 +270,7 @@ export type ContextControl =
       readonly kind: 'prompt';
       readonly command: string;
       readonly fields: readonly WingField[];
+      readonly submitOnOutside?: boolean;
     })
   | (ContextBase & {
       readonly kind: 'lightbox';

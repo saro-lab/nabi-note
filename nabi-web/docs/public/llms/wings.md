@@ -25,6 +25,24 @@ The main toolbar color and highlight buttons remove an existing effect regardles
 Like other mark buttons, a pointer click with a collapsed caret and no current mark reports that no text is selected instead of arming future text.
 With `mountHints()`, tapping Shift twice opens the compact Tools palette. Tab changes groups and arrow keys navigate icons; Enter or Space activates the focused tool through its keyboard action. Letters such as C or H and the up/down arrows no longer directly invoke color, highlight, superscript, or subscript after double-Shift. The legacy `shortcut` field remains validated compatibility metadata; see `custom-wing.md`.
 
+## Footnotes
+
+| `w` | Export | Stored value or behavior |
+| --- | --- | --- |
+| `fn` | `footnoteWing` | Inline terminal; `a.t` is the footnote text; no children |
+
+A footnote is a childless inline node between characters, for example `{ "w": "fn", "a": { "t": "Source text" }, "ch": [] }`. It occupies exactly one caret unit, like `br`, so the caret never enters it and a number is never partially edited. Numbers are not stored. They follow document tree order, including footnotes inside table cells, lists, quotes, floats, and details.
+
+- Content is one line of plain text. HTML is never interpreted: typing `<b>` keeps those characters as text. Line breaks and tabs become single spaces, control characters are removed, and surrounding whitespace is trimmed. A footnote whose text becomes empty is removed during normalization.
+- `insertFootnote({ t })` inserts at the caret, or at the end of a selected range without changing the selected text. Inside link text it inserts after the link. It is rejected inside a code box and on an object wrapper. The new footnote is outside every mark.
+- `setFootnote({ t })` and `removeFootnote()` act only when the selection covers exactly one footnote (a one-unit range).
+- Toolbar: one button in the `link` group opens a toolbar-width textarea prompt below the whole toolbar. Property row: Edit footnote (the same prompt, prefilled) and Delete footnote. The textarea wraps visually across four lines on desktop and six on mobile, shrinking to fit the visible space above the keyboard; typed or pasted line breaks become spaces. There is no confirmation button: clicking outside applies valid content and closes the prompt. Enter also applies unless an IME composition is active. Escape cancels, and blank input leaves the original footnote unchanged.
+- Editing surface: clicking a number selects that footnote and opens the edit prompt from the property row. This requires `mountContextToolbar()`; without it the footnote is still selectable and deletable. Backspace or Delete directly beside a footnote first selects it; the next press deletes it. Applying the prompt is one undo step.
+- The footnote list appears in a read-only area placed directly after the surface root, outside `contenteditable`. It exists only while the document has footnotes and disappears with its separator and spacing when the last one is removed. Clicking a number there selects that footnote in the body without opening the prompt.
+- Published HTML contains `<sup data-nabi-fn="text">[n]</sup>` in the body and a `<section data-nabi-footnotes>` list at the end of the whole document. Both are readable without JavaScript. `nabi-note/viewer` adds hover, click, and tap bubbles; see `viewer-diff.md`.
+- Formatting is fixed. Footnote text in the list and in bubbles uses the base sans stack (`--nabi-font`) at 0.875 of the body font size, the `fs` wing's `sm` step below the default. The body number is superscript at 0.75 of the surrounding text and ignores typeface, bold, and italic. See `styling.md`.
+- Sharing one footnote between several positions, nested footnotes, other number styles, and per-section numbering are not supported. The inline-terminal capability is package-internal; custom wings cannot declare one.
+
 ## Paragraph attributes
 
 | `w` | Export | Paragraph attribute |
@@ -33,7 +51,11 @@ With `mountHints()`, tapping Shift twice opens the compact Tools palette. Tab ch
 | `align` | `alignWing` | `a.a`, `l|c|r` |
 | `dc` | `dropCapWing` | `a.dc`, numeric 1 |
 
+H1 displays sequential numbers through CSS; H2 remains unnumbered. Optional `mountOutline()` from `nabi-note/viewer` builds the draggable H1/H2 outline from the body. Numbers are not stored in heading text or JSON.
+
 A heading remains a `p` tree node. Heading, alignment, and drop cap are not separate block node types.
+
+H1-H6 reject alignment in commands and toolbar availability, including headings inside table cells. Applying a heading removes an existing alignment value. JSON/HTML normalization also removes alignment from headings. Mixed selections skip headings while aligning eligible paragraphs and objects. The main demo's NABI NOTE title uses an ordinary paragraph with `fs` value `xl` and `b`, so it remains alignable and does not appear in the heading outline.
 
 Inside a table cell, alignment targets the current inner paragraph or selected image wrapper. A rectangular cell selection aligns every eligible paragraph and object wrapper in the selected cells, skipping objects that declare `noAlign`, such as code. The main toolbar aligns the table's outer wrapper when the whole table object is selected with its wrapper range `0..1` or when a collapsed caret is at either wrapper boundary (`0` or `1`). Boundary carets show the dashed table outline and remain collapsed after alignment. A range crossing between a cell and content outside that table cannot change paragraph attributes.
 
@@ -56,6 +78,8 @@ Headings and drop caps target inner text paragraphs. Header cells (`td.a.th === 
 
 Leaving a container with double-Enter uses a 180 ms window by default. Double-Escape and double-Shift retain their 350 ms defaults. An explicit `mountSurface({ doubleEnterMs })` also sets the double-Escape window.
 
+Details never contain H1-H6 headings, whether open or closed. Heading commands and toolbar availability exclude every paragraph below details, including nested containers and table cells. JSON/HTML/paste repair strips heading attributes recursively while preserving text, inline formatting, and other paragraph attributes. Wrapping headings in details removes heading formatting; undo restores the prior headings.
+
 Nested details blocks, including details inside table cells, toggle only the clicked block. Closing a block moves the selection to its wrapper only when either selection endpoint reaches into the body being closed. A selection in its summary or elsewhere remains in place; the open state is stored in `a.o` as numeric `1` when open.
 
 Below the viewport's `--nabi-mobile-breakpoint`, the table button closes the Tools palette and opens a centered size picker over a translucent backdrop. It follows the visual viewport and shows a 5x5 grid with touch-sized cells, including in fullscreen and `layout: 'wrap'`. Selecting a size inserts one table at the current editing selection and closes the picker. Escape or an outside interaction cancels without inserting. Arrow keys stay within the visible grid; Enter or Space confirms. Desktop keeps its existing nonmodal picker.
@@ -75,6 +99,15 @@ Cells contain multiple paragraphs and built-in blocks, including images, lists, 
 - `selectTable()` selects the table's wrapper range 0..1. The table property row provides this action. Table alignment is available for that exact object selection and for a collapsed caret at either table wrapper boundary, never for a caret inside a cell or a selection spanning the table and other blocks.
 - Cell merge preserves child blocks in row order. Split retains those blocks in the origin cell and creates empty paragraphs in the other cells.
 - Simple uncolored single-paragraph cells can use pipe-table Markdown. Multi-block, structured, or colored cells use HTML fallback to preserve their content.
+
+### Table full width
+
+`toggleTableFullWidth()` toggles the table property row's Full width control. New tables default to off. When enabled, `table.a.full` is numeric `1`; disabling removes the attribute. Other values are discarded during normalization.
+
+- The table and its scroll wrapper have a minimum inline size of 100% of the containing block. Wider content retains horizontal scrolling. Disabling restores content-based sizing.
+- The command accepts a caret or range within one table, a whole-table wrapper selection, or a collapsed caret at either wrapper boundary. Selections crossing the table boundary or spanning different tables are rejected. Selection, cell content, sorting, and wrapper alignment are preserved, and the change supports undo/redo.
+- Table alignment remains available. While the table fills its container, left, center, and right alignment have no visible effect; the chosen alignment is still stored and applies when full width is disabled.
+- JSON stores `a.full: 1`. Editor, stored, and server-rendered HTML use `data-nabi-table-full` on the table. HTML import restores the flag. Full-width tables use HTML fallback in Markdown to preserve it. Published pages need the table wing CSS, as usual.
 
 ### Table cell backgrounds
 
@@ -258,7 +291,7 @@ Only rules from registered wings exist.
 
 The registry exposes core commands plus registered wing commands. The default wing commands include:
 
-`setTypeface`, `setFontSize`, `setTextColor`, `setHighlight`, `setLink`, `renameLink`, `setHeading`, `setAlign`, `toggleDropCap`, list toggles, `toggleQuote`, `toggleDetails`, `setDetailsOpen`, `toggleCode`, `setCodeLanguage`, `insertDivider`, table edit commands, `insertImage`, `setImageWidth`, `insertYoutube`, `setYoutubeWidth`, `commitUpload`, `saveFile`, `openFile`, `restoreHistory`, and `clearFormat`.
+`setTypeface`, `setFontSize`, `setTextColor`, `setHighlight`, `setLink`, `renameLink`, `insertFootnote`, `setFootnote`, `removeFootnote`, `setHeading`, `setAlign`, `toggleDropCap`, list toggles, `toggleQuote`, `toggleDetails`, `setDetailsOpen`, `toggleCode`, `setCodeLanguage`, `insertDivider`, table edit commands, `insertImage`, `setImageWidth`, `insertYoutube`, `setYoutubeWidth`, `commitUpload`, `saveFile`, `openFile`, `restoreHistory`, and `clearFormat`.
 
 Float commands are `insertFloat`, `unwrapFloat`, `setFloatSide`, and `setFloatWidth`.
 

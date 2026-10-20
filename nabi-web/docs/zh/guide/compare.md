@@ -13,9 +13,11 @@ import CompareDemo from '../../.vitepress/ui/CompareDemo.vue'
 
 ## 选择并应用旧内容
 
+独立比较界面默认为只读，不显示 **&gt;&gt;** 应用按钮。连接 `onMerge` 回调后才会显示应用按钮。
+
 左侧是旧文档，右侧是当前文档。点击变化旁的 **&gt;&gt;**，即可将该段落或行组的旧内容应用到当前文档，并非逐字选择。也可以恢复已删除的内容，或移除当前文档新增的内容。
 
-试着只还原下面示例的聚会时间或携带物品。展开 **回调更新后的当前文档** 查看结果，点击 **重新开始** 恢复原始示例。
+下方示例为只读。请查看集合时间和携带物品发生了哪些变化。点击**重新开始**可恢复原始示例。
 
 <CompareDemo />
 
@@ -85,7 +87,6 @@ const comparison = mountDiffWing({
   registry,
   surface: content,
   locale: 'zh',
-  merge: true,
 })
 const toolbar = mountToolbar({
   nabi,
@@ -98,6 +99,6 @@ const toolbar = mountToolbar({
 })
 ```
 
-设置 `merge: true` 后，比较界面选中的旧内容会应用到编辑器。此操作可撤销，并保留基准文档。比较打开期间原编辑器发生变化时会重新计算比较。省略 `merge` 则保留只读比较。
+`merge` 默认为 `true`，因此可以将比较界面选中的旧内容应用到编辑器。此操作可撤销，并保留基准文档。比较打开期间原编辑器发生变化时会重新计算比较。设置 `merge: false` 可切换为只读比较。
 
 移除界面时调用 `toolbar.unmount()` 和 `comparison.unmount()`。如需一并查看开始编辑时的版本并自动合并双方变化，请使用[合并](./merge)。

@@ -10,7 +10,8 @@ Use this file as a router. Read only the document that owns your question.
 - npm setup and complete browser assembly: `llms/quickstart-npm.md`
 - CDN setup with the browser bundle: `llms/quickstart-cdn.md`
 - Public export and type index: `llms/api-reference.md`
-- Table cell formatting, crosshair cursor during cell-range dragging, multi-block table examples, and editable float examples for 1.4.0: `llms/wings.md`
+- Footnote storage, editing, numbering, and published output: `llms/wings.md#footnotes`
+- Table cell formatting, crosshair cursor during cell-range dragging, multi-block table examples, and editable float examples for 1.5.0: `llms/wings.md`
 
 ## Contracts by topic
 
@@ -19,7 +20,7 @@ Use this file as a router. Read only the document that owns your question.
 - Built-in wing catalog and picker behavior: `llms/wings.md`
 - Custom wing contract and registry validation: `llms/custom-wing.md`
 - Server rendering, toolbar pre-rendering, hydration: `llms/ssr.md`
-- Published-page viewer and document diff: `llms/viewer-diff.md`
+- Heading-derived floating outline, availability callbacks (including no headings), published-page viewer and document diff: `llms/viewer-diff.md`
 - Three-way automatic merge, editable conflict resolution, and confirmation: `llms/merge.md`
 - CSS delivery, theme tokens, dark-mode cell tints, fullscreen paper backgrounds, mobile breakpoint, host markup, drop caps: `llms/styling.md`
 - SVG/WebP/PNG icon themes and individual preview/fullscreen visibility: `llms/icons.md`
@@ -31,10 +32,16 @@ Use this file as a router. Read only the document that owns your question.
 - Use `nabi-note` for editor assembly and browser UI.
 - Use `nabi-note/ssr` in a DOM-free server process.
 - Use `nabi-note/viewer` for optional behavior on published HTML.
-- Use `nabi-note/diff` for comparing two stored documents. Optional `onMerge` proposes previous-to-current changes; the host accepts with revision-checked `update()`. See `llms/viewer-diff.md`.
+- Use `mountOutline()` from `nabi-note/viewer` on editable or published bodies for the draggable H1/H2 outline. Initial and last-heading-removal callbacks report empty items and `available: false`. H1 numbering is also supplied by the common heading CSS. Details reject H1-H6 at every depth. See `llms/viewer-diff.md#heading-outline`.
+- Headings reject alignment. Applying a heading clears paragraph alignment, and JSON/HTML normalization removes alignment from H1-H6. Mixed selections align only eligible non-heading targets. The main demo title is an ordinary paragraph with `fs: xl` and bold.
+- Open outlines keep the current heading visible as the body scrolls. Edge arrows move one heading from the current selection on press and repeat only while held; hovering does nothing. Keyboard arrows also move one heading from the current selection.
+- The `fn` footnote wing stores one-line plain text in `a.t` as a one-unit inline terminal. Numbers are derived from document order, never stored. Published HTML has `[n]` markers plus a document-end list; the editor shows the list outside `contenteditable`, and clicking a number opens the edit prompt in the property row. Footnote text uses fixed sans formatting at 0.875 of the body size. See `llms/wings.md`.
+- Footnote insert/edit prompts use a toolbar-width wrapping textarea below the toolbar, four visible lines on desktop and six on mobile, shrinking to fit the visible space above the keyboard. Actual line breaks become spaces. Clicking outside applies valid content without a confirmation button; Escape cancels. Viewer bubbles start with a numbered button that scrolls to the corresponding endnote.
+- Use `nabi-note/diff` for comparing two stored documents. Standalone `mountDiff()` is read-only by default; optional `onMerge` exposes apply controls and the host accepts proposals with revision-checked `update()`. Editor `mountDiffWing()` enables apply controls by default; pass `merge: false` to disable them. See `llms/viewer-diff.md`.
 - Use `nabi-note/merge` for three-way merging. The left pane is the editing-start base, the middle is the editable local/merged result, and the right is the incoming version. Automatic merge runs first; per-line gutter arrows apply individual source changes, and confirmation requires zero unresolved conflicts. See `llms/merge.md`.
 - Diff opens in only-changes mode by default. With zero changes, it shows both complete documents and disables folding. See `llms/viewer-diff.md`.
 - Load `nabi-note/nabi.css` on editor and published pages unless all required sheets are injected.
+- UI labels, tooltips, and panel inputs use the sans stack independently of the body typeface. Tables also default to sans, while explicit typeface marks inside cells still apply. See `llms/styling.md#typeface-defaults`.
 - The `float` wing adds editable left/right float regions with maximum widths 20, 30, 40, or 50 percent (default: right, 40). Pasted text, tables, images, and rich fragments stay inside the region. Editor-only dotted outlines disappear in stored HTML and preview; diff keeps placement but isolates each block. See `llms/wings.md`.
 - Use `mountToolbar({ panels: { img: { mode: 'inline', render: renderImagePicker } } })` to replace the default image URL prompt with host UI. Choose `modal` for a window on a full-page translucent backdrop, or `inline` for an anchored desktop panel that fills the screen on mobile. Both start empty. The renderer receives a dedicated root, abort signal, cleanup registration, `close()`, `insertImage(src)`, and `run()` for one command at the opening selection; function-only renderers keep their previous placement; omitted slots keep their default behavior. See `llms/api-reference.md` and `llms/quickstart-npm.md`.
 - The default `layout: 'compact'` shows all main-toolbar commands on desktop, wrapping like fullscreen, and uses a compact single row on mobile. Available object properties appear automatically in a wrapping row below it; both rows take up space and move together. Fullscreen expands the complete main toolbar at every width. Exiting restores the viewport-appropriate layout. Use `layout: 'wrap'` for the explicit wrapping layout; see `llms/styling.md`.
@@ -50,6 +57,7 @@ Use this file as a router. Read only the document that owns your question.
 - On iOS, icon buttons handle a completed short, single-touch tap directly and cancel its compatibility click. The touchend handler does not turn scrolling, multitouch, or long presses into command taps; native document selection menus remain available. See `llms/styling.md`.
 - Store `nabi.getJson()` or `nabi.getHtml()`. Never store `getEditorHtml()`. HTML output and clipboard fragments protect leading spaces, including partial selections; see `llms/document-model.md`.
 - Table cell-range copy/cut uses the highlighted rectangle, including its final cell, instead of the linear DOM range. Internal clipboard data and HTML retain empty cells, spans, and inline formatting; plain text contains only the selected cells, separated by tabs and newlines. Cut clears only those cells and is one undo step. See `llms/io-security.md`.
+- The table property row offers Full width (`toggleTableFullWidth`). It defaults to off; enabling stores `table.a.full: 1` and gives the table a 100% minimum width while retaining overflow scrolling. Alignment remains available. JSON, HTML, and Markdown HTML fallback preserve the setting. See `llms/wings.md#table-full-width`.
 - Table cells support multiple paragraphs and built-in blocks except nested tables/floats, which unwrap without discarding their contents. Cell backgrounds use pale theme colors through `setCellColor({ bg })`; `bg: ''` clears. Alignment inside cells targets inner paragraphs/images, with rectangular multi-cell application. A caret at either boundary of the table wrapper paragraph shows a dashed table outline without expanding the selection. The main toolbar can align the table itself at either wrapper boundary or after `selectTable()`. Copy/cut at either outlined boundary includes the table wrapper; cut removes the paragraph and table together after a successful clipboard write. Header cells remove heading formatting. See `llms/wings.md` and `llms/document-model.md`.
 - Treat HTML, JSON, paste data, command args, and custom filter output as untrusted input.
 - Use `NabiOptions.onError` for isolated command and callback failure reporting.
@@ -61,7 +69,7 @@ Use this file as a router. Read only the document that owns your question.
 
 ## Package facts
 
-- Package contract documented here: 1.4.0 (unreleased). Package and CDN publication are separate from this contract version.
+- Package contract documented here: 1.5.0. Package and CDN publication are separate from this contract version.
 - Runtime dependencies: zero.
 - Node.js for package tooling and SSR: 20 or newer.
 - Declared browser baseline: Chrome and Edge 120, Firefox 120, Safari 17.

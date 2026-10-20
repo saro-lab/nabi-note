@@ -83,3 +83,15 @@ export function insertLine(doc: NabiDoc, pos: Position, env: EditEnv, marks?: re
     caret: { path: pos.path, offset: pos.offset + 1 },
   };
 }
+
+// 인라인 단말(각주 표식)을 캐럿 자리에 세운다 — 마크 밖에 서서 앞뒤 글자의 서식을 입지 않는다. 래퍼문단에는 설 글이 없어 그대로 둔다.
+// Plants an inline terminal (a footnote marker) at the caret, outside any mark so it never takes on neighboring formatting; a wrapper paragraph has no text for it, so it's left unchanged.
+export function insertTerminal(doc: NabiDoc, pos: Position, node: ElementNode, env: EditEnv): EditResult {
+  const holder = nodeAt(doc, pos.path);
+  if (!holder || isWrapper(holder, env)) return { doc, caret: pos };
+  const run: Run = { kind: 'node', node, marks: [] };
+  return {
+    doc: spliceRuns(doc, pos, holder, [run], env),
+    caret: { path: pos.path, offset: pos.offset + 1 },
+  };
+}

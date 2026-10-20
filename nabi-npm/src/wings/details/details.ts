@@ -5,7 +5,8 @@ import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import { DEFAULT_BUILDERS } from '../../html/index.js';
 import { caretAt, isCollapsed, ordered } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
-import { replaceAt } from '../../doc/index.js';
+import { nodeAt, replaceAt } from '../../doc/index.js';
+import { $setParagraphTargetFilter } from '../../wing/paragraph-target.js';
 import { blockOwnerAt, blocksBoundaryEscape, exitWrapper } from '../../wing/ops.js';
 import { type OnKey, type Wing } from '../../wing/index.js';
 import type { LocaleText } from '../../locale/index.js';
@@ -42,7 +43,7 @@ const DETAILS_CSS = `
 function repairDetails(node: ElementNode): ElementNode {
   let head: ElementNode | null = null;
   const body: NabiNode[] = [];
-  for (const child of node.ch) {
+  for (const child of node.ch.map(withoutHeading)) {
     if (isElement(child) && child.w === SUMMARY) {
       if (head === null) head = child;
       else body.push({ w: P, ch: child.ch }); // 제목이 둘이면 뒤엣것은 문단으로 내려온다
@@ -60,6 +61,17 @@ function repairDetails(node: ElementNode): ElementNode {
     ch,
     ...(node._id !== undefined ? { _id: node._id } : {}),
   };
+}
+
+function withoutHeading(node: NabiNode): NabiNode {
+  if (!isElement(node)) return node;
+  const ch = node.ch.map(withoutHeading);
+  const strip = node.w === P && node.a?.['h'] !== undefined;
+  if (!strip && ch.every((child, index) => child === node.ch[index])) return node;
+  const { a: attrs, ...rest } = node;
+  const a = { ...attrs };
+  if (strip) delete a['h'];
+  return { ...rest, ch, ...(Object.keys(a).length ? { a } : {}) };
 }
 
 // 감싸기·풀기 — 풀면 제목이 문단이 되어 앞에 선다(글이 사라지는 자리를 안 만든다).
@@ -167,3 +179,10 @@ export const detailsWing: Wing = {
 };
 
 $markBuiltinAttrOwner(detailsWing, ['details', 'summary']);
+$setParagraphTargetFilter(detailsWing, (doc, target, key) => {
+  if (key !== 'h') return true;
+  for (let depth = 1; depth < target.path.length; depth += 1) {
+    if (nodeAt(doc, target.path.slice(0, depth))?.w === 'details') return false;
+  }
+  return true;
+});

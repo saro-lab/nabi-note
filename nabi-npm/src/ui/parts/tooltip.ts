@@ -61,7 +61,10 @@ export function mountTooltip(root: HTMLElement): Tooltip {
       if (value) tip.style.setProperty(name, value);
       else tip.style.removeProperty(name);
     }
-    tip.style.fontFamily = theme?.fontFamily ?? '';
+    tip.style.fontFamily =
+      theme?.getPropertyValue('--nabi-font').trim() ||
+      theme?.getPropertyValue('--nabi-font-fallback').trim() ||
+      'sans-serif';
     tip.style.direction = style?.direction || theme?.direction || 'ltr';
     const layer = Number.parseInt(theme?.getPropertyValue('--nabi-z-dialog') ?? '', 10);
     tip.style.zIndex = String((Number.isFinite(layer) ? layer : Z_DIALOG) + 1);

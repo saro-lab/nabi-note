@@ -119,7 +119,7 @@ roundTrip('크기·서체', [p([el('fs', ['크게'], { v: 'lg' }), el('tf', ['�
 roundTrip('링크와 첨부', [
   p([el('a', ['링크'], { href: 'https://example.com/' }), el('a', ['첨부'], { href: '/f/x.png', file: '첨부.png' })]),
 ]);
-roundTrip('제목·정렬·드롭캡', [p(['제목글'], { h: 2, a: 'c' }), p(['드롭캡'], { dc: 1 })]);
+roundTrip('제목·정렬·드롭캡', [p(['제목글'], { h: 2 }), p(['가운데'], { a: 'c' }), p(['드롭캡'], { dc: 1 })]);
 roundTrip('라인', [p(['첫 줄', el('br'), '둘째 줄'])]);
 roundTrip('글머리 목록', [el('ul', [el('li', [p(['하나'])]), el('li', [p(['둘'])])])]);
 roundTrip('번호 목록', [el('ol', [el('oli', [p(['하나'])])])]);
@@ -705,6 +705,24 @@ for (const fam of FAMILIES) {
 }
 
 // --- 문단 속성 ---------------------------------------------------------------------------------
+
+{
+  const n = make([p(['제목'], { h: 1, a: 'c' }), p(['본문'], { a: 'r' })]);
+  eq('제목의 기존 정렬은 정규화에서 제거한다', n.getJson()[0], p(['제목'], { h: 1 }));
+  n.select(caretAt(at([0], 0)));
+  ok('제목 정렬 명령은 거절한다', !n.applyCommand('setAlign', { value: 'c' }));
+  ok('제목에서는 정렬 도구를 숨긴다', !visibleAt(reachAt(hostOf(n).doc(), at([0], 0), registry, env), alignWing));
+  n.select(range(at([0], 0), at([1], 2)));
+  ok('혼합 선택의 본문은 정렬한다', n.applyCommand('setAlign', { value: 'c' }));
+  eq('혼합 선택에서도 제목 정렬은 제외한다', n.getJson(), [p(['제목'], { h: 1 }), p(['본문'], { a: 'c' })]);
+  n.select(caretAt(at([1], 0)));
+  n.applyCommand('setHeading', { value: 2 });
+  eq('본문을 제목으로 바꾸면 정렬을 제거한다', n.getJson()[1], p(['본문'], { h: 2 }));
+  n.undo();
+  eq('실행 취소는 본문의 정렬을 복원한다', n.getJson()[1], p(['본문'], { a: 'c' }));
+  n.setHtml('<h3 data-nabi-align="r"><b>붙여넣기</b></h3>');
+  eq('HTML 제목도 정렬을 제거하고 다른 서식을 유지한다', n.getHtml(), '<h3><b>붙여넣기</b></h3>');
+}
 
 {
   const n = make([p(['제목글'])]);

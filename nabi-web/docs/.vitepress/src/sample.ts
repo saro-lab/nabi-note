@@ -17,6 +17,7 @@ export const SAMPLE_KEYS = [
   'superscript',
   'subscript',
   'link',
+  'footnote',
   'highlight',
   'text_color',
   'heading',
@@ -60,6 +61,7 @@ const SAMPLE_BY_PATH: Readonly<Record<string, SampleKey>> = {
   '/wing/inline/superscript': 'superscript',
   '/wing/inline/subscript': 'subscript',
   '/wing/inline/link': 'link',
+  '/wing/inline/footnote': 'footnote',
   '/wing/inline/highlight': 'highlight',
   '/wing/inline/text-color': 'text_color',
 

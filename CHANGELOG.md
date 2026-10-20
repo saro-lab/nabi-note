@@ -5,11 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
-## [1.4.0] - Unreleased
+## [1.5.0] - 2026-10-20
 
 ### Added
 
-- Added previous-to-current click merge to the standalone comparison view. Callbacks receive paragraph/line-group proposals, and hosts can update the view after checking its revision. Pending callbacks prevent duplicate clicks and stale proposal acceptance; pure functions expose change groups and applied results. Enable it in an editor comparison with `mountDiffWing({ merge: true })`; applied changes are undoable and preserve the baseline.
+- Added a draggable outline generated from body H1/H2 headings, with body H1 numbering, state callbacks including empty outlines, pointer scrubbing, edge scrolling, keyboard navigation, and CSS placement. Attach it with `mountOutline()` or the `outline` option of `attachViewer()` from `nabi-note/viewer`; the home demo includes a floating trigger. H1-H6 headings are disallowed inside details during editing, paste, and loading while preserving text and other formatting.
+- Added a Full width toggle to table properties. It gives the table a minimum width of 100% while retaining horizontal scrolling for wider content. Table alignment remains available, and undo/redo, JSON and HTML storage, and Markdown HTML fallback preserve the setting.
+- Added previous-to-current click merge to the standalone comparison view. Callbacks receive paragraph/line-group proposals, and hosts can update the view after checking its revision. Pending callbacks prevent duplicate clicks and stale proposal acceptance; pure functions expose change groups and applied results. Standalone comparisons and the web comparison demo hide apply controls by default, while editor comparisons through `mountDiffWing()` enable them by default. Set `merge: false` to disable them; applied changes are undoable and preserve the baseline.
 - Added independent three-way merging through `nabi-note/merge` for the editing-start base, local edit, and newly saved incoming version. Non-overlapping changes merge automatically first. Remaining conflicts can use the base or incoming version, or accept the editable middle result. Normal editing features remain available, and undo/redo restores document content and resolution status together. Confirmation callbacks run only when no unresolved conflicts remain.
 - Added comparison and merge guides in every documentation language with working API examples for click merge, complete automatic merging, and partial automatic merging with manual conflict resolution. Demo messages and sample documents follow the page language. Updated the public AI documentation with the new APIs and persistence/version-check contracts.
 - Added pale table cell backgrounds with light and dark theme values. Apply a color to one cell or a selected rectangle, restore the default background, and undo the change. Colors survive merge, split, clipboard, JSON, and HTML; colored tables use HTML in Markdown exports to preserve their backgrounds.
@@ -20,9 +22,17 @@ Dates use Korea Standard Time (KST).
 - Added `Wing.scopedCommands` to run selected block-container commands against their child document. Block insertion, uploads, and conversions stay inside floats. JSON and HTML save/load preserve region contents, placement, and width.
 - Added `setCellColor({ bg })` and `--nabi-cell-*` CSS variables. Cell backgrounds support `yellow`, `green`, `cyan`, `pink`, `purple`, and `orange`; an empty string restores the default background. Mixed cell colors show no single selected swatch.
 - Added unit and browser regression coverage for table block editing, colors, paragraph formatting, cell boundaries, copy/cut, paste, uploads, storage formats, and toolbar layout.
+- Added the footnote wing (`footnoteWing`, `fn`). Numbers such as `[1]` appear at the insertion point, and the numbers and content appear again at the end of the document. Numbers are not stored; they follow document order. Footnote content accepts one line of plain text only, and HTML tags stay literal text. Content is shown in a fixed sans-serif face one step smaller than the body text.
+- The editing view shows the footnote list read-only directly below the body, outside the editable area, and shows no area when there are no footnotes. Clicking a number in the body opens the property-row input prompt prefilled with the current content. Backspace or Delete beside a footnote first selects it, and the next press deletes it.
+- Added footnote bubbles to `nabi-note/viewer`. In preview and published views, hovering, clicking, or tapping a number opens its content, and clicking a number in the list moves to its position in the body. There is no close button; disable the behavior with `ViewerOptions.footnotes: false`.
+- Markdown save and open support GFM footnote syntax (`[^1]`, `[^1]: text`). Reloading HTML restores each footnote once and never stores the generated list as body content. Comparison and merge compare footnote content, so blocks whose numbers only shifted are not reported as changed.
 
 ### Changed
 
+- Synchronized every language's main demo descriptions, formatting, and example structure with the Korean source, and enabled full width for the cell background color sample table. Updated heading alignment instructions and comparison guides to match current behavior.
+- Headings now reject alignment and discard existing alignment when loaded or applied. The main demo's NABI NOTE title is an ordinary paragraph with extra-large text and bold formatting.
+- Footnote prompts now align below the whole toolbar in a toolbar-width textarea with four visible lines on desktop and six on mobile, shrinking to fit the visible space above the keyboard, converting actual line breaks to spaces. Clicking outside applies the content and closes the prompt without a confirmation button; Escape cancels. A numbered button at the start of each footnote bubble jumps to the matching endnote.
+- Outline edge arrows move one item from the current selection on press and repeat one step at a time only while held. Hovering does nothing, and navigation does not skip intermediate items at the list edges or document bottom. While the outline is open, body scrolling keeps the current heading visible inside the outline.
 - The merge view now highlights changed lines and text, with gutter arrows that apply only the corresponding base or incoming content. The middle result stays editable, and individual line applications support undo/redo. Automatically merged changes can also be revised individually.
 - Document comparison now shows only changes and surrounding context by default. With no changes, folding is disabled and both complete documents remain visible.
 - Reduced the default double-Enter window for leaving a container from 350 ms to 180 ms. Esc and Shift double-tap defaults remain unchanged.
@@ -32,11 +42,13 @@ Dates use Korea Standard Time (KST).
 - Cell merge preserves child blocks in row order and uses the top-left background. Split keeps content in the origin cell and applies its background to the new cells. Content deletion, cut, and format clearing preserve cell backgrounds. Selected cell rectangles now use inset outlines instead of a background overlay.
 - Unified heading, drop-cap, and alignment commands with toolbar visibility and pressed states around the same inner paragraph targets. Header cells skip headings, and mixed selections show no single active value. Nested table and float insertion controls are hidden inside cells; cross-cell selections reject block insertion and paste.
 - `KeyIntent.shift` distinguishes Shift+Enter, and unhandled keys inside an isolated editing scope pass to ancestor wings up to that scope. Shift+Enter inserts a line break without splitting a list item, and Shift+Tab in code does not move to another cell when no further outdent is possible.
-- Updated the public AI documentation for table cell editing, backgrounds, storage formats, command scopes, uploads and paste, toolbar groups, and the double-Enter default. Refreshed SSR toolbars in every web documentation locale, the web demo's `nabi-note-1.4.0.tgz`, and its npm lockfile.
-- Added a pnpm lockfile and workspace configuration to the web documentation project. Build permissions for `esbuild` and `workerd` remain selection placeholders.
+- Updated the public AI documentation for table cell editing, backgrounds, storage formats, command scopes, uploads and paste, toolbar groups, and the double-Enter default. Refreshed SSR toolbars in every web documentation locale, the web demo's `nabi-note-1.5.0.tgz`, and its npm lockfile.
+- Removed the unnecessary pnpm lockfile and workspace configuration so web deployments no longer misidentify the npm project as a pnpm project.
+- Updated the public AI documentation with the footnote wing's storage format, commands, editing behavior, formatting, viewer, and Markdown contracts. Refreshed the SSR toolbars and wing chips for every web documentation locale, the web demo `nabi-note-1.5.0.tgz`, and the npm lockfile.
 
 ### Fixed
 
+- Fixed UI text, including tooltips and panel inputs, and default table text to use sans-serif independently of the body typeface. Explicit user-selected typefaces inside cells remain supported.
 - Removed unnecessary spacing between the instruction row and the top controls in the web comparison example.
 - Fixed editor fullscreen being constrained by ancestor sizing, transforms, and containment. Fullscreen fills the browser viewport and restores the original position and styles on exit. The merge view also expands all three document panes to the available height.
 - Fixed float content remaining visible inside folded comparison regions.
@@ -147,7 +159,7 @@ Dates use Korea Standard Time (KST).
 
 - First stable release.
 
-[1.4.0]: https://www.npmjs.com/package/nabi-note/v/1.4.0
+[1.5.0]: https://www.npmjs.com/package/nabi-note/v/1.5.0
 [1.3.2]: https://www.npmjs.com/package/nabi-note/v/1.3.2
 [1.3.1]: https://www.npmjs.com/package/nabi-note/v/1.3.1
 [1.3.0]: https://www.npmjs.com/package/nabi-note/v/1.3.0

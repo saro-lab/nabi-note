@@ -213,12 +213,12 @@ function fixture(onMerge?: (proposal: DiffMergeProposal) => void | Promise<void>
   const dom = new JSDOM('<!doctype html><html><body><div id="surface" tabindex="0"></div></body></html>');
   const surface = dom.window.document.getElementById('surface')!;
   const { nabi, registry: editorRegistry } = createNabiWith([], { doc: [p('base')], typingMergeMs: 0 });
-  const wing = mountDiffWing({ nabi, registry: editorRegistry, surface, merge: true });
+  const wing = mountDiffWing({ nabi, registry: editorRegistry, surface });
   nabi.applyCommand('insertText', { text: 'local ' });
   const local = nabi.getJson();
   wing.open();
   const button = () => dom.window.document.querySelector<HTMLButtonElement>('.nabi-diff-merge-action');
-  ok('날개 머지는 선택적으로 켤 수 있다', button() !== null);
+  ok('날개 머지는 기본으로 켜진다', button() !== null);
   button()!.click();
   eq('날개 머지는 현재 편집기에 반영한다', nabi.getJson(), [p('base')]);
   eq('날개 머지는 로드 기준을 옮기지 않는다', wing.baseline(), [p('base')]);
@@ -238,6 +238,11 @@ function fixture(onMerge?: (proposal: DiffMergeProposal) => void | Promise<void>
   button()!.click();
   eq('잠금 해제 뒤 다시 적용할 수 있다', nabi.getJson(), [p('base')]);
   wing.unmount();
+  const readonlyWing = mountDiffWing({ nabi, registry: editorRegistry, surface, merge: false });
+  nabi.applyCommand('insertText', { text: 'new local ' });
+  readonlyWing.open();
+  eq('날개 머지도 명시적으로 끌 수 있다', button(), null);
+  readonlyWing.unmount();
   dom.window.close();
 }
 

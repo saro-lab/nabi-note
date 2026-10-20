@@ -15,6 +15,8 @@ export interface PromptField {
   readonly value?: string;
   readonly placeholder?: string;
   readonly optional?: boolean;
+  readonly kind?: 'text' | 'url' | 'textarea';
+  readonly singleLine?: boolean;
   // 이 칸의 형식 검사 — wing이 선언한 WingField.validate가 그대로 실려 온다.
   // This field's validation — carried straight through from the wing's declared WingField.validate.
   readonly validate?: (value: string) => boolean;
@@ -24,6 +26,7 @@ export interface PromptOptions extends PanelOptions {
   readonly translator?: Translator;
   readonly fields: readonly PromptField[];
   readonly okLabel: string;
+  readonly submitOnOutside?: boolean;
   // 값 묶음이 쓸 만한가 — 거짓이면 확인이 안 눌린다. 없으면 "필수 칸이 비지 않았나"만 본다.
   // Whether the whole set of values is usable — false locks the OK button. Absent, only "no required field is blank" is checked.
   readonly validate?: (values: Readonly<Record<string, string>>) => boolean;
@@ -47,9 +50,12 @@ export function promptValid(fields: readonly PromptField[], values: Readonly<Rec
 export function openPrompt(owner: Document, options: PromptOptions): Panel {
   const copy = options.translator ? new Translations(options.translator) : null;
   let cleanup = (): void => {};
+  let submit = (): void => {};
   const panel = openPanel(owner, {
     ...options,
-    className: 'nabi-prompt',
+    className: options.fields.some((field) => field.kind === 'textarea')
+      ? 'nabi-prompt nabi-prompt-wide'
+      : 'nabi-prompt',
     modal: false,
     restore: options.restore ?? options.anchor,
     onClose: () => {
@@ -57,23 +63,29 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
       cleanup();
       options.onClose?.();
     },
+    ...(options.submitOnOutside
+      ? {
+          onOutside: () => {
+            submit();
+            options.onOutside?.();
+          },
+        }
+      : {}),
   });
   panel.root.setAttribute('role', 'dialog');
-  const inputs: HTMLInputElement[] = [];
+  const inputs: (HTMLInputElement | HTMLTextAreaElement)[] = [];
   const close = (): void => panel.close();
 
   try {
-    // 한 줄이다. 칸 위에 이름표를 세우지 않는다 — 값 하나(주소)를 받자고 뜨는 판이라, 이름표를 세우면 판만 두 배로 커지고 말하는 것은 그대로다. 이름은 placeholder가 진다.
-    // A single line — no label above the field. This panel exists to collect one value (an address); a label would only double the panel's height without saying anything new. The placeholder carries the name instead.
     for (const field of options.fields) {
-      const input = make(owner, 'input', 'nabi-input', {
-        type: 'text',
+      const input = make(owner, field.kind === 'textarea' ? 'textarea' : 'input', 'nabi-input', {
+        ...(field.kind === 'textarea' ? { rows: '4' } : { type: field.kind ?? 'text' }),
         // 선언한 자리표시가 먼저고, 없으면 이름표를 자리표시로 쓴다.
         // The declared placeholder wins; without one, the field's label is used as the placeholder.
         placeholder: field.placeholder ?? field.label,
         'aria-label': field.label,
         'data-name': field.name,
-      }) as HTMLInputElement;
+      }) as HTMLInputElement | HTMLTextAreaElement;
       input.value = field.value ?? '';
       copy?.attribute(input, 'placeholder', () => field.placeholder ?? field.label);
       copy?.attribute(input, 'aria-label', () => field.label);
@@ -83,13 +95,18 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
 
     // 확인은 글자다 — 재생 화살표(▶)였을 때는 주소를 적고 나면 "이걸 누르면 재생되나?"로 읽혔다. aria-label은 남기고 data-nabi-tip은 뗀다(이름이 이미 보이는데 같은 말풍선을 또 띄우면 가림막일 뿐이다).
     // The confirm button is text, not an icon — a play arrow (▶) here used to read as "does this play the address I just typed?" The aria-label stays (accessible naming is fragile here), but data-nabi-tip is dropped — a tooltip repeating a name already visible is just clutter.
-    const ok = make(owner, 'button', 'nabi-btn nabi-go', {
-      type: 'button',
-      'aria-label': options.okLabel,
-    }) as HTMLButtonElement;
-    ok.textContent = options.okLabel;
-    copy?.text(ok, () => options.okLabel);
-    copy?.attribute(ok, 'aria-label', () => options.okLabel);
+    const ok = options.submitOnOutside
+      ? null
+      : (make(owner, 'button', 'nabi-btn nabi-go', {
+          type: 'button',
+          'aria-label': options.okLabel,
+        }) as HTMLButtonElement);
+    if (ok) {
+      ok.textContent = options.okLabel;
+      copy?.text(ok, () => options.okLabel);
+      copy?.attribute(ok, 'aria-label', () => options.okLabel);
+      panel.root.append(ok);
+    }
     if (copy && options.translator) {
       const t = options.translator;
       copy.attribute(panel.root, 'dir', () => localeDirection(t.locale));
@@ -103,7 +120,6 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
             .join(', ') || options.okLabel,
       );
     }
-    panel.root.append(ok);
 
     const read = (): Record<string, string> => {
       const values: Record<string, string> = {};
@@ -118,12 +134,23 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
       promptValid(options.fields, values) && (options.validate?.(values) ?? true);
 
     const sync = (): void => {
+      options.fields.forEach((field, i) => {
+        const input = inputs[i];
+        if (!input || !field.singleLine) return;
+        const clean = (value: string): string => value.replace(/\r\n?|[\n\u2028\u2029]/g, ' ');
+        const value = clean(input.value);
+        if (value === input.value) return;
+        const start = clean(input.value.slice(0, input.selectionStart ?? 0)).length;
+        const end = clean(input.value.slice(0, input.selectionEnd ?? 0)).length;
+        input.value = value;
+        input.setSelectionRange(start, end);
+      });
       const values = read();
       const valid = good(values);
-      ok.disabled = !valid;
+      if (ok) ok.disabled = !valid;
     };
 
-    const submit = (): void => {
+    submit = (): void => {
       const values = read();
       if (!good(values)) return;
       close();
@@ -135,7 +162,7 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
       (event: KeyboardEvent): void => {
         event.stopPropagation();
         if (event.key === 'Tab') {
-          const controls = [...inputs, ...(ok.disabled ? [] : [ok])];
+          const controls = [...inputs, ...(ok && !ok.disabled ? [ok] : [])];
           if (controls.length < 2) return;
           event.preventDefault();
           const at = controls.indexOf(control as HTMLInputElement & HTMLButtonElement);
@@ -143,7 +170,13 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
           controls[next]?.focus();
           return;
         }
-        if (event.key === 'Enter') {
+        if (event.isComposing || event.keyCode === 229) return;
+        if (
+          event.key === 'Enter' &&
+          (control.tagName !== 'TEXTAREA' ||
+            !event.shiftKey ||
+            options.fields[inputs.indexOf(control as HTMLTextAreaElement)]?.singleLine)
+        ) {
           event.preventDefault();
           submit();
         }
@@ -155,17 +188,19 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
       // Keys must not leak to the editor — while focus is here, typing belongs to this field.
       const onKey = keydown(input);
       keys.set(input, onKey);
-      input.addEventListener('keydown', onKey);
+      input.addEventListener('keydown', onKey as EventListener);
     }
-    const releaseMouse = suppressMousedownTap(ok);
-    ok.addEventListener('click', submit);
-    const onOkKey = keydown(ok);
-    keys.set(ok, onOkKey);
-    ok.addEventListener('keydown', onOkKey);
+    const releaseMouse = ok ? suppressMousedownTap(ok) : (): void => {};
+    if (ok) {
+      ok.addEventListener('click', submit);
+      const onOkKey = keydown(ok);
+      keys.set(ok, onOkKey);
+      ok.addEventListener('keydown', onOkKey);
+    }
     cleanup = () => {
       releaseMouse();
-      ok.removeEventListener('click', submit);
-      ok.removeEventListener('keydown', onOkKey);
+      ok?.removeEventListener('click', submit);
+      if (ok) ok.removeEventListener('keydown', keys.get(ok) as EventListener);
       for (const input of inputs) {
         input.removeEventListener('input', sync);
         input.removeEventListener('keydown', keys.get(input) as EventListener);
@@ -192,7 +227,7 @@ export function openPrompt(owner: Document, options: PromptOptions): Panel {
           .join(', ') || options.okLabel;
       panel.root.setAttribute('aria-label', name);
     }
-    (inputs[0] ?? ok).focus();
+    (inputs[0] ?? ok ?? panel.root).focus();
     return panel;
   } catch (error) {
     try {

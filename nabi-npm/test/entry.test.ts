@@ -72,9 +72,9 @@ eq('viewer 가 딛는 층은 viewer·locale·code·lifecycle·아이콘 렌더�
   'viewer',
 ]);
 eq(
-  'viewer 는 순수 아이콘 렌더러만 공유한다',
-  viewerFiles.filter((rel) => rel.startsWith('src/style/')),
-  ['src/style/icon.ts'],
+  'viewer 는 순수 아이콘 렌더러와 DOM 헤딩 도우미만 공유한다',
+  viewerFiles.filter((rel) => rel.startsWith('src/style/')).sort(),
+  ['src/style/headings.ts', 'src/style/icon.ts'],
 );
 ok(
   'viewer 가 editor·surface·ui·wing 파일을 하나도 안 문다',

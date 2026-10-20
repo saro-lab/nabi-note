@@ -221,6 +221,7 @@ export function callbackEnv(env: EditEnv): EditEnv {
     voids: new ReadonlySetView(env.voids),
     blockHolders: new ReadonlySetView(env.blockHolders),
     inlineHolders: new ReadonlySetView(env.inlineHolders),
+    ...(env.inlineTerminals ? { inlineTerminals: new ReadonlySetView(env.inlineTerminals) } : {}),
     boolAttrs: new ReadonlySetView(env.boolAttrs),
     ...(attrSchemas ? { attrSchemas } : {}),
     ...(boolAttrsByType ? { boolAttrsByType } : {}),

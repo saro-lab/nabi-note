@@ -129,7 +129,14 @@ export interface MdContext {
   // Current indent inside a list/quote; this step's result becomes the next line prefix.
   readonly indent: string;
   readonly env: SchemaEnv;
+  // html 조립의 ordinal과 같다 — 문서 전체를 낼 때 같은 타입 안의 차례.
+  // Same as the html builder's ordinal: the position within its type when the whole document is written.
+  readonly ordinal?: number;
 }
 
 export type MdBuilder = (node: ElementNode, ctx: MdContext) => string;
 export type MdBuilders = Readonly<Record<string, MdBuilder>>;
+// 문서 끝 덧붙임 — html 쪽 HtmlAppendix와 짝이다(각주 정의 줄).
+// Document-end appendix, the counterpart of HtmlAppendix (footnote definition lines).
+export type MdAppendix = (nodes: readonly ElementNode[], escape: (raw: string) => string) => string;
+export type MdAppendices = Readonly<Record<string, MdAppendix>>;

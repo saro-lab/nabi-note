@@ -13,9 +13,11 @@ Affichez deux documents enregistrés côte à côte pour examiner leurs différe
 
 ## Appliquer le contenu antérieur sélectionné
 
+Les comparaisons autonomes sont en lecture seule par défaut et n’affichent pas de boutons d’application **&gt;&gt;**. Connectez un callback `onMerge` pour afficher ces boutons.
+
 L’ancien document est à gauche, l’actuel à droite. Cliquez sur **&gt;&gt;** à côté d’une modification pour reprendre l’ancien contenu du paragraphe ou groupe de lignes concerné. La sélection ne se fait pas caractère par caractère. Vous pouvez aussi restaurer du contenu supprimé ou retirer du contenu ajouté au document actuel.
 
-Essayez de rétablir uniquement l’heure ou les objets à apporter. Ouvrez **Document actuel mis à jour par le callback** pour voir le résultat. **Recommencer** restaure l’exemple initial.
+L’exemple ci-dessous est en lecture seule. Observez les changements d’horaire et d’objets à apporter. **Recommencer** restaure l’exemple initial.
 
 <CompareDemo />
 
@@ -85,7 +87,6 @@ const comparison = mountDiffWing({
   registry,
   surface: content,
   locale: 'fr',
-  merge: true,
 })
 const toolbar = mountToolbar({
   nabi,
@@ -98,6 +99,6 @@ const toolbar = mountToolbar({
 })
 ```
 
-Avec `merge: true`, le contenu antérieur choisi est appliqué à l’éditeur. Cette opération peut être annulée et conserve la référence. Si l’éditeur d’origine change pendant l’affichage, la comparaison est recalculée. Omettre `merge` conserve la lecture seule.
+`merge` vaut `true` par défaut : le contenu antérieur choisi peut donc être appliqué à l’éditeur. Cette opération peut être annulée et conserve la référence. Si l’éditeur d’origine change pendant l’affichage, la comparaison est recalculée. Définissez `merge: false` pour une comparaison en lecture seule.
 
 Appelez `toolbar.unmount()` et `comparison.unmount()` en retirant la vue. Pour inclure la version du début de l’édition et combiner automatiquement les modifications des deux côtés, utilisez [Fusion](./merge).

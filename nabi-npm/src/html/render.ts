@@ -1,10 +1,10 @@
 // 조립 — 나비트리가 HTML이 되는 유일한 자리이자 이스케이프가 일어나는 유일한 곳이다(조립 함수는 ctx.element로만 태그를 짓는다) — 신뢰 경계가 한 줄로 지켜진다.
 // Assembly — the only place a nabi-tree becomes HTML, and the only place escaping happens (builders write tags solely through ctx.element) — the trust boundary stays a single line.
-import { isWrapper, type SchemaEnv } from '../schema/env.js';
+import { isInlineTerminal, isWrapper, type SchemaEnv } from '../schema/env.js';
 import { BR, P } from '../schema/reserved.js';
 import { isElement, type ElementNode, type NabiDoc, type NabiNode } from '../schema/types.js';
-import { DEFAULT_BUILDERS, FILLER_ATTR } from './builders.js';
-import type { HtmlAttrs, HtmlBuilders, HtmlContext, HtmlOptions } from './contract.js';
+import { DEFAULT_BUILDERS, FILLER_ATTR, TERMINAL_ATTR } from './builders.js';
+import type { HtmlAppendices, HtmlAttrs, HtmlBuilders, HtmlContext, HtmlOptions } from './contract.js';
 import { safeUrl } from './url.js';
 
 // --- 이스케이프 (이 모듈 전용) ----------------------------------------------------------------
@@ -84,7 +84,9 @@ const FILLER_BR = `<br ${FILLER_ATTR}/>`;
 function trailingLine(nodes: readonly NabiNode[], env: SchemaEnv): boolean {
   const last = nodes[nodes.length - 1];
   if (last === undefined || !isElement(last)) return false;
-  if (last.w === BR) return true;
+  // 끝의 봉해진 인라인 단말 뒤에도 브라우저가 캐럿을 못 세운다 — 라인처럼 받침을 단다.
+  // Browsers can't place a caret after a trailing sealed inline terminal either, so it gets a filler like a line.
+  if (last.w === BR || isInlineTerminal(last.w, env)) return true;
   if (isBlockGrade(last.w, env)) return false;
   return trailingLine(last.ch, env);
 }
@@ -102,6 +104,7 @@ interface Job {
   readonly builders: HtmlBuilders;
   readonly keys: boolean;
   readonly allowLocal: boolean;
+  readonly ordinals?: ReadonlyMap<ElementNode, number>;
 }
 
 interface DropCapState {
@@ -140,6 +143,7 @@ function jobOf(options: HtmlOptions, keys: boolean): Job {
     builders: options.builders ?? DEFAULT_BUILDERS,
     keys,
     allowLocal: options.allowLocalUrls === true,
+    ...(options.ordinals ? { ordinals: options.ordinals } : {}),
   };
 }
 
@@ -156,7 +160,12 @@ function contextFor(
   preserveStart: boolean,
   preserveEnd: boolean,
 ): HtmlContext {
-  const key: HtmlAttrs = job.keys && block && typeof node._id === 'string' ? { 'data-key': node._id } : {};
+  const key: HtmlAttrs =
+    job.keys && block && typeof node._id === 'string'
+      ? { 'data-key': node._id }
+      : job.keys && isInlineTerminal(node.w, job.env)
+        ? { [TERMINAL_ATTR]: '', contenteditable: 'false', draggable: 'false' }
+        : {};
   return {
     element: (tag, inner, attrs) => tagOf(tag, inner, { ...key, ...attrs }),
     wrap: (tag, inner, attrs) => tagOf(tag, inner, attrs ?? {}),
@@ -169,7 +178,56 @@ function contextFor(
     src: (raw) => safeUrl(raw, job.allowLocal),
     filled: (inner) => bodyOf(inner, job, node.ch),
     keys: job.keys,
+    ...(job.ordinals?.has(node) ? { ordinal: job.ordinals.get(node) as number } : {}),
   };
+}
+
+// 인라인 단말을 타입별로 문서 순서대로 모은다 — 조립 함수가 children()을 부르는 순서와 상관없이 트리 순서가 번호의 기준이다.
+// Gathers inline terminals per type in document order; numbering follows tree order regardless of when builders call children().
+export function inlineTerminalsOf(
+  doc: readonly NabiNode[],
+  env: SchemaEnv,
+): ReadonlyMap<string, readonly ElementNode[]> {
+  const out = new Map<string, ElementNode[]>();
+  if (!env.inlineTerminals || env.inlineTerminals.size === 0) return out;
+  const walk = (nodes: readonly NabiNode[]): void => {
+    for (const node of nodes) {
+      if (!isElement(node)) continue;
+      if (isInlineTerminal(node.w, env)) {
+        const list = out.get(node.w) ?? [];
+        list.push(node);
+        out.set(node.w, list);
+        continue;
+      }
+      walk(node.ch);
+    }
+  };
+  walk(doc);
+  return out;
+}
+
+export function ordinalsOf(
+  found: ReadonlyMap<string, readonly ElementNode[]>,
+): ReadonlyMap<ElementNode, number> | undefined {
+  if (found.size === 0) return undefined;
+  const out = new Map<ElementNode, number>();
+  for (const nodes of found.values()) nodes.forEach((node, i) => out.set(node, i + 1));
+  return out;
+}
+
+function appendixOf(
+  found: ReadonlyMap<string, readonly ElementNode[]>,
+  appendices: HtmlAppendices | undefined,
+  job: Job,
+): string {
+  if (!appendices) return '';
+  let out = '';
+  for (const [w, nodes] of found) {
+    const appendix = Object.prototype.hasOwnProperty.call(appendices, w) ? appendices[w] : undefined;
+    if (!appendix || nodes.length === 0) continue;
+    out += appendix(nodes, contextFor({ ...job, keys: false }, { w, ch: nodes }, false, false, false));
+  }
+  return out;
 }
 
 function renderNode(
@@ -236,7 +294,10 @@ function renderParagraph(p: ElementNode, job: Job): string {
     attrs['data-nabi-p'] = '';
   } else {
     const h = p.a?.['h'];
-    if (typeof h === 'number' && Number.isInteger(h) && h >= 1 && h <= 6) tag = `h${h}`;
+    if (typeof h === 'number' && Number.isInteger(h) && h >= 1 && h <= 6) {
+      tag = `h${h}`;
+      if (h === 1 && !headingTextOf(p.ch, job.env).trim()) attrs['data-nabi-heading-empty'] = '';
+    }
   }
 
   const align = p.a?.['a'];
@@ -250,12 +311,34 @@ function renderParagraph(p: ElementNode, job: Job): string {
   return tagOf(tag, bodyOf(inner, job, p.ch), attrs);
 }
 
+function headingTextOf(nodes: readonly NabiNode[], env: SchemaEnv): string {
+  return nodes
+    .map((node) => {
+      if (typeof node === 'string') return node;
+      if (node.w === BR) return ' ';
+      return isInlineTerminal(node.w, env) ? '' : headingTextOf(node.ch, env);
+    })
+    .join('');
+}
+
 // --- 문 -------------------------------------------------------------------------------------
 
 // 보기 HTML — 저장·발행되는 값. `nabi.css` 를 건 `.nabi-content` 안에서 그려진다.
 // Display HTML — the stored/published value, meant to render inside a `.nabi-content` with `nabi.css` loaded.
 export function renderHtml(doc: NabiDoc, options: HtmlOptions): string {
-  return renderChildren(doc, jobOf(options, false));
+  const found = inlineTerminalsOf(doc, options.env);
+  const ordinals = ordinalsOf(found);
+  const job: Job = { ...jobOf(options, false), ...(ordinals ? { ordinals } : {}) };
+  return renderChildren(doc, job) + appendixOf(found, options.appendices, job);
+}
+
+// 덧붙임만 — 편집 화면은 본문을 contenteditable에 그리고 이 부분만 그 밖에 따로 그린다.
+// The appendix alone; the editing screen draws the body in contenteditable and this part separately outside it.
+export function renderAppendixHtml(doc: NabiDoc, options: HtmlOptions): string {
+  const found = inlineTerminalsOf(doc, options.env);
+  const ordinals = ordinalsOf(found);
+  const job: Job = { ...jobOf(options, false), ...(ordinals ? { ordinals } : {}) };
+  return appendixOf(found, options.appendices, job);
 }
 
 // 편집기 HTML — 같은 조립에 data-key·화면 전용 부속을 더한다. DOM 어휘가 없어 Node에서도 돈다.

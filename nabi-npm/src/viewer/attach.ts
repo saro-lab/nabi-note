@@ -2,11 +2,19 @@
 // The single door that wires up all reader-side runtime; a host only ever writes one declarative line. If the host had to rewire itself every time a feature (column sort, code highlighting, ...) was added, an already-deployed page would never get it, so growth happens in this one place instead. Both attachment points -- the preview body (from PreviewOptions.onBody) and the published page's .nabi-content -- must go through this same door, or the preview would drift from what's actually published
 import { attachCodePaint, type CodePaintOptions } from './code-paint.js';
 import { attachTableSort, type TableSortOptions } from './table-sort.js';
+import { attachFootnotes } from './footnotes.js';
+import { mountOutline, type OutlineAttachment, type OutlineOptions } from './outline.js';
 import { claimMountRoot } from '../lifecycle.js';
 
-export interface ViewerOptions extends TableSortOptions, CodePaintOptions {}
+export interface ViewerOptions extends TableSortOptions, CodePaintOptions {
+  // 각주 말풍선·하단 번호 이동 — 기본으로 켜진다. false면 저장 HTML 그대로(번호와 하단 목록만) 둔다.
+  // Footnote bubbles and list-number jumps, on by default; false leaves the stored HTML as is (numbers and the list only).
+  readonly footnotes?: boolean;
+  readonly outline?: OutlineOptions | false;
+}
 
 export interface ViewerAttachment {
+  readonly outline?: OutlineAttachment;
   // Host HTML이 바뀐 뒤 reader behavior를 새 내용에 다시 건다
   // Re-attaches reader behavior to new content after the host's HTML changes
   refresh(): void;
@@ -20,6 +28,7 @@ export interface ViewerAttachment {
 export function attachViewer(root: HTMLElement, options: ViewerOptions = {}): ViewerAttachment {
   const releaseRoot = claimMountRoot(root);
 
+  let outline: OutlineAttachment | undefined;
   let detachers: (() => void)[] = [];
   let disposed = false;
   let refreshing = false;
@@ -64,11 +73,13 @@ export function attachViewer(root: HTMLElement, options: ViewerOptions = {}): Vi
         clear();
         next.push(attachTableSort(root, options));
         next.push(attachCodePaint(root, options));
+        if (options.footnotes !== false) next.push(attachFootnotes(root));
         if (disposed) {
           rollback();
           return;
         }
         detachers = next;
+        outline?.refresh();
       } catch (error) {
         pending = false;
         rollback();
@@ -86,9 +97,13 @@ export function attachViewer(root: HTMLElement, options: ViewerOptions = {}): Vi
   };
   const attachment: ViewerAttachment = {
     refresh,
+    get outline() {
+      return outline;
+    },
     unmount() {
       if (disposed) return;
       disposed = true;
+      outline?.unmount();
       clear();
       if (refreshing) releaseDeferred = true;
       else releaseRoot();
@@ -96,8 +111,11 @@ export function attachViewer(root: HTMLElement, options: ViewerOptions = {}): Vi
   };
   try {
     refresh();
+    if (options.outline) outline = mountOutline(root, { locale: options.locale, ...options.outline });
   } catch (error) {
     disposed = true;
+    outline?.unmount();
+    clear();
     releaseRoot();
     throw error;
   }

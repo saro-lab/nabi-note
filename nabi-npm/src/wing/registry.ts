@@ -4,8 +4,22 @@
 import { $fromJson, $guarded, BR, P, RESERVED, isElement, type ElementNode, type NabiNode } from '../schema/index.js';
 import type { EditEnv } from '../doc/index.js';
 import { parseNodes, renderEditorHtml, renderHtml } from '../html/index.js';
-import type { HtmlBuilder, HtmlBuilders, HtmlOptions, ImportOptions } from '../html/index.js';
-import { $assertIoFilter, type IoFilter, type MdBuilder, type MdBuilders } from '../io/index.js';
+import type {
+  HtmlAppendices,
+  HtmlAppendix,
+  HtmlBuilder,
+  HtmlBuilders,
+  HtmlOptions,
+  ImportOptions,
+} from '../html/index.js';
+import {
+  $assertIoFilter,
+  type IoFilter,
+  type MdAppendices,
+  type MdAppendix,
+  type MdBuilder,
+  type MdBuilders,
+} from '../io/index.js';
 import {
   coreCommands,
   createNabi,
@@ -18,6 +32,7 @@ import { $builtinAttrTypes, $closeBuiltinAttrs, $closeKnownTypes, $isBuiltinWing
 import { erectsNode, type Attach, type InputRule, type StructureDecl, type Wing } from './contract.js';
 import { scopeBlockCommand } from './scope.js';
 import { $collectParagraphTargets } from './paragraph-target.js';
+import { $inlineTerminalOf } from './inline.js';
 
 // 커맨드 이름 규칙 — 동사+목적어 카멜. 낱말 하나(`merge`)나 대문자 시작은 죽는다.
 // Command naming rule: verb+object camelCase; a single word (`merge`) or a capitalized start fails.
@@ -53,6 +68,7 @@ const OFFICIAL_WINGS = new Set([
   'table',
   'img',
   'youtube',
+  'fn',
   'upload',
   'save',
   'open',
@@ -91,6 +107,10 @@ export interface Registry {
   // md 조립 맵 — builders와 같은 무늬다. 없는 타입은 md 저장에서 html로 떨어진다.
   // Markdown builder map, shaped like `builders`; a type without one falls back to raw HTML in md output.
   readonly mdBuilders: MdBuilders;
+  // 문서 끝 덧붙임(각주 목록) — 인라인 단말 타입별로 html·md 한 벌씩.
+  // Document-end appendices (the footnote list), one html and one md per inline-terminal type.
+  readonly appendices: HtmlAppendices;
+  readonly mdAppendices: MdAppendices;
   // 이 타입(부품 포함)을 소유한 wing — 키 소유 판정·ui가 쓴다.
   // The wing owning this type (including parts); used by key-ownership resolution and the UI.
   ownerOf(typeW: string): Wing | null;
@@ -353,6 +373,9 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
   const voids: string[] = [];
   const blockHolders: string[] = [];
   const inlineHolders: string[] = [];
+  const inlineTerminals: string[] = [];
+  const appendices = Object.create(null) as Record<string, HtmlAppendix>;
+  const mdAppendices = Object.create(null) as Record<string, MdAppendix>;
   const singleParagraph: string[] = [];
   const isolating: string[] = [];
   const noAlign: string[] = [];
@@ -395,7 +418,12 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     for (const w of $builtinAttrTypes(wing) ?? []) {
       if (byType.get(w) === wing) closedAttrs.add(w);
     }
-    if (wing.place === 'void') {
+    const inline = $inlineTerminalOf(wing);
+    if (inline) {
+      inlineTerminals.push(wing.w);
+      if (inline.appendix) appendices[wing.w] = inline.appendix;
+      if (inline.mdAppendix) mdAppendices[wing.w] = inline.mdAppendix;
+    } else if (wing.place === 'void') {
       lumps.push(wing.w);
       voids.push(wing.w);
     }
@@ -494,6 +522,7 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     voids: new Set(voids),
     blockHolders: new Set(blockHolders),
     inlineHolders: new Set(inlineHolders),
+    ...(inlineTerminals.length > 0 ? { inlineTerminals: new Set(inlineTerminals) } : {}),
     boolAttrs,
     attrSchemas,
     boolAttrsByType,
@@ -534,6 +563,8 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     doubles,
     ioFilters,
     mdBuilders,
+    appendices,
+    mdAppendices,
     ownerOf: (typeW) => byType.get(typeW) ?? null,
     wingOf: (w) => byW.get(w) ?? null,
   };
@@ -549,6 +580,7 @@ export function nabiOptionsOf(
     env: registry.env,
     commands: registry.commands,
     builders: registry.builders,
+    appendices: registry.appendices,
     ...(registry.claim ? { claim: registry.claim } : {}),
     parseHtml: parseNodes,
     ...(extra ?? {}),
@@ -608,6 +640,7 @@ export interface StoredHtmlOptions {
 const storedJob = (registry: Registry, options?: StoredHtmlOptions): HtmlOptions => ({
   env: registry.env,
   builders: registry.builders,
+  appendices: registry.appendices,
   ...(options?.allowLocalUrls ? { allowLocalUrls: true } : {}),
 });
 

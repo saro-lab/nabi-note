@@ -31,6 +31,7 @@ export {
 } from './values/values.js';
 export type { ValueWingOptions } from './values/values.js';
 export { linkWing } from './link/link.js';
+export { footnoteWing } from './footnote/footnote.js';
 export { alignWing, dropCapWing, headingWing, paragraphAttrWings } from './attrs/attrs.js';
 export { bulletListWing, listWings, orderedListWing, taskListWing } from './list/list.js';
 export { quoteWing } from './quote/quote.js';

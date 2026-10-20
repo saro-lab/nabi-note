@@ -1,3 +1,4 @@
+import { attachHeadingNumbers } from '../style/headings.js';
 import type { LocaleInput } from '../locale/index.js';
 import { iconHtml } from '../style/icon.js';
 // --- 화면 --------------------------------------------------------------------------------------
@@ -105,6 +106,10 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
     const afterPane = el('nabi-diff-pane nabi-diff-after');
     const afterDocEl = el('nabi-content nabi-diff-doc');
     afterPane.append(afterDocEl);
+    const beforeNumbers = attachHeadingNumbers(beforeDocEl);
+    const afterNumbers = attachHeadingNumbers(afterDocEl);
+    lifecycle.add(() => beforeNumbers.unmount());
+    lifecycle.add(() => afterNumbers.unmount());
     body.append(beforePane, gutter, afterPane);
     root.replaceChildren(bar, body);
     lifecycle.add(() => {
@@ -574,6 +579,8 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
       mergePlan = options.onMerge ? diffMergeChanges(before, after, registry, mergeOptions) : null;
       beforeDocEl.innerHTML = model ? paneHtml(model.before, model.entries) : '';
       afterDocEl.innerHTML = model ? paneHtml(model.after, model.entries) : '';
+      beforeNumbers.update();
+      afterNumbers.update();
       openLinksInNewTab(beforeDocEl);
       openLinksInNewTab(afterDocEl);
       beforeEls = [...beforeDocEl.children] as HTMLElement[];

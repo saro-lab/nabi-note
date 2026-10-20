@@ -1,7 +1,7 @@
 // 상황 줄이 그릴 그룹 목록을 정하는 순수부 — 출처 셋(조상·마크·문단 속성)을 안→밖 순서로 모으고, 상태는 겨눔 노드 하나가 아니라 후보 줄기 전체가 함께 답한다.
 // Pure logic that decides which groups the context toolbar renders — merges three sources (ancestors, marks, paragraph attrs) inside-out; state comes from the whole candidate chain, not just the target node.
-import { isElement, isWrapper, type ElementNode, type NabiDoc } from '../schema/index.js';
-import { holderLength, nodeAt, type EditEnv, type Position } from '../doc/index.js';
+import { isElement, isInlineTerminal, isWrapper, runsOf, type ElementNode, type NabiDoc } from '../schema/index.js';
+import { holderLength, nodeAt, terminalOf, type EditEnv, type Position } from '../doc/index.js';
 import { marksAt, ordered, type Selection } from '../caret/index.js';
 import type { Registry, Wing } from '../wing/index.js';
 import { aimNode } from './press.js';
@@ -29,6 +29,22 @@ function markReadPoint(doc: NabiDoc, start: Position, end: Position, env: EditEn
   if (!holder) return start;
   const limit = holderLength(holder, env);
   return { path: start.path, offset: Math.min(start.offset + 1, limit) };
+}
+
+// 꼭 한 칸을 덮은 선택이 인라인 단말(각주)이면 그 노드 — 조상도 마크도 아닌 물건이라 따로 찾는다.
+// The inline terminal (footnote) a one-unit selection covers exactly; it's neither an ancestor nor a mark, so it's looked up separately.
+function inlineTerminalAt(doc: NabiDoc, start: Position, end: Position, env: EditEnv): ElementNode | null {
+  if (end.offset - start.offset !== 1 || start.path.length !== end.path.length) return null;
+  if (start.path.some((v, i) => v !== end.path[i])) return null;
+  const holder = nodeAt(doc, start.path);
+  if (!holder || isWrapper(holder, env)) return null;
+  let at = 0;
+  for (const run of runsOf(holder, terminalOf(env))) {
+    if (at === start.offset) return run.kind === 'node' && isInlineTerminal(run.node.w, env) ? run.node : null;
+    if (at > start.offset) return null;
+    at += run.kind === 'text' ? run.text.length : 1;
+  }
+  return null;
 }
 
 export function contextGroupsAt(
@@ -72,6 +88,8 @@ export function contextGroupsAt(
   // 2. 마크 — 범위를 골랐으면 첫 글자의 마크를 읽는다. 경계 정규화상 캐럿은 앞 글자를 따르므로, 범위 시작점 그대로 읽으면 고른 첫 글자가 아니라 그 앞 글자를 보게 된다.
   // Marks — for a range, read the first character's marks. Since boundary normalization makes the caret follow the preceding character, reading straight from the range start would see the character before the selection, not its first character.
   const [start, end] = ordered(sel);
+  const terminal = inlineTerminalAt(doc, start, end, env);
+  if (terminal) offer(registry.ownerOf(terminal.w), terminal);
   const at = markReadPoint(doc, start, end, env);
   for (const mark of marksAt(doc, at, env)) offer(registry.ownerOf(mark.w), mark);
 

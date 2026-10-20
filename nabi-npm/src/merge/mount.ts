@@ -1,3 +1,4 @@
+import { attachHeadingNumbers } from '../style/headings.js';
 import { hostOf } from '../editor/host.js';
 import { acquireStyleSheet, claimMountRoot, DisposerStack, HostElementLease } from '../lifecycle.js';
 import { localeDirection, makeTranslator } from '../locale/index.js';
@@ -139,6 +140,8 @@ export function mountMerge(options: MergeMountOptions): MergeMount {
     const incomingGutter = el('gutter nabi-merge-incoming-gutter', grid);
     const right = pane('incoming');
     const incoming = el('source nabi-content', right.pane);
+    const headingNumbers = [base, content, incoming].map(attachHeadingNumbers);
+    for (const numbers of headingNumbers) lifecycle.add(() => numbers.unmount());
     const errorNode = el('error', shell);
     errorNode.setAttribute('role', 'alert');
     errorNode.hidden = true;
@@ -227,6 +230,7 @@ export function mountMerge(options: MergeMountOptions): MergeMount {
             count: remaining.length,
           });
       changes.update(selected, pending || composing || !state.canApply, composing);
+      for (const numbers of headingNumbers) numbers.update();
     }
     function reveal(): void {
       changes.reveal(selected);

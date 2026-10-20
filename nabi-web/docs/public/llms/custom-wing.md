@@ -89,8 +89,12 @@ interface Wing {
 
 ## Structure rules
 
+Prompt `WingField` and UI `PromptField` accept `kind: 'text' | 'url' | 'textarea'`. A textarea prompt spans the toolbar width and wraps across four visible lines on desktop or six on mobile, shrinking to fit the visible space above the keyboard. `singleLine: true` replaces actual line breaks with spaces on input while retaining visual wrapping. Enter confirms; Shift+Enter inserts a line break only when `singleLine` is absent or false. Enter during IME composition never submits.
+
+Prompt actions, prompt context controls, and `PromptOptions` accept `submitOnOutside: true`. This removes the confirmation button and submits valid values when a pointer press outside closes the prompt. Enter also submits. Escape and programmatic closure cancel; invalid values close without submission. Built-in footnote insert/edit prompts enable this option.
+
 - `mark`: inline wrapper around text/content.
-- `void`: block object with no children.
+- `void`: block object with no children. A custom wing cannot declare an inline terminal; that capability is internal to the official `fn` footnote wing.
 - `container`: block object; declare `holds: 'blocks'|'inline'`.
 - `attr`: changes a paragraph attribute; current core keys are only `h`, `a`, and `dc`.
 - `tool`: creates no document node.

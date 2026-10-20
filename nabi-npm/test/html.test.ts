@@ -31,7 +31,7 @@ const json = (doc: NabiDoc): string => JSON.stringify($toJson(doc));
 
 // 의 전체 예시 — 확정 스키마의 정본 문서다.
 const EX = [
-  { w: 'p', a: { h: 1, a: 'c' }, ch: ['제목글'] },
+  { w: 'p', a: { h: 1 }, ch: ['제목글'] },
   {
     w: 'p',
     a: { a: 'c', dc: 1 },
@@ -99,7 +99,7 @@ const EXAMPLE: NabiDoc = doc ?? [];
 
 // 이 글자열이 곧 계약이다: 태그 대응·속성 이름·라인·받침·표 겉옷이 한 줄에 다 들어 있다.
 const VIEW =
-  '<h1 data-nabi-align="c">제목글</h1>' +
+  '<h1>제목글</h1>' +
   '<p data-nabi-align="c" data-nabi-dropcap="1">맨글자 <b>굵게</b><i>기울임</i><u>밑줄</u><s>취소선</s>' +
   '<sub>아래첨자</sub><sup>위첨자</sup><mark data-color="yellow">형광펜</mark>' +
   '<span data-color="green">글자색</span><span data-nabi-size="lg">큰 글자</span>' +
@@ -452,9 +452,9 @@ eq(
   '[{"w":"p","ch":[{"w":"fs","a":{"v":"lg"},"ch":["글"]}]}]',
 );
 eq(
-  '문단 속성(제목·정렬)은 그대로 남고 마크만 덧입는다',
+  '제목은 정렬을 제거하고 서체 마크를 덧입는다',
   json(read('<h2 data-nabi-typeface="mono" data-nabi-align="c">글</h2>')),
-  '[{"w":"p","a":{"h":2,"a":"c"},"ch":[{"w":"tf","a":{"v":"mono"},"ch":["글"]}]}]',
+  '[{"w":"p","a":{"h":2},"ch":[{"w":"tf","a":{"v":"mono"},"ch":["글"]}]}]',
 );
 eq(
   '속의 마크는 그대로 살아 그 안에 든다',
@@ -494,9 +494,9 @@ for (const [name, source] of [
   eq(`${name} editor HTML roundtrip`, json(read(renderEditorHtml(source, OPT))), json(source));
 }
 eq(
-  '제목·정렬·드롭캡은 되읽힌다',
+  '제목·드롭캡은 되읽고 제목 정렬은 제거한다',
   json(read('<h2 data-nabi-align="c" data-nabi-dropcap="1">제목</h2>')),
-  '[{"w":"p","a":{"h":2,"a":"c","dc":1},"ch":["제목"]}]',
+  '[{"w":"p","a":{"h":2,"dc":1},"ch":["제목"]}]',
 );
 eq(
   '표의 횡스크롤 겉옷과 tbody 는 벗겨진다',
@@ -560,15 +560,11 @@ ok('이스케이프 함수는 층 밖으로 안 나간다 (06 규칙)', !/\besca
 // 문단 하나만 다시 그리는 문(부분 재그리기·SSR 조각)이 전체 조립과 같은 값을 낸다.
 // The single-paragraph render gate (partial redraw, SSR fragments) produces the same output as a full assembly.
 const first = EXAMPLE[0] as ElementNode;
-eq(
-  '문단 하나 조립은 전체 조립의 한 걸음과 같다',
-  renderParagraphHtml(first, OPT),
-  '<h1 data-nabi-align="c">제목글</h1>',
-);
+eq('문단 하나 조립은 전체 조립의 한 걸음과 같다', renderParagraphHtml(first, OPT), '<h1>제목글</h1>');
 eq(
   '문단 하나 조립도 편집기 갈래를 갖는다 (hydrate 조각)',
   renderParagraphHtml(first, OPT, true),
-  '<h1 data-key="n0" data-nabi-align="c">제목글</h1>',
+  '<h1 data-key="n0">제목글</h1>',
 );
 
 done('html');

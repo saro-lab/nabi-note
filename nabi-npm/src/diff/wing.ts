@@ -41,6 +41,7 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
   const surface = options.surface;
   const locale = options.locale;
   const allowLocalUrls = options.allowLocalUrls;
+  const merge = options.merge ?? true;
   const doc = surface.ownerDocument;
   const translator = makeTranslator(locale);
   const t = (key: string): string => translator.t(key);
@@ -53,7 +54,7 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
     if (change.loaded) base = nabi.getJson();
     if (change.doc) {
       editorRevision += 1;
-      if (options.merge && inner) {
+      if (merge && inner) {
         displayedEditorRevision = editorRevision;
         inner.update(base, nabi.getJson());
       }
@@ -193,7 +194,7 @@ export function mountDiffWing(options: DiffWingMountOptions): DiffWingMount {
         ...(allowLocalUrls ? { allowLocalUrls: true } : {}),
         ...(locale ? { locale } : {}),
         ...(options.onError ? { onError: options.onError } : {}),
-        ...(options.merge
+        ...(merge
           ? {
               onMerge(proposal) {
                 if (

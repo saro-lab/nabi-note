@@ -20,7 +20,7 @@ const ENV = makeEnv({
 // EX — 확정 스키마의 정본 문서 전체 예시다.
 // EX is the canonical full example document for the finalized schema.
 const EX = [
-  { w: 'p', a: { h: 1, a: 'c' }, ch: ['제목글'] },
+  { w: 'p', a: { h: 1 }, ch: ['제목글'] },
   {
     w: 'p',
     a: { a: 'c', dc: 1 },
@@ -225,9 +225,8 @@ eq('문단 속 문단은 껍데기를 벗는다', $toJson(nested), [{ w: 'p', ch
 
 const pAttrs =
   $fromJson([{ w: 'p', a: { h: 3, a: 'c', dc: 1, tf: 'serif', fs: 'lg', x: 'y' }, ch: ['글'] }], ENV) ?? [];
-eq('글 문단 attrs 는 h·a·dc 화이트리스트다 (서체·크기는 마크로 갔다)', (pAttrs[0] as ElementNode).a, {
+eq('제목 문단은 정렬을 제거하고 h·dc를 유지한다', (pAttrs[0] as ElementNode).a, {
   h: 3,
-  a: 'c',
   dc: 1,
 });
 const badAttrs = $fromJson([{ w: 'p', a: { h: 7, a: 'center', dc: 0 }, ch: ['글'] }], ENV) ?? [];

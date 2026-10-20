@@ -543,23 +543,18 @@ export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
     const flip = !(mobile && isInput) && below < 320 && above > below;
     const available = flip ? above : below;
     toolbox.classList.toggle('nabi-toolbox-mobile', mobile);
-    const contentBoxes = Array.from(body.children, (child) => child.getBoundingClientRect());
-    const contentHeight = contentBoxes.length
-      ? Math.max(...contentBoxes.map((box) => box.bottom)) - Math.min(...contentBoxes.map((box) => box.top))
-      : 0;
     const bodyStyle = view?.getComputedStyle(body);
     const bodyPadding = length(bodyStyle?.paddingTop) + length(bodyStyle?.paddingBottom);
     const toolboxStyle = view?.getComputedStyle(toolbox);
     const borderHeight = length(toolboxStyle?.borderTopWidth) + length(toolboxStyle?.borderBottomWidth);
+    const panelRoom = Math.min(state?.lastKeyboardHeight || 280, Math.max(96, room - 3 * barHeight), available);
+    toolbox.style.setProperty('--nabi-prompt-room', `${Math.max(0, panelRoom - bodyPadding - borderHeight)}px`);
+    const contentBoxes = Array.from(body.children, (child) => child.getBoundingClientRect());
+    const contentHeight = contentBoxes.length
+      ? Math.max(...contentBoxes.map((box) => box.bottom)) - Math.min(...contentBoxes.map((box) => box.top))
+      : 0;
     const panelHeight =
-      mode && !isInput
-        ? Math.min(
-            contentHeight > 0 ? contentHeight + bodyPadding + borderHeight : 280,
-            state?.lastKeyboardHeight || 280,
-            Math.max(96, room - 3 * barHeight),
-            available,
-          )
-        : 0;
+      mode && !isInput ? Math.min(contentHeight > 0 ? contentHeight + bodyPadding + borderHeight : 280, panelRoom) : 0;
     toolbox.classList.toggle('nabi-toolbox-input', mobile && isInput);
     toolbox.style.setProperty('--nabi-toolbox-height', `${panelHeight}px`);
     toolbox.classList.toggle('nabi-toolbox-inline', mobile && isInput);
@@ -629,6 +624,18 @@ export function mountCompactToolbar(options: CompactOptions): CompactToolbar {
     const onOutside = (event: Event): void => {
       const target = event.target as Node | null;
       if (navigating && target && !chrome.contains(target)) navigating = false;
+      if (
+        detail &&
+        detailOptions?.onOutside &&
+        target &&
+        !detail.root.contains(target) &&
+        !detailOptions.anchor.contains(target)
+      ) {
+        const onOutside = detailOptions.onOutside;
+        close(false);
+        onOutside();
+        return;
+      }
       if (mode && target && !root.contains(target) && !context?.root.contains(target)) close(false);
     };
     const onKey = (event: Event): void => {

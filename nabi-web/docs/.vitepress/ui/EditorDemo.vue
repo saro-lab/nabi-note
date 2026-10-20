@@ -216,6 +216,20 @@
         spellcheck="false"
         v-html="props.ssrHtml ?? ''"
       ></div>
+      <button
+        v-if="props.foldWings"
+        ref="outlineTrigger"
+        v-show="outlineAvailable"
+        class="demo-outline-trigger"
+        type="button"
+        :aria-label="outlineLabel"
+        :title="outlineLabel"
+        @click="outline?.toggle()"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M8 6h12M8 12h12M8 18h12M3 6h1M3 12h1M3 18h1" />
+        </svg>
+      </button>
     </div>
 
     <!-- 나가는 값 둘을 나란히 — 왼쪽은 HTML, 오른쪽은 문서의 실체인 나비트리다(좁은 화면은 위아래로). -->
@@ -287,6 +301,7 @@ import CodeBox from './CodeBox.vue'
 // Type-only import, erased at runtime, so Shiki never reaches SSR or the first bundle.
 import type { CodeHighlighting } from '../src/highlight.ts'
 import type { CodeHighlighter, Wing, LocaleInput, LocaleController } from 'nabi-note'
+import type { OutlineAttachment } from 'nabi-note/viewer'
 
 // wings는 처음 상태만 정한다 — 칩으로 껐다 켜는 것은 그대로고, 안 주면 전부 켜진다.
 // wings only sets the initial state; the chips still toggle everything, and omitting it starts all on.
@@ -448,6 +463,20 @@ let nabiModule: NabiModule | null = null
 // The reading-side runtime is a separate entry (nabi-note/viewer), loaded on the client like the editor.
 type ViewerModule = typeof import('nabi-note/viewer')
 let viewerModule: ViewerModule | null = null
+let outline: OutlineAttachment | null = null
+const outlineTrigger = ref<HTMLButtonElement | null>(null)
+const outlineAvailable = ref(false)
+const outlineLabel = ref('')
+watch(locale, () => {
+  if (nabiModule) outlineLabel.value = nabiModule.makeTranslator(locale.value).t('outline')
+})
+
+function outlineOffset(content: HTMLElement): number {
+  const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+  const host = content.closest<HTMLElement>('.demo-host')
+  const chrome = host?.querySelector<HTMLElement>('.demo-chrome')
+  return rem + (host?.classList.contains('is-fullscreen') ? 0 : 4 * rem) + (chrome?.offsetHeight ?? 0)
+}
 // diff도 다른 엔트리다(nabi-note/diff) — 같은 규칙으로 클라이언트에서만 온다.
 // The diff runtime is another entry (nabi-note/diff), loaded on the client by the same rule.
 type DiffModule = typeof import('nabi-note/diff')
@@ -492,8 +521,31 @@ const highlightCode: CodeHighlighter = (source, language) => {
 // 미리보기가 실제로 겪을 것(열 정렬·코드 색칠)을 얹는다 — attachViewer 하나를 부르고 하이라이터만 넘긴다.
 // What the reader's published page actually gets (sortable columns, code color): one door, one highlighter handed over.
 function attachPreviewRuntime(body: HTMLElement, locale: LocaleInput): () => void {
-  const viewer = viewerModule?.attachViewer(body, { locale, highlight: highlightCode })
-  return () => viewer?.unmount()
+  if (!viewerModule) return () => {}
+  const trigger = document.createElement('button')
+  trigger.type = 'button'
+  trigger.className = 'demo-outline-trigger'
+  trigger.hidden = true
+  body.parentElement!.append(trigger)
+  const updateLabel = () => {
+    trigger.textContent = nabiModule!.makeTranslator(locale).t('outline')
+  }
+  updateLabel()
+  const stopLocale = typeof locale === 'object' ? locale.onChange(updateLabel) : undefined
+  const viewer = viewerModule.attachViewer(body, {
+    locale, highlight: highlightCode,
+    outline: {
+      trigger,
+      scrollContainer: () => body.closest<HTMLElement>('.nabi-preview')!,
+      onAvailabilityChange: (available) => { trigger.hidden = !available },
+    },
+  })
+  trigger.onclick = () => viewer.outline?.toggle()
+  return () => {
+    stopLocale?.()
+    viewer.unmount()
+    trigger.remove()
+  }
 }
 
 function ensureHighlighting(): void {
@@ -553,6 +605,9 @@ let value = ''
 function unmountAll(): void {
   stopChange?.()
   stopChange = null
+  outline?.unmount()
+  outline = null
+  outlineAvailable.value = false
   viewTools?.unmount()
   pickedMark?.unmount()
   hints?.unmount()
@@ -757,6 +812,17 @@ function build(): void {
     onBody: (body: HTMLElement) => attachPreviewRuntime(body, here),
   })
 
+  if (props.foldWings && outlineTrigger.value && viewerModule) {
+    const trigger = outlineTrigger.value
+    outlineLabel.value = mod.makeTranslator(here).t('outline')
+    outline = viewerModule.mountOutline(content, {
+      trigger, locale: here,
+      scrollContainer: () => root.classList.contains('is-fullscreen') ? root : window,
+      offset: () => outlineOffset(content),
+      onAvailabilityChange: (available) => { outlineAvailable.value = available },
+    })
+  }
+
   const editor = nabi
   stopChange = editor.onChange(() => {
     value = editor.getHtml()
@@ -819,6 +885,7 @@ const EXPORT_NAME: Readonly<Record<string, string>> = {
   tc: 'textColorWing',
   hl: 'highlightWing',
   a: 'linkWing',
+  fn: 'footnoteWing',
   h: 'headingWing',
   align: 'alignWing',
   dc: 'dropCapWing',
@@ -851,6 +918,7 @@ const code = computed(() => {
   const all = ids.length === catalog.value.length && catalog.value.length > 0
 
   const imports = ['createLocale', 'createNabiWith', 'mountSurface', 'mountToolbar', 'mountContextToolbar', 'mountHints', 'watchSettle']
+  if (props.foldWings) imports.push('makeTranslator')
   const wingLines: string[] = []
 
   if (all) {
@@ -927,6 +995,7 @@ const code = computed(() => {
   const lines = [
     importBlock(imports),
     ...(on('diff') ? ["import { mountDiffWing } from 'nabi-note/diff'"] : []),
+    ...(props.foldWings ? ["import { mountOutline } from 'nabi-note/viewer'"] : []),
     '',
     ...askNote,
     'const selected = [',
@@ -947,6 +1016,24 @@ const code = computed(() => {
       : '// The locale also sets the direction — Arabic and Urdu run right to left',
     `mountSurface({ nabi, registry, root: content, locale${on('upload') ? ', fileSink: upload.take' : ''} })`,
     '',
+    ...(props.foldWings ? [
+      "const trigger = document.createElement('button')",
+      "trigger.type = 'button'",
+      "trigger.textContent = makeTranslator(locale).t('outline')",
+      "trigger.style.cssText = 'position:fixed;right:1rem;bottom:1rem;z-index:1000'",
+      'root.append(trigger)',
+      'const outline = mountOutline(content, {',
+      '  trigger, locale,',
+      "  scrollContainer: () => root.classList.contains('is-fullscreen') ? root : window,",
+      '  onChange: ({ items, activeIndex, available, open }) => {',
+      '    trigger.hidden = !available',
+      '    trigger.setAttribute("aria-expanded", String(open))',
+      '  },',
+      '})',
+      'trigger.onclick = () => outline.toggle()',
+      ko ? '// 편집기를 제거할 때 outline.unmount() 호출' : '// Call outline.unmount() when removing the editor',
+      '',
+    ] : []),
     'const settle = watchSettle(document, { surface: content })',
     `const shared = { nabi, registry, surface: content, settle, locale }`,
     ...(on('localHistory') || on('diff')
@@ -1272,4 +1359,20 @@ onBeforeUnmount(() => {
   outline: 2px solid var(--g-accent);
   outline-offset: 2px;
 }
+</style>
+
+<style>
+.demo-outline-trigger {
+  position: fixed; inset-inline-end: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom)); z-index: 1000;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 3rem; height: 3rem; padding: .75rem; border: 1px solid var(--nabi-line, #ddd);
+  border-radius: 999px; color: var(--nabi-fg, #222); background: var(--nabi-bg, #fff);
+  box-shadow: var(--nabi-shadow, 0 4px 18px #0002); cursor: pointer;
+  font: 500 .875rem/1 var(--nabi-font, var(--nabi-font-fallback, sans-serif));
+}
+.demo-outline-trigger[hidden] { display: none; }
+.demo-outline-trigger svg { width: 1.5rem; height: 1.5rem; }
+.demo-outline-trigger:hover, .demo-outline-trigger[aria-expanded="true"] { color: var(--nabi-accent, #3b6fe0); }
+.demo-outline-trigger:focus-visible { outline: 2px solid var(--nabi-accent, #3b6fe0); outline-offset: 3px; }
 </style>

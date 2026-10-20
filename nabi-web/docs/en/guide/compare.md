@@ -13,9 +13,11 @@ Compare two saved documents side by side to see what changed. The comparison can
 
 ## Apply selected earlier content
 
+Standalone comparisons are read-only by default and do not show **&gt;&gt;** apply buttons. Connect an `onMerge` callback to show these buttons.
+
 The earlier document is on the left and the current document on the right. Click **&gt;&gt;** beside a change to apply the earlier content of that paragraph or line group to the current document. Selection is not character by character. You can also restore content deleted from the current document or remove newly added content.
 
-Try restoring only the meeting time or the items to bring below. Expand **Current document updated by the callback** to inspect the result. **Start over** restores the original example.
+The example below is read-only. Check how the meeting time and items to bring have changed. **Start over** restores the original example.
 
 <CompareDemo />
 
@@ -85,7 +87,6 @@ const comparison = mountDiffWing({
   registry,
   surface: content,
   locale: 'en',
-  merge: true,
 })
 const toolbar = mountToolbar({
   nabi,
@@ -98,6 +99,6 @@ const toolbar = mountToolbar({
 })
 ```
 
-With `merge: true`, selected earlier content is applied to the editor. This change is undoable and preserves the baseline. Changes in the original editor while comparison is open trigger recalculation. Omitting `merge` retains the read-only comparison.
+`merge` defaults to `true`, so selected earlier content can be applied to the editor. This change is undoable and preserves the baseline. Changes in the original editor while comparison is open trigger recalculation. Set `merge: false` for a read-only comparison.
 
 Call `toolbar.unmount()` and `comparison.unmount()` when removing the view. To include the editing-start version and automatically combine both sides' changes, use [Merge](./merge).

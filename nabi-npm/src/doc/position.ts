@@ -46,10 +46,10 @@ export function isolationPath(doc: NabiDoc, path: readonly number[], env: EditEn
   return null;
 }
 
-// 라인은 언제나 한 칸이고, 홀더 속에 선 물건도 한 칸이다.
-// A line always counts as one slot, and so does an object standing inside a holder.
+// 라인은 언제나 한 칸이고, 홀더 속에 선 물건도, 글자 사이의 인라인 단말도 한 칸이다.
+// A line always counts as one slot, and so does an object standing inside a holder or an inline terminal between characters.
 export function terminalOf(env: SchemaEnv): Terminal {
-  return (w) => w === BR || env.lumps.has(w);
+  return (w) => w === BR || env.lumps.has(w) || (env.inlineTerminals?.has(w) ?? false);
 }
 
 export function nodeAt(doc: NabiDoc, path: readonly number[]): ElementNode | null {

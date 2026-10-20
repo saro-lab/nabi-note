@@ -76,6 +76,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
     const htmlOptions: HtmlOptions = {
       env,
       builders: registry.builders,
+      appendices: registry.appendices,
       ...(options.allowLocalUrls ? { allowLocalUrls: true } : {}),
     };
     // 일반 편집 상태인가 — 연타 몸짓의 문이다(260823_004 ④). 새 전역 깃발 없이 DOM의 기존 표식 셋(전체화면·힌트 배지 클래스, 실재하는 덮개·판)만 본다. 실제로 새는 자리는 전체화면 하나뿐이다 — 덮개·판은 캡처 단계에서 이미 막아 여기까지 안 온다
