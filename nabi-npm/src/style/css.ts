@@ -51,9 +51,13 @@ export const CORE_CSS = `${ICON_CSS}
   border-radius: var(--nabi-outline-radius, .75rem); background: var(--nabi-bg, #fff);
   color: var(--nabi-fg, #1b1b1f); box-shadow: var(--nabi-shadow, 0 8px 24px #10182820);
   font: 400 .875rem/1.5 var(--nabi-font, var(--nabi-font-fallback, sans-serif));
-  text-align: start; user-select: none; -webkit-user-select: none; touch-action: none;
+  text-align: start;
   opacity: 0; transform: var(--nabi-outline-enter, translateY(.5rem));
   transition: opacity var(--nabi-outline-duration, 150ms), transform var(--nabi-outline-duration, 150ms);
+}
+.nabi-outline, .nabi-outline * {
+  -webkit-user-select: none; user-select: none; -webkit-user-drag: none;
+  -webkit-touch-callout: none; touch-action: none;
 }
 .nabi-outline[data-state="open"] { opacity: 1; transform: translateY(0); }
 .nabi-outline[data-state="closing"] { transform: var(--nabi-outline-exit, translateY(.5rem)); pointer-events: none; }

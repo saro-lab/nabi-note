@@ -1,6 +1,6 @@
 # Viewer and diff
 
-The 1.5.0 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
+The 1.5.1 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
 
 These features live in separate package entry points so a published page does not pay for the editor.
 
@@ -67,6 +67,8 @@ Options also include `container` (outside the article, default its parent), `anc
 The supplied nonmodal panel has no backdrop, body scroll lock, heading bar, or close button. Pointer press selects immediately, dragging across items visits headings, and release closes. Long lists have top/bottom edge regions: pressing moves one heading from the current selection and holding repeats that step, revealing the selected item as needed. Mouse hover does nothing. Releasing or leaving an edge stops repetition; using an arrow alone does not close the panel. Edges disable only at the first or last selected heading, independently of list scroll position. Pointer cancellation/lost capture/window blur stops dragging. Keyboard arrows move one heading from the current selection even if keyboard focus is elsewhere; Home/End visit the first/last heading. Enter/Space on an edge moves one heading; on an item it selects and closes. Escape and outside press close. Focus returns to the trigger on selection or Escape, while outside interactions keep their destination. Touch dragging uses pointer capture, not native list scrolling.
 
 While open, scrolling the document reveals its current heading inside the outline without moving keyboard focus. This automatic list scrolling yields to pointer dragging and edge scrolling.
+
+The panel and its descendants disable text selection, native dragging, touch callouts, and native touch gestures, including on the scrollable list itself. This keeps mobile touch dragging under pointer navigation control; it does not restrict selection or scrolling in the document outside the panel.
 
 Immediate navigation keeps the chosen heading selected until the document scroll position changes, including near the bottom where several headings may share the same clamped scroll position.
 

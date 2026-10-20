@@ -1,6 +1,6 @@
 # Three-way merge
 
-Part of the 1.5.0 package contract. The web merge guide and its automatic/partial merge examples are available in every documentation locale; controls, messages, and sample content use the page language.
+Part of the 1.5.1 package contract. The web merge guide and its automatic/partial merge examples are available in every documentation locale; controls, messages, and sample content use the page language.
 
 Use `nabi-note/merge` independently of the diff wing. It compares an editing-start base with the local edit and the newly saved incoming document. The UI is base on the left, an editable result in the middle, and incoming on the right.
 

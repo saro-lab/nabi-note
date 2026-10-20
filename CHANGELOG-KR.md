@@ -5,6 +5,12 @@
 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/) 형식과 [시맨틱 버저닝](https://semver.org/lang/ko/)을 따릅니다.
 날짜는 한국 표준시(KST)를 기준으로 합니다.
 
+## [1.5.1] - 2026-10-21
+
+### Fixed
+
+- 모바일에서 목차를 터치한 채 움직일 때 글자가 선택되거나 기본 터치 동작이 목차 탐색을 가로채지 않도록, 내부 목록·항목·번호에도 선택·끌기·길게 누르기 메뉴 방지 규칙을 적용했습니다.
+
 ## [1.5.0] - 2026-10-20
 
 ### Added
@@ -159,6 +165,7 @@
 
 - 정식 버전을 출시했습니다.
 
+[1.5.1]: https://www.npmjs.com/package/nabi-note/v/1.5.1
 [1.5.0]: https://www.npmjs.com/package/nabi-note/v/1.5.0
 [1.3.2]: https://www.npmjs.com/package/nabi-note/v/1.3.2
 [1.3.1]: https://www.npmjs.com/package/nabi-note/v/1.3.1

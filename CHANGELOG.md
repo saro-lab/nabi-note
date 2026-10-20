@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
+## [1.5.1] - 2026-10-21
+
+### Fixed
+
+- Applied selection, native drag, and touch callout suppression to outline lists, items, and numbers so text selection and native touch gestures do not interrupt mobile heading navigation.
+
 ## [1.5.0] - 2026-10-20
 
 ### Added
@@ -159,6 +165,7 @@ Dates use Korea Standard Time (KST).
 
 - First stable release.
 
+[1.5.1]: https://www.npmjs.com/package/nabi-note/v/1.5.1
 [1.5.0]: https://www.npmjs.com/package/nabi-note/v/1.5.0
 [1.3.2]: https://www.npmjs.com/package/nabi-note/v/1.3.2
 [1.3.1]: https://www.npmjs.com/package/nabi-note/v/1.3.1
