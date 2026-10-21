@@ -21,6 +21,9 @@ interface Saved {
 const markersIn = (scope: ParentNode): HTMLElement[] =>
   Array.from(scope.querySelectorAll<HTMLElement>(MARKER)).filter((el) => !el.hasAttribute('data-nabi-terminal'));
 
+const canNavigate = (element: Element): boolean =>
+  !element.closest('.nabi-editing, .nabi-footnote-area, .nabi-preview-body');
+
 export function attachFootnotes(root: HTMLElement): () => void {
   const owner = root.ownerDocument;
   const view = owner.defaultView;
@@ -40,7 +43,9 @@ export function attachFootnotes(root: HTMLElement): () => void {
     remember(marker, 'role', 'button');
     remember(marker, 'aria-expanded', 'false');
   }
-  for (const list of lists) remember(list, READY_ATTR, '');
+  for (const list of lists) {
+    if (canNavigate(list)) remember(list, READY_ATTR, '');
+  }
 
   let tip: HTMLElement | null = null;
   let current: HTMLElement | null = null;
@@ -92,21 +97,23 @@ export function attachFootnotes(root: HTMLElement): () => void {
     }
     const scope = marker.closest<HTMLElement>('.nabi-content') ?? root;
     const index = markersIn(scope).indexOf(marker);
-    const number = owner.createElement('button');
-    number.type = 'button';
+    const number = owner.createElement(canNavigate(marker) ? 'button' : 'span');
     number.setAttribute('data-nabi-fn-num', '');
     number.textContent = `[${index + 1}]`;
-    number.addEventListener('click', (event) => {
-      const list = lists.find((list) => (list.parentElement ?? root) === scope);
-      const item = list?.querySelector<HTMLElement>(`[data-nabi-fn-n="${index + 1}"]`);
-      if (!item) return;
-      event.preventDefault();
-      const reduce = view?.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
-      close();
-      item.scrollIntoView?.({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
-      if (!item.hasAttribute('tabindex')) remember(item, 'tabindex', '-1');
-      item.focus({ preventScroll: true });
-    });
+    if (number.tagName === 'BUTTON') {
+      number.setAttribute('type', 'button');
+      number.addEventListener('click', (event) => {
+        const list = lists.find((list) => (list.parentElement ?? root) === scope);
+        const item = list?.querySelector<HTMLElement>(`[data-nabi-fn-n="${index + 1}"]`);
+        if (!item || !canNavigate(marker) || !canNavigate(item)) return;
+        event.preventDefault();
+        const reduce = view?.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+        close();
+        item.scrollIntoView?.({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+        if (!item.hasAttribute('tabindex')) remember(item, 'tabindex', '-1');
+        item.focus({ preventScroll: true });
+      });
+    }
     tip.replaceChildren(number, owner.createTextNode(` ${marker.getAttribute(FOOTNOTE_ATTR) ?? ''}`));
     // 본문 root 안에 붙여 글꼴 크기·색 토큰을 그대로 물려받는다 — 크기는 그 기준의 한 단계 아래다(CSS).
     // Placed inside the content root so it inherits the font size and color tokens; its size is one step below that base (CSS).
@@ -160,7 +167,7 @@ export function attachFootnotes(root: HTMLElement): () => void {
     const num = (event.target as Element | null)?.closest?.('[data-nabi-fn-num]');
     const item = num?.closest('[data-nabi-fn-n]');
     const list = item?.closest('[data-nabi-footnotes]');
-    if (!item || !list || !lists.includes(list as HTMLElement)) return;
+    if (!item || !list || !lists.includes(list as HTMLElement) || !canNavigate(list)) return;
     const index = Number(item.getAttribute('data-nabi-fn-n')) - 1;
     const scope = list.parentElement ?? root;
     const target = markersIn(scope)[index];
@@ -173,10 +180,11 @@ export function attachFootnotes(root: HTMLElement): () => void {
 
   const onKey = (event: KeyboardEvent): void => {
     const marker = markerOf(event.target);
-    if (event.key === 'Tab' && current && tip) {
+    const button = tip?.querySelector<HTMLButtonElement>('button');
+    if (event.key === 'Tab' && current && tip && button) {
       if (marker === current && !event.shiftKey) {
         event.preventDefault();
-        tip.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+        button.focus({ preventScroll: true });
       } else if (event.shiftKey && tip.contains(event.target as Node)) {
         event.preventDefault();
         current.focus({ preventScroll: true });

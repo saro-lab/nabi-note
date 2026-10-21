@@ -5,6 +5,13 @@
 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/) 형식과 [시맨틱 버저닝](https://semver.org/lang/ko/)을 따릅니다.
 날짜는 한국 표준시(KST)를 기준으로 합니다.
 
+## [1.5.2] - 2026-10-21
+
+### Fixed
+
+- 편집·미리보기 화면에서 각주 번호를 눌렀을 때 본문과 하단 목록 사이를 이동하지 않도록 수정했습니다. 편집 화면의 본문 각주 수정과 미리보기의 내용 말풍선, 게시 화면의 각주 이동은 유지합니다.
+- 링크 속성의 주소·표시 이름 입력칸이 도구 영역의 너비를 활용하고, 좁은 화면에서는 줄바꿈되어 영역 밖으로 넘치지 않도록 수정했습니다.
+
 ## [1.5.1] - 2026-10-21
 
 ### Fixed
@@ -165,6 +172,7 @@
 
 - 정식 버전을 출시했습니다.
 
+[1.5.2]: https://www.npmjs.com/package/nabi-note/v/1.5.2
 [1.5.1]: https://www.npmjs.com/package/nabi-note/v/1.5.1
 [1.5.0]: https://www.npmjs.com/package/nabi-note/v/1.5.0
 [1.3.2]: https://www.npmjs.com/package/nabi-note/v/1.3.2

@@ -148,8 +148,7 @@ const FOOTNOTE_CSS = `
 .nabi-content [data-nabi-footnotes] ol { list-style: none; margin: 0; padding: 0; }
 .nabi-content [data-nabi-footnotes] li { margin: 0; padding-block-end: .2em; overflow-wrap: anywhere; }
 .nabi-content [data-nabi-fn-num] { color: var(--nabi-accent); font-variant-numeric: tabular-nums; margin-inline-end: .2em; }
-.nabi-content [data-nabi-footnotes][data-nabi-fn-ready] [data-nabi-fn-num],
-.nabi-footnote-area [data-nabi-fn-num] { cursor: pointer; }
+.nabi-content [data-nabi-footnotes][data-nabi-fn-ready] [data-nabi-fn-num] { cursor: pointer; }
 .nabi-footnote-area { padding-block-start: 0; }
 .nabi-footnote-area [data-nabi-footnotes] { margin-block-start: 0; padding-block-end: 0; }
 .nabi-fullscreen-content + .nabi-footnote-area {
@@ -164,7 +163,7 @@ const FOOTNOTE_CSS = `
   font-family: var(--nabi-font, var(--nabi-font-fallback)); font-size: .875em; font-weight: 400; font-style: normal;
   line-height: 1.6; text-align: start; overflow-wrap: anywhere; white-space: normal;
 }
-.nabi-fn-tip [data-nabi-fn-num] {
+.nabi-fn-tip button[data-nabi-fn-num] {
   padding: 0; border: 0; background: transparent; font: inherit; cursor: pointer;
 }
 `;

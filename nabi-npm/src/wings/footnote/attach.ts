@@ -57,20 +57,6 @@ export const attachFootnotes: Attach = ({ root, nabi, doc, env, onDispose }) => 
     return sameSelection(nabi.getSelection(), selection) || nabi.select(selection);
   };
 
-  // 하단 번호 → 본문의 그 각주로 간다. 고치기 판은 열지 않는다(본문 번호를 눌러야 연다).
-  // A number in the list jumps to that footnote in the body; it doesn't open the edit prompt (that takes the body number).
-  const onAreaClick = (event: MouseEvent): void => {
-    const target = event.target as Element | null;
-    const item = typeof target?.closest === 'function' ? target.closest('[data-nabi-fn-n]') : null;
-    if (!item || !target?.closest('[data-nabi-fn-num]')) return;
-    const index = Number(item.getAttribute('data-nabi-fn-n')) - 1;
-    if (!Number.isInteger(index) || !select(index)) return;
-    event.preventDefault();
-    const reduce = owner.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
-    const marker = markers()[index] as HTMLElement | undefined;
-    marker?.scrollIntoView?.({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
-  };
-
   // 하단 목록은 본문 contenteditable의 형제다 — 그 안에 두면 커서·입력·지우기를 따로 막아야 한다. 각주가 없으면 영역째 없앤다.
   // The list is a sibling of the body's contenteditable; inside it, caret entry, typing, and deletion would each need blocking. No footnotes, no area at all.
   const drawArea = (): void => {
@@ -84,7 +70,6 @@ export const attachFootnotes: Attach = ({ root, nabi, doc, env, onDispose }) => 
     if (!area) {
       area = owner.createElement('div');
       area.className = 'nabi-content nabi-footnote-area';
-      area.addEventListener('click', onAreaClick);
     }
     if (root.nextSibling !== area) root.after(area);
     if (html !== areaHtml) {
@@ -246,7 +231,6 @@ export const attachFootnotes: Attach = ({ root, nabi, doc, env, onDispose }) => 
     root.removeEventListener('mousedown', onMouseDown);
     picked?.removeAttribute(PICKED_ATTR);
     picked = null;
-    area?.removeEventListener('click', onAreaClick);
     area?.remove();
     area = null;
   });

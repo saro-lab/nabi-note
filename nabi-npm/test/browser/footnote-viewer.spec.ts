@@ -1,10 +1,122 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+import type { Nabi } from '../../src/index.js';
 
 const entry = `/@fs${new URL('../../src/index.ts', import.meta.url).pathname}`;
+
+interface EditorState {
+  readonly nabi: Nabi;
+  readonly surface: HTMLElement;
+}
+
+async function setupEditor(page: Page): Promise<void> {
+  await page.goto('/');
+  await page.evaluate(async (entry) => {
+    const api = await import(/* @vite-ignore */ entry);
+    const viewer = await import(/* @vite-ignore */ entry.replace('/index.ts', '/viewer/index.ts'));
+    document.body.innerHTML =
+      '<div class="nabi"><div id="context" class="nabi-toolbar"></div><div id="surface" class="nabi-content"></div></div>' +
+      '<button id="preview" style="position:fixed;bottom:8px;right:8px">Preview</button>';
+    const { nabi, registry } = api.createNabiWith(api.defaultWings, {
+      locale: 'en',
+      doc: [
+        { w: 'p', ch: ['Body', { w: 'fn', a: { t: 'First note' }, ch: [] }] },
+        ...Array.from({ length: 40 }, (_, i) => ({ w: 'p', ch: [`Paragraph ${i + 1}`] })),
+      ],
+    });
+    api.injectSheets(document, api.collectSheets(registry, api.CORE_CSS));
+    const surface = document.getElementById('surface')!;
+    api.mountSurface({ nabi, registry, root: surface });
+    api.mountContextToolbar({ nabi, registry, surface, root: document.getElementById('context')!, locale: 'en' });
+    (globalThis as unknown as { footnoteTest: EditorState }).footnoteTest = { nabi, surface };
+    document.getElementById('preview')!.onclick = () =>
+      api.openPreview({
+        nabi,
+        surface,
+        locale: 'en',
+        onBody: (body: HTMLElement) => {
+          const attachment = viewer.attachViewer(body);
+          return () => attachment.unmount();
+        },
+      });
+  }, entry);
+}
+
+async function snapshot(page: Page) {
+  return page.evaluate(() => {
+    const { nabi, surface } = (globalThis as unknown as { footnoteTest: EditorState }).footnoteTest;
+    return {
+      scroll: window.scrollY,
+      previewScroll: document.querySelector('.nabi-preview')?.scrollTop ?? 0,
+      url: location.href,
+      document: nabi.getJson(),
+      selection: nabi.getSelection(),
+      sameSurface: document.getElementById('surface') === surface,
+    };
+  });
+}
 
 for (const width of [1280, 390]) {
   test.describe(`footnote viewer at ${width}px`, () => {
     test.use({ viewport: { width, height: 844 }, hasTouch: true, reducedMotion: 'reduce' });
+
+    test('editor endnote numbers keep the scroll, selection, and document in place', async ({ page }) => {
+      await setupEditor(page);
+      const number = page.locator('.nabi-footnote-area [data-nabi-fn-num]');
+      await number.scrollIntoViewIfNeeded();
+      const before = await snapshot(page);
+      expect(before.scroll).toBeGreaterThan(0);
+      if (width === 390) await number.tap();
+      else await number.click();
+      expect(await snapshot(page)).toEqual(before);
+      await expect(number).not.toHaveCSS('cursor', 'pointer');
+
+      const marker = page.locator('#surface [data-nabi-fn]');
+      if (width === 390) await marker.tap();
+      else await marker.click();
+      await expect(page.locator('.nabi-panel textarea')).toHaveValue('First note');
+    });
+
+    test('preview footnotes show their text without navigating in either direction', async ({ page }) => {
+      await setupEditor(page);
+      await page.locator('#preview').click();
+      const preview = page.locator('.nabi-preview-body');
+      const marker = preview.locator('sup[data-nabi-fn]');
+      if (width === 390) await marker.tap();
+      else await marker.click();
+      const tip = preview.locator('.nabi-fn-tip');
+      await expect(tip).toHaveText('[1] First note');
+      await expect(tip.locator('button')).toHaveCount(0);
+      const beforeBubbleClick = await snapshot(page);
+      const bubbleNumber = tip.locator('[data-nabi-fn-num]');
+      if (width === 390) await bubbleNumber.tap();
+      else await bubbleNumber.click();
+      expect(await snapshot(page)).toEqual(beforeBubbleClick);
+      await expect(tip).toBeVisible();
+      await expect(bubbleNumber).not.toHaveCSS('cursor', 'pointer');
+
+      if (width === 390) await marker.tap();
+      else await marker.click();
+      await expect(tip).toHaveCount(0);
+      const endnoteNumber = preview.locator('[data-nabi-footnotes] [data-nabi-fn-num]');
+      await endnoteNumber.scrollIntoViewIfNeeded();
+      const beforeListClick = await snapshot(page);
+      expect(beforeListClick.previewScroll).toBeGreaterThan(0);
+      if (width === 390) await endnoteNumber.tap();
+      else await endnoteNumber.click();
+      expect(await snapshot(page)).toEqual(beforeListClick);
+      await expect(endnoteNumber).not.toHaveCSS('cursor', 'pointer');
+
+      await marker.focus();
+      await page.keyboard.press('Enter');
+      await page.keyboard.press('Tab');
+      await expect(marker).not.toBeFocused();
+      await page.locator('.nabi-preview .nabi-close').click();
+      await expect(page.locator('.nabi-preview')).toHaveCount(0);
+      const after = await snapshot(page);
+      expect(after.document).toEqual(beforeListClick.document);
+      expect(after.selection).toEqual(beforeListClick.selection);
+      expect(after.sameSurface).toBe(true);
+    });
 
     test('bubble numbers navigate to endnotes and keyboard dismissal restores the marker', async ({ page }) => {
       await page.goto('/');

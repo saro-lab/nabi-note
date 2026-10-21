@@ -11,7 +11,7 @@ Use this file as a router. Read only the document that owns your question.
 - CDN setup with the browser bundle: `llms/quickstart-cdn.md`
 - Public export and type index: `llms/api-reference.md`
 - Footnote storage, editing, numbering, and published output: `llms/wings.md#footnotes`
-- Table cell formatting, crosshair cursor during cell-range dragging, multi-block table examples, and editable float examples for 1.5.1: `llms/wings.md`
+- Table cell formatting, crosshair cursor during cell-range dragging, multi-block table examples, and editable float examples for 1.5.2: `llms/wings.md`
 
 ## Contracts by topic
 
@@ -36,7 +36,7 @@ Use this file as a router. Read only the document that owns your question.
 - Headings reject alignment. Applying a heading clears paragraph alignment, and JSON/HTML normalization removes alignment from H1-H6. Mixed selections align only eligible non-heading targets. The main demo title is an ordinary paragraph with `fs: xl` and bold.
 - Open outlines keep the current heading visible as the body scrolls. Edge arrows move one heading from the current selection on press and repeat only while held; hovering does nothing. Keyboard arrows also move one heading from the current selection. The panel and all descendants suppress text selection, native dragging, and touch callouts so mobile touch dragging keeps navigating headings.
 - The `fn` footnote wing stores one-line plain text in `a.t` as a one-unit inline terminal. Numbers are derived from document order, never stored. Published HTML has `[n]` markers plus a document-end list; the editor shows the list outside `contenteditable`, and clicking a number opens the edit prompt in the property row. Footnote text uses fixed sans formatting at 0.875 of the body size. See `llms/wings.md`.
-- Footnote insert/edit prompts use a toolbar-width wrapping textarea below the toolbar, four visible lines on desktop and six on mobile, shrinking to fit the visible space above the keyboard. Actual line breaks become spaces. Clicking outside applies valid content without a confirmation button; Escape cancels. Viewer bubbles start with a numbered button that scrolls to the corresponding endnote.
+- Footnote insert/edit prompts use a toolbar-width wrapping textarea below the toolbar, four visible lines on desktop and six on mobile, shrinking to fit the visible space above the keyboard. Actual line breaks become spaces. Clicking outside applies valid content without a confirmation button; Escape cancels. Editing and preview disable footnote navigation: editor list numbers do not select or scroll the body, and preview bubbles use plain number labels. Published viewer bubbles retain numbered buttons that scroll to the corresponding endnotes.
 - Use `nabi-note/diff` for comparing two stored documents. Standalone `mountDiff()` is read-only by default; optional `onMerge` exposes apply controls and the host accepts proposals with revision-checked `update()`. Editor `mountDiffWing()` enables apply controls by default; pass `merge: false` to disable them. See `llms/viewer-diff.md`.
 - Use `nabi-note/merge` for three-way merging. The left pane is the editing-start base, the middle is the editable local/merged result, and the right is the incoming version. Automatic merge runs first; per-line gutter arrows apply individual source changes, and confirmation requires zero unresolved conflicts. See `llms/merge.md`.
 - Diff opens in only-changes mode by default. With zero changes, it shows both complete documents and disables folding. See `llms/viewer-diff.md`.
@@ -69,7 +69,7 @@ Use this file as a router. Read only the document that owns your question.
 
 ## Package facts
 
-- Package contract documented here: 1.5.1. Package and CDN publication are separate from this contract version.
+- Package contract documented here: 1.5.2. Package and CDN publication are separate from this contract version.
 - Runtime dependencies: zero.
 - Node.js for package tooling and SSR: 20 or newer.
 - Declared browser baseline: Chrome and Edge 120, Firefox 120, Safari 17.

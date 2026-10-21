@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
+## [1.5.2] - 2026-10-21
+
+### Fixed
+
+- Disabled navigation between footnote markers and endnotes in editing and preview views. Editing body markers still open the edit prompt, preview bubbles still show footnote text, and published-page navigation remains available.
+- Fixed the link property address and display-name fields to use the available toolbar width and wrap on narrow screens without overflowing the tool area.
+
 ## [1.5.1] - 2026-10-21
 
 ### Fixed
@@ -165,6 +172,7 @@ Dates use Korea Standard Time (KST).
 
 - First stable release.
 
+[1.5.2]: https://www.npmjs.com/package/nabi-note/v/1.5.2
 [1.5.1]: https://www.npmjs.com/package/nabi-note/v/1.5.1
 [1.5.0]: https://www.npmjs.com/package/nabi-note/v/1.5.0
 [1.3.2]: https://www.npmjs.com/package/nabi-note/v/1.3.2

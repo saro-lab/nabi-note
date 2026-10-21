@@ -232,6 +232,17 @@ const strip = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
       !root.contains(area),
     area?.outerHTML,
   );
+  const selectionBeforeListClick = nabi.getSelection();
+  let listScrolled = false;
+  (markers()[1] as HTMLElement).scrollIntoView = () => {
+    listScrolled = true;
+  };
+  const viewer = attachViewer(area as HTMLElement);
+  area!.querySelectorAll<HTMLElement>('[data-nabi-fn-num]')[1]!.click();
+  eq('표면 — 하단 번호를 눌러도 본문 선택은 그대로다', nabi.getSelection(), selectionBeforeListClick);
+  ok('표면 — 하단 번호를 눌러도 스크롤하지 않는다', !listScrolled);
+  ok('표면 — viewer를 함께 걸어도 하단 번호에 이동 동작을 붙이지 않는다', !area!.querySelector('[data-nabi-fn-ready]'));
+  viewer.unmount();
 
   const first = root.querySelector('p') as HTMLElement;
   eq('표면 — 화면 글자에서 각주는 한 칸', domTextOf(first), '가\n나');
@@ -312,12 +323,53 @@ const strip = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
   article.querySelector<HTMLButtonElement>('.nabi-fn-tip button')!.click();
   ok('viewer — 말풍선 번호는 하단 각주로 이동하고 닫힌다', scrolled && !article.querySelector('.nabi-fn-tip'));
   eq('viewer — 이동한 각주에 포커스가 간다', owner.activeElement, item);
+  scrolled = false;
+  marker.scrollIntoView = () => {
+    scrolled = true;
+  };
+  item.querySelector<HTMLElement>('[data-nabi-fn-num]')!.click();
+  ok('viewer — 게시 화면 하단 번호는 본문으로 이동한다', scrolled && owner.activeElement === marker);
   viewer.unmount();
   ok(
     'viewer — 떼면 저장 HTML 그대로다',
     !marker.hasAttribute('tabindex') && !marker.hasAttribute('role') && article.innerHTML === baseline,
     article.innerHTML,
   );
+  dom.window.close();
+}
+
+{
+  const html = make([p(['가', fn('미리보기 내용')])]).getHtml();
+  const dom = new JSDOM(
+    `<!doctype html><html><body><div class="nabi-content nabi-preview-body">${html}<button id="after">After</button></div></body></html>`,
+  );
+  const owner = dom.window.document;
+  const preview = owner.querySelector<HTMLElement>('.nabi-preview-body')!;
+  const baseline = preview.innerHTML;
+  const viewer = attachViewer(owner.body);
+  const marker = preview.querySelector<HTMLElement>('sup[data-nabi-fn]')!;
+  const item = preview.querySelector<HTMLElement>('[data-nabi-fn-n]')!;
+  let scrolled = false;
+  marker.scrollIntoView = item.scrollIntoView = () => {
+    scrolled = true;
+  };
+  marker.click();
+  const tip = preview.querySelector<HTMLElement>('.nabi-fn-tip')!;
+  eq('미리보기 — 각주 내용은 말풍선으로 읽는다', tip.textContent, '[1] 미리보기 내용');
+  ok('미리보기 — 말풍선 번호는 이동 버튼이 아니다', tip.firstElementChild?.tagName === 'SPAN');
+  tip.querySelector<HTMLElement>('[data-nabi-fn-num]')!.click();
+  ok('미리보기 — 말풍선 번호를 눌러도 이동하거나 닫히지 않는다', !scrolled && tip.isConnected);
+  item.querySelector<HTMLElement>('[data-nabi-fn-num]')!.click();
+  ok(
+    '미리보기 — 하단 번호를 눌러도 이동하거나 포커스를 옮기지 않는다',
+    !scrolled && owner.activeElement === owner.body,
+  );
+  ok('미리보기 — 하단 번호에 이동 상태를 붙이지 않는다', !preview.querySelector('[data-nabi-fn-ready]'));
+  const tab = new dom.window.KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+  marker.dispatchEvent(tab);
+  ok('미리보기 — 이동 버튼이 없으면 Tab을 가로채지 않는다', !tab.defaultPrevented);
+  viewer.unmount();
+  eq('미리보기 — 떼면 원래 HTML로 돌아간다', preview.innerHTML, baseline);
   dom.window.close();
 }
 

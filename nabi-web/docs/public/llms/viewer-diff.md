@@ -1,6 +1,6 @@
 # Viewer and diff
 
-The 1.5.1 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
+The 1.5.2 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
 
 These features live in separate package entry points so a published page does not pay for the editor.
 
@@ -31,7 +31,7 @@ interface ViewerOptions {
 }
 ```
 
-`footnotes` defaults to true. Set it to false to leave stored footnote markup without reader behavior.
+`footnotes` defaults to true. Set it to false to leave stored footnote markup without reader behavior. Editor and preview contexts suppress footnote navigation automatically; preview bubbles remain available.
 
 One viewer may be attached to a root at a time. `refresh()` first removes its current reader projection, then attaches to the current host HTML. `unmount()` is idempotent and restores the still-current code nodes, table row order, attributes, and controls without overwriting intervening host changes.
 
@@ -107,11 +107,13 @@ Stored HTML already shows `sup[data-nabi-fn]` numbers and the `section[data-nabi
 - mouse hover or keyboard focus on a number opens a read-only bubble with the footnote text; leaving both the number and the bubble closes it;
 - a click or tap pins the bubble; pressing the same number again, pressing outside, or Escape closes it;
 - moving the pointer into the bubble or selecting its text keeps it open; opening another number closes the previous bubble;
-- each bubble starts with a `[n]` button; activating it closes the bubble and scrolls to and focuses the matching endnote in the same document;
-- a number in the list scrolls to its marker in the same document and focuses it;
+- on published pages, each bubble starts with a `[n]` button; activating it closes the bubble and scrolls to and focuses the matching endnote in the same document;
+- on published pages, a number in the list scrolls to its marker in the same document and focuses it;
 - a number inside a details summary does not toggle the details.
 
-There is no close button. The bubble content is inserted as plain text from the `data-nabi-fn` attribute, never parsed as HTML. Its numbered control is a native button; the bubble uses `role="group"` because it is interactive. The bubble is appended inside the nearest `.nabi-content`, inherits its tokens, and uses the fixed footnote formatting (base sans stack, 0.875 of the body size). Long text scrolls inside the bubble, which stays within the viewport. Each attachment is scoped to its root, so several documents on one page do not open each other's footnotes. `refresh()` and `unmount()` remove the bubble and listeners and restore the marker attributes. `openPreview()` does not attach the viewer by itself; call `attachViewer()` from its `onBody` hook.
+Footnote navigation is disabled inside `.nabi-editing`, `.nabi-footnote-area`, and `.nabi-preview-body`. Preview bubbles start with a plain `[n]` span instead of a button, and list numbers do not scroll or move focus. Tab follows normal focus order when the bubble has no button. The editor's own footnote list also leaves the body selection unchanged; clicking a marker in the editing body still opens its edit prompt.
+
+There is no close button. The bubble content is inserted as plain text from the `data-nabi-fn` attribute, never parsed as HTML. On published pages its numbered control is a native button; the bubble uses `role="group"`. The bubble is appended inside the nearest `.nabi-content`, inherits its tokens, and uses the fixed footnote formatting (base sans stack, 0.875 of the body size). Long text scrolls inside the bubble, which stays within the viewport. Each attachment is scoped to its root, so several documents on one page do not open each other's footnotes. `refresh()` and `unmount()` remove the bubble and listeners and restore the marker attributes. `openPreview()` does not attach the viewer by itself; call `attachViewer()` from its `onBody` hook.
 
 Standalone exports include `FOOTNOTE_ATTR` and `attachFootnotes`.
 

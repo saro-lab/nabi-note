@@ -579,6 +579,15 @@ export const CORE_CSS = `${ICON_CSS}
 .nabi-compact-context :is(.nabi-input, .nabi-range) { block-size: 1.75rem; }
 .nabi-compact-context .nabi-field { flex: 1 1 12rem; min-inline-size: 0; max-inline-size: 100%; }
 .nabi-compact-context .nabi-field > .nabi-input { inline-size: 0; }
+.nabi-context > .nabi-ctx-group[data-wing="a"] {
+  flex: 1 1 100%; flex-wrap: wrap; gap: .375rem .75rem;
+  min-inline-size: 0; max-inline-size: 100%;
+}
+.nabi-context > .nabi-ctx-group[data-wing="a"] > .nabi-field {
+  flex: 1 1 16rem; min-inline-size: 0; max-inline-size: 100%;
+}
+.nabi-context > .nabi-ctx-group[data-wing="a"] > .nabi-field > span { flex: none; }
+.nabi-context > .nabi-ctx-group[data-wing="a"] > .nabi-field > .nabi-input { inline-size: 0; }
 .nabi-toolbox {
   position: absolute; inset-block-start: var(--nabi-toolbox-top, 100%); inset-inline-start: 0;
   z-index: calc(var(--nabi-z-sticky) + 5); display: flex; flex-direction: column;

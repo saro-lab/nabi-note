@@ -7,8 +7,8 @@ import { mountOutline, type OutlineAttachment, type OutlineOptions } from './out
 import { claimMountRoot } from '../lifecycle.js';
 
 export interface ViewerOptions extends TableSortOptions, CodePaintOptions {
-  // 각주 말풍선·하단 번호 이동 — 기본으로 켜진다. false면 저장 HTML 그대로(번호와 하단 목록만) 둔다.
-  // Footnote bubbles and list-number jumps, on by default; false leaves the stored HTML as is (numbers and the list only).
+  // 각주 말풍선은 기본으로 켜고 이동은 게시 화면에서만 허용한다. false면 번호와 하단 목록만 둔다.
+  // Footnote bubbles default to on, with navigation only on published pages; false leaves numbers and the list only.
   readonly footnotes?: boolean;
   readonly outline?: OutlineOptions | false;
 }
