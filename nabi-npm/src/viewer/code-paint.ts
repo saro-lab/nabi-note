@@ -1,5 +1,7 @@
 // 코드 색칠은 보는 쪽에서만 도는 로직이다(편집기는 wings/code/paint.ts가 트리를 보고 따로 칠한다). 발행된 HTML(<pre data-nabi-lang><code>…<br>…</code></pre>)을 칠하며 저장값엔 토큰이 안 들어가므로 하이라이터를 바꾸면 옛 글도 새 색이 된다. 두 걸음(codeSourceOf로 원본 복원, applyTokens로 span 얹기)뿐이고 둘 다 code/ 층의 문이다 — 이어 붙인 글이 원본과 한 글자라도 어긋나면 색칠이 통째로 평문으로 떨어진다(usableTokens)
 // Code highlighting is reader-only logic (the editor paints separately, from the tree, via wings/code/paint.ts). It colors the published HTML (<pre data-nabi-lang><code>...<br>...</code></pre>) directly; no tokens are stored, so swapping highlighters recolors old text too. Just two steps, both doors into the code/ layer: reconstructing the source (codeSourceOf, where <br> is a newline) and applying spans (applyTokens) -- a host must not do these by hand, since a single mismatched character between the joined text and the source drops highlighting entirely back to plain text (usableTokens), silently
+import { attachCodeCopy } from '../code/controls.js';
+import { localeValue, type LocaleInput } from '../locale/index.js';
 import { applyTokens, codeSourceOf, tokensFor, type CodeHighlighter } from '../code/index.js';
 
 // 언어가 적히는 자리 — 우리 조립기의 표식이 먼저고, 없으면 바깥 관례(language-*)를 본다(남이 만든 페이지의 코드 상자에도 붙는다는 뜻)
@@ -14,6 +16,7 @@ export function codeLanguageOf(code: Element): string | null {
 }
 
 export interface CodePaintOptions {
+  readonly locale?: LocaleInput;
   // 호스트 하이라이터 — 안 주거나 답을 못 하면 내장 토크나이저가 답한다(의존성 0). 편집기의 색칠(makeCodeAttach)에 넘기는 것과 같은 훅이라, 한 벌을 둘 다에 넘기면 편집 화면과 읽는 화면의 색이 갈리지 않는다
   // Host highlighter; if omitted or it declines, the built-in tokenizer answers instead (zero dependencies). It's the same hook passed to the editor's own highlighting (makeCodeAttach), so passing one implementation to both keeps edit and read colors in sync
   readonly highlight?: CodeHighlighter;
@@ -28,6 +31,22 @@ export function attachCodePaint(root: HTMLElement, options: CodePaintOptions = {
   const undo: (() => void)[] = [];
   try {
     for (const code of boxes) {
+      const pre = code.parentElement!;
+      const langBefore = pre.getAttribute(CODE_LANG_ATTR);
+      const lang = codeLanguageOf(code);
+      if (langBefore === null && lang) {
+        pre.setAttribute(CODE_LANG_ATTR, lang);
+        undo.push(() => {
+          if (pre.getAttribute(CODE_LANG_ATTR) === lang) pre.removeAttribute(CODE_LANG_ATTR);
+        });
+      }
+      const control = attachCodeCopy(
+        pre,
+        () => codeSourceOf(code),
+        () => localeValue(options.locale ?? root.closest('[lang]')?.getAttribute('lang') ?? undefined),
+      );
+      undo.push(() => control.dispose());
+      if (options.locale && typeof options.locale === 'object') undo.push(options.locale.onChange(control.refresh));
       const source = codeSourceOf(code);
       // 빈 상자는 건드리지 않는다 — 받침 <br> 하나뿐인 속을 다시 지으면 없던 빈 줄이 생긴다
       // Empty boxes are left alone; rebuilding content that's just a filler <br> would create a blank line that wasn't there

@@ -101,12 +101,45 @@ const CODE_CSS = `
 /* 빈 상자도 한 줄 높이를 바닥으로 둔다 — 안 그러면 padding만 남아 납작해진다. */
 /* A freshly made empty box keeps a one-line floor height, or it flattens to just its padding. */
 .nabi-content pre {
-  background: var(--nabi-soft); border-radius: var(--nabi-radius, 6px); padding:.7em.9em;
-  overflow-x: auto; font-size:.9em; min-block-size: 1.6em; box-sizing: content-box;
+  position: relative; background: var(--nabi-soft); border-radius: .5rem; padding: .9rem 1rem;
+  overflow-x: auto; font-size:.75rem; font-family: var(--nabi-font-mono, var(--nabi-font-mono-fallback)); min-block-size: 1.6em; box-sizing: content-box;
 }
 /* 서체 wing의 '고정폭' 토큰을 그대로 쓴다 — 여기만 따로 적으면 호스트가 덮어도 둘이 갈라진다. */
 /* Reuses the typeface wing's monospace token, so a host override moves both together instead of splitting them. */
-.nabi-content pre > code { font-family: var(--nabi-font-mono, var(--nabi-font-mono-fallback)); white-space: pre-wrap; }
+.nabi-content pre > code { font-family: inherit; font-size: inherit; white-space: pre-wrap; }
+.nabi-content pre::before {
+  content: attr(data-nabi-lang); position: absolute; top: .4rem; right: .7rem; z-index: 2;
+  max-width: calc(100% - 1rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--nabi-fg); font: .7rem/1.7 var(--nabi-font, var(--nabi-font-fallback));
+  opacity: .7; transition: opacity 200ms ease; pointer-events: none; user-select: none;
+}
+.nabi-content pre:has(> .nabi-code-copy):hover::before,
+.nabi-content pre:has(> .nabi-code-copy:focus-visible)::before,
+.nabi-content pre:has(> .nabi-code-copy[data-copy-state="copied"])::before { opacity: 0; }
+.nabi-content .nabi-code-copy {
+  position: absolute; top: .3rem; right: .35rem; z-index: 3;
+  width: 1.8rem; height: 1.8rem; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--nabi-muted); cursor: pointer;
+  font-family: var(--nabi-font, var(--nabi-font-fallback)); user-select: none;
+  opacity: 0; pointer-events: none; transition: opacity 200ms ease, background-color 120ms ease;
+}
+.nabi-content pre:hover > .nabi-code-copy,
+.nabi-content .nabi-code-copy:focus-visible { opacity: 1; pointer-events: auto; }
+.nabi-content .nabi-code-copy:hover { background: color-mix(in srgb, var(--nabi-fg) 10%, transparent); }
+.nabi-content .nabi-code-copy:focus-visible { outline: 2px solid var(--nabi-accent); outline-offset: 1px; }
+.nabi-content .nabi-code-copy::before {
+  content: ''; display: block; width: 100%; height: 100%; background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='11' height='11' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E") center / .95rem no-repeat;
+}
+.nabi-content .nabi-code-copy[data-copy-state="copied"] { opacity: 1; color: var(--nabi-accent); }
+.nabi-content .nabi-code-copy[data-copy-state="copied"]::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}
+.nabi-content .nabi-code-copy[data-copy-state="failed"] { color: var(--nabi-danger, #c33); }
+@media (hover: none) {
+  .nabi-content pre > .nabi-code-copy { opacity: 1; pointer-events: auto; }
+  .nabi-content pre:has(> .nabi-code-copy)::before { opacity: 0; }
+}
 .nabi-content [data-nabi-token="comment"] { color: #7a8a7a; font-style: italic; }
 .nabi-content [data-nabi-token="string"] { color: #a2543a; }
 .nabi-content [data-nabi-token="keyword"] { color: #7b4fd0; }

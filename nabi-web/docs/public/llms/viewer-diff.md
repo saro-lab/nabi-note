@@ -1,6 +1,6 @@
 # Viewer and diff
 
-The 1.5.2 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
+The 1.5.3 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
 
 These features live in separate package entry points so a published page does not pay for the editor.
 
@@ -97,6 +97,8 @@ Standalone exports include `SORTABLE_ATTR`, `attachTableSort`, `hasMergedCells`,
 Every nonempty `pre > code` under the root is painted. Language is read from the parent `data-nabi-lang`, then the code class `language-...`.
 
 A custom `CodeHighlighter` may return tokens. If it is missing or cannot answer, the zero-dependency built-in tokenizer runs. Token spans are transient viewer DOM and are not document content.
+
+Each code box, including an empty one, receives an upper-right source-copy button. The selected language occupies the same upper-right position when the button is hidden. Hover or button keyboard focus replaces the label with the clipboard icon; touch devices keep the button visible. These overlays do not add a header row above the code. Copying preserves source whitespace and line breaks and excludes labels and highlighting markup. Success and failure update its localized label and visual state. `CodePaintOptions.locale` accepts `LocaleInput`; it defaults to the nearest `lang` ancestor and then the locale fallback. A locale controller updates labels without remounting. Refresh/unmount removes controls and listeners and restores a language attribute added from a `language-...` class.
 
 Standalone exports include `CODE_LANG_ATTR`, `attachCodePaint`, and `codeLanguageOf`.
 

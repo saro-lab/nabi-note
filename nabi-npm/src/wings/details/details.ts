@@ -36,7 +36,9 @@ const DETAILS_ICON = 'details-details';
 const DETAILS_CSS = `
 .nabi-content details {
   border: 1px solid var(--nabi-line); border-radius: var(--nabi-radius, 6px); padding:.4em.8em;
+  font-family: var(--nabi-font, var(--nabi-font-fallback)); font-size: calc(1em - .25rem);
 }
+.nabi-content :is(table, details) details { font-size: inherit; }
 .nabi-content details > summary { cursor: pointer; font-weight: 600; }
 `;
 

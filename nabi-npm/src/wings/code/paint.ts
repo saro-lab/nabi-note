@@ -6,6 +6,8 @@
 //
 // 색칠의 지식은 `code/` 층에 산다(viewer도 같이 문다) — 여기 남은 건 편집 화면만의 사정뿐이다.
 // The actual highlighting logic lives in `code/` (shared with the viewer) — this file only handles the editor-side scheduling.
+import { attachCodeCopy } from '../../code/controls.js';
+import { hostOf } from '../../editor/index.js';
 import { isElement, type ElementNode, type NabiNode } from '../../schema/index.js';
 import type { Attach } from '../../wing/index.js';
 import { applyTokens, tokensFor, type CodeHighlighter } from '../../code/index.js';
@@ -92,24 +94,56 @@ export interface PaintOptions {
 }
 
 export function makeCodeAttach(options: PaintOptions = {}): Attach {
-  return ({ root, nabi, doc, pathOfKey }) => {
+  return ({ root, nabi, doc, pathOfKey, onDispose }) => {
     const view = root.ownerDocument.defaultView;
     let frame = 0;
     let composing = false;
     let painted = new WeakMap<Element, string>();
+    const controls = new Map<Element, ReturnType<typeof attachCodeCopy>>();
+    const clearControls = (): void => {
+      for (const control of controls.values()) control.dispose();
+      controls.clear();
+    };
+    onDispose(clearControls);
 
     const sweep = (): void => {
       frame = 0;
       if (composing) return;
+      for (const [el, control] of controls) {
+        if (!root.contains(el) || !el.querySelector(':scope > .nabi-code-copy')) {
+          control.dispose();
+          controls.delete(el);
+        }
+      }
       for (const box of codeBoxes(doc())) {
         if (typeof box._id !== 'string') continue;
         const el = root.querySelector(`[data-key="${box._id.replace(/["\\]/g, '\\$&')}"]`);
         if (!el) continue;
-        // IME 조합 자리는 DOM에만 산다 — 지금 칠하면 조합이 끊긴다.
-        // A composing IME's state lives only in the DOM — repainting now would break the composition.
-        if ((el.textContent ?? '').includes(ZERO_WIDTH)) continue;
-
         const source = sourceOf(box);
+        // 빈 홀더의 IME 자리는 옮기지 않는다. 옮기면 캐럿이 표식 앞으로 밀린다.
+        // Do not move an empty holder's IME slot; reparenting shifts the caret before its marker.
+        if (source === '' && (el.textContent ?? '').includes(ZERO_WIDTH)) continue;
+        let code = el.querySelector(':scope > code');
+        if (!code) {
+          code = root.ownerDocument.createElement('code');
+          while (el.firstChild) code.append(el.firstChild);
+          el.append(code);
+        }
+        if (!controls.has(el)) {
+          const key = box._id;
+          controls.set(
+            el,
+            attachCodeCopy(
+              el,
+              () => {
+                const current = codeBoxes(doc()).find((node) => node._id === key);
+                return current ? sourceOf(current) : '';
+              },
+              () => hostOf(nabi).locale(),
+            ),
+          );
+        }
+        controls.get(el)?.refresh();
         const lang = typeof box.a?.['lang'] === 'string' ? (box.a['lang'] as string) : null;
         const signature = `${options.version?.() ?? ''}\u0000${lang ?? ''}\u0000${source}`;
         if (painted.get(el) === signature) continue;
@@ -122,8 +156,8 @@ export function makeCodeAttach(options: PaintOptions = {}): Attach {
         const sel = nabi.getSelection();
         const path = pathOfKey(box._id);
         const inBox = path !== null && samePath(sel.focus.path, path) && samePath(sel.anchor.path, path);
-        applyTokens(el, tokens);
-        if (inBox) restoreCaretIn(el, { start: sel.anchor.offset, end: sel.focus.offset });
+        applyTokens(code, tokens);
+        if (inBox) restoreCaretIn(code, { start: sel.anchor.offset, end: sel.focus.offset });
         painted.set(el, signature);
       }
     };
@@ -162,6 +196,7 @@ export function makeCodeAttach(options: PaintOptions = {}): Attach {
 
     return () => {
       stop();
+      clearControls();
       root.removeEventListener('compositionstart', onCompositionStart);
       root.removeEventListener('compositionend', onCompositionEnd);
       root.removeEventListener('blur', onBlur);

@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
+## [1.5.3] - 2026-10-26
+
+### Added
+
+- Code boxes show the selected language in the upper-right corner. Hovering or focusing the copy button replaces the label with a copy icon in the same position, without reserving an extra header row. The icon, language label size, position and opacity, and inner padding match the documentation site installation and code examples. Source copying is available in the editor, preview, and published-page viewer.
+
+### Changed
+
+- Code boxes use monospace at `0.75rem`. Tables and details default to sans-serif at `0.25rem` below body text. Nested tables and details do not shrink again, and explicit typeface marks remain intact.
+
+### Fixed
+
+- Fixed code indentation spaces being converted to nonbreaking spaces in stored HTML and copied output. Original spaces and line breaks are preserved.
+- Fixed plain text after a renamed link becoming part of the link when typing or deleting at its boundary. The displayed and stored link ranges stay consistent.
+
 ## [1.5.2] - 2026-10-21
 
 ### Fixed
@@ -172,6 +187,7 @@ Dates use Korea Standard Time (KST).
 
 - First stable release.
 
+[1.5.3]: https://www.npmjs.com/package/nabi-note/v/1.5.3
 [1.5.2]: https://www.npmjs.com/package/nabi-note/v/1.5.2
 [1.5.1]: https://www.npmjs.com/package/nabi-note/v/1.5.1
 [1.5.0]: https://www.npmjs.com/package/nabi-note/v/1.5.0

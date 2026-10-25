@@ -111,8 +111,12 @@ export const DEFAULT_BUILDERS: HtmlBuilders = {
   // Wraps in the pre > code.language-* convention; a trailing filler after the last line comes from ctx.filled, since every holder shares this need.
   code: (node, children, ctx) => {
     const lang = language(node.a?.['lang']);
-    return ctx.element('pre', ctx.wrap('code', ctx.filled(children()), { class: lang && `language-${lang}` }), {
-      'data-nabi-lang': lang,
-    });
+    return ctx.element(
+      'pre',
+      ctx.wrap('code', ctx.filled(children().replaceAll('&nbsp;', ' ')), { class: lang && `language-${lang}` }),
+      {
+        'data-nabi-lang': lang,
+      },
+    );
   },
 };

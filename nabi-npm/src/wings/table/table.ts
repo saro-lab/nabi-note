@@ -860,9 +860,10 @@ const TABLE_CSS = `
 /* 표는 자리를 꽉 채우지 않는다 — 폭을 안 적어야 속 글에 맞춰 자동 배치가 줄어들고, 안 그러면 칸 둘짜리 표가 빈 칸만 늘어난다. */
 /* A table never fills its space by default — leaving width unset lets it shrink to content; setting it explicitly would stretch a two-column table into empty space. */
 .nabi-content table {
-  border-collapse: collapse;
+  border-collapse: collapse; font-size: calc(1em - .25rem);
   font-family: var(--nabi-font, var(--nabi-font-fallback));
 }
+.nabi-content :is(table, details) table { font-size: inherit; }
 .nabi-content .nabi-scroll:has(> table[data-nabi-table-full]),
 .nabi-content table[data-nabi-table-full] { min-inline-size: 100%; }
 /* 칸의 최소 폭 — 없으면 갓 만든 표가 폭 0으로 접혀 캐럿이 설 자리가 없어진다("셀을 클릭해도 커서가 안 생김"). */

@@ -94,3 +94,59 @@ test.describe('mobile panels', () => {
     await expect(page.locator('.nabi-scrim .nabi-readout')).toHaveCSS('font-family', /sans-serif/);
   });
 });
+
+test('code, tables, and details keep compact defaults in editor and reader', async ({ page }) => {
+  await page.evaluate(() => {
+    const nabi = (globalThis as unknown as { nabi: Nabi }).nabi;
+    const code = { w: 'p', ch: [{ w: 'code', a: { lang: 'javascript' }, ch: ['const x = 1;'] }] };
+    const details = {
+      w: 'details',
+      a: { o: 1 },
+      ch: [{ w: 'summary', ch: ['Summary'] }, { w: 'p', ch: ['Body'] }, code],
+    };
+    const table = {
+      w: 'table',
+      ch: [
+        {
+          w: 'tr',
+          ch: [
+            {
+              w: 'td',
+              ch: [
+                { w: 'p', ch: ['Cell'] },
+                { w: 'p', ch: [details] },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    nabi.setJson([
+      { w: 'p', ch: ['Outside'] },
+      code,
+      { w: 'p', ch: [table] },
+      { w: 'p', ch: [{ ...details, ch: [...details.ch, { w: 'p', ch: [table] }] }] },
+    ]);
+    const reader = document.createElement('article');
+    reader.id = 'compact-reader';
+    reader.className = 'nabi-content';
+    reader.innerHTML = nabi.getHtml();
+    document.body.append(reader);
+    for (const root of [document.querySelector<HTMLElement>('#content')!, reader]) {
+      root.style.cssText =
+        'font-size:20px;font-family:serif;--nabi-font:Arial,sans-serif;--nabi-font-mono:"Courier New",monospace';
+    }
+  });
+  for (const root of ['#content', '#compact-reader']) {
+    await expect(page.locator(`${root} > p`).first()).toHaveCSS('font-size', '20px');
+    await expect(page.locator(`${root} > p`).first()).toHaveCSS('font-family', 'serif');
+    for (const el of await page.locator(`${root} table, ${root} details`).all()) {
+      await expect(el).toHaveCSS('font-size', '16px');
+      await expect(el).toHaveCSS('font-family', 'Arial, sans-serif');
+    }
+    for (const el of await page.locator(`${root} pre, ${root} pre > code`).all()) {
+      await expect(el).toHaveCSS('font-size', '12px');
+      await expect(el).toHaveCSS('font-family', /Courier New["]?, monospace/);
+    }
+  }
+});

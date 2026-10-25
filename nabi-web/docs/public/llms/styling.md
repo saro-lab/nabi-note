@@ -33,7 +33,9 @@ Do not use runtime injection in SSR. Link or bundle `nabi-note/nabi.css`.
 
 `--nabi-typeface-base` selects the editor body typeface. UI text (toolbars, tooltips, panels and their inputs, dialogs, notices, and comparison/merge controls) uses `var(--nabi-font, var(--nabi-font-fallback))` independently of that body setting. Keep `--nabi-font` as the host's sans stack; use `--nabi-typeface-base` to choose a different body default. Typeface picker samples retain the face they represent.
 
-Tables use the same sans stack as their default in editing and published `.nabi-content`, even when surrounding text is serif, monospace, or cursive. This is an inherited table default, not a forced font on every descendant: explicit `tf` marks inside cells still apply, and clearing them returns to sans. Code blocks retain their monospace formatting. Do not insert synthetic typeface marks into stored JSON or HTML to implement this default.
+Tables and details use the same sans stack as their default in editing and published `.nabi-content`, even when surrounding text is serif, monospace, or cursive. This is an inherited block default, not a forced font on every descendant: explicit `tf` marks inside cells still apply, and clearing them returns to sans. Code blocks retain their monospace formatting. Do not insert synthetic typeface marks into stored JSON or HTML to implement this default.
+
+Tables and details default to `calc(1em - .25rem)`, two size steps below their surrounding body text. A table or details block nested inside another table/details inherits that reduced size without shrinking again. Explicit inline size and typeface marks still apply. Code boxes use the monospace stack on both `pre` and `code` at `0.75rem`, including inside tables/details. Their padding is `.9rem 1rem`. The language label uses `.7rem` text at `top: .4rem; right: .7rem` with 0.7 opacity. The copy button uses the same SVG icon and overlay spacing as the documentation code examples: a `1.8rem` button at `top: .3rem; right: .35rem` with a `.95rem` icon. Neither control reserves a header row. Hover or keyboard focus on the button hides the language label, and touch devices show the button directly.
 
 ## Table cell colors
 
@@ -281,7 +283,7 @@ A read-only body needs `.nabi-content` plus CSS:
 <article class="nabi-content">...</article>
 ```
 
-CSS handles layout, check states, drop caps, code colors, tables, images, attachments, and footnotes. JavaScript is optional. Use `nabi-note/viewer` only for table sorting, code token painting, and footnote bubbles.
+CSS handles layout, check states, drop caps, code colors, tables, images, attachments, and footnotes. JavaScript is optional. Code language labels use CSS and the UI sans font. Use `nabi-note/viewer` for table sorting, code token painting and source-copy buttons, and footnote bubbles.
 
 ## Footnotes
 

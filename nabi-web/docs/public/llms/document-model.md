@@ -111,7 +111,7 @@ HTML import is described in `io-security.md`.
 - `getHtml()` creates published/storage HTML. When the document has footnotes, it numbers them in tree order and appends one `section[data-nabi-footnotes]` list after the last block. Rendering a single block (diff, merge, Markdown fallback) never appends that list.
 - `getEditorHtml()` creates editing HTML with deterministic `data-key`, content seals, fillers, and edit-only markup. Footnote markers there are sealed, empty, and unnumbered; the editing surface numbers them and draws the footnote list outside `contenteditable`.
 - `renderStoredHtml(json, registry)` and `renderStoredEditorHtml(json, registry)` are the detached equivalents.
-- Leading paragraph spaces (including inside inline formatting), multiple spaces, and trailing spaces are protected in HTML output so browser whitespace collapse does not change visible content.
+- Leading paragraph spaces (including inside inline formatting), multiple spaces, and trailing spaces are protected in HTML output so browser whitespace collapse does not change visible content. Code boxes retain literal source spaces in their `pre > code` output, so copying code does not turn indentation into nonbreaking spaces; literal nonbreaking spaces in the source remain unchanged.
 - Copy/cut HTML also protects spaces at the selected fragment's edges, even when the selection splits a run of spaces. Whitespace-only fragments containing protected spaces survive HTML paste. Storage reloads and preview retain the visible spaces.
 - Empty published paragraphs render as `<p></p>`. Editor HTML uses a marked filler `br`. A sole unmarked `br` is a real line, and a trailing real `br` receives a separate marked editor-only filler.
 

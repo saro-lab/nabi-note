@@ -6,7 +6,7 @@ import { comparePositions, holderLength, holders, isHolder, nodeAt, terminalOf }
 import { caretAt, isCollapsed, ordered, sameSelection, selectObject, type Selection } from '../caret/index.js';
 import { localeDirection, localeValue, makeTranslator } from '../locale/index.js';
 import { hostOf, type Nabi, type NabiChange } from '../editor/index.js';
-import type { Registry } from '../wing/index.js';
+import { markSpanAt, type Registry } from '../wing/index.js';
 import { FILLER_ATTR, renderEditorHtml, renderHtml, renderParagraphHtml, type HtmlOptions } from '../html/index.js';
 import { cutTableSelection, tableClipboardOf } from '../wings/table/clipboard.js';
 import type { IoFilter } from '../io/index.js';
@@ -575,15 +575,28 @@ export function mountSurface(options: SurfaceOptions): Surface {
         inputHint && samePath(inputHint.path, focusPath) ? inputHint : undefined,
       );
       const change = diffPlain(before, after);
-      const hadArmed = !hostOf(nabi).armed.isEmpty();
+      const armed = hostOf(nabi).armed;
+      let hadArmed = !armed.isEmpty();
 
       if (change) {
+        const start = { path: focusPath, offset: change.start };
+        const link = change.inserted !== '' ? markSpanAt(doc(), start, 'a', env) : null;
+        const point =
+          link?.selection.focus.offset === change.start ? toDomPoint(root, doc(), env, start, isCaretSlot) : null;
+        const element = point?.node.nodeType === TEXT_NODE ? point.node.parentElement : null;
+        const leavesLink = element !== null && !element.closest('a') && !armed.isArmed('a');
         reconciling = true;
         try {
           nabi.select({
             anchor: { path: focusPath, offset: change.start },
             focus: { path: focusPath, offset: change.removedEnd },
           });
+          // 링크 밖에 입력한 글자는 경계 왼쪽의 링크를 물려받지 않는다.
+          // Text inserted outside a link must not inherit the link on its left boundary.
+          if (leavesLink) {
+            armed.escape('a');
+            hadArmed = true;
+          }
           if (change.inserted === '') {
             nabi.applyCommand('deleteRange');
           } else if (!change.inserted.includes('\n')) {

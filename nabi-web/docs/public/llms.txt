@@ -11,7 +11,7 @@ Use this file as a router. Read only the document that owns your question.
 - CDN setup with the browser bundle: `llms/quickstart-cdn.md`
 - Public export and type index: `llms/api-reference.md`
 - Footnote storage, editing, numbering, and published output: `llms/wings.md#footnotes`
-- Table cell formatting, crosshair cursor during cell-range dragging, multi-block table examples, and editable float examples for 1.5.2: `llms/wings.md`
+- Table cell formatting, crosshair cursor during cell-range dragging, multi-block table examples, and editable float examples for 1.5.3: `llms/wings.md`
 
 ## Contracts by topic
 
@@ -55,6 +55,8 @@ Use this file as a router. Read only the document that owns your question.
 - Keyboard opening preserves an already visible caret below a pinned toolbar. Viewport position changes alone do not restart correction after a user scroll. Focusing or navigating tool panels scrolls within the tool area without moving the outer page.
 - Updating an already focused property control preserves its focus after refresh instead of returning to the document, avoiding unwanted keyboard reopening and caret scrolling.
 - On iOS, icon buttons handle a completed short, single-touch tap directly and cancel its compatibility click. The touchend handler does not turn scrolling, multitouch, or long presses into command taps; native document selection menus remain available. See `llms/styling.md`.
+- Typing or composing outside a link at its end keeps that text outside the stored link, including after a display-name change and later boundary deletion. See `llms/wings.md`.
+- Code boxes use monospace at 0.75rem and show their selected language at the upper right without an extra header row. Editor attachments and the published viewer replace that label with a copy button on hover or button keyboard focus; touch devices keep the button visible. Tables and details use sans by default and reduce body text by 0.25rem without repeated reduction in nested tables/details. These controls are not document content. See `llms/wings.md` and `llms/viewer-diff.md`.
 - Store `nabi.getJson()` or `nabi.getHtml()`. Never store `getEditorHtml()`. HTML output and clipboard fragments protect leading spaces, including partial selections; see `llms/document-model.md`.
 - Table cell-range copy/cut uses the highlighted rectangle, including its final cell, instead of the linear DOM range. Internal clipboard data and HTML retain empty cells, spans, and inline formatting; plain text contains only the selected cells, separated by tabs and newlines. Cut clears only those cells and is one undo step. See `llms/io-security.md`.
 - The table property row offers Full width (`toggleTableFullWidth`). It defaults to off; enabling stores `table.a.full: 1` and gives the table a 100% minimum width while retaining overflow scrolling. Alignment remains available. JSON, HTML, and Markdown HTML fallback preserve the setting. See `llms/wings.md#table-full-width`.
@@ -69,7 +71,7 @@ Use this file as a router. Read only the document that owns your question.
 
 ## Package facts
 
-- Package contract documented here: 1.5.2. Package and CDN publication are separate from this contract version.
+- Package contract documented here: 1.5.3. Package and CDN publication are separate from this contract version.
 - Runtime dependencies: zero.
 - Node.js for package tooling and SSR: 20 or newer.
 - Declared browser baseline: Chrome and Edge 120, Firefox 120, Safari 17.

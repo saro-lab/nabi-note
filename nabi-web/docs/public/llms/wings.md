@@ -18,6 +18,8 @@ The official catalog lists wings in a stable order. `defaultWings` and `wings().
 | `hl` | `highlightWing` | `a.c`: named highlight colors |
 | `a` | `linkWing` | Strict `href`; attachment links also carry `file` |
 
+Native typing and IME composition at a link end preserve the actual DOM side: text inserted outside the anchor stays outside its stored link range, including after display-name changes and subsequent deletion or undo/redo. Typing inside the anchor still extends the link.
+
 Value factories are `makeTypefaceWing`, `makeFontSizeWing`, `makeTextColorWing`, and `makeHighlightWing`, each with `{ values }`.
 
 With a collapsed caret, font size and typeface target the paragraph's current text. Color/highlight target the current mark span or arm future text. A selected range always remains the target.
@@ -75,6 +77,8 @@ Headings and drop caps target inner text paragraphs. Header cells (`td.a.th === 
 | `table` | `tableWings` | Parts `tr`, `td`; cell grid repair and cell-range attachment |
 
 `tableWings` is an array containing the assembled table wing. Code coloring can be replaced with `{ ...codeWing, attach: makeCodeAttach({ highlight, version }) }`. The token DOM is transient and composition-aware.
+
+Code boxes use the monospace stack at 0.75rem. They show `a.lang` in their upper-right corner using the UI sans font. With the editor attachment or published-page viewer, a copy button replaces the label in the same position on hover or button keyboard focus and stays visible on touch devices. Neither label nor button reserves a header row or pushes the first source line downward. It copies only the current source text, preserving line breaks and whitespace. The language label, copy control, and copy feedback never become stored text, HTML, or undo entries. Clearing the language removes the label while retaining the copy action. Published HTML keeps the language label with CSS alone; copying requires `attachViewer()` or `attachCodePaint()` from `nabi-note/viewer`.
 
 Leaving a container with double-Enter uses a 180 ms window by default. Double-Escape and double-Shift retain their 350 ms defaults. An explicit `mountSurface({ doubleEnterMs })` also sets the double-Escape window.
 
