@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Durchgestrichen
 
-Durchstreicht den markierten Text. Wird die Formatierung erneut auf denselben Bereich angewendet, wird sie entfernt, und die Markierung bleibt in gespeicherten Dokumenten erhalten.
+Zieht eine Linie durch die Mitte des ausgewählten Textes. So bleiben geänderte Formulierungen oder nicht mehr gültige Inhalte sichtbar, ohne sie zu löschen. Erneutes Anwenden auf denselben Bereich entfernt die Formatierung.
 
 <WingDemo path="/wing/inline/strikethrough" />
 

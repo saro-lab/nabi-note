@@ -49,7 +49,7 @@ export const en = {
   menu_block_quote: 'Quote',
   menu_block_divider: 'Divider',
 
-  menu_etc: 'Other',
+  menu_etc: "Tools",
   menu_etc_align: 'Align',
   menu_etc_dropcap: 'Drop cap',
   menu_etc_typeface: 'Typeface',
@@ -90,48 +90,48 @@ export const en = {
   demo_html_bold:
     '<p>Point at <b>the words that matter</b>. Select some text and hit <b>B</b> in the toolbar.</p>',
   demo_html_italic:
-    '<p>Quotes and unfamiliar words go in <i>italics</i>. Select this sentence and try it.</p>',
+    "<p>You can <i>italicize</i> text you want to distinguish, such as book titles or foreign words. Select the text, then click the italic button.</p>",
   demo_html_underline:
     '<p>There is an <u>underline</u> here. Select those letters and press it again to take it off.</p>',
-  demo_html_strikethrough: '<p><s>$19.00</s> $9.90 — keep the old value visible.</p>',
+  demo_html_strikethrough: "<p><s>19,000 KRW</s> 9,900 KRW shows a new value while keeping the old one visible.</p>",
   demo_html_superscript:
     '<p>The area is 3.5m<sup>2</sup>, and footnotes hang like this.<sup>1</sup></p>',
-  demo_html_subscript: '<p>Water is H<sub>2</sub>O and the fizz is CO<sub>2</sub>.</p>',
+  demo_html_subscript: "<p>The chemical formula of water is H<sub>2</sub>O, and the chemical formula of carbon dioxide is CO<sub>2</sub>.</p>",
   demo_html_link:
-    '<p>Enter an address to make <a href="https://example.com">a link like this</a>. The document stores only the link address; the page that displays the document decides whether it opens in the same window or a new one.</p>',
+    "<p>Enter an address to create <a href=\"https://example.com/\">a link like this</a>. The document stores only the link address; the page displaying it decides whether the link opens in the same window or a new one.</p>",
   demo_html_highlight:
     '<p>Select text and press the highlight button to open the palette. You can choose <mark data-color="yellow">yellow</mark> · <mark data-color="green">green</mark> · <mark data-color="cyan">cyan</mark> · <mark data-color="pink">pink</mark> · <mark data-color="purple">purple</mark> · <mark data-color="orange">orange</mark>.</p><p>Place the caret inside highlighted text to change its color from the context tools.</p>',
   demo_html_text_color:
     '<p>Apply <span data-color="green">green</span> · <span data-color="coral">coral</span> · <span data-color="violet">violet</span> · <span data-color="amber">amber</span> · <span data-color="blue">blue</span> to selected text.</p><p><mark data-color="yellow">Highlight</mark> and <span data-color="blue">text color can be applied together.</span></p>',
   demo_html_heading:
-    '<h1>Heading 1</h1><h2>Heading 2</h2><h3>Heading 3</h3><p>Body text. Typing # and a space on an empty line makes a heading too.</p>',
+    "<h1>Largest heading</h1><h2>Second heading</h2><h3>Third heading</h3><p>This is body text below a heading. Type # and press Space on an empty line to turn it into a heading.</p>",
   demo_html_bullet_list:
     '<ul><li>A bullet list</li><li>Tab indents, Shift+Tab outdents<ul><li>A nested item</li></ul></li></ul><p>Typing - and a space on an empty line makes one too.</p>',
   demo_html_ordered_list:
     '<ol><li>A numbered list</li><li>Insert or delete an item and the numbers redo themselves</li></ol><p>Typing 1. and a space on an empty line makes one too.</p>',
   demo_html_task_list:
-    '<ul data-nabi-list="task"><li data-nabi-checked="true">Click the box in front of the text</li><li data-nabi-checked="false">The checked state is saved with the document</li></ul><p>Typing [ ] or [x] on an empty line makes one too.</p>',
+    "<ul data-nabi-list=\"task\"><li data-nabi-checked=\"true\">This item is complete.</li><li data-nabi-checked=\"false\">Click the box before an item to change its completion state.</li></ul><p>The checked state is saved in the document. Type [ ] or [x] and press Space on an empty line to create a checklist.</p>",
   demo_html_table:
     "<p>Cells can hold multiple paragraphs and blocks, with background colors to distinguish their contents. Try editing the text and images in the table below.</p><div data-nabi-p><div class=\"nabi-scroll\"><table><tr><th data-nabi-cell-color=\"cyan\"><p>Resources</p></th><th data-nabi-cell-color=\"cyan\"><p>Work notes</p></th></tr><tr><td><div data-nabi-p data-nabi-align=\"c\"><img src=\"/nabi-note.svg\" alt data-nabi-width=\"30\"/></div><p data-nabi-align=\"c\">An image and its description share one cell.</p></td><td data-nabi-cell-color=\"yellow\"><h3>Flexible paragraphs</h3><p>Press Enter to start a new paragraph, or Shift+Enter to add a line break within the same paragraph.</p></td></tr><tr><td data-nabi-cell-color=\"green\"><div data-nabi-p><ul data-nabi-list=\"task\"><li data-nabi-checked=\"true\"><p>Change cell backgrounds</p></li><li data-nabi-checked=\"false\"><p>Indent a list with Tab</p></li><li data-nabi-checked=\"false\"><p>Select several cells and apply the same color</p></li></ul></div></td><td><div data-nabi-p><details open><summary>Click for editing tips</summary><p>Cells can also contain details, quotes, code, and videos.</p><p>Merging cells preserves their contents in order.</p></details></div></td></tr></table></div></div><p>Click inside a cell to show its background color and row/column tools. Select several cells to change their color and alignment together. To reposition the whole table, choose “Select table”, then use the alignment tools.</p><p>Tab in a regular paragraph moves to the next cell; in lists and code it indents. Clearing content or formatting keeps the cell background.</p>",
   demo_html_image:
-    '<div data-nabi-p data-nabi-align="c"><img src="/nabi-note.svg" alt="NABI NOTE logo" data-nabi-width="50"></div><p>Click the image for the width and alignment box.</p>',
+    "<div data-nabi-p data-nabi-align=\"c\"><img src=\"/nabi-note.svg\" alt data-nabi-width=\"50\"/></div><p>Select an image to adjust its display size and align it left, center, or right.</p>",
   demo_html_youtube:
     '<p>Use the YouTube button in the toolbar, or just paste a video address — the embed lands right here.</p>',
   demo_html_code:
-    '<pre data-nabi-lang="ts">function sum(numbers: number[]) {<br>  return numbers.reduce((a, b) =&gt; a + b, 0)<br>}</pre><p>Put the caret inside the code and the context row shows a language field.</p>',
+    "<div data-nabi-p><pre data-nabi-lang=\"ts\"><code class=\"language-ts\">function sum(numbers: number[]) {<br/>  return numbers.reduce((a, b) =&gt; a + b, 0)<br/>}</code></pre></div><p>Place the caret in the code block to choose a language from the context tools. Select several lines and press Tab to indent them together, or Shift+Tab to outdent them.</p>",
   demo_html_details:
-    '<details open=""><summary>Click here to fold</summary><p>The folded state is saved with the document — readers see it the way the author left it.</p></details>',
+    "<details open><summary>Click the title to collapse or expand the content.</summary><p>Whether the content starts expanded or collapsed is also saved in the document.</p></details>",
   demo_html_quote:
     '<blockquote><p>You can group a sentence from another text, or content you want to separate, as a quote.</p><p>A quote can contain several paragraphs and blocks.</p></blockquote><p>Type &gt; and a space on an empty line to turn that line into a quote.</p>',
   demo_html_divider:
-    '<p>A paragraph above the divider.</p><hr><p>And one below. Typing --- alone on a line and pressing Enter also makes a rule.</p>',
+    "<p>A paragraph that concludes the first part.</p><hr><p>Start new content below the divider. Type --- and press Enter on an empty line to create a divider.</p>",
   demo_html_align:
-    '<p data-nabi-align="l">Aligned left</p><p data-nabi-align="c">Aligned center</p><p data-nabi-align="r">Aligned right</p>',
+    "<p data-nabi-align=\"l\">Left alignment suits ordinary body text.</p><p data-nabi-align=\"c\">Center alignment can be used for short titles or notices.</p><p data-nabi-align=\"r\">Right alignment can be used for content placed on the right, such as dates or signatures.</p>",
   demo_html_font_size:
     '<p data-nabi-size="xs">Extra small — good for footnotes or supporting notes.</p><p data-nabi-size="sm">Small — one step smaller than body text.</p><p>A paragraph at the default size. The size menu also shows each text size as it will appear.</p><p data-nabi-size="lg">Large — good for a sentence that needs emphasis.</p><p data-nabi-size="xl">Extra large — good for an introductory sentence under a title.</p><p>Font size applies to the selected range. If there is only a caret, it applies to the text in the current paragraph.</p>',
-  demo_html_typeface: "<p>This paragraph has no explicit typeface. It is shown with the page default font.</p><p data-nabi-typeface=\"serif\">This paragraph uses a serif typeface. When you choose a family such as serif, the actual font follows the site CSS.</p><p data-nabi-typeface=\"mono\">This paragraph uses a monospace typeface. Fixed character width is useful for aligning numbers or code — 0O 1lI</p><p data-nabi-typeface=\"cursive\">Cursive · 필기체 · 筆記体 · 手写体 · Schreibschrift · Cursiva · Рукописный · خط اليد · हस्तलिपि · হস্তলিপি · رواں خط · Tulisan tangan · دست‌نویس · हस्ताक्षर · Chữ viết tay · చేతిరాత · Rubutun hannu · El yazısı · Mwandiko · கையெழுத்து · ลายมือ · Corsivo</p>",
+  demo_html_typeface: "<p>This paragraph has no explicit typeface. It uses the page’s default typeface.</p><p data-nabi-typeface=\"serif\">This paragraph uses a serif typeface. When you choose a family such as serif, the actual font follows the site’s CSS settings.</p><p data-nabi-typeface=\"mono\">This paragraph uses monospace. Its fixed character widths make it useful for aligning numbers or code — 0O 1lI</p><p data-nabi-typeface=\"cursive\">Cursive · 필기체 · 筆記体 · 手写体 · Schreibschrift · Cursiva · Рукописный · خط اليد · हस्तलिपि · হস্তলিপি · رواں خط · Tulisan tangan · دست‌نویس · हस्ताक्षर · Chữ viết tay · చేతిరాత · Rubutun hannu · El yazısı · Mwandiko · கையெழுத்து · ลายมือ · Corsivo</p>",
   demo_html_dropcap:
-    '<p data-nabi-dropcap="on">The first letter spans three lines and the text flows around it. Short paragraphs still reserve room for those lines, so the block below is never pushed into.</p><p>This paragraph does not have it.</p>',
+    "<p data-nabi-dropcap=\"1\">Enlarge the first letter of a paragraph and let the remaining text flow beside it. In the editor, the first letter is wrapped in a real element to keep the caret position accurate.</p><p>This paragraph does not have a drop cap.</p>",
   demo_html_clear_format:
     '<p><b>Bold</b>·<i>italic</i>·<u>underline</u>·<s>strikethrough</s> are applied to this text; select it and press clear formatting.</p><p>Inline formatting on the selection is removed, but paragraph and block structure remains.</p>',
   demo_html_upload:
@@ -140,11 +140,11 @@ export const en = {
 
   cdn_demo_lead: 'Save the code below as {file} and open it in a browser — you can see it working right away.',
   cdn_demo_download: 'Download demo.html',
-  cdn_code_minheight: 'Minimum editor height — keeps it from looking like a single-line box on first load. Change freely.',
-  cdn_code_wings: 'Every wing except upload.',
+  cdn_code_minheight: "In this example, the editor fills the browser height. Adjust the height to fit your site's layout.",
+  cdn_code_wings: "Select the editing and file wings used in this example.",
   cdn_code_faces:
-    'Of the typefaces, only sans and serif are kept.\nSystems support different typefaces, so mono and cursive need a web font imported separately\nbefore every platform recognizes them. See the "Typeface" page for the details.',
-  cdn_code_change: 'Example callback for when the value changes',
+    "This example loads only sans serif and serif fonts.\nTo use monospace or cursive, also load the corresponding font files on the page.\nSee the \"Typeface\" documentation for details.",
+  cdn_code_change: "This example schedules a save when the document changes.",
   code_copy: 'Copy code',
   demo_install: 'Install',
   demo_code: 'Code',

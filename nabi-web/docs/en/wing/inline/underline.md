@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Underline
 
-Underlines selected text. Applying it again to the same range removes the formatting, and the mark is preserved in saved documents.
+Underline selected text. It may look like a link, but it is only text formatting and adds neither an address nor navigation.
 
 <WingDemo path="/wing/inline/underline" />
 

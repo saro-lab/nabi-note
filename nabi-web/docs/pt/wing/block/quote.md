@@ -9,7 +9,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Citação
 
-Agrupe uma frase de outro texto, ou conteúdo que você quer separar do fluxo principal, como uma citação. Uma citação pode conter vários parágrafos e blocos. Em uma linha vazia, digitar `>` e pressionar Espaço também cria uma citação.
+Agrupa texto citado ou um contexto separado em vários parágrafos. Digite `>` seguido de Espaço em um parágrafo vazio ou transforme os parágrafos selecionados em citação pela barra de ferramentas.
+
+Uma citação pode conter parágrafos comuns e blocos como listas e imagens. Converter o mesmo trecho novamente devolve seu conteúdo aos parágrafos externos.
 
 <WingDemo path="/wing/block/quote" />
 
@@ -19,12 +21,16 @@ const selected = wings().use('quote').build()
 
 ## Estilos CSS
 
-Use `.nabi-content blockquote` para alterar a aparência da citação. Mantenha espaço interno suficiente para que vários parágrafos não fiquem colados.
+Use `.nabi-content blockquote` para mudar as bordas e o espaçamento das citações.
 
 ```css
 .article-body blockquote {
+  margin-inline: 0;
+  padding: .25rem 1rem;
   border-inline-start: 4px solid var(--nabi-accent);
-  padding: .5rem 1rem;
-  background: var(--nabi-soft);
+  color: var(--nabi-muted);
+  background: color-mix(in srgb, var(--nabi-soft) 72%, transparent);
 }
 ```
+
+Mantenha a estrutura dos parágrafos dentro de `blockquote` e altere apenas a apresentação, como margens externas, bordas e cores.

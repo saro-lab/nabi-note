@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Barrato
 
-Barra il testo selezionato. Applicarlo di nuovo allo stesso intervallo rimuove la formattazione, e il mark viene conservato nei documenti salvati.
+Traccia una linea al centro del testo selezionato. Puoi usarla per mantenere visibili espressioni modificate o contenuti non più validi senza eliminarli. Applicarla di nuovo allo stesso intervallo rimuove il formato.
 
 <WingDemo path="/wing/inline/strikethrough" />
 

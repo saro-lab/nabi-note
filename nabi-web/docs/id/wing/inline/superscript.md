@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Superskrip
 
-Menaikkan teks terpilih di atas baseline untuk eksponen dan penanda referensi. Menerapkannya lagi akan menghapus pemformatan.
+Menampilkan teks terpilih dalam ukuran lebih kecil di atas garis dasar. Dapat digunakan untuk pangkat atau penanda catatan kaki dan hanya berlaku pada rentang terpilih.
 
 <WingDemo path="/wing/inline/superscript" />
 

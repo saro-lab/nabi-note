@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # 下線
 
-選択した文字に下線を引きます。同じ範囲にもう一度適用すると解除され、保存した文書ではこの mark が保たれます。
+選択した文字に下線を引きます。リンクのように見えることがありますが、アドレスや移動の動作は追加されない単純な文字書式です。
 
 <WingDemo path="/wing/inline/underline" />
 

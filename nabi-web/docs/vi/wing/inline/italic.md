@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Nghiêng
 
-Hiển thị chữ đã chọn bằng chữ nghiêng. Phù hợp để tách nhẹ khỏi nội dung chính, như tên tác phẩm hay từ nước ngoài; nhấn lại trên phạm vi đã nghiêng để bỏ định dạng.
+Hiển thị chữ được chọn ở dạng nghiêng. Cách này phù hợp để phân biệt nhẹ tên tác phẩm hoặc từ nước ngoài với phần thân bài. Nhấn lại trên vùng đã in nghiêng để bỏ định dạng.
 
 <WingDemo path="/wing/inline/italic" />
 

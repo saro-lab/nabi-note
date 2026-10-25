@@ -113,7 +113,7 @@ This declaration alone does not create a way to wrap selected paragraphs. Add a 
 
 ### 5. A matched list and item pair
 
-Use `listFamily()` where a list and item must always occur together.
+Use `listFamily()` where a list and item must always occur together. The following example is a minimal custom list that creates `<ul>` and `<li>`.
 
 ```ts
 import { listFamily } from 'nabi-note'

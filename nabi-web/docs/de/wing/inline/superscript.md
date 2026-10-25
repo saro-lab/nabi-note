@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Hochgestellt
 
-Hebt den markierten Text über die Grundlinie, für Exponenten und Referenzmarkierungen. Durch erneutes Anwenden wird das Formatierung entfernt.
+Zeigt den ausgewählten Text kleiner oberhalb der Grundlinie an. Das eignet sich für Exponenten oder Fußnotenzeichen und gilt nur für den ausgewählten Bereich.
 
 <WingDemo path="/wing/inline/superscript" />
 

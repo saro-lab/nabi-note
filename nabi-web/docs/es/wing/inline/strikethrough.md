@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Tachado
 
-Tacha el texto seleccionado. Aplicarlo otra vez sobre el mismo rango quita el formato, y la marca se conserva en los documentos guardados.
+Traza una línea por el centro del texto seleccionado. Puedes usarla para conservar a la vista expresiones modificadas o contenido que ya no es válido, sin borrarlo. Aplicarla de nuevo al mismo rango quita el formato.
 
 <WingDemo path="/wing/inline/strikethrough" />
 

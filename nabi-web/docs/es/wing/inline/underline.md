@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Subrayado
 
-Subraya el texto seleccionado. Aplicarlo otra vez sobre el mismo rango quita el formato, y la marca se conserva en los documentos guardados.
+Subraya el texto seleccionado. Aunque puede parecer un enlace, solo es un formato de texto: no añade una dirección ni una acción de navegación.
 
 <WingDemo path="/wing/inline/underline" />
 

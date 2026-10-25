@@ -1,6 +1,6 @@
 # Viewer and diff
 
-The 1.5.3 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
+The 1.5.4 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
 
 These features live in separate package entry points so a published page does not pay for the editor.
 
@@ -78,6 +78,8 @@ To compose with the reader runtime, pass `attachViewer(article, { outline: { tri
 
 ### Table sorting
 
+Sort controls localize their sort action, original order, ascending state, and descending state for every language in `LOCALES`. Regional locale tags use their base language. Updating a shared locale source refreshes labels without changing the current row order.
+
 Default selector: `table[data-nabi-sortable]`. Set `tables: 'all'` to attach every table under the root. A root that is itself a matching table is included.
 
 A table is skipped when:
@@ -98,7 +100,7 @@ Every nonempty `pre > code` under the root is painted. Language is read from the
 
 A custom `CodeHighlighter` may return tokens. If it is missing or cannot answer, the zero-dependency built-in tokenizer runs. Token spans are transient viewer DOM and are not document content.
 
-Each code box, including an empty one, receives an upper-right source-copy button. The selected language occupies the same upper-right position when the button is hidden. Hover or button keyboard focus replaces the label with the clipboard icon; touch devices keep the button visible. These overlays do not add a header row above the code. Copying preserves source whitespace and line breaks and excludes labels and highlighting markup. Success and failure update its localized label and visual state. `CodePaintOptions.locale` accepts `LocaleInput`; it defaults to the nearest `lang` ancestor and then the locale fallback. A locale controller updates labels without remounting. Refresh/unmount removes controls and listeners and restores a language attribute added from a `language-...` class.
+Each code box, including an empty one, receives an upper-right source-copy button. The selected language occupies the same upper-right position when the button is hidden. Hover or button keyboard focus replaces the label with the clipboard icon; touch devices keep the button visible. These overlays do not add a header row above the code. Copying preserves source whitespace and line breaks and excludes labels and highlighting markup. Success and failure update its localized label and visual state. Copy labels include Punjabi (`pa`), Pashto (`ps`), and Yoruba (`yo`), including regional locale tags; this does not add these languages to the complete editor locale catalog. `CodePaintOptions.locale` accepts `LocaleInput`; it defaults to the nearest `lang` ancestor and then the locale fallback. A locale controller updates labels without remounting. Refresh/unmount removes controls and listeners and restores a language attribute added from a `language-...` class.
 
 Standalone exports include `CODE_LANG_ATTR`, `attachCodePaint`, and `codeLanguageOf`.
 

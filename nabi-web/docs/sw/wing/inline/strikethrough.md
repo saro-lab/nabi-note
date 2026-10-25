@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Mstari wa kufuta
 
-Huweka mstari katikati ya maandishi yaliyochaguliwa. Unaweza kuacha maandishi yaliyobadilishwa au yasiyotumika yaonekane badala ya kuyafuta. Ukikitumia tena kwenye sehemu ileile, uumbizaji huondolewa.
+Huchora mstari katikati ya maandishi yaliyochaguliwa. Unaweza kuitumia kuacha maneno yaliyobadilishwa au maudhui ambayo hayatumiki tena yaonekane bila kuyafuta. Ukiitumia tena kwenye sehemu ileile, uumbizaji huondolewa.
 
 <WingDemo path="/wing/inline/strikethrough" />
 

@@ -113,7 +113,7 @@ Declaration hii peke yake haitengenezi njia ya kufunika aya zilizochaguliwa. Ong
 
 ### 5. Jozi inayolingana ya orodha na item
 
-Tumia `listFamily()` pale orodha na item lazima zitokee pamoja daima.
+Tumia `listFamily()` pale orodha na item lazima zitokee pamoja daima. Mfano ufuatao ni orodha maalum ndogo inayounda `<ul>` na `<li>`.
 
 ```ts
 import { listFamily } from 'nabi-note'

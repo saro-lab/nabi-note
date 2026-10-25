@@ -9,7 +9,9 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Divisor
 
-Insere uma linha horizontal entre blocos. Digitar `---` em uma linha vazia e pressionar Enter também cria um divisor. É um bloco sem conteúdo de texto.
+Uma linha horizontal que separa o fluxo do documento. Digite três ou mais hífens em um parágrafo vazio e pressione Enter, ou insira pela barra de ferramentas.
+
+O separador é um bloco independente sem texto, portanto não contém formatos como títulos ou cores. Use-o apenas para separar os parágrafos anteriores e posteriores.
 
 <WingDemo path="/wing/block/divider" />
 

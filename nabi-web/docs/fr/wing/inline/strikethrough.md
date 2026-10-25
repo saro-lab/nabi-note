@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Barré
 
-Barre le texte sélectionné. L'appliquer à nouveau sur la même plage supprime le formatage, et la marque est conservée dans les documents enregistrés.
+Trace une ligne au milieu du texte sélectionné. Cela permet de garder visibles des formulations modifiées ou des informations devenues obsolètes sans les supprimer. Une nouvelle application à la même plage retire ce format.
 
 <WingDemo path="/wing/inline/strikethrough" />
 

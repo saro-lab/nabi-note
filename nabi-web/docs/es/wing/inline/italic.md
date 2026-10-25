@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Cursiva
 
-Inclina el texto seleccionado. Aplicarlo otra vez sobre el mismo rango quita el formato, y la marca se conserva en los documentos guardados.
+Muestra el texto seleccionado en cursiva. Sirve para distinguir ligeramente del cuerpo del texto los títulos de obras o las palabras extranjeras. Vuelve a pulsar sobre un rango que ya esté en cursiva para quitar el formato.
 
 <WingDemo path="/wing/inline/italic" />
 

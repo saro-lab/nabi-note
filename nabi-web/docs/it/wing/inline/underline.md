@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Sottolineato
 
-Sottolinea il testo selezionato. Applicarlo di nuovo allo stesso intervallo rimuove la formattazione, e il mark viene conservato nei documenti salvati.
+Sottolinea il testo selezionato. Può sembrare un collegamento, ma è solo un formato del testo e non aggiunge un indirizzo né un’azione di navigazione.
 
 <WingDemo path="/wing/inline/underline" />
 

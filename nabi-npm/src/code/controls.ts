@@ -19,12 +19,15 @@ const COPY: LocaleText = {
   mr: 'कोड कॉपी करा',
   vi: 'Sao chép mã',
   te: 'కోడ్‌ను కాపీ చేయండి',
-  ha: 'Kwafi lamba',
+  ha: 'Kwafi lambar shirin',
   tr: 'Kodu kopyala',
   sw: 'Nakili msimbo',
   ta: 'குறியீட்டை நகலெடு',
   th: 'คัดลอกโค้ด',
   it: 'Copia codice',
+  pa: 'ਕੋਡ ਕਾਪੀ ਕਰੋ',
+  ps: 'کوډ کاپي کړئ',
+  yo: 'Da kóòdù kọ',
 };
 const COPIED: LocaleText = {
   en: 'Code copied',
@@ -45,12 +48,15 @@ const COPIED: LocaleText = {
   mr: 'कोड कॉपी केला',
   vi: 'Đã sao chép mã',
   te: 'కోడ్ కాపీ అయింది',
-  ha: 'An kwafi lamba',
+  ha: 'An kwafi lambar shirin',
   tr: 'Kod kopyalandı',
   sw: 'Msimbo umenakiliwa',
   ta: 'குறியீடு நகலெடுக்கப்பட்டது',
   th: 'คัดลอกโค้ดแล้ว',
   it: 'Codice copiato',
+  pa: 'ਕੋਡ ਕਾਪੀ ਹੋ ਗਿਆ',
+  ps: 'کوډ کاپي شو',
+  yo: 'A ti da kóòdù kọ',
 };
 const FAILED: LocaleText = {
   en: 'Copy failed. Please try again.',
@@ -70,13 +76,16 @@ const FAILED: LocaleText = {
   fa: 'کپی انجام نشد. لطفاً دوباره تلاش کنید.',
   mr: 'कॉपी करता आले नाही. कृपया पुन्हा प्रयत्न करा.',
   vi: 'Không thể sao chép. Vui lòng thử lại.',
-  te: 'కాపీ చేయలేకపోయింది. దయచేసి మళ్లీ ప్రయత్నించండి.',
+  te: 'కాపీ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.',
   ha: 'An kasa kwafi. Da fatan a sake gwadawa.',
   tr: 'Kopyalanamadı. Lütfen tekrar deneyin.',
   sw: 'Imeshindwa kunakili. Tafadhali jaribu tena.',
   ta: 'நகலெடுக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.',
   th: 'คัดลอกไม่สำเร็จ โปรดลองอีกครั้ง',
   it: 'Copia non riuscita. Riprova.',
+  pa: 'ਕਾਪੀ ਨਹੀਂ ਹੋ ਸਕੀ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।',
+  ps: 'کاپي کول ناکام شول. مهرباني وکړئ بیا هڅه وکړئ.',
+  yo: 'Kò ṣeé da kọ. Jọ̀wọ́ tún gbìyànjú.',
 };
 
 export function attachCodeCopy(

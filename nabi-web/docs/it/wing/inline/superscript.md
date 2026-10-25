@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Apice
 
-Solleva il testo selezionato sopra la baseline, per esponenti e indicatori di riferimento. Applicarlo di nuovo rimuove la formattazione.
+Mostra il testo selezionato più piccolo sopra la linea di base. Può essere usato per esponenti o richiami di note a piè di pagina e si applica solo all’intervallo selezionato.
 
 <WingDemo path="/wing/inline/superscript" />
 

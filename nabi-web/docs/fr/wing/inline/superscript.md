@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Exposant
 
-Élève le texte sélectionné au-dessus de la ligne de base, pour les exposants et les marqueurs de référence. L'appliquer à nouveau supprime le formatage.
+Affiche le texte sélectionné en plus petit au-dessus de la ligne de base. Ce format sert aux exposants ou aux appels de note et ne s’applique qu’à la plage sélectionnée.
 
 <WingDemo path="/wing/inline/superscript" />
 

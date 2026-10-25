@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Gạch ngang
 
-Kẻ một đường qua giữa chữ đã chọn. Dùng khi muốn giữ lại thay vì xóa nội dung đã thay đổi hoặc không còn hiệu lực; áp dụng lại trên cùng phạm vi để bỏ.
+Kẻ một đường qua giữa chữ được chọn. Dùng để giữ lại cách diễn đạt đã sửa hoặc nội dung không còn hiệu lực mà không xóa chúng. Áp dụng lại cho cùng vùng chọn sẽ bỏ định dạng.
 
 <WingDemo path="/wing/inline/strikethrough" />
 

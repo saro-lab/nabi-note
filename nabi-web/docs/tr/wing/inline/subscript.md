@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Alt simge
 
-Kimyasal formüller ve indisler için seçili metni baseline altına indirir. Tekrar uygulamak biçimlendirmeyi kaldırır.
+Seçili metni taban çizgisinin altında daha küçük gösterir. `H₂O` kimyasal formülü gibi alt simge gerektiren gösterimler için uygundur. Bu biçim formül hesaplama özelliği eklemez; gösterimin kendisini korumak için kullanın.
 
 <WingDemo path="/wing/inline/subscript" />
 

@@ -113,7 +113,7 @@ export const exCallout: Wing = {
 
 ### 5. 同时出现的列表和列表项
 
-列表和列表项必须总是一起出现时，使用 `listFamily()`。
+列表和列表项必须总是一起出现时，使用 `listFamily()`。 下面的示例是一个创建 `<ul>` 和 `<li>` 的最小自定义列表。
 
 ```ts
 import { listFamily } from 'nabi-note'

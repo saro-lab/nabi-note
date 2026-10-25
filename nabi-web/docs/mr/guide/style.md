@@ -1,9 +1,9 @@
 ---
-title: CSS themes
+title: CSS थीम
 description: CSS variables ने संपादक आणि प्रकाशित मजकुरासाठी रंग, fonts, आकार आणि dark mode संयोजित करा.
 ---
 
-# CSS themes
+# CSS थीम
 
 NABI NOTE संपादन आणि प्रकाशित मजकुरासाठी एकच CSS वापरते. package stylesheet एकदा लोड करा, नंतर service container वर लागणारे variablesच override करा.
 

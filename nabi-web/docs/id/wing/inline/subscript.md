@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Subskrip
 
-Menurunkan teks terpilih di bawah baseline untuk rumus kimia dan indeks. Menerapkannya lagi akan menghapus pemformatan.
+Menampilkan teks terpilih dalam ukuran lebih kecil di bawah garis dasar. Cocok untuk notasi yang memerlukan subskrip, seperti rumus kimia `H₂O`. Format ini tidak menambahkan perhitungan rumus; gunakan untuk mempertahankan notasinya.
 
 <WingDemo path="/wing/inline/subscript" />
 

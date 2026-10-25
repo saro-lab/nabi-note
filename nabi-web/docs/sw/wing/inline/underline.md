@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Mstari wa chini
 
-Huweka mstari chini ya maandishi yaliyochaguliwa. Unaweza kuufananisha na kiungo, lakini ni uumbizaji wa maandishi tu: hauna anwani wala kitendo cha kuelekeza mahali pengine.
+Hupigia mstari maandishi yaliyochaguliwa. Huenda yakaonekana kama kiungo, lakini huu ni uumbizaji wa maandishi tu; hauongezi anwani wala kitendo cha kuelekeza mahali pengine.
 
 <WingDemo path="/wing/inline/underline" />
 

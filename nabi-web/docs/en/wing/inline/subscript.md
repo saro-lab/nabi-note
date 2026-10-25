@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Subscript
 
-Lowers selected text below the baseline, for chemical formulas and indices. Applying it again removes the formatting.
+Display selected text in a smaller size below the baseline. This suits notation that needs subscripts, such as the chemical formula `H₂O`. It does not add formula calculation, so use it to preserve the notation itself.
 
 <WingDemo path="/wing/inline/subscript" />
 

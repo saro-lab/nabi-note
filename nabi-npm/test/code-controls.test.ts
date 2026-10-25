@@ -132,3 +132,61 @@ console.log('Code controls checks passed');
   assert.equal(codeSourceOf(dom.window.document.querySelector('code')!), '  x\u00a0y &nbsp;');
   dom.window.close();
 }
+
+{
+  const cases = [
+    ['pa-IN', 'ਕੋਡ ਕਾਪੀ ਕਰੋ', 'ਕੋਡ ਕਾਪੀ ਹੋ ਗਿਆ', 'ਕਾਪੀ ਨਹੀਂ ਹੋ ਸਕੀ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।'],
+    ['ps-AF', 'کوډ کاپي کړئ', 'کوډ کاپي شو', 'کاپي کول ناکام شول. مهرباني وکړئ بیا هڅه وکړئ.'],
+    ['yo-NG', 'Da kóòdù kọ', 'A ti da kóòdù kọ', 'Kò ṣeé da kọ. Jọ̀wọ́ tún gbìyànjú.'],
+  ] as const;
+  for (const [language, idle, copied, failed] of cases) {
+    const dom = new JSDOM('<!doctype html><div id="editor"></div><article></article>', {
+      url: 'https://example.test',
+    });
+    const owner = dom.window.document;
+    const locale = createLocale(language);
+    let reject = false;
+    const values: string[] = [];
+    Object.defineProperty(dom.window.navigator, 'clipboard', {
+      value: {
+        writeText: async (value: string) => {
+          if (reject) throw new Error('denied');
+          values.push(value);
+        },
+      },
+    });
+    const { nabi, registry } = createNabiWith(defaultWings, {
+      locale,
+      doc: [{ w: 'p', ch: [{ w: 'code', ch: ['  x', { w: 'br', ch: [] }, 'y'] }] }],
+    });
+    const editor = owner.getElementById('editor')!;
+    const surface = mountSurface({ nabi, registry, root: editor, locale });
+    const reader = owner.querySelector('article')!;
+    reader.innerHTML = nabi.getHtml();
+    const viewer = attachViewer(reader, { locale });
+    for (const root of [editor, reader]) {
+      const button = root.querySelector<HTMLButtonElement>('.nabi-code-copy')!;
+      const label = (expected: string): void => {
+        assert.equal(button.getAttribute('aria-label'), expected);
+        assert.equal(button.title, expected);
+      };
+      reject = false;
+      label(idle);
+      button.click();
+      await tick();
+      label(copied);
+      assert.equal(values.at(-1), '  x\ny');
+      reject = true;
+      button.click();
+      await tick();
+      label(failed);
+    }
+    locale.setLocale('en');
+    assert.equal(reader.querySelector('button')!.getAttribute('aria-label'), 'Copy failed. Please try again.');
+    locale.setLocale(language);
+    assert.equal(reader.querySelector('button')!.getAttribute('aria-label'), failed);
+    viewer.unmount();
+    surface.unmount();
+    dom.window.close();
+  }
+}

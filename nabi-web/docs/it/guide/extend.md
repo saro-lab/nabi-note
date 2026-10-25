@@ -113,7 +113,7 @@ Questa dichiarazione da sola non crea un modo per avvolgere i paragrafi selezion
 
 ### 5. Coppia corrispondente di elenco ed elemento
 
-Usa `listFamily()` quando elenco ed elemento devono comparire sempre insieme.
+Usa `listFamily()` quando elenco ed elemento devono comparire sempre insieme. L’esempio seguente è un elenco personalizzato minimo che crea `<ul>` e `<li>`.
 
 ```ts
 import { listFamily } from 'nabi-note'

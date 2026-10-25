@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Itálico
 
-Inclina o texto selecionado. Aplicar novamente ao mesmo intervalo remove a formatação, e a marca é preservada nos documentos salvos.
+Mostra o texto selecionado em itálico. É útil para diferenciar discretamente do corpo do texto os títulos de obras ou palavras estrangeiras. Clique novamente em um trecho que já esteja em itálico para remover o formato.
 
 <WingDemo path="/wing/inline/italic" />
 

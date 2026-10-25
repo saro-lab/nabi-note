@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Indice
 
-Placer le texte sélectionné en dessous de la ligne de base, pour les formules chimiques et les indices. L'appliquer à nouveau supprime le formatage.
+Affiche le texte sélectionné en plus petit sous la ligne de base. Ce format convient aux notations nécessitant un indice, comme la formule chimique `H₂O`. Il n’ajoute pas de calcul de formules : utilisez-le pour préserver la notation elle-même.
 
 <WingDemo path="/wing/inline/subscript" />
 

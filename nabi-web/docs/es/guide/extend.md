@@ -113,7 +113,7 @@ Esta declaración por sí sola no crea una forma de envolver los párrafos selec
 
 ### 5. Un par de lista y elemento que siempre van juntos
 
-Usa `listFamily()` cuando una lista y sus elementos deben aparecer siempre juntos.
+Usa `listFamily()` cuando una lista y sus elementos deben aparecer siempre juntos. El siguiente ejemplo es una lista personalizada mínima que crea `<ul>` y `<li>`.
 
 ```ts
 import { listFamily } from 'nabi-note'

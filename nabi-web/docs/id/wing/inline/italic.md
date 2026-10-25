@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Miring
 
-Memiringkan teks terpilih. Menerapkannya lagi pada rentang yang sama akan menghapus pemformatan, dan mark tetap disimpan dalam dokumen.
+Menampilkan teks terpilih dengan huruf miring. Ini berguna untuk membedakan judul karya atau kata asing secara halus dari teks utama. Klik lagi pada rentang yang sudah miring untuk menghapus formatnya.
 
 <WingDemo path="/wing/inline/italic" />
 

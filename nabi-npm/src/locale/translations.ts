@@ -153,7 +153,7 @@ Conferma
 Barra contestuale
 Corallo
 Sessione corrente
-Corsivo
+Calligrafico
 Ciano
 Predefinito
 Elimina colonna
@@ -649,7 +649,7 @@ const MR = rows(String.raw`
 संदर्भ पट्टी
 प्रवाळ
 सध्याचे सत्र
-हस्तलिखित
+हस्तलिपी
 सायन
 डीफॉल्ट
 स्तंभ हटवा
@@ -892,7 +892,7 @@ Zaɓi fayiloli
 Goge duka
 Goge tsarawa
 Rufe
-Lamba
+Lambar shirin
 Tabbatar
 Sandar mahalli
 Launin murjani
@@ -962,7 +962,7 @@ Ajiye a matsayin {ext}
 Mai serif
 Alamomin gajeriyar hanya
 Ƙarami
-Tsallake rubutu
+Layi a tsakiyar rubutu
 Rubutun ƙasa
 Rubutun sama
 Tebur
@@ -1087,8 +1087,8 @@ Yenye serif
 Vidokezo vya mikato
 Ndogo
 Piga mstari katikati
-Hati ndogo
-Hati juu
+Herufi za chini
+Herufi za juu
 Jedwali
 Rangi ya maandishi
 Ukubwa wa maandishi

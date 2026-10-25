@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Kiambishi cha chini
 
-Hushusha maandishi yaliyochaguliwa chini ya mstari wa msingi. Kinafaa kwa maandishi kama `H₂O` katika fomula za kemia. Si uumbizaji wa kukokotoa fomula; kitumie unapohitaji kuhifadhi mwonekano wa maandishi.
+Huonyesha maandishi yaliyochaguliwa kwa ukubwa mdogo chini ya mstari wa msingi. Inafaa kwa uandishi unaohitaji herufi za chini, kama fomula ya kemikali `H₂O`. Uumbizaji huu hauongezi uwezo wa kukokotoa fomula; utumie kuhifadhi uandishi wenyewe.
 
 <WingDemo path="/wing/inline/subscript" />
 

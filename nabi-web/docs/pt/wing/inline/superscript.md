@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Sobrescrito
 
-Eleva o texto selecionado acima da linha de base, para expoentes e marcadores de referência. Aplicar novamente remove a formatação.
+Mostra o texto selecionado em tamanho menor acima da linha de base. Pode ser usado para expoentes ou chamadas de notas de rodapé e só se aplica ao trecho selecionado.
 
 <WingDemo path="/wing/inline/superscript" />
 

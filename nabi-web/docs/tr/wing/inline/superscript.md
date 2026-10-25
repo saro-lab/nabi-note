@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Üst simge
 
-Üsler ve referans işaretleri için seçili metni baseline üstüne çıkarır. Tekrar uygulamak biçimlendirmeyi kaldırır.
+Seçili metni taban çizgisinin üstünde daha küçük gösterir. Üsler veya dipnot işaretleri için kullanılabilir ve yalnızca seçili aralığa uygulanır.
 
 <WingDemo path="/wing/inline/superscript" />
 

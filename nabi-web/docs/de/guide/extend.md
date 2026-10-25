@@ -113,7 +113,7 @@ Diese Deklaration allein erstellt noch keine Möglichkeit, ausgewählte Absätze
 
 ### 5. Ein passendes Listen- und Elementpaar
 
-Verwenden Sie `listFamily()`, wo eine Liste und ein Element immer gemeinsam auftreten müssen.
+Verwenden Sie `listFamily()`, wo eine Liste und ein Element immer gemeinsam auftreten müssen. Das folgende Beispiel ist eine minimale benutzerdefinierte Liste, die `<ul>` und `<li>` erzeugt.
 
 ```ts
 import { listFamily } from 'nabi-note'

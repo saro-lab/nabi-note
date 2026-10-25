@@ -113,7 +113,7 @@ Chỉ khai báo này chưa tạo cách bọc các đoạn đã chọn. Hãy thê
 
 ### 5. Cặp danh sách và mục tương ứng
 
-Dùng `listFamily()` khi danh sách và mục phải luôn xuất hiện cùng nhau.
+Dùng `listFamily()` khi danh sách và mục phải luôn xuất hiện cùng nhau. Ví dụ dưới đây là danh sách tùy chỉnh tối thiểu tạo ra `<ul>` và `<li>`.
 
 ```ts
 import { listFamily } from 'nabi-note'

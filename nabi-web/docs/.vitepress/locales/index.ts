@@ -28,7 +28,7 @@ import { DEFAULT_LOCALE, localeCodes, type LocaleCode } from './codes.ts'
 // Adding a language means editing both codes.ts's list and this map; satisfies catches any drift.
 export const messages = { en, ko, ja, zh, de, fr, es, pt, ru, ar, hi, bn, ur, id, fa, mr, vi, te, ha, tr, sw, ta, th, it } satisfies Record<
   LocaleCode,
-  unknown
+  Record<keyof typeof ko, string>
 >
 
 export type Messages = typeof en

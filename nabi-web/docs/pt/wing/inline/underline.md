@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Sublinhado
 
-Sublinha o texto selecionado. Aplicar novamente ao mesmo intervalo remove a formatação, e a marca é preservada nos documentos salvos.
+Sublinha o texto selecionado. Pode parecer um link, mas é apenas uma formatação de texto e não adiciona endereço nem ação de navegação.
 
 <WingDemo path="/wing/inline/underline" />
 

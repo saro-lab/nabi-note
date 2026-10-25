@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Mlalo
 
-Hufanya maandishi yaliyochaguliwa yawe ya mlazo. Ni muhimu kutofautisha majina ya kazi au maneno ya kigeni na maandishi mengine. Ukibonyeza tena kwenye sehemu iliyochaguliwa, uumbizaji huondolewa.
+Huonyesha maandishi yaliyochaguliwa kwa italiki. Hii husaidia kutofautisha kidogo majina ya kazi au maneno ya lugha nyingine na maandishi makuu. Bonyeza tena kwenye sehemu ambayo tayari ina italiki ili kuondoa uumbizaji.
 
 <WingDemo path="/wing/inline/italic" />
 

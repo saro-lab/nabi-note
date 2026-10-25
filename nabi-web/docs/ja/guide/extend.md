@@ -113,7 +113,7 @@ export const exCallout: Wing = {
 
 ### 5. 対になるリストと項目
 
-リストと項目が常に一緒に現れる必要がある場合は `listFamily()` を使います。
+リストと項目が常に一緒に現れる必要がある場合は `listFamily()` を使います。 次の例は `<ul>` と `<li>` を作る最小限のカスタムリストです。
 
 ```ts
 import { listFamily } from 'nabi-note'

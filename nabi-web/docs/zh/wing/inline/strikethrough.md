@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # 删除线
 
-给选中的文字加上删除线。对同一范围再次应用会移除该格式，保存文档时 mark 会保留。
+在选中文字的中间画一条线。可用于保留已修改的措辞或不再有效的内容，而不将其删除。对同一范围再次应用即可取消。
 
 <WingDemo path="/wing/inline/strikethrough" />
 

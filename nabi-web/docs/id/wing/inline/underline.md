@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Garis bawah
 
-Memberi garis bawah pada teks terpilih. Menerapkannya lagi pada rentang yang sama akan menghapus pemformatan, dan mark tetap disimpan dalam dokumen.
+Menggarisbawahi teks terpilih. Teks mungkin terlihat seperti tautan, tetapi ini hanya format teks dan tidak menambahkan alamat atau tindakan navigasi.
 
 <WingDemo path="/wing/inline/underline" />
 

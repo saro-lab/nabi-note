@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Unterstreichung
 
-Unterstreicht den ausgewählten Text. Wird sie erneut auf denselben Bereich angewendet, wird die Formatierung entfernt, und die Markierung in gespeicherten Dokumenten bleibt erhalten.
+Unterstreicht den ausgewählten Text. Das kann wie ein Link aussehen, ist aber reine Textformatierung und fügt weder eine Adresse noch eine Navigation hinzu.
 
 <WingDemo path="/wing/inline/underline" />
 

@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Superíndice
 
-Eleva el texto seleccionado sobre la línea base, para exponentes y marcas de referencia. Aplicarlo otra vez quita el formato.
+Muestra el texto seleccionado en un tamaño menor por encima de la línea base. Puede usarse para exponentes o llamadas de notas al pie y solo se aplica al rango seleccionado.
 
 <WingDemo path="/wing/inline/superscript" />
 

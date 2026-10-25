@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Rubutu na sama
 
-Yana nuna rubutun da aka zaɓa a ƙarami sama da layin tushe. Ya dace da jigo ko alamar bayanin ƙasa, kuma yana aiki ne kawai a yankin da aka zaɓa.
+Yana nuna rubutun da aka zaɓa da ƙananan haruffa a saman layin asali. Ana iya amfani da shi don ƙarfin lamba ko alamar bayanin ƙasa, kuma yana aiki ga yankin da aka zaɓa kawai.
 
 <WingDemo path="/wing/inline/superscript" />
 

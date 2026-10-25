@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
+## [1.5.4] - 2026-10-26
+
+### Fixed
+
+- Added Punjabi, Pashto, and Yoruba translations for code-copy, success, and failure labels.
+- Filled missing supported languages in published-view table sorting, original-order, ascending, and descending labels, and refined code-copy and formatting-tool translations.
+- Filled missing comparison, merge, and guide menu translations on the documentation site. Aligned CDN instructions, basic formatting descriptions, and demos across all languages with the Korean source, correcting omissions and mistranslations about links, typefaces, code indentation, checked states, and drop caps. Also corrected outdated security descriptions and missing sentences in some introductions.
+- Added checks for locale labels, placeholders, documentation files, and demo structure, along with published-view copy feedback and table-sort labels.
+
 ## [1.5.3] - 2026-10-26
 
 ### Added
@@ -187,6 +196,7 @@ Dates use Korea Standard Time (KST).
 
 - First stable release.
 
+[1.5.4]: https://www.npmjs.com/package/nabi-note/v/1.5.4
 [1.5.3]: https://www.npmjs.com/package/nabi-note/v/1.5.3
 [1.5.2]: https://www.npmjs.com/package/nabi-note/v/1.5.2
 [1.5.1]: https://www.npmjs.com/package/nabi-note/v/1.5.1

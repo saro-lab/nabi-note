@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Ƙarƙashin layi
 
-Yana ja layi a ƙarƙashin rubutun da aka zaɓa. Zai iya kama da mahaɗi, amma tsari ne kawai na rubutu: ba ya adana adireshi ko aiki na zuwa wani shafi.
+Yana ja layi a ƙarƙashin rubutun da aka zaɓa. Yana iya kama da mahaɗi, amma tsarin rubutu ne kawai; ba ya ƙara adireshi ko aikin zuwa wani wuri.
 
 <WingDemo path="/wing/inline/underline" />
 

@@ -113,7 +113,7 @@ export const exCallout: Wing = {
 
 ### 5. जुळणारी list आणि item जोडी
 
-list आणि item नेहमी एकत्र असणे आवश्यक असेल तेथे `listFamily()` वापरा.
+list आणि item नेहमी एकत्र असणे आवश्यक असेल तेथे `listFamily()` वापरा. खालील उदाहरणात `<ul>` आणि `<li>` तयार करणारी सर्वांत साधी सानुकूल यादी आहे.
 
 ```ts
 import { listFamily } from 'nabi-note'

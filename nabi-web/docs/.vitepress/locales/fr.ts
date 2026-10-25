@@ -1,6 +1,8 @@
 // 옮겼다 — 키 하나라도 빠지면 타입 오류라 파일이 통째로 채워져 있어야 한다.
 // Translated — a missing key is a type error, so the file must stay filled in whole.
 export const fr = {
+  menu_compare: "Comparaison",
+  menu_merge: "Fusion",
   menu_inline_footnote: "Note de bas de page",
   demo_html_footnote: "<p>WYSIWYG<sup data-nabi-fn=\"WYSIWYG signifie « What You See Is What You Get » : le résultat correspond à ce que vous voyez pendant l’édition.\">[1]</sup></p>",
   label: 'Français',
@@ -49,7 +51,7 @@ export const fr = {
   menu_block_quote: 'Citation',
   menu_block_divider: 'Séparateur',
 
-  menu_etc: 'Divers',
+  menu_etc: "Outils",
   menu_etc_align: 'Alignement',
   menu_etc_dropcap: 'Lettrine',
   menu_etc_typeface: 'Police',
@@ -90,54 +92,54 @@ export const fr = {
   demo_html_bold:
     '<p>Repérez <b>les mots qui comptent</b>. Sélectionnez du texte et appuyez sur <b>G</b> dans la barre d\'outils.</p>',
   demo_html_italic:
-    '<p>Les citations et les mots inhabituels se mettent en <i>italique</i>. Sélectionnez cette phrase et essayez.</p>',
+    "<p>Vous pouvez mettre en <i>italique</i> les mots à distinguer, comme les titres de livres ou les mots étrangers. Sélectionnez le texte, puis cliquez sur le bouton italique.</p>",
   demo_html_underline:
     '<p>Il y a un <u>soulignement</u> ici. Sélectionnez ces lettres et appuyez à nouveau pour le retirer.</p>',
-  demo_html_strikethrough: '<p><s>19,00 €</s> 9,90 € — pour garder l\'ancienne valeur visible.</p>',
+  demo_html_strikethrough: "<p><s>19,000 KRW</s> 9,900 KRW permet d’afficher une nouvelle valeur tout en laissant l’ancienne visible.</p>",
   demo_html_superscript:
     '<p>La surface fait 3,5 m<sup>2</sup>, et les notes de bas de page s\'accrochent ainsi.<sup>1</sup></p>',
-  demo_html_subscript: '<p>L\'eau, c\'est H<sub>2</sub>O, et le gaz qui pétille, c\'est du CO<sub>2</sub>.</p>',
+  demo_html_subscript: "<p>La formule chimique de l’eau est H<sub>2</sub>O et celle du dioxyde de carbone est CO<sub>2</sub>.</p>",
   demo_html_link:
-    '<p>Donnez-lui une adresse et vous obtenez <a href="https://example.com">un lien comme celui-ci</a>. Un lien déjà posé n\'ouvre aucune ligne contextuelle — pour changer l\'adresse, supprimez-le et refaites-en un.</p>',
+    "<p>Saisissez une adresse pour créer <a href=\"https://example.com/\">un lien comme celui-ci</a>. Le document ne stocke que l’adresse du lien ; la page qui l’affiche décide s’il s’ouvre dans la même fenêtre ou dans une nouvelle.</p>",
   demo_html_highlight: '<p>Sélectionnez du texte et appuyez sur le bouton : six couleurs — <mark data-color="yellow">jaune</mark>, <mark data-color="green">vert</mark>, <mark data-color="cyan">cyan</mark>, <mark data-color="pink">rose</mark>, <mark data-color="purple">violet</mark>, <mark data-color="orange">orange</mark> — s’ouvrent près du caret.</p><p>Placez le caret dans un surlignage, et les mêmes échantillons apparaissent dans la ligne contextuelle pour changer seulement la couleur.</p>',
   demo_html_text_color: '<p>Colorez le texte en <span data-color="green">vert</span>, <span data-color="coral">corail</span>, <span data-color="violet">violet</span>, <span data-color="amber">ambre</span> ou <span data-color="blue">bleu</span> — cinq couleurs au total.</p><p><mark data-color="yellow">Le chevauchement avec un surlignage</mark> ne pose pas de problème : ce sont des marques différentes, donc <span data-color="blue">les deux s’appliquent.</span></p>',
   demo_html_heading:
-    '<h1>Titre 1</h1><h2>Titre 2</h2><h3>Titre 3</h3><p>Texte courant. Taper # suivi d\'une espace sur une ligne vide fait aussi un titre.</p>',
+    "<h1>Le plus grand titre</h1><h2>Deuxième titre</h2><h3>Troisième titre</h3><p>Voici le texte qui suit un titre. Saisissez # puis appuyez sur Espace sur une ligne vide pour la transformer en titre.</p>",
   demo_html_bullet_list:
     '<ul><li>Une liste à puces</li><li>Tab indente, Maj+Tab désindente<ul><li>Un élément imbriqué</li></ul></li></ul><p>Taper - suivi d\'une espace sur une ligne vide en fait une aussi.</p>',
   demo_html_ordered_list:
     '<ol><li>Une liste numérotée</li><li>Insérer ou supprimer un élément renumérote tout seul</li></ol><p>Taper 1. suivi d\'une espace sur une ligne vide en fait une aussi.</p>',
   demo_html_task_list:
-    '<ul data-nabi-list="task"><li data-nabi-checked="true">Cliquez sur la case devant le texte</li><li data-nabi-checked="false">L\'état coché est enregistré avec le document</li></ul><p>Taper [ ] ou [x] sur une ligne vide en fait une aussi.</p>',
+    "<ul data-nabi-list=\"task\"><li data-nabi-checked=\"true\">Cet élément est terminé.</li><li data-nabi-checked=\"false\">Cliquez sur la case devant un élément pour changer son état d’achèvement.</li></ul><p>L’état coché est enregistré dans le document. Saisissez [ ] ou [x] puis appuyez sur Espace sur une ligne vide pour créer une liste de tâches.</p>",
   demo_html_table:
     "<p>Une cellule peut contenir plusieurs paragraphes et blocs, avec des couleurs de fond pour distinguer les contenus. Essayez de modifier directement le texte et les images du tableau ci-dessous.</p><div data-nabi-p><div class=\"nabi-scroll\"><table><tr><th data-nabi-cell-color=\"cyan\"><p>Ressources</p></th><th data-nabi-cell-color=\"cyan\"><p>Notes de travail</p></th></tr><tr><td><div data-nabi-p data-nabi-align=\"c\"><img src=\"/nabi-note.svg\" alt data-nabi-width=\"30\"/></div><p data-nabi-align=\"c\">Une image et sa description dans la même cellule.</p></td><td data-nabi-cell-color=\"yellow\"><h3>Des paragraphes libres</h3><p>Appuyez sur Entrée pour créer un paragraphe, ou sur Maj+Entrée pour revenir à la ligne dans le même paragraphe.</p></td></tr><tr><td data-nabi-cell-color=\"green\"><div data-nabi-p><ul data-nabi-list=\"task\"><li data-nabi-checked=\"true\"><p>Changer le fond des cellules</p></li><li data-nabi-checked=\"false\"><p>Indenter une liste avec Tab</p></li><li data-nabi-checked=\"false\"><p>Sélectionner plusieurs cellules et appliquer la même couleur</p></li></ul></div></td><td><div data-nabi-p><details open><summary>Cliquer pour afficher les conseils</summary><p>Les cellules acceptent aussi des blocs repliables, citations, blocs de code et vidéos.</p><p>La fusion des cellules conserve leur contenu dans l’ordre.</p></details></div></td></tr></table></div></div><p>Cliquez dans une cellule pour afficher sa couleur de fond et les outils de lignes et colonnes. Sélectionnez plusieurs cellules pour changer ensemble leur couleur et leur alignement. Pour déplacer le tableau entier, choisissez « Sélectionner le tableau », puis utilisez les outils d’alignement.</p><p>Dans un paragraphe ordinaire, Tab passe à la cellule suivante ; dans une liste ou du code, il indente. Effacer le contenu ou la mise en forme conserve le fond de la cellule.</p>",
   demo_html_image:
-    '<div data-nabi-p data-nabi-align="c"><img src="/nabi-note.svg" alt="Logo NABI NOTE" data-nabi-width="50"></div><p>Cliquez sur l\'image pour ouvrir la boîte de largeur et d\'alignement.</p>',
+    "<div data-nabi-p data-nabi-align=\"c\"><img src=\"/nabi-note.svg\" alt data-nabi-width=\"50\"/></div><p>Sélectionnez une image pour régler sa taille d’affichage et l’aligner à gauche, au centre ou à droite.</p>",
   demo_html_youtube:
     '<p>Utilisez le bouton YouTube de la barre d\'outils, ou collez simplement une adresse de vidéo — l\'intégration atterrit ici même.</p>',
   demo_html_code:
-    '<pre data-nabi-lang="ts">function sum(numbers: number[]) {<br>  return numbers.reduce((a, b) =&gt; a + b, 0)<br>}</pre><p>Placez le caret dans le code et la ligne contextuelle affiche un champ de langage.</p>',
+    "<div data-nabi-p><pre data-nabi-lang=\"ts\"><code class=\"language-ts\">function sum(numbers: number[]) {<br/>  return numbers.reduce((a, b) =&gt; a + b, 0)<br/>}</code></pre></div><p>Placez le curseur dans le bloc de code pour choisir une langue dans les outils contextuels. Sélectionnez plusieurs lignes et appuyez sur Tab pour les indenter ensemble, ou sur Maj+Tab pour réduire leur retrait.</p>",
   demo_html_details:
-    '<details open=""><summary>Cliquez ici pour replier</summary><p>L\'état replié est enregistré avec le document — les lecteurs le voient tel que l\'auteur l\'a laissé.</p></details>',
+    "<details open><summary>Cliquez sur le titre pour replier ou déplier le contenu.</summary><p>Le choix d’afficher le contenu ouvert ou replié au départ est aussi enregistré dans le document.</p></details>",
   demo_html_quote: '<blockquote><p>Vous pouvez regrouper comme citation une phrase venant d’un autre texte, ou un contenu que vous voulez séparer.</p><p>Une citation peut contenir plusieurs paragraphes et blocs.</p></blockquote><p>Tapez &gt; puis une espace au début d’une ligne vide pour transformer cette ligne en citation.</p>',
   demo_html_divider:
-    '<p>Un paragraphe au-dessus du séparateur.</p><hr><p>Et un autre en dessous. Taper --- seul sur une ligne puis Entrée fait aussi un trait.</p>',
+    "<p>Un paragraphe qui termine la première partie.</p><hr><p>Vous pouvez commencer un nouveau contenu sous le séparateur. Saisissez --- puis appuyez sur Entrée sur une ligne vide pour créer un séparateur.</p>",
   demo_html_align:
-    '<p data-nabi-align="l">Aligné à gauche</p><p data-nabi-align="c">Centré</p><p data-nabi-align="r">Aligné à droite</p>',
+    "<p data-nabi-align=\"l\">L’alignement à gauche convient au corps du texte.</p><p data-nabi-align=\"c\">L’alignement centré peut servir aux titres courts ou aux messages d’information.</p><p data-nabi-align=\"r\">L’alignement à droite convient aux éléments placés à droite, comme les dates ou les signatures.</p>",
   demo_html_font_size: '<p data-nabi-size="xs">Très petit — utile pour les notes de bas de page ou les notes d’appoint.</p><p data-nabi-size="sm">Petit — une taille en dessous du texte courant.</p><p>Un paragraphe à la taille par défaut. Le menu de taille montre aussi chaque taille de texte telle qu’elle apparaîtra.</p><p data-nabi-size="lg">Grand — utile pour une phrase qui doit ressortir.</p><p data-nabi-size="xl">Très grand — utile pour une phrase d’introduction sous un titre.</p><p>La taille du texte s’applique à la plage sélectionnée. S’il n’y a qu’un caret, elle s’applique au texte du paragraphe courant.</p>',
-  demo_html_typeface: "<p>Ce paragraphe n’a pas de police explicite. Il est affiché avec la police par défaut de la page.</p><p data-nabi-typeface=\"serif\">Ce paragraphe utilise une police serif. Quand vous choisissez une famille comme serif, la police réelle suit le CSS du site.</p><p data-nabi-typeface=\"mono\">Ce paragraphe utilise une police monospace. Une largeur fixe par caractère aide à aligner des nombres ou du code — 0O 1lI</p><p data-nabi-typeface=\"cursive\">Cursive · Cursiva · Рукописный · خط اليد · हस्तलिपि · হস্তলিপি · رواں خط · Tulisan tangan · دست‌نویس · हस्ताक्षर · Chữ viết tay · చేతిరాత · Rubutun hannu · El yazısı · Mwandiko · கையெழுத்து · ลายมือ · Corsivo · 필기체 · 筆記体 · 手写体 · Schreibschrift</p>",
+  demo_html_typeface: "<p>Ce paragraphe n’a pas de famille de polices particulière. Il utilise celle définie par défaut sur la page.</p><p data-nabi-typeface=\"serif\">Ce paragraphe utilise une police avec empattement. Lorsque vous choisissez une famille comme serif, la police réelle dépend des réglages CSS du site.</p><p data-nabi-typeface=\"mono\">Ce paragraphe utilise une police à chasse fixe. La largeur constante des caractères facilite l’alignement des nombres ou du code — 0O 1lI</p><p data-nabi-typeface=\"cursive\">Cursive · Cursiva · Рукописный · خط اليد · हस्तलिपि · হস্তলিপি · رواں خط · Tulisan tangan · دست‌نویس · हस्ताक्षर · Chữ viết tay · చేతిరాత · Rubutun hannu · El yazısı · Mwandiko · கையெழுத்து · ลายมือ · Corsivo · 필기체 · 筆記体 · 手写体 · Schreibschrift</p>",
   demo_html_dropcap:
-    '<p data-nabi-dropcap="on">La première lettre s\'étend sur trois lignes et le texte s\'écoule tout autour. Même un paragraphe court réserve la place de ces lignes, si bien que le bloc suivant n\'est jamais empiété.</p><p>Ce paragraphe ne l\'a pas.</p>',
+    "<p data-nabi-dropcap=\"1\">Agrandissez la première lettre d’un paragraphe et laissez le reste du texte s’écouler à côté. Dans l’éditeur, cette lettre est entourée d’un élément réel pour maintenir la position du curseur.</p><p>Ce paragraphe n’a pas de lettrine.</p>",
   demo_html_clear_format:
     '<p>Sélectionnez du texte <b>gras</b>, <i>italique</i>, <u>souligné</u> ou <s>barré</s> et appuyez sur la gomme.</p><p>Seule la mise en forme des caractères part — les blocs restent exactement tels quels.</p>',
   demo_html_upload: '<p>Déposez un fichier dans la zone d’édition, ou collez-en un. Cette démo n’est pas connectée à un vrai serveur d’upload, donc les fichiers ne sont pas stockés sur un serveur.</p><p>Une fois l’upload terminé, un fichier peut rester dans le document comme <a href="https://nabi.saro.me/file-link-test.txt" data-nabi-file="txt">pièce jointe</a>.</p>',
   cdn_demo_lead: 'Enregistrez le code ci-dessous sous {file} et ouvrez-le dans un navigateur — vous le voyez tourner tout de suite.',
   cdn_demo_download: 'Télécharger demo.html',
-  cdn_code_minheight: 'Hauteur minimale de l\'éditeur — évite qu\'il ressemble à une boîte d\'une seule ligne au chargement. Valeur libre.',
-  cdn_code_wings: 'Toutes les wings sauf upload.',
+  cdn_code_minheight: "Dans cet exemple, l’éditeur occupe toute la hauteur du navigateur. Adaptez cette hauteur à la mise en page de votre site.",
+  cdn_code_wings: "Sélectionnez les wings d’édition et de gestion des fichiers utilisées dans cet exemple.",
   cdn_code_faces:
-    'Parmi les polices, seules sans et serif sont gardées.\nLes systèmes ne prennent pas en charge les mêmes polices : mono et cursive ont besoin d\'une\npolice web importée à part pour être reconnues sur toutes les plateformes.\nVoir la page « Police » pour le détail.',
-  cdn_code_change: 'Exemple de rappel quand la valeur change',
+    "Cet exemple charge uniquement les polices sans empattement et avec empattement.\nPour utiliser une police à chasse fixe ou manuscrite, chargez aussi les fichiers de police correspondants sur la page.\nConsultez la documentation « Police » pour en savoir plus.",
+  cdn_code_change: "Cet exemple programme un enregistrement lorsque le document change.",
   code_copy: 'Copier le code',
   demo_install: 'Installation',
   demo_code: 'Code',

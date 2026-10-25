@@ -124,7 +124,7 @@ bir `button` ekleyin.
 
 ### 5. Liste ve öğe çifti
 
-Liste ve öğe her zaman eşleştiği için `listFamily()` kullanın.
+Liste ve öğe her zaman eşleştiği için `listFamily()` kullanın. Aşağıdaki örnek, `<ul>` ve `<li>` oluşturan en küçük özel listedir.
 
 ```ts
 import { listFamily } from 'nabi-note'

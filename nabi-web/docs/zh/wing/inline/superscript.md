@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # 上标
 
-将选中的文字抬到基线之上，适合指数和引用标记。再次应用会移除该格式。
+将选中的文字以较小字号显示在基线上方。可用于指数或脚注标记，并且只应用于选中的范围。
 
 <WingDemo path="/wing/inline/superscript" />
 

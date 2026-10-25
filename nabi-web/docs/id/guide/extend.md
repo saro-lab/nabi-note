@@ -113,7 +113,7 @@ Deklarasi ini saja tidak membuat cara untuk membungkus paragraf yang dipilih. Ta
 
 ### 5. Pasangan daftar dan item yang selalu berpasangan
 
-Gunakan `listFamily()` ketika daftar dan item harus selalu hadir bersama.
+Gunakan `listFamily()` ketika daftar dan item harus selalu hadir bersama. Contoh berikut adalah daftar kustom minimal yang membuat `<ul>` dan `<li>`.
 
 ```ts
 import { listFamily } from 'nabi-note'

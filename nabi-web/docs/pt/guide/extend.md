@@ -113,7 +113,7 @@ Essa declaração sozinha não cria uma forma de envolver os parágrafos selecio
 
 ### 5. Um par combinado de lista e item
 
-Use `listFamily()` quando uma lista e seu item precisam sempre aparecer juntos.
+Use `listFamily()` quando uma lista e seu item precisam sempre aparecer juntos. O exemplo a seguir é uma lista personalizada mínima que cria `<ul>` e `<li>`.
 
 ```ts
 import { listFamily } from 'nabi-note'

@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Rubutu karkace
 
-Yana nuna rubutun da aka zaɓa a karkace. Ya dace idan ana son a ɗan raba sunan aiki ko kalmar waje da rubutun jiki; idan an sake dannawa a yankin da yake karkace, zai koma yadda yake.
+Yana nuna rubutun da aka zaɓa a karkace. Wannan ya dace da bambanta sunan littafi ko kalmomin wani harshe kaɗan daga babban rubutu. Sake dannawa a yankin da ya riga ya karkace yana cire tsarin.
 
 <WingDemo path="/wing/inline/italic" />
 

@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Coret
 
-Mencoret teks terpilih. Menerapkannya lagi pada rentang yang sama akan menghapus pemformatan, dan mark tetap disimpan dalam dokumen.
+Menarik garis melalui bagian tengah teks terpilih. Gunakan untuk tetap menampilkan ungkapan yang diubah atau informasi yang sudah tidak berlaku tanpa menghapusnya. Menerapkannya lagi pada rentang yang sama menghapus formatnya.
 
 <WingDemo path="/wing/inline/strikethrough" />
 

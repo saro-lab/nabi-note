@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Corsivo
 
-Mette in corsivo il testo selezionato. Applicarlo di nuovo allo stesso intervallo rimuove la formattazione, e il mark viene conservato nei documenti salvati.
+Mostra il testo selezionato in corsivo. È utile per distinguere leggermente dal corpo del testo i titoli di opere o le parole straniere. Premi di nuovo su un intervallo già in corsivo per rimuovere il formato.
 
 <WingDemo path="/wing/inline/italic" />
 

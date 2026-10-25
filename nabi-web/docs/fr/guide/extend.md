@@ -113,7 +113,7 @@ Cette déclaration seule ne crée pas de moyen d'englober les paragraphes sélec
 
 ### 5. Une paire liste/élément associée
 
-Utilisez `listFamily()` lorsqu'une liste et son élément doivent toujours apparaître ensemble.
+Utilisez `listFamily()` lorsqu'une liste et son élément doivent toujours apparaître ensemble. L’exemple suivant est une liste personnalisée minimale qui crée `<ul>` et `<li>`.
 
 ```ts
 import { listFamily } from 'nabi-note'

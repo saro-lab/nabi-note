@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Soulignement
 
-Souligne le texte sélectionné. L'appliquer à nouveau sur la même plage supprime le formatage, et la marque est conservée dans les documents enregistrés.
+Souligne le texte sélectionné. Il peut ressembler à un lien, mais il s’agit uniquement d’un format de texte, sans adresse ni action de navigation.
 
 <WingDemo path="/wing/inline/underline" />
 

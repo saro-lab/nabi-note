@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # 斜体
 
-将选中的文字设为斜体。对同一范围再次应用会移除该格式，保存文档时 mark 会保留。
+将选中的文字显示为斜体。适合用来让作品名称、外语词汇等与正文略有区别。在已应用斜体的范围内再次点击即可取消。
 
 <WingDemo path="/wing/inline/italic" />
 

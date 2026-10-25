@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Tiefstellung
 
-Hebt den ausgewählten Text unter die Grundlinie, für chemische Formeln und Indizes. Durch erneutes Anwenden wird das Formatierung entfernt.
+Zeigt den ausgewählten Text kleiner unterhalb der Grundlinie an. Das eignet sich für Schreibweisen mit tiefgestellten Zeichen, etwa die chemische Formel `H₂O`. Die Formatierung fügt keine Formelberechnung hinzu, sondern dient dazu, die Schreibweise zu erhalten.
 
 <WingDemo path="/wing/inline/subscript" />
 

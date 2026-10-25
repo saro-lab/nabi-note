@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Üstü çizili
 
-Seçili metnin üstünü çizer. Aynı aralığa tekrar uygulamak biçimlendirmeyi kaldırır ve mark kaydedilmiş belgelerde korunur.
+Seçili metnin ortasından bir çizgi geçirir. Değiştirilen ifadeleri veya artık geçerli olmayan içeriği silmeden görünür tutmak için kullanılabilir. Aynı aralığa yeniden uygulamak biçimi kaldırır.
 
 <WingDemo path="/wing/inline/strikethrough" />
 

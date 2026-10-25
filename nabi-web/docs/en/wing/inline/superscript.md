@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Superscript
 
-Raises selected text above the baseline, for exponents and reference markers. Applying it again removes the formatting.
+Display selected text in a smaller size above the baseline. Use it for exponents or footnote markers. It applies only to the selected range.
 
 <WingDemo path="/wing/inline/superscript" />
 

@@ -113,7 +113,7 @@ export const exCallout: Wing = {
 
 ### 5. ملتی ہوئی فہرست اور item جوڑی
 
-جہاں فہرست اور item کو ہمیشہ اکٹھا ہونا ہو وہاں `listFamily()` استعمال کریں۔
+جہاں فہرست اور item کو ہمیشہ اکٹھا ہونا ہو وہاں `listFamily()` استعمال کریں۔ نیچے `<ul>` اور `<li>` بنانے والی کم سے کم حسب ضرورت فہرست کی مثال ہے۔
 
 ```ts
 import { listFamily } from 'nabi-note'

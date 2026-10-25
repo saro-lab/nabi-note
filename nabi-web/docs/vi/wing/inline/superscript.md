@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Chỉ số trên
 
-Hiển thị chữ đã chọn nhỏ trên đường cơ sở. Có thể dùng cho số mũ hoặc ký hiệu chú thích và chỉ áp dụng cho phạm vi đã chọn.
+Hiển thị chữ được chọn với cỡ nhỏ hơn bên trên đường cơ sở. Có thể dùng cho số mũ hoặc dấu chú thích cuối trang và chỉ áp dụng cho vùng được chọn.
 
 <WingDemo path="/wing/inline/superscript" />
 

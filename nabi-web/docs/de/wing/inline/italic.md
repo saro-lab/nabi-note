@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Kursiv
 
-Formatiert den markierten Text kursiv. Wird die Formatierung erneut auf denselben Bereich angewendet, wird sie entfernt, und die Markierung in gespeicherten Dokumenten bleibt erhalten.
+Stellt den ausgewählten Text kursiv dar. Damit lassen sich etwa Werktitel oder fremdsprachige Wörter dezent vom Fließtext abheben. Erneutes Klicken in einem bereits kursiven Bereich entfernt die Formatierung.
 
 <WingDemo path="/wing/inline/italic" />
 

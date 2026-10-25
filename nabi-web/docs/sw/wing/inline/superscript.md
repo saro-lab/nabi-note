@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Kiambishi cha juu
 
-Hupandisha maandishi yaliyochaguliwa juu ya mstari wa msingi. Unaweza kukitumia kwa vielelezo vya nguvu au alama za maelezo ya chini, na hutumika kwenye sehemu iliyochaguliwa pekee.
+Huonyesha maandishi yaliyochaguliwa kwa ukubwa mdogo juu ya mstari wa msingi. Unaweza kuitumia kwa vipeo au alama za tanbihi, na inatumika kwenye sehemu iliyochaguliwa tu.
 
 <WingDemo path="/wing/inline/superscript" />
 

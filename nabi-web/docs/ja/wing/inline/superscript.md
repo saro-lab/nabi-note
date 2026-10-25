@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # 上付き
 
-選択した文字を基準線より上に上げます。指数や参照番号に使えます。もう一度適用すると解除されます。
+選択した文字をベースラインの上に小さく表示します。指数や脚注の印に使え、選択した範囲だけに適用されます。
 
 <WingDemo path="/wing/inline/superscript" />
 

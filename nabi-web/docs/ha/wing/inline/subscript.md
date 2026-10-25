@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Rubutu na ƙasa
 
-Yana nuna rubutun da aka zaɓa a ƙarami ƙasa da layin tushe. Ya dace da rubutu kamar `H₂O` a tsarin sinadarai. Ba ya ƙara aikin lissafi; ana amfani da shi idan ana son a adana yadda rubutun yake.
+Yana nuna rubutun da aka zaɓa da ƙananan haruffa a ƙasan layin asali. Ya dace da rubutun da ke buƙatar alamar ƙasa, kamar dabarar sinadarai `H₂O`. Wannan tsarin ba ya ƙara aikin lissafin dabara; a yi amfani da shi don kiyaye yadda aka rubuta alamar.
 
 <WingDemo path="/wing/inline/subscript" />
 

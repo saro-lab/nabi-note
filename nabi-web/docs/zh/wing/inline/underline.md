@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # 下划线
 
-给选中的文字加上下划线。对同一范围再次应用会移除该格式，保存文档时 mark 会保留。
+为选中的文字添加下划线。虽然看起来可能像链接，但这只是文字格式，不会添加地址或跳转行为。
 
 <WingDemo path="/wing/inline/underline" />
 

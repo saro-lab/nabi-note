@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Italic
 
-Italicizes selected text. Applying it again to the same range removes the formatting, and the mark is preserved in saved documents.
+Italicize selected text. This is useful for subtly distinguishing titles of works or foreign words from the body text. Click again on a range that is already italicized to remove the formatting.
 
 <WingDemo path="/wing/inline/italic" />
 

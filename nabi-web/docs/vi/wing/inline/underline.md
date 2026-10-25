@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Gạch chân
 
-Gạch chân chữ đã chọn. Nó có thể trông giống liên kết, nhưng chỉ là định dạng chữ đơn thuần, không có địa chỉ hay thao tác điều hướng.
+Gạch dưới chữ được chọn. Dù có thể trông giống liên kết, đây chỉ là định dạng chữ, không thêm địa chỉ hay thao tác điều hướng.
 
 <WingDemo path="/wing/inline/underline" />
 

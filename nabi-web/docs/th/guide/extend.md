@@ -113,7 +113,7 @@ export const exCallout: Wing = {
 
 ### 5. คู่ list และ item ที่จับคู่กัน
 
-ใช้ `listFamily()` เมื่อ list และ item ต้องปรากฏร่วมกันเสมอ
+ใช้ `listFamily()` เมื่อ list และ item ต้องปรากฏร่วมกันเสมอ ตัวอย่างต่อไปนี้เป็นรายการแบบกำหนดเองที่เรียบง่ายที่สุดซึ่งสร้าง `<ul>` และ `<li>`
 
 ```ts
 import { listFamily } from 'nabi-note'

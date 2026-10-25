@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # İtalik
 
-Seçili metni italik yapar. Aynı aralığa tekrar uygulamak biçimlendirmeyi kaldırır ve mark kaydedilmiş belgelerde korunur.
+Seçili metni eğik gösterir. Eser adlarını veya yabancı sözcükleri ana metinden hafifçe ayırmak için uygundur. Zaten eğik olan bir aralıkta yeniden basmak biçimi kaldırır.
 
 <WingDemo path="/wing/inline/italic" />
 

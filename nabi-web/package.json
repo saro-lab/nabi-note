@@ -13,13 +13,14 @@
     "build:full": "npm run pack:note && npm run build:trees && npm run build",
     "preview": "vitepress preview docs",
     "cf:preview": "npm run build && wrangler dev",
-    "cf:deploy": "npm run build && wrangler deploy"
+    "cf:deploy": "npm run build && wrangler deploy",
+    "check:locales": "node --import ../nabi-npm/node_modules/tsx/dist/loader.mjs scripts/check-locales.ts"
   },
   "dependencies": {
     "@shikijs/langs": "^4.5.0",
     "@shikijs/themes": "^4.5.0",
     "minisearch": "^7.2.0",
-    "nabi-note": "file:nabi-note-1.5.3.tgz",
+    "nabi-note": "file:nabi-note-1.5.4.tgz",
     "shiki": "^4.5.0"
   },
   "devDependencies": {

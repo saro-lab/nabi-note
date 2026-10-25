@@ -1,6 +1,8 @@
 // 옮겼다 — 키 하나라도 빠지면 타입 오류라 파일이 통째로 채워져 있어야 한다.
 // Translated — a missing key is a type error, so the file must stay filled in whole.
 export const zh = {
+  menu_compare: "比较",
+  menu_merge: "合并",
   menu_inline_footnote: "脚注",
   demo_html_footnote: "<p>WYSIWYG<sup data-nabi-fn=\"WYSIWYG 是“What You See Is What You Get”的缩写，意为所见即所得，即编辑时看到的样式就是最终效果。\">[1]</sup></p>",
   label: '中文',
@@ -49,7 +51,7 @@ export const zh = {
   menu_block_quote: '引用',
   menu_block_divider: '分隔线',
 
-  menu_etc: '其他',
+  menu_etc: "工具",
   menu_etc_align: '对齐',
   menu_etc_dropcap: '首字下沉',
   menu_etc_typeface: '字体',
@@ -90,48 +92,48 @@ export const zh = {
   demo_html_bold:
     '<p>用<b>加粗</b>标出重要的词。选中一段文字，按工具栏里的 <b>B</b> 试试看。</p>',
   demo_html_italic:
-    '<p>生僻词或者引用一般用<i>斜体</i>。选中这句话试试看。</p>',
+    "<p>可以将书名、外语词汇等需要区分的文字显示为<i>斜体</i>。选中文字后，点击斜体按钮试试。</p>",
   demo_html_underline:
     '<p>这里有一条<u>下划线</u>。选中这几个字再按一次就能去掉。</p>',
-  demo_html_strikethrough: '<p><s>¥129</s> ¥89 —— 用来留住划掉之前的价格。</p>',
+  demo_html_strikethrough: "<p><s>19,000 KRW</s> 9,900 KRW，可在保留旧值的同时显示新值。</p>",
   demo_html_superscript:
     '<p>面积是 3.5m<sup>2</sup>，脚注就像这样标注。<sup>1</sup></p>',
-  demo_html_subscript: '<p>水是 H<sub>2</sub>O，汽水里的气是 CO<sub>2</sub>。</p>',
+  demo_html_subscript: "<p>水的化学式是 H<sub>2</sub>O，二氧化碳的化学式是 CO<sub>2</sub>。</p>",
   demo_html_link:
-    '<p>填一个地址就变成<a href="https://example.com">这样的链接</a>。已有的链接不会弹出上下文工具栏——要改地址得先删掉再重新做一个。</p>',
+    "<p>输入地址即可创建<a href=\"https://example.com/\">这样的链接</a>。文档只保存链接地址；在当前窗口还是新窗口打开，由显示文档的页面决定。</p>",
   demo_html_highlight:
     `<p>选中文字并按荧光笔按钮，会打开调色板。可以选择 <mark data-color="yellow">黄色</mark> · <mark data-color="green">绿色</mark> · <mark data-color="cyan">青色</mark> · <mark data-color="pink">粉色</mark> · <mark data-color="purple">紫色</mark> · <mark data-color="orange">橙色</mark>。</p><p>把光标放在已高亮文字中，可以从上下文工具改变颜色。</p>`,
   demo_html_text_color:
     `<p>给选中文字应用 <span data-color="green">绿色</span> · <span data-color="coral">珊瑚色</span> · <span data-color="violet">紫色</span> · <span data-color="amber">琥珀色</span> · <span data-color="blue">蓝色</span>。</p><p><mark data-color="yellow">荧光笔</mark> 和 <span data-color="blue">文字颜色可以一起应用。</span></p>`,
   demo_html_heading:
-    '<h1>标题一</h1><h2>标题二</h2><h3>标题三</h3><p>这是正文。在空行上敲 # 再加空格，也能变成标题。</p>',
+    "<h1>最大的标题</h1><h2>第二级标题</h2><h3>第三级标题</h3><p>这是标题下面的正文。在空行中输入 # 后按空格，也会转换为标题。</p>",
   demo_html_bullet_list:
     '<ul><li>一个无序列表</li><li>Tab 缩进，Shift+Tab 取消缩进<ul><li>一个嵌套项</li></ul></li></ul><p>在空行上敲 - 再加空格，也能变成列表。</p>',
   demo_html_ordered_list:
     '<ol><li>一个有序列表</li><li>插入或删除一项，编号会自动重排</li></ol><p>在空行上敲 1. 再加空格，也能变成编号列表。</p>',
   demo_html_task_list:
-    '<ul data-nabi-list="task"><li data-nabi-checked="true">点文字前面的方框可以打勾</li><li data-nabi-checked="false">打勾的状态会存进文档里</li></ul><p>在空行上敲 [ ] 或 [x]，也能变成任务列表。</p>',
+    "<ul data-nabi-list=\"task\"><li data-nabi-checked=\"true\">这是已完成的项目。</li><li data-nabi-checked=\"false\">点击项目前面的方框即可更改完成状态。</li></ul><p>勾选状态会保存在文档中。在空行中输入 [ ] 或 [x] 后按空格，也会转换为任务列表。</p>",
   demo_html_table:
     "<p>单元格可以容纳多个段落和块，并用背景色区分内容。试着直接编辑下表中的文字和图片。</p><div data-nabi-p><div class=\"nabi-scroll\"><table><tr><th data-nabi-cell-color=\"cyan\"><p>资料</p></th><th data-nabi-cell-color=\"cyan\"><p>工作笔记</p></th></tr><tr><td><div data-nabi-p data-nabi-align=\"c\"><img src=\"/nabi-note.svg\" alt data-nabi-width=\"30\"/></div><p data-nabi-align=\"c\">图片和说明放在同一个单元格中。</p></td><td data-nabi-cell-color=\"yellow\"><h3>自由分段</h3><p>按Enter分段，或按Shift+Enter在同一段落内换行。</p></td></tr><tr><td data-nabi-cell-color=\"green\"><div data-nabi-p><ul data-nabi-list=\"task\"><li data-nabi-checked=\"true\"><p>更改单元格背景色</p></li><li data-nabi-checked=\"false\"><p>在列表中按Tab缩进</p></li><li data-nabi-checked=\"false\"><p>选择多个单元格并应用相同颜色</p></li></ul></div></td><td><div data-nabi-p><details open><summary>点击查看编辑提示</summary><p>单元格中也可以放入折叠块、引用、代码和视频。</p><p>合并单元格后，各单元格的内容仍按顺序保留。</p></details></div></td></tr></table></div></div><p>点击单元格内部，会显示背景色和行列工具。选中多个单元格后，可以一起更改颜色和对齐方式。要调整整张表的位置，请先选择“选择整个表格”，再使用对齐工具。</p><p>普通段落中按Tab移到下一个单元格，列表或代码中则进行缩进。清除内容或格式不会清除单元格背景色。</p>",
   demo_html_image:
-    '<div data-nabi-p data-nabi-align="c"><img src="/nabi-note.svg" alt="NABI NOTE 标志" data-nabi-width="50"></div><p>点一下图片，会弹出宽度、对齐的设置框。</p>',
+    "<div data-nabi-p data-nabi-align=\"c\"><img src=\"/nabi-note.svg\" alt data-nabi-width=\"50\"/></div><p>选择图片后，可以调整显示大小，并将其左对齐、居中或右对齐。</p>",
   demo_html_youtube:
     '<p>用工具栏上的 YouTube 按钮，或者直接粘贴一个视频地址——嵌入的视频就会出现在这里。</p>',
   demo_html_code:
-    '<pre data-nabi-lang="ts">function sum(numbers: number[]) {<br>  return numbers.reduce((a, b) =&gt; a + b, 0)<br>}</pre><p>把光标放进代码里，上下文工具栏会出现语言输入框。选中多行按 Tab，选中的行会一起缩进，Shift+Tab 则退回去。</p>',
+    "<div data-nabi-p><pre data-nabi-lang=\"ts\"><code class=\"language-ts\">function sum(numbers: number[]) {<br/>  return numbers.reduce((a, b) =&gt; a + b, 0)<br/>}</code></pre></div><p>将光标放在代码块内，即可通过上下文工具选择语言。选中多行后按 Tab 可一起增加缩进，按 Shift+Tab 可减少缩进。</p>",
   demo_html_details:
-    '<details open=""><summary>点这里折叠</summary><p>折叠的状态会存进文档——读者看到的就是作者折起来的样子。</p></details>',
+    "<details open><summary>点击标题，折叠或展开内容。</summary><p>内容最初是展开还是折叠，也会保存在文档中。</p></details>",
   demo_html_quote:
     `<blockquote><p>可以把其他文章中的一句话，或想单独区分的内容，整理成引用。</p><p>引用中可以一起包含多个段落和块。</p></blockquote><p>在空行输入 &gt; 和一个空格，就会把那一行变成引用。</p>`,
   demo_html_divider:
-    '<p>分割线上面的段落。</p><hr><p>分割线下面的段落。在空行上只敲 --- 再按回车，也能变成分割线。</p>',
+    "<p>这是结束第一部分内容的段落。</p><hr><p>可以在分隔线下方开始新的内容。在空行中输入 --- 后按 Enter，也会创建分隔线。</p>",
   demo_html_align:
-    '<p data-nabi-align="l">左对齐</p><p data-nabi-align="c">居中对齐</p><p data-nabi-align="r">右对齐</p>',
+    "<p data-nabi-align=\"l\">左对齐适合一般正文。</p><p data-nabi-align=\"c\">居中适合简短的标题或提示。</p><p data-nabi-align=\"r\">右对齐适合日期、签名等需要放在右侧的内容。</p>",
   demo_html_font_size:
     `<p data-nabi-size="xs">非常小 — 适合脚注或补充说明。</p><p data-nabi-size="sm">小 — 比正文小一级。</p><p>默认大小的段落。大小菜单中也会按实际显示大小展示每个文字大小。</p><p data-nabi-size="lg">大 — 适合需要强调的句子。</p><p data-nabi-size="xl">非常大 — 适合标题下的导入句。</p><p>文字大小会应用到选中的范围。如果只有光标，则应用到当前段落的文字。</p>`,
-  demo_html_typeface: "<p>这个段落没有指定字体。它会使用页面默认字体显示。</p><p data-nabi-typeface=\"serif\">这个段落使用衬线字体。选择 serif 这样的字体类别时，实际字体会跟随站点 CSS。</p><p data-nabi-typeface=\"mono\">这个段落使用等宽字体。固定字符宽度便于对齐数字或代码 — 0O 1lI</p><p data-nabi-typeface=\"cursive\">手写体 · Schreibschrift · Cursive · Cursiva · Рукописный · خط اليد · हस्तलिपि · হস্তলিপি · رواں خط · Tulisan tangan · دست‌نویس · हस्ताक्षर · Chữ viết tay · చేతిరాత · Rubutun hannu · El yazısı · Mwandiko · கையெழுத்து · ลายมือ · Corsivo · 필기체 · 筆記体</p>",
+  demo_html_typeface: "<p>此段落未单独指定字体类别，使用页面的默认字体。</p><p data-nabi-typeface=\"serif\">此段落应用了衬线字体。选择衬线等字体类别后，实际字体由网站的 CSS 设置决定。</p><p data-nabi-typeface=\"mono\">此段落应用了等宽字体。字符宽度一致，适合对齐数字或代码 — 0O 1lI</p><p data-nabi-typeface=\"cursive\">手写体 · Schreibschrift · Cursive · Cursiva · Рукописный · خط اليد · हस्तलिपि · হস্তলিপি · رواں خط · Tulisan tangan · دست‌نویس · हस्ताक्षर · Chữ viết tay · చేతిరాత · Rubutun hannu · El yazısı · Mwandiko · கையெழுத்து · ลายมือ · Corsivo · 필기체 · 筆記体</p>",
   demo_html_dropcap:
-    '<p data-nabi-dropcap="on">首字占据三行的高度，其余文字绕着它排布。就算段落很短，也照样留出那三行的位置，不会挤到下一个块上。</p><p>这段没有挂它。</p>',
+    "<p data-nabi-dropcap=\"1\">放大段落的第一个字，让其余文字环绕在旁边。编辑时会用实际元素包住第一个字，以保持光标位置准确。</p><p>此段落未应用首字下沉。</p>",
   demo_html_clear_format:
     '<p>选中同时带有<b>加粗</b>、<i>斜体</i>、<u>下划线</u>、<s>删除线</s>的文字，按一下橡皮擦试试。</p><p>只会清掉文字格式，块本身原封不动。</p>',
   demo_html_upload:
@@ -140,11 +142,11 @@ export const zh = {
 
   cdn_demo_lead: '把下面的代码存成 {file}，用浏览器打开就能立刻看到效果。',
   cdn_demo_download: '下载 demo.html',
-  cdn_code_minheight: '编辑区最小高度 —— 避免刚打开时看起来像只有一行的小方框。数值可以随意改。',
-  cdn_code_wings: '除了上传以外的全部翅膀。',
+  cdn_code_minheight: "在此示例中，编辑器占满浏览器的高度。请根据网站布局调整高度。",
+  cdn_code_wings: "选择此示例使用的编辑和文件操作 wing。",
   cdn_code_faces:
-    '字体只留无衬线和衬线两种。\n各系统支持的字体不一样，等宽体、手写体要单独 import 才能在所有平台上认出来。\n详情见"字体"文档。',
-  cdn_code_change: '值变化时的回调例子',
+    "此示例仅加载无衬线和衬线字体。\n如需使用等宽或手写字体，请在页面中同时加载相应的字体文件。\n具体方法请参阅“字体”文档。",
+  cdn_code_change: "此示例在文档发生变化时安排保存操作。",
   code_copy: '复制代码',
   demo_install: '安装',
   demo_code: '代码',

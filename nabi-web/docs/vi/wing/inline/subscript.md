@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Chỉ số dưới
 
-Hiển thị chữ đã chọn nhỏ dưới đường cơ sở. Phù hợp với ký hiệu cần chỉ số dưới như `H₂O` trong công thức hóa học. Đây không phải định dạng bổ sung chức năng tính toán công thức, nên dùng khi cần giữ chính biểu diễn đó.
+Hiển thị chữ được chọn với cỡ nhỏ hơn bên dưới đường cơ sở. Phù hợp với ký hiệu cần chỉ số dưới, như công thức hóa học `H₂O`. Định dạng này không bổ sung khả năng tính toán công thức; hãy dùng để giữ nguyên cách viết ký hiệu.
 
 <WingDemo path="/wing/inline/subscript" />
 

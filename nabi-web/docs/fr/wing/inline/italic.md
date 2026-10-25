@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Italique
 
-Met en italique le texte sélectionné. L'appliquer à nouveau sur la même plage supprime le formatage, et la marque est conservée dans les documents sauvegardés.
+Met le texte sélectionné en italique. Cela permet de distinguer légèrement du corps du texte les titres d’œuvres ou les mots étrangers. Cliquez à nouveau sur une plage déjà en italique pour retirer ce format.
 
 <WingDemo path="/wing/inline/italic" />
 

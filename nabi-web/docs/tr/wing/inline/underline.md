@@ -9,7 +9,7 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 
 # Altı çizili
 
-Seçili metnin altını çizer. Aynı aralığa tekrar uygulamak biçimlendirmeyi kaldırır ve mark kaydedilmiş belgelerde korunur.
+Seçili metnin altını çizer. Bağlantıya benzeyebilir, ancak yalnızca metin biçimidir; adres veya gezinme davranışı eklemez.
 
 <WingDemo path="/wing/inline/underline" />
 

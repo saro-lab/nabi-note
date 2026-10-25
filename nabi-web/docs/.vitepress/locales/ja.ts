@@ -1,6 +1,8 @@
 // 옮겼다 — 키 하나라도 빠지면 타입 오류라 파일이 통째로 채워져 있어야 한다.
 // Translated — a missing key is a type error, so the file must stay filled in whole.
 export const ja = {
+  menu_compare: "比較",
+  menu_merge: "マージ",
   menu_inline_footnote: "脚注",
   demo_html_footnote: "<p>WYSIWYG<sup data-nabi-fn=\"WYSIWYG は「What You See Is What You Get」の略で、編集画面で見たとおりの結果を得られる方式です。\">[1]</sup></p>",
   label: '日本語',
@@ -49,7 +51,7 @@ export const ja = {
   menu_block_quote: '引用',
   menu_block_divider: '区切り線',
 
-  menu_etc: 'その他',
+  menu_etc: "ツール",
   menu_etc_align: '配置',
   menu_etc_dropcap: 'ドロップキャップ',
   menu_etc_typeface: '書体',
@@ -90,48 +92,48 @@ export const ja = {
   demo_html_bold:
     '<p>文の中で <b>大事な言葉</b> を示します。文字を選んでツールバーの <b>B</b> を押してみてください。</p>',
   demo_html_italic:
-    '<p>聞き慣れない言葉や引用は <i>斜めに</i> 書きます。この文を選んで押してみてください。</p>',
+    "<p>本のタイトルや外国語など、区別したい文字を<i>斜体</i>で表示できます。文字を選択して斜体ボタンを押してみてください。</p>",
   demo_html_underline:
     '<p>ここに <u>下線</u> が引かれています。その文字を選んでもう一度押すと外れます。</p>',
-  demo_html_strikethrough: '<p><s>2,900円</s> 1,900円 — 消した値を残しておきたいときに使います。</p>',
+  demo_html_strikethrough: "<p><s>19,000 KRW</s> 9,900 KRW のように、以前の値を残しながら新しい値を示すときに使えます。</p>",
   demo_html_superscript:
     '<p>面積は 3.5m<sup>2</sup> で、脚注はこのように付けます。<sup>1</sup></p>',
-  demo_html_subscript: '<p>水は H<sub>2</sub>O、二酸化炭素は CO<sub>2</sub> です。</p>',
+  demo_html_subscript: "<p>水の化学式は H<sub>2</sub>O、二酸化炭素の化学式は CO<sub>2</sub> です。</p>",
   demo_html_link:
-    '<p>アドレスを入れると <a href="https://example.com">このようなリンク</a> になります。すでにあるリンクには状況行が出ません — アドレスを直すには消してから作り直します。</p>',
+    "<p>アドレスを入力すると<a href=\"https://example.com/\">このようなリンク</a>を作れます。文書にはリンク先のアドレスだけが保存され、同じウィンドウと新しいウィンドウのどちらで開くかは表示するページが決めます。</p>",
   demo_html_highlight:
     '<p>文字を選んでボタンを押すとキャレットのそばに見本が出ます。色は六つです — <mark data-color="yellow">黄</mark>・<mark data-color="green">黄緑</mark>・<mark data-color="cyan">水色</mark>・<mark data-color="pink">桃</mark>・<mark data-color="purple">紫</mark>・<mark data-color="orange">橙</mark>。</p><p>マークの中にキャレットを置くと、状況行に同じ見本が出て色だけ変えられます。</p>',
   demo_html_text_color:
     '<p>文字に五色を乗せます — <span data-color="green">緑</span>・<span data-color="coral">珊瑚</span>・<span data-color="violet">紫</span>・<span data-color="amber">琥珀</span>・<span data-color="blue">青</span>。</p><p><mark data-color="yellow">蛍光ペンと重ねても</mark> 別のマークなので <span data-color="blue">両方効きます。</span></p>',
   demo_html_heading:
-    '<h1>見出し1</h1><h2>見出し2</h2><h3>見出し3</h3><p>本文です。空行で # と空白を打っても見出しになります。</p>',
+    "<h1>最も大きな見出し</h1><h2>2番目の見出し</h2><h3>3番目の見出し</h3><p>見出しの下に続く本文です。空の行に # を入力して Space を押しても見出しになります。</p>",
   demo_html_bullet_list:
     '<ul><li>箇条書きです</li><li>Tab で字下げ、Shift+Tab で字上げします<ul><li>入れ子になった項目</li></ul></li></ul><p>空行で - と空白を打っても箇条書きになります。</p>',
   demo_html_ordered_list:
     '<ol><li>順序のあるリストです</li><li>項目を挟んだり消したりしても番号は振り直されます</li></ol><p>空行で 1. と空白を打っても番号付きリストになります。</p>',
   demo_html_task_list:
-    '<ul data-nabi-list="task"><li data-nabi-checked="true">文字の前の四角を押してチェックします</li><li data-nabi-checked="false">チェックの状態はドキュメントに保存されます</li></ul><p>空行で [ ] や [x] を打ってもチェックリストになります。</p>',
+    "<ul data-nabi-list=\"task\"><li data-nabi-checked=\"true\">完了した項目です。</li><li data-nabi-checked=\"false\">項目の前のボックスを押すと完了状態を変えられます。</li></ul><p>チェック状態は文書に保存されます。空の行に [ ] または [x] を入力して Space を押してもチェックリストになります。</p>",
   demo_html_table:
     "<p>セルには複数の段落やブロックを入れ、背景色で内容を区別できます。下の表の文章と画像を直接編集してみてください。</p><div data-nabi-p><div class=\"nabi-scroll\"><table><tr><th data-nabi-cell-color=\"cyan\"><p>資料</p></th><th data-nabi-cell-color=\"cyan\"><p>作業メモ</p></th></tr><tr><td><div data-nabi-p data-nabi-align=\"c\"><img src=\"/nabi-note.svg\" alt data-nabi-width=\"30\"/></div><p data-nabi-align=\"c\">画像と説明を同じセルに入れています。</p></td><td data-nabi-cell-color=\"yellow\"><h3>段落も自由に</h3><p>Enterで段落を分け、Shift+Enterで同じ段落内に改行を入れてみてください。</p></td></tr><tr><td data-nabi-cell-color=\"green\"><div data-nabi-p><ul data-nabi-list=\"task\"><li data-nabi-checked=\"true\"><p>セルの背景色を変更する</p></li><li data-nabi-checked=\"false\"><p>リスト内でTabを押して字下げする</p></li><li data-nabi-checked=\"false\"><p>複数のセルを選んで同じ色を適用する</p></li></ul></div></td><td><div data-nabi-p><details open><summary>クリックして編集のヒントを表示</summary><p>セル内にも折りたたみ・引用・コード・動画を入れられます。</p><p>セルを結合しても、それぞれの内容は順番どおりに残ります。</p></details></div></td></tr></table></div></div><p>セル内をクリックすると、背景色と行・列のツールが表示されます。複数のセルを選ぶと、色と配置をまとめて変更できます。表全体の位置は「表全体を選択」を押してから配置ツールで変えてみてください。</p><p>通常の段落ではTabで次のセルへ移動し、リストやコード内では字下げします。内容や書式を消してもセルの背景色は残ります。</p>",
   demo_html_image:
-    '<div data-nabi-p data-nabi-align="c"><img src="/nabi-note.svg" alt="ナビ ロゴ" data-nabi-width="50"></div><p>画像をクリックすると幅・配置の箱が出ます。</p>',
+    "<div data-nabi-p data-nabi-align=\"c\"><img src=\"/nabi-note.svg\" alt data-nabi-width=\"50\"/></div><p>画像を選択すると表示サイズを調整し、左・中央・右に揃えられます。</p>",
   demo_html_youtube:
     '<p>ツールバーの YouTube ボタンを押すか、動画のアドレスをそのまま貼り付けてみてください。この場所に動画が入ります。</p>',
   demo_html_code:
-    '<pre data-nabi-lang="ts">function sum(numbers: number[]) {<br>  return numbers.reduce((a, b) =&gt; a + b, 0)<br>}</pre><p>コードの中にキャレットを置くと状況行に言語の入力欄が出ます。複数行を選んで Tab を押すと選んだ行がまとめて字下げされ、Shift+Tab で戻ります。</p>',
+    "<div data-nabi-p><pre data-nabi-lang=\"ts\"><code class=\"language-ts\">function sum(numbers: number[]) {<br/>  return numbers.reduce((a, b) =&gt; a + b, 0)<br/>}</code></pre></div><p>コードブロック内にキャレットを置くと、コンテキストツールから言語を選べます。複数行を選択して Tab を押すとまとめて字下げし、Shift+Tab を押すと字下げを戻します。</p>",
   demo_html_details:
-    '<details open=""><summary>ここを押すと折りたたみます</summary><p>折りたたんだ状態はドキュメントに保存されます。書いた人が畳んだとおりに読む人にも見えます。</p></details>',
+    "<details open><summary>タイトルを押して内容を折りたたんだり開いたりしてみてください。</summary><p>最初から開いておくか折りたたんでおくかも文書に保存されます。</p></details>",
   demo_html_quote:
     '<blockquote><p>他の文章から持ってきた一文や、強調したい内容を引用としてまとめられます。</p><p>引用の中には複数の段落とブロックを一緒に入れられます。</p></blockquote><p>空行で &gt; と空白を打つと、その行が引用になります。</p>',
   demo_html_divider:
-    '<p>区切り線の上の段落です。</p><hr><p>区切り線の下の段落です。空行に --- だけを打って Enter を押しても線になります。</p>',
+    "<p>最初の内容を締めくくる段落です。</p><hr><p>区切り線の下で新しい内容を始められます。空の行に --- を入力して Enter を押しても区切り線ができます。</p>",
   demo_html_align:
-    '<p data-nabi-align="l">左揃え</p><p data-nabi-align="c">中央揃え</p><p data-nabi-align="r">右揃え</p>',
+    "<p data-nabi-align=\"l\">左揃えは通常の本文に適しています。</p><p data-nabi-align=\"c\">中央揃えは短いタイトルや案内文に使えます。</p><p data-nabi-align=\"r\">右揃えは日付や署名など、右側に置く内容に使えます。</p>",
   demo_html_font_size:
     '<p data-nabi-size="xs">とても小さく — 脚注や添え書きに使います。</p><p data-nabi-size="sm">小さく — 本文より一歩控えた言葉。</p><p>既定の大きさの段落です。サイズ選択メニューにも、それぞれの文字サイズがそのまま表示されます。</p><p data-nabi-size="lg">大きく — 強調したい文に合います。</p><p data-nabi-size="xl">とても大きく — 見出し下の導入文に合います。</p><p>文字サイズは選択した範囲に適用されます。選択した文字がなくキャレットだけの場合は、現在の段落の文字に適用されます。</p>',
-  demo_html_typeface: "<p>書体を指定していない段落です。ページの既定書体で表示されます。</p><p data-nabi-typeface=\"serif\">この段落には明朝体を適用しました。明朝体のような書体の種類を選ぶと、実際のフォントはサイトの CSS 設定に従います。</p><p data-nabi-typeface=\"mono\">この段落には等幅書体を適用しました。文字幅が一定なので、数字やコードの位置をそろえやすくなります — 0O 1lI</p><p data-nabi-typeface=\"cursive\">筆記体 · 手写体 · Schreibschrift · Cursive · Cursiva · Рукописный · خط اليد · हस्तलिपि · হস্তলিপি · رواں خط · Tulisan tangan · دست‌نویس · हस्ताक्षर · Chữ viết tay · చేతిరాత · Rubutun hannu · El yazısı · Mwandiko · கையெழுத்து · ลายมือ · Corsivo · 필기체</p>",
+  demo_html_typeface: "<p>書体を個別に指定していない段落です。ページの既定の書体で表示されます。</p><p data-nabi-typeface=\"serif\">この段落にはセリフ書体を適用しています。セリフなどの書体の種類を選ぶと、実際のフォントはサイトの CSS 設定に従います。</p><p data-nabi-typeface=\"mono\">この段落には等幅書体を適用しています。文字幅が一定なので、数字やコードの位置を揃えるのに適しています — 0O 1lI</p><p data-nabi-typeface=\"cursive\">筆記体 · 手写体 · Schreibschrift · Cursive · Cursiva · Рукописный · خط اليد · हस्तलिपि · হস্তলিপি · رواں خط · Tulisan tangan · دست‌نویس · हस्ताक्षर · Chữ viết tay · చేతిరాత · Rubutun hannu · El yazısı · Mwandiko · கையெழுத்து · ลายมือ · Corsivo · 필기체</p>",
   demo_html_dropcap:
-    '<p data-nabi-dropcap="on">先頭の文字が三行分の高さで大きく表示され、文はその横に流れます。段落が短くても包む行数ぶんの場所を確保するので、文字が次のブロックにはみ出しません。</p><p>この段落には掛かっていません。</p>',
+    "<p data-nabi-dropcap=\"1\">段落の最初の文字を大きく表示し、残りの文章をその横に流します。編集画面では最初の文字を実際の要素で囲み、キャレット位置がずれないようにします。</p><p>この段落にはドロップキャップを適用していません。</p>",
   demo_html_clear_format:
     '<p><b>太字</b>・<i>斜体</i>・<u>下線</u>・<s>取り消し線</s>が掛かった文字を選んで消しゴムを押してみてください。</p><p>文字の書式だけが消え、ブロックはそのまま残ります。</p>',
   demo_html_upload:
@@ -140,11 +142,11 @@ export const ja = {
 
   cdn_demo_lead: '以下のコードを {file} として保存し、ブラウザで開けばすぐに確認できます。',
   cdn_demo_download: 'demo.html をダウンロード',
-  cdn_code_minheight: '編集エリアの最小高さ — 開いた直後に一行だけの箱に見えないようにします。値は自由に変更できます。',
-  cdn_code_wings: 'アップロードを除くすべての翼を含みます。',
+  cdn_code_minheight: "この例ではエディターがブラウザの高さを満たします。サイトのレイアウトに合わせて高さを調整してください。",
+  cdn_code_wings: "この例で使う編集用・ファイル操作用の wing を選びます。",
   cdn_code_faces:
-    '書体はサンセリフとセリフの二つだけ残します。\nシステムごとに対応する書体が違うため、等幅・筆記体は別途 import しないとどの環境でも認識されません。\n詳しくは「書体」ドキュメントを確認してください。',
-  cdn_code_change: '値が変わったときのコールバック例',
+    "この例ではサンセリフとセリフのフォントだけを読み込みます。\n等幅や筆記体を使う場合は、対応するフォントファイルもページで読み込んでください。\n詳しくは「書体」のドキュメントを確認してください。",
+  cdn_code_change: "文書が変更されたときに保存処理を予約する例です。",
   code_copy: 'コードをコピー',
   demo_install: 'インストール',
   demo_code: 'コード',
