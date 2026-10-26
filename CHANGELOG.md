@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
+## [1.5.5] - 2026-10-26
+
+### Added
+
+- Valid HTTP(S) URLs in footnote text now appear as hyperlinks in bubbles and in the editing and published endnote lists. Stored footnote text remains unchanged.
+
+### Changed
+
+- Footnote bubbles now use sans-serif text at the toolbar's two-step-smaller size (75% of the body size), with equal padding on all sides.
+
+### Fixed
+
+- Fixed endnote spacing and document height changing when footnote bubbles open or close.
+
 ## [1.5.4] - 2026-10-26
 
 ### Fixed
@@ -196,6 +210,7 @@ Dates use Korea Standard Time (KST).
 
 - First stable release.
 
+[1.5.5]: https://www.npmjs.com/package/nabi-note/v/1.5.5
 [1.5.4]: https://www.npmjs.com/package/nabi-note/v/1.5.4
 [1.5.3]: https://www.npmjs.com/package/nabi-note/v/1.5.3
 [1.5.2]: https://www.npmjs.com/package/nabi-note/v/1.5.2

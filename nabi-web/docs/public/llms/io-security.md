@@ -58,7 +58,7 @@ Valid generated tag names match `[a-z][a-z0-9]*`. Attribute names match `[a-z][a
 
 A custom builder that returns raw unsafe markup defeats these guarantees. Use the context helpers.
 
-Footnote text (`fn` `a.t`) is plain text only. It is written through the shared attribute and text escaping into `data-nabi-fn` and the document-end list, so `<`, `>`, quotes, and `&` never become markup. The viewer bubble and the editing list use `textContent` or escaped builder output, never raw HTML.
+Footnote text (`fn` `a.t`) is stored as plain text. It is written through the shared attribute escaping into `data-nabi-fn`. Lists and viewer bubbles recognize explicit HTTP(S) URLs with the shared `safeUrl()` validator and render them as links without changing the source text. Other schemes and malformed URLs remain plain text. Text and link attributes use `textContent` or escaped builder output, never raw input HTML, so `<`, `>`, quotes, and `&` cannot inject markup.
 
 ## HTML import
 

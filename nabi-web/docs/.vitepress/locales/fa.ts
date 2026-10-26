@@ -6,7 +6,7 @@ export const fa = {
   "label": "فارسی",
   "lang": "fa",
   "link": "/fa/",
-  "dir": "rtl",
+  "dir": "rtl" as const,
   "description": "NABI NOTE — یک ویرایشگر WYSIWYG متن‌باز.",
   "menu_docs": "مستندات",
   "menu_start": "راهنما",

@@ -158,9 +158,9 @@ const FOOTNOTE_CSS = `
 .nabi-fn-tip {
   position: fixed; z-index: var(--nabi-z-dialog); box-sizing: border-box;
   max-inline-size: min(22rem, calc(100vw - 16px)); max-block-size: min(40vh, 16rem); overflow: auto;
-  padding: .45em .7em; border: 1px solid var(--nabi-line); border-radius: var(--nabi-radius-sm);
+  padding: .6em; border: 1px solid var(--nabi-line); border-radius: var(--nabi-radius-sm);
   background: var(--nabi-bg); color: var(--nabi-fg); box-shadow: var(--nabi-shadow);
-  font-family: var(--nabi-font, var(--nabi-font-fallback)); font-size: .875em; font-weight: 400; font-style: normal;
+  font-family: var(--nabi-font, var(--nabi-font-fallback)); font-size: .75em; font-weight: 400; font-style: normal;
   line-height: 1.6; text-align: start; overflow-wrap: anywhere; white-space: normal;
 }
 .nabi-fn-tip button[data-nabi-fn-num] {

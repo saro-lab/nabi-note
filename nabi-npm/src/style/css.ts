@@ -958,8 +958,8 @@ export const CORE_CSS = `${ICON_CSS}
 .nabi-content.nabi-editing { min-block-size: var(--nabi-content-min-height, 12.5rem); }
 /* 블록 사이 간격은 margin이 아니라 padding-block-end다 — margin이면 그 띠를 브라우저가 다음 블록의 0번 오프셋으로 셈해 클릭·드래그 위치가 어긋난다
    Spacing between blocks is padding-block-end, not margin; a margin gap gets counted by the browser as offset 0 of the next block, throwing off click/drag targeting there */
-.nabi-content > * { margin: 0; padding-block-end: .6em; }
-.nabi-content > :last-child { padding-block-end: 0; }
+.nabi-content > :where(:not(.nabi-fn-tip)) { margin: 0; padding-block-end: .6em; }
+.nabi-content > :nth-last-child(1 of :where(:not(.nabi-fn-tip))) { padding-block-end: 0; }
 /* 빈 문단은 발행 HTML에서 자식이 없어 브라우저가 줄 높이를 안 만든다 — 시트에서 최소 높이를 세워 연속 빈 줄 수가 미리보기·발행에도 그대로 보이게 한다
    Empty paragraphs have no children in published HTML, so the browser gives them no line box; this min-height keeps consecutive blank lines visible in preview and publish alike */
 .nabi-content :is(p, h1, h2, h3, h4, h5, h6):empty { min-block-size: 1lh; }

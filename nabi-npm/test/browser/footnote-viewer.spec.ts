@@ -153,5 +153,94 @@ for (const width of [1280, 390]) {
       await expect(endnote).toBeInViewport();
       await expect(page.locator('.nabi-fn-tip')).toHaveCount(0);
     });
+
+    for (const mode of ['published', 'preview']) {
+      test(`${mode} bubbles keep compact sans text, even padding, and stable document spacing`, async ({ page }) => {
+        await setupEditor(page);
+        await page.evaluate(
+          async ({ entry, mode }) => {
+            const { nabi } = (globalThis as unknown as { footnoteTest: EditorState }).footnoteTest;
+            nabi.setJson([
+              { w: 'p', ch: ['Body', { w: 'fn', a: { t: 'Source https://example.com/a_(b).' }, ch: [] }] },
+              { w: 'p', ch: ['End of body'] },
+            ]);
+            if (mode === 'published') {
+              const viewer = await import(/* @vite-ignore */ entry.replace('/index.ts', '/viewer/index.ts'));
+              document.body.innerHTML = '<article id="notes" class="nabi-content"></article>';
+              const root = document.getElementById('notes')!;
+              root.innerHTML = nabi.getHtml();
+              viewer.attachViewer(root);
+            }
+          },
+          { entry, mode },
+        );
+        if (mode === 'preview') await page.locator('#preview').click();
+        const root = page.locator(mode === 'preview' ? '.nabi-preview-body' : '#notes');
+        await root.evaluate((element) => {
+          const root = element as HTMLElement;
+          root.style.fontSize = '20px';
+          root.style.fontFamily = 'serif';
+          root.style.setProperty('--nabi-font', 'Arial, sans-serif');
+        });
+        const layout = () =>
+          root.evaluate((element) => {
+            const list = element.querySelector<HTMLElement>('[data-nabi-footnotes]')!;
+            const rect = list.getBoundingClientRect();
+            const style = getComputedStyle(list);
+            return {
+              rootHeight: element.getBoundingClientRect().height,
+              listTop: rect.top,
+              listHeight: rect.height,
+              marginTop: style.marginTop,
+              paddingBottom: style.paddingBottom,
+            };
+          });
+        const before = await layout();
+        const marker = root.locator('sup[data-nabi-fn]');
+        await marker.hover();
+        const tip = root.locator('.nabi-fn-tip');
+        await expect(tip).toBeVisible();
+        expect(await layout()).toEqual(before);
+        await expect(tip).toHaveCSS('font-family', 'Arial, sans-serif');
+        await expect(tip).toHaveCSS('font-size', '15px');
+        await expect(tip.locator('[data-nabi-fn-num]')).toHaveCSS('font-size', '15px');
+        await expect(tip.locator('a')).toHaveCSS('font-size', '15px');
+        await expect(tip.locator('a')).toHaveAttribute('href', 'https://example.com/a_(b)');
+        await expect(root.locator('[data-nabi-footnotes] a')).toHaveAttribute('href', 'https://example.com/a_(b)');
+        await expect(tip).toHaveText('[1] Source https://example.com/a_(b).');
+        const padding = await tip.evaluate((element) => {
+          const style = getComputedStyle(element);
+          return [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft];
+        });
+        expect(parseFloat(padding[0]!)).toBeGreaterThan(0);
+        expect(new Set(padding).size).toBe(1);
+        await tip.hover();
+        await expect(tip).toBeVisible();
+        await root.locator('p').last().hover();
+        await expect(tip).toHaveCount(0);
+        expect(await layout()).toEqual(before);
+        await marker.focus();
+        await expect(tip).toBeVisible();
+        expect(await layout()).toEqual(before);
+        await page.keyboard.press('Tab');
+        if (mode === 'published') {
+          await expect(tip.locator('button')).toBeFocused();
+          await page.keyboard.press('Tab');
+        }
+        await expect(tip.locator('a')).toBeFocused();
+        await page.keyboard.press('Shift+Tab');
+        if (mode === 'published') {
+          await expect(tip.locator('button')).toBeFocused();
+          await page.keyboard.press('Shift+Tab');
+        }
+        await expect(marker).toBeFocused();
+        if (mode === 'preview') {
+          await marker.click();
+          await marker.click();
+        } else await page.keyboard.press('Escape');
+        await expect(tip).toHaveCount(0);
+        expect(await layout()).toEqual(before);
+      });
+    }
   });
 }

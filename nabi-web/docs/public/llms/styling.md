@@ -289,10 +289,12 @@ CSS handles layout, check states, drop caps, code colors, tables, images, attach
 
 Footnote formatting is fixed and is not a document or toolbar option:
 
-- list and bubble text: the base sans stack `var(--nabi-font, var(--nabi-font-fallback))`, weight 400, normal style, at `.875em` of the body font size (one step below the default, matching the `fs` `sm` step);
+- list and bubble text: the base sans stack `var(--nabi-font, var(--nabi-font-fallback))`, weight 400, normal style;
+- list text: `.875em` of the body font size (one step below the default, matching the `fs` `sm` step);
+- bubble text: `.75em` of the body font size (two steps below the default, matching the `fs` `xs` step), including its number and links;
 - body numbers: the same sans stack, superscript at `.75em` of the surrounding text, accent color, unaffected by typeface, bold, or italic marks.
 
-The size follows the body font size the host sets on `.nabi-content`. The published list is a direct child of `.nabi-content`; the editing list is a separate `.nabi-content.nabi-footnote-area` element placed directly after the surface root, so host font-size rules for `.nabi-content` apply to both. The bubble is appended inside the nearest `.nabi-content`. Editing input prompts keep the regular input size, including the 16px touch size, regardless of footnote formatting.
+The size follows the body font size the host sets on `.nabi-content`. The published list is a direct child of `.nabi-content`; the editing list is a separate `.nabi-content.nabi-footnote-area` element placed directly after the surface root, so host font-size rules for `.nabi-content` apply to both. The bubble is appended inside the nearest `.nabi-content`, with `.6em` padding on every side. Content block spacing excludes the bubble, so opening or closing it does not change the last block's bottom padding or the document height. Editing input prompts keep the regular input size, including the 16px touch size, regardless of footnote formatting.
 
 Stable hooks: `[data-nabi-fn]` (body number), `[data-nabi-footnotes]` (list section), `[data-nabi-fn-n]` (list item), `[data-nabi-fn-num]` (list number), `.nabi-footnote-area` (editing list), and `.nabi-fn-tip` (viewer bubble). In fullscreen editing, the list area follows the paper width and background. Do not change `display` or generated content of the editing marker; its number comes from `::before` and it must remain a single sealed unit.
 

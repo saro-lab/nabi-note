@@ -16,7 +16,7 @@ export const ar = {
   lang: 'ar',
   // Right to left — VitePress puts this on <html dir>
   // 오른쪽에서 왼쪽으로 읽는다 — VitePress 가 <html dir> 에 얹는다
-  dir: 'rtl',
+  dir: 'rtl' as const,
   link: '/ar/',
   description: 'NABI NOTE — محرّر WYSIWYG مفتوح المصدر.',
 

@@ -3,6 +3,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, type HeadConfig } from 'vitepress'
 import tailwindcss from '@tailwindcss/vite'
+import { findAvailablePort } from '../../scripts/local-port.mjs'
 
 import { GA_ID } from './src/ga.ts'
 import { DEFAULT_LOCALE, localeCodes, vitepressLocales } from './locales/index.ts'
@@ -181,8 +182,18 @@ export default defineConfig({
   appearance: true,
   cleanUrls: true,
   vite: {
-    plugins: [tailwindcss() as never],
+    plugins: [
+      tailwindcss() as never,
+      {
+        name: 'nabi-local-port',
+        async configureServer(server) {
+          const options = server.config.server
+          options.port = await findAvailablePort(options.port ?? 5173, options)
+        },
+      },
+    ],
     server: {
+      strictPort: false,
       fs: {
         // 형제 패키지의 소스와 빌드 CSS가 참조하는 아이콘은 개발 서버의 기본 허용 범위 밖에 있다.
         // Icons referenced by the sibling package's source and built CSS are outside the dev server's default allow list.

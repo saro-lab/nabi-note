@@ -2,6 +2,7 @@
 // Footnotes on a published page: hovering, clicking, or tapping a number shows its content in a bubble, and a number in the list jumps to its marker in the body. There is no close button.
 // 저장 HTML만으로도 번호와 하단 목록은 읽힌다 — 여기는 그 위에 얹는 읽기 편의일 뿐이고, 내용은 언제나 textContent로만 넣는다.
 // Stored HTML alone already shows numbers and the list; this only adds reading conveniences on top, and content is always inserted via textContent.
+import { textLinkParts } from '../url.js';
 
 export const FOOTNOTE_ATTR = 'data-nabi-fn';
 
@@ -114,9 +115,16 @@ export function attachFootnotes(root: HTMLElement): () => void {
         item.focus({ preventScroll: true });
       });
     }
-    tip.replaceChildren(number, owner.createTextNode(` ${marker.getAttribute(FOOTNOTE_ATTR) ?? ''}`));
-    // 본문 root 안에 붙여 글꼴 크기·색 토큰을 그대로 물려받는다 — 크기는 그 기준의 한 단계 아래다(CSS).
-    // Placed inside the content root so it inherits the font size and color tokens; its size is one step below that base (CSS).
+    const content = textLinkParts(` ${marker.getAttribute(FOOTNOTE_ATTR) ?? ''}`).map((part) => {
+      if (!part.href) return owner.createTextNode(part.text);
+      const link = owner.createElement('a');
+      link.href = part.href;
+      link.textContent = part.text;
+      return link;
+    });
+    tip.replaceChildren(number, ...content);
+    // 본문 root 안에 붙여 글꼴 크기·색 토큰을 물려받는다.
+    // Place it inside the content root to inherit font-size and color tokens.
     const host = marker.closest<HTMLElement>('.nabi-content') ?? root;
     if (tip.parentElement !== host) host.append(tip);
     current = marker;
@@ -180,12 +188,12 @@ export function attachFootnotes(root: HTMLElement): () => void {
 
   const onKey = (event: KeyboardEvent): void => {
     const marker = markerOf(event.target);
-    const button = tip?.querySelector<HTMLButtonElement>('button');
-    if (event.key === 'Tab' && current && tip && button) {
+    const first = tip?.querySelector<HTMLElement>('button, a[href]');
+    if (event.key === 'Tab' && current && tip && first) {
       if (marker === current && !event.shiftKey) {
         event.preventDefault();
-        button.focus({ preventScroll: true });
-      } else if (event.shiftKey && tip.contains(event.target as Node)) {
+        first.focus({ preventScroll: true });
+      } else if (event.shiftKey && event.target === first) {
         event.preventDefault();
         current.focus({ preventScroll: true });
       }

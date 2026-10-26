@@ -1,6 +1,6 @@
 # Viewer and diff
 
-The 1.5.4 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
+The 1.5.5 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
 
 These features live in separate package entry points so a published page does not pay for the editor.
 
@@ -115,9 +115,9 @@ Stored HTML already shows `sup[data-nabi-fn]` numbers and the `section[data-nabi
 - on published pages, a number in the list scrolls to its marker in the same document and focuses it;
 - a number inside a details summary does not toggle the details.
 
-Footnote navigation is disabled inside `.nabi-editing`, `.nabi-footnote-area`, and `.nabi-preview-body`. Preview bubbles start with a plain `[n]` span instead of a button, and list numbers do not scroll or move focus. Tab follows normal focus order when the bubble has no button. The editor's own footnote list also leaves the body selection unchanged; clicking a marker in the editing body still opens its edit prompt.
+Footnote navigation is disabled inside `.nabi-editing`, `.nabi-footnote-area`, and `.nabi-preview-body`. Preview bubbles start with a plain `[n]` span instead of a button, and list numbers do not scroll or move focus. Tab from a marker enters the bubble's first button or link, if present; Shift+Tab from that first control returns to the marker. Controls inside the bubble keep their normal focus order. The editor's own footnote list also leaves the body selection unchanged; clicking a marker in the editing body still opens its edit prompt.
 
-There is no close button. The bubble content is inserted as plain text from the `data-nabi-fn` attribute, never parsed as HTML. On published pages its numbered control is a native button; the bubble uses `role="group"`. The bubble is appended inside the nearest `.nabi-content`, inherits its tokens, and uses the fixed footnote formatting (base sans stack, 0.875 of the body size). Long text scrolls inside the bubble, which stays within the viewport. Each attachment is scoped to its root, so several documents on one page do not open each other's footnotes. `refresh()` and `unmount()` remove the bubble and listeners and restore the marker attributes. `openPreview()` does not attach the viewer by itself; call `attachViewer()` from its `onBody` hook.
+There is no close button. The bubble reads plain text from the `data-nabi-fn` attribute, never parses it as HTML, and turns valid explicit HTTP(S) URLs into native links using the shared URL validator. Displayed text remains unchanged. On published pages its numbered control is a native button; the bubble uses `role="group"`. The bubble is appended inside the nearest `.nabi-content`, inherits its tokens, and uses the base sans stack at 0.75 of the body size (`fs` `xs`, two steps below the default). Padding is `.6em` on all sides, and the bubble is excluded from content block spacing so opening it leaves the endnote list and document height unchanged. Long text scrolls inside the bubble, which stays within the viewport. Each attachment is scoped to its root, so several documents on one page do not open each other's footnotes. `refresh()` and `unmount()` remove the bubble and listeners and restore the marker attributes. `openPreview()` does not attach the viewer by itself; call `attachViewer()` from its `onBody` hook.
 
 Standalone exports include `FOOTNOTE_ATTR` and `attachFootnotes`.
 

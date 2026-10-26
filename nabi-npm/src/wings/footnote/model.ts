@@ -5,6 +5,7 @@ import { holders, nodeAt, terminalOf, type EditEnv, type Position } from '../../
 import { ordered, type Selection } from '../../caret/index.js';
 import type { HtmlAppendix } from '../../html/index.js';
 import type { MdAppendix } from '../../io/index.js';
+import { textLinkParts } from '../../url.js';
 
 export const FN = 'fn';
 
@@ -110,7 +111,10 @@ export const footnoteList: HtmlAppendix = (nodes, ctx) => {
     .map((node, i) => {
       const n = String(i + 1);
       const num = ctx.wrap('span', ctx.escape(`[${n}]`), { 'data-nabi-fn-num': '' });
-      return ctx.wrap('li', `${num} ${ctx.escape(textOf(node))}`, { 'data-nabi-fn-n': n });
+      const text = textLinkParts(textOf(node))
+        .map((part) => (part.href ? ctx.wrap('a', ctx.escape(part.text), { href: part.href }) : ctx.escape(part.text)))
+        .join('');
+      return ctx.wrap('li', `${num} ${text}`, { 'data-nabi-fn-n': n });
     })
     .join('');
   return ctx.wrap('section', ctx.wrap('ol', items), { 'data-nabi-footnotes': '' });

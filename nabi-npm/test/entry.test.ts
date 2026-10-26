@@ -64,11 +64,12 @@ const viewerLayers = [...new Set(viewerFiles.map((rel) => rel.split('/')[1] as s
 
 ok('viewer 엔트리가 있다', has('src/viewer/index.ts'));
 ok('코어 엔트리가 있다', has('src/index.ts'));
-eq('viewer 가 딛는 층은 viewer·locale·code·lifecycle·아이콘 렌더러뿐이다', viewerLayers, [
+eq('viewer 가 딛는 층은 viewer·locale·code·lifecycle·URL·아이콘 렌더러뿐이다', viewerLayers, [
   'code',
   'lifecycle.ts',
   'locale',
   'style',
+  'url.ts',
   'viewer',
 ]);
 eq(

@@ -101,6 +101,63 @@ const strip = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
 // --- 왕복 ---------------------------------------------------------------------------------------
 
 {
+  const text =
+    '참고 (https://example.com/a_(b)). HTTP://EXAMPLE.COM?q=1&x=2 및 https://예시.한국/문서, ' +
+    '<img src=x onerror=alert(1)> javascript:alert(1) data:text/html,x blob:https://example.com/id ' +
+    'https://bad\\host.test https://';
+  const nabi = make([p(['가', fn(text)])]);
+  const dom = new JSDOM(nabi.getHtml());
+  const section = dom.window.document.querySelector('[data-nabi-footnotes]')!;
+  eq('URL — 표시 글자는 문장 부호와 HTML처럼 보이는 내용까지 그대로다', section.textContent, `[1] ${text}`);
+  eq(
+    'URL — 허용된 HTTP 주소만 정규화된 링크로 바꾼다',
+    Array.from(section.querySelectorAll('a')).map((link) => [link.textContent, link.getAttribute('href')]),
+    [
+      ['https://example.com/a_(b)', 'https://example.com/a_(b)'],
+      ['HTTP://EXAMPLE.COM?q=1&x=2', 'http://example.com/?q=1&x=2'],
+      ['https://예시.한국/문서', new URL('https://예시.한국/문서').href],
+    ],
+  );
+  ok('URL — HTML처럼 보이는 내용은 실행 가능한 요소가 아니다', !section.querySelector('img, script, [onerror]'));
+  const back = make([]);
+  back.setHtml(nabi.getHtml());
+  eq('URL — 링크가 있는 하단 목록을 다시 읽어도 저장 내용은 평문 각주다', back.getJson(), nabi.getJson());
+  dom.window.close();
+}
+
+{
+  const text = [
+    "https://example.com/O'Reilly",
+    "'https://example.org/O'Reilly'.",
+    '"https://example.net/quoted"',
+    'https://example.com/%22quoted%22',
+    "https://example.com/?q=O'Reilly",
+  ].join(' ');
+  const nabi = make([p(['가', fn(text)])]);
+  const dom = new JSDOM(`<article class="nabi-content">${nabi.getHtml()}</article>`);
+  const article = dom.window.document.querySelector<HTMLElement>('article')!;
+  const viewer = attachViewer(article);
+  article.querySelector<HTMLElement>('sup[data-nabi-fn]')!.click();
+  for (const selector of ['[data-nabi-footnotes]', '.nabi-fn-tip']) {
+    const content = article.querySelector(selector)!;
+    eq(`URL 인용부호 ${selector} — 보이는 원문은 그대로다`, content.textContent, `[1] ${text}`);
+    eq(
+      `URL 인용부호 ${selector} — 내부 작은따옴표는 보존하고 둘러싼 인용부호만 제외한다`,
+      Array.from(content.querySelectorAll('a')).map((link) => [link.textContent, link.getAttribute('href')]),
+      [
+        ["https://example.com/O'Reilly", "https://example.com/O'Reilly"],
+        ["https://example.org/O'Reilly", "https://example.org/O'Reilly"],
+        ['https://example.net/quoted', 'https://example.net/quoted'],
+        ['https://example.com/%22quoted%22', 'https://example.com/%22quoted%22'],
+        ["https://example.com/?q=O'Reilly", 'https://example.com/?q=O%27Reilly'],
+      ],
+    );
+  }
+  viewer.unmount();
+  dom.window.close();
+}
+
+{
   const source = make([p(['가', fn('하나 <i>'), '나', fn('둘')]), p(['다', fn('셋')])]);
   const back = make([]);
   back.setHtml(source.getHtml());
@@ -286,6 +343,76 @@ const strip = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
 }
 
 // --- viewer -------------------------------------------------------------------------------------
+
+{
+  const text = '출처 https://example.com/?a=1&b=2 및 https://example.org/x.';
+  const dom = new JSDOM('<!doctype html><div class="nabi"><div id="editor"></div></div>');
+  const root = dom.window.document.querySelector<HTMLElement>('#editor')!;
+  const { nabi, registry: reg } = createNabiWith(defaultWings, { doc: [p(['가', fn(text)])] });
+  const surface = mountSurface({ nabi, registry: reg, root });
+  eq(
+    '표면 URL — 편집 하단 목록에도 같은 주소 링크가 보인다',
+    Array.from(root.nextElementSibling!.querySelectorAll('a')).map((link) => link.getAttribute('href')),
+    ['https://example.com/?a=1&b=2', 'https://example.org/x'],
+  );
+  eq('표면 URL — 링크를 표시해도 저장 각주 내용은 바꾸지 않는다', nabi.getJson(), [p(['가', fn(text)])]);
+  surface.unmount();
+  dom.window.close();
+}
+
+for (const preview of [false, true]) {
+  const text = '참고 https://example.com/?a=1&b=2 및 (https://example.org/x). <b>글자</b>';
+  const html = make([p(['가', fn(text)])]).getHtml();
+  const dom = new JSDOM(
+    `<!doctype html><article class="nabi-content${preview ? ' nabi-preview-body' : ''}">${html}</article>`,
+  );
+  const owner = dom.window.document;
+  const article = owner.querySelector<HTMLElement>('article')!;
+  const baseline = article.innerHTML;
+  const viewer = attachViewer(article);
+  const marker = article.querySelector<HTMLElement>('sup[data-nabi-fn]')!;
+  marker.focus();
+  const tip = article.querySelector<HTMLElement>('.nabi-fn-tip')!;
+  eq(`viewer URL ${preview} — 툴팁도 원래 글자를 그대로 보인다`, tip.textContent, `[1] ${text}`);
+  eq(
+    `viewer URL ${preview} — 하단 목록과 툴팁의 링크는 같다`,
+    Array.from(tip.querySelectorAll('a')).map((link) => [link.textContent, link.getAttribute('href')]),
+    Array.from(article.querySelectorAll('[data-nabi-footnotes] a')).map((link) => [
+      link.textContent,
+      link.getAttribute('href'),
+    ]),
+  );
+  ok(`viewer URL ${preview} — 태그처럼 보이는 글자는 요소로 해석하지 않는다`, !tip.querySelector('b'));
+  const first = tip.querySelector<HTMLElement>('button, a[href]')!;
+  const tab = new dom.window.KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+  marker.dispatchEvent(tab);
+  ok(`viewer URL ${preview} — Tab은 툴팁의 첫 조작 요소로 간다`, tab.defaultPrevented && owner.activeElement === first);
+  const links = tip.querySelectorAll('a');
+  links[links.length - 1]!.focus();
+  const back = new dom.window.KeyboardEvent('keydown', {
+    key: 'Tab',
+    shiftKey: true,
+    bubbles: true,
+    cancelable: true,
+  });
+  links[links.length - 1]!.dispatchEvent(back);
+  ok(`viewer URL ${preview} — 뒤쪽 링크의 Shift+Tab은 앞선 조작 요소로 간다`, !back.defaultPrevented);
+  first.focus();
+  const returnToMarker = new dom.window.KeyboardEvent('keydown', {
+    key: 'Tab',
+    shiftKey: true,
+    bubbles: true,
+    cancelable: true,
+  });
+  first.dispatchEvent(returnToMarker);
+  ok(
+    `viewer URL ${preview} — 첫 조작 요소의 Shift+Tab은 본문 번호로 돌아간다`,
+    returnToMarker.defaultPrevented && owner.activeElement === marker,
+  );
+  viewer.unmount();
+  eq(`viewer URL ${preview} — 떼면 링크가 있는 원래 저장 HTML로 돌아간다`, article.innerHTML, baseline);
+  dom.window.close();
+}
 
 {
   const html = make([p(['가', fn('보이는 <내용>'), '나']), p([fn('둘')])]).getHtml();

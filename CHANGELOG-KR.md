@@ -5,6 +5,20 @@
 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/) 형식과 [시맨틱 버저닝](https://semver.org/lang/ko/)을 따릅니다.
 날짜는 한국 표준시(KST)를 기준으로 합니다.
 
+## [1.5.5] - 2026-10-26
+
+### Added
+
+- 각주 내용의 올바른 HTTP(S) 주소를 툴팁과 편집·게시 화면의 하단 목록에서 하이퍼링크로 표시합니다. 저장된 각주 텍스트는 그대로 유지합니다.
+
+### Changed
+
+- 각주 툴팁의 기본 글자를 툴박스의 두 단계 작은 크기에 맞춘 산세리프(본문의 75%)로 바꾸고, 상하좌우 안쪽 여백을 같게 맞췄습니다.
+
+### Fixed
+
+- 각주 툴팁을 열고 닫을 때 문서 하단 각주 영역의 여백과 문서 높이가 바뀌는 문제를 수정했습니다.
+
 ## [1.5.4] - 2026-10-26
 
 ### Fixed
@@ -196,6 +210,7 @@
 
 - 정식 버전을 출시했습니다.
 
+[1.5.5]: https://www.npmjs.com/package/nabi-note/v/1.5.5
 [1.5.4]: https://www.npmjs.com/package/nabi-note/v/1.5.4
 [1.5.3]: https://www.npmjs.com/package/nabi-note/v/1.5.3
 [1.5.2]: https://www.npmjs.com/package/nabi-note/v/1.5.2

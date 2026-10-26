@@ -4,14 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vitepress dev docs --host 0.0.0.0",
+    "dev": "vitepress dev docs --host 0.0.0.0 --open",
     "build": "vitepress build docs",
     "typecheck": "tsc --noEmit",
     "pack:note": "node scripts/pack-note.mjs",
     "build:trees": "node ../nabi-npm/node_modules/tsx/dist/cli.mjs scripts/build-trees.ts",
     "check:frozen": "node ../nabi-npm/node_modules/tsx/dist/cli.mjs scripts/build-trees.ts --check",
     "build:full": "npm run pack:note && npm run build:trees && npm run build",
-    "preview": "vitepress preview docs",
+    "preview": "node scripts/preview.mjs",
     "cf:preview": "npm run build && wrangler dev",
     "cf:deploy": "npm run build && wrangler deploy",
     "check:locales": "node --import ../nabi-npm/node_modules/tsx/dist/loader.mjs scripts/check-locales.ts"
@@ -20,16 +20,16 @@
     "@shikijs/langs": "^4.5.0",
     "@shikijs/themes": "^4.5.0",
     "minisearch": "^7.2.0",
-    "nabi-note": "file:nabi-note-1.5.4.tgz",
+    "nabi-note": "file:nabi-note-1.5.5.tgz",
     "shiki": "^4.5.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^26.6.4",
+    "@types/node": "^26.6.5",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vitepress": "^2.0.0-alpha.20",
-    "vue": "^3.5.43",
-    "wrangler": "^4.147.0"
+    "vitepress": "^2.0.0-alpha.21",
+    "vue": "^3.5.44",
+    "wrangler": "^4.152.0"
   }
 }
