@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
+## [Unreleased]
+
+### Fixed
+
+- Fixed image upload progress appearing outside the starting float region. Drops, pasted files, and file-picker uploads now keep progress and completed images inside the same float, or inside the starting table cell when it is nested in a float.
+
 ## [1.5.5] - 2026-10-26
 
 ### Added

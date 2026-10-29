@@ -116,3 +116,91 @@ test('HTML clipboard copy and paste keeps float content and placement', async ({
   await expect(page.locator('#content [data-nabi-float]')).toHaveAttribute('data-nabi-float-width', '40');
   await expect(page.locator('#content [data-nabi-float]')).toContainText('방문 안내');
 });
+
+for (const entry of ['drop', 'paste', 'picker'] as const) {
+  test(`${entry} keeps upload progress and the finished image inside the starting float`, async ({ page }) => {
+    const region = page.locator('#content [data-nabi-float]');
+    await region.locator(':scope > p').first().click();
+    const before = await page.evaluate(() => (globalThis as unknown as { nabi: Nabi }).nabi.getJson());
+    const image = await page.evaluate(() => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 160;
+      canvas.height = 80;
+      const context = canvas.getContext('2d')!;
+      context.fillStyle = 'blue';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/png').split(',')[1]!;
+    });
+    const chooser =
+      entry === 'picker'
+        ? await Promise.all([
+            page.waitForEvent('filechooser'),
+            page.locator('#toolbar').getByRole('button', { name: '파일 업로드', exact: true }).click(),
+          ]).then(([chooser]) => chooser)
+        : null;
+    await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+    await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
+    if (chooser) {
+      await chooser.setFiles({ name: 'float-upload.png', mimeType: 'image/png', buffer: Buffer.from(image, 'base64') });
+    } else {
+      await page.evaluate(
+        ({ entry, image }) => {
+          const root = document.querySelector<HTMLElement>('#content')!;
+          const paragraph = root.querySelector<HTMLElement>('[data-nabi-float] > p')!;
+          const transfer = new DataTransfer();
+          const bytes = Uint8Array.from(atob(image), (char) => char.charCodeAt(0));
+          transfer.items.add(new File([bytes], 'float-upload.png', { type: 'image/png' }));
+          if (entry === 'paste') {
+            root.dispatchEvent(
+              new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }),
+            );
+          } else {
+            const rect = paragraph.getBoundingClientRect();
+            paragraph.dispatchEvent(
+              new DragEvent('drop', {
+                dataTransfer: transfer,
+                clientX: rect.left + 10,
+                clientY: rect.top + rect.height / 2,
+                bubbles: true,
+                cancelable: true,
+              }),
+            );
+          }
+        },
+        { entry, image },
+      );
+    }
+    const placeholder = region.locator(':scope > nabi-upload');
+    await expect(placeholder).toBeVisible();
+    await expect(page.locator('#content > nabi-upload')).toHaveCount(0);
+    await expect(placeholder.locator('img')).toBeVisible();
+    const placement = await placeholder.evaluate((box) => {
+      const parent = box.parentElement!.getBoundingClientRect();
+      const rect = box.getBoundingClientRect();
+      return {
+        previous: box.previousElementSibling?.textContent,
+        contained: rect.left >= parent.left && rect.right <= parent.right + 1 && rect.bottom <= parent.bottom + 1,
+      };
+    });
+    expect(placement).toEqual({ previous: '방문 안내', contained: true });
+    await page.evaluate(() => {
+      const nabi = (globalThis as unknown as { nabi: Nabi }).nabi;
+      nabi.select({ anchor: { path: [2], offset: 0 }, focus: { path: [2], offset: 0 } });
+    });
+    await page.clock.runFor(1_500);
+    await expect(page.locator('#content nabi-upload')).toHaveCount(0);
+    const finished = region.locator(':scope > [data-nabi-p] > img');
+    await expect(finished).toBeVisible();
+    expect(await finished.evaluate((img) => img.parentElement?.previousElementSibling?.textContent)).toBe('방문 안내');
+    const result = await page.evaluate(() => {
+      const nabi = (globalThis as unknown as { nabi: Nabi }).nabi;
+      const selection = nabi.getSelection();
+      const doc = nabi.getJson();
+      nabi.undo();
+      return { selection, doc, undone: nabi.getJson() };
+    });
+    expect((result.doc as unknown[]).slice(2)).toEqual((before as unknown[]).slice(2));
+    expect(result.selection.focus.path.slice(0, 2)).toEqual([1, 0]);
+    expect(result.undone).toEqual(before);
+  });
+}

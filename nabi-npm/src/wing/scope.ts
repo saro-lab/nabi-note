@@ -1,19 +1,36 @@
 import { isElement, type NabiDoc } from '../schema/index.js';
-import { nodeAt, replaceAt, type Position } from '../doc/index.js';
+import { nodeAt, replaceAt, type EditEnv, type Position } from '../doc/index.js';
 import type { Command } from '../editor/index.js';
+
+const commandScopes = new WeakMap<EditEnv, ReadonlyMap<string, ReadonlySet<string>>>();
+
+export function bindCommandScopes(env: EditEnv, scopes: ReadonlyMap<string, ReadonlySet<string>>): void {
+  commandScopes.set(env, scopes);
+}
+
+function scopePath(doc: NabiDoc, path: readonly number[], scopes?: ReadonlySet<string>): readonly number[] | null {
+  if (!scopes) return null;
+  for (let depth = path.length - 1; depth > 0; depth -= 1) {
+    const at = path.slice(0, depth);
+    const node = nodeAt(doc, at);
+    if (node && scopes.has(node.w)) return at;
+  }
+  return null;
+}
+
+export function commandScopePath(
+  doc: NabiDoc,
+  path: readonly number[],
+  env: EditEnv,
+  command: string,
+): readonly number[] | null {
+  return scopePath(doc, path, commandScopes.get(env)?.get(command));
+}
 
 export function scopeBlockCommand(command: Command, scopes: ReadonlySet<string>): Command {
   return (doc, selection, args, env) => {
-    const ownerAt = (at: Position): readonly number[] | null => {
-      for (let depth = at.path.length - 1; depth > 0; depth -= 1) {
-        const path = at.path.slice(0, depth);
-        const node = nodeAt(doc, path);
-        if (node && scopes.has(node.w)) return path;
-      }
-      return null;
-    };
-    const anchor = ownerAt(selection.anchor);
-    const focus = ownerAt(selection.focus);
+    const anchor = scopePath(doc, selection.anchor.path, scopes);
+    const focus = scopePath(doc, selection.focus.path, scopes);
     if (!anchor && !focus) return command(doc, selection, args, env);
     if (!anchor || !focus || anchor.length !== focus.length || anchor.some((v, i) => v !== focus[i])) return null;
     const owner = nodeAt(doc, anchor);

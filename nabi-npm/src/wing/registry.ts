@@ -30,7 +30,7 @@ import {
 } from '../editor/index.js';
 import { $builtinAttrTypes, $closeBuiltinAttrs, $closeKnownTypes, $isBuiltinWing } from '../schema/env.js';
 import { erectsNode, type Attach, type InputRule, type StructureDecl, type Wing } from './contract.js';
-import { scopeBlockCommand } from './scope.js';
+import { bindCommandScopes, scopeBlockCommand } from './scope.js';
 import { $collectParagraphTargets } from './paragraph-target.js';
 import { $inlineTerminalOf } from './inline.js';
 
@@ -489,6 +489,7 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
       fail(`연타 키 "${key}" 가 없는 커맨드 "${name}" 를 참조합니다`);
   }
 
+  const commandScopes = new Map<string, ReadonlySet<string>>();
   for (const [name, command] of Object.entries(commands)) {
     const scopes = wings.flatMap((wing) => [
       ...(wing.scopedCommands?.includes(name) ? [wing.w] : []),
@@ -496,7 +497,11 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
         .filter(([, decl]) => decl.scopedCommands?.includes(name))
         .map(([part]) => part),
     ]);
-    if (scopes.length > 0) commands[name] = scopeBlockCommand(command, new Set(scopes));
+    if (scopes.length > 0) {
+      const types = new Set(scopes);
+      commandScopes.set(name, types);
+      commands[name] = scopeBlockCommand(command, types);
+    }
   }
 
   const referencedCommand = (action: unknown): string | null => {
@@ -536,6 +541,7 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
   $closeKnownTypes(env, [P, BR, ...byType.keys()]);
   $closeBuiltinAttrs(env, closedAttrs);
   $collectParagraphTargets(wings, env);
+  bindCommandScopes(env, commandScopes);
 
   // 들여오기 역방향 — 주장한 wing들에게 차례로 묻고, 첫 답이 이긴다. 아무도 안 잡으면 기본 대응.
   // Import claiming, in reverse — asks each claiming wing in turn, first hit wins; falls back to the default if none claim it.

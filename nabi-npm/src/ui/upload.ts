@@ -1,11 +1,12 @@
 import { Translations } from './parts/translation.js';
 import type { LocaleInput } from '../locale/index.js';
 import { iconHtml } from '../style/icon.js';
-// 자리표시자는 문서에 저장하지 않고 시작 문단 뒤에 둔다. 셀에서 시작하면 그 셀 안에만 둔다.
-// Placeholders stay outside the document model, after the starting paragraph and inside its cell when present.
+// 자리표시자는 문서에 저장하지 않고 업로드가 삽입될 범위의 시작 블록 뒤에 둔다.
+// Placeholders stay outside the document model, after the starting block in the upload command's insertion scope.
 import { hostOf, type Nabi } from '../editor/index.js';
 import { ordered } from '../caret/index.js';
-import { isolationPath, nodeAt } from '../doc/index.js';
+import { nodeAt } from '../doc/index.js';
+import { commandScopePath } from '../wing/scope.js';
 import type { Translator } from '../locale/index.js';
 import { makeTranslator } from '../locale/index.js';
 import type { StartedTask, UploadMount } from '../surface/index.js';
@@ -85,7 +86,7 @@ export function mountUploadView(options: UploadViewOptions): UploadView {
   const anchorNow = (): string | null => {
     const host = hostOf(nabi);
     const [, end] = ordered(nabi.getSelection());
-    const scope = isolationPath(host.doc(), end.path, host.env);
+    const scope = commandScopePath(host.doc(), end.path, host.env, 'commitUpload');
     const path = end.path.slice(0, (scope?.length ?? 0) + 1);
     scopeKey = scope ? (nodeAt(host.doc(), scope)?._id ?? null) : null;
     return nodeAt(host.doc(), path)?._id ?? null;
