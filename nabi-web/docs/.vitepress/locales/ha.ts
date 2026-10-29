@@ -1,6 +1,7 @@
 import { withLocaleTypefaceSample } from './typeface-lines.ts'
 
 export const ha = {
+  title: "NABI NOTE - Nabi Note, editan WYSIWYG na buɗaɗɗen tushe",
   menu_compare: "Kwatantawa",
   menu_merge: "Garwayawa",
   menu_inline_footnote: "Bayanin ƙasa",

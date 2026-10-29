@@ -1,4 +1,5 @@
 export const th = {
+  title: "NABI NOTE - Nabi Note โปรแกรมแก้ไข WYSIWYG แบบโอเพนซอร์ส",
   menu_compare: "เปรียบเทียบ",
   menu_merge: "รวม",
   menu_inline_footnote: "เชิงอรรถ",

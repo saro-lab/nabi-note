@@ -1,6 +1,7 @@
 // 옮겼다 — 키 하나라도 빠지면 타입 오류라 파일이 통째로 채워져 있어야 한다.
 // Translated — a missing key is a type error, so the file must stay filled in whole.
 export const zh = {
+  title: "NABI NOTE - Nabi Note 开源 WYSIWYG 编辑器",
   menu_compare: "比较",
   menu_merge: "合并",
   menu_inline_footnote: "脚注",

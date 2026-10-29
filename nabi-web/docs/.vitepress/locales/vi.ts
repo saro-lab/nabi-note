@@ -1,6 +1,7 @@
 import { withLocaleTypefaceSample } from './typeface-lines.ts'
 
 export const vi = {
+  title: "NABI NOTE - Nabi Note, trình soạn thảo WYSIWYG mã nguồn mở",
   menu_compare: "So sánh",
   menu_merge: "Gộp",
   menu_inline_footnote: "Chú thích cuối trang",

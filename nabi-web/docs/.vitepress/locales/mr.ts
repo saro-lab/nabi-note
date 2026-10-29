@@ -1,4 +1,5 @@
 export const mr = {
+  title: "NABI NOTE - Nabi Note, एक मुक्त स्रोत WYSIWYG संपादक",
   menu_compare: "तुलना",
   menu_merge: "मर्ज",
   menu_inline_footnote: "तळटीप",

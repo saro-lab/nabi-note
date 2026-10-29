@@ -1,4 +1,5 @@
 export const ko = {
+  title: "NABI NOTE - 나비노트 오픈소스 이지윅 에디터",
   menu_inline_footnote: "각주",
   label: '한국어',
   lang: 'ko',

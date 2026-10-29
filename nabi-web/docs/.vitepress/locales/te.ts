@@ -2,6 +2,7 @@
 const p = (text: string) => `<p>${text}</p>`
 
 export const te = {
+  title: "NABI NOTE - Nabi Note, ఒక ఓపెన్ సోర్స్ WYSIWYG ఎడిటర్",
   menu_compare: "పోలిక",
   menu_merge: "విలీనం",
   menu_inline_footnote: "పాదసూచిక",

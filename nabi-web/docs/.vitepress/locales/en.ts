@@ -1,4 +1,5 @@
 export const en = {
+  title: "NABI NOTE - Nabi Note, an open-source WYSIWYG editor",
   menu_inline_footnote: "Footnote",
   demo_html_footnote: "<p>WYSIWYG<sup data-nabi-fn=\"WYSIWYG stands for ‘What You See Is What You Get’: the result looks like what you see while editing.\">[1]</sup></p>",
   label: 'English',

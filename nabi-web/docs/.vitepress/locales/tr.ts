@@ -1,4 +1,5 @@
 export const tr = {
+  title: "NABI NOTE - Nabi Note, açık kaynaklı bir WYSIWYG düzenleyici",
   menu_compare: "Karşılaştırma",
   menu_merge: "Birleştirme",
   menu_inline_footnote: "Dipnot",

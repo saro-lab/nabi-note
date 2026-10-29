@@ -1,4 +1,5 @@
 export const ta = {
+  title: "NABI NOTE - Nabi Note, ஒரு திறந்த மூல WYSIWYG தொகுப்பி",
   cdn_code_change: "ஆவணம் மாறும்போது சேமிக்கும் பணியைத் திட்டமிடும் எடுத்துக்காட்டு இது.",
   menu_compare: "ஒப்பீடு",
   menu_merge: "இணைத்தல்",

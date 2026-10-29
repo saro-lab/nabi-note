@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { findAvailablePort } from '../../scripts/local-port.mjs'
 
 import { GA_ID } from './src/ga.ts'
-import { DEFAULT_LOCALE, localeCodes, vitepressLocales } from './locales/index.ts'
+import { DEFAULT_LOCALE, localeCodes, messages, vitepressLocales, type LocaleCode } from './locales/index.ts'
 import { hasLocalePage } from './src/nav.ts'
 
 // nabi-note 는 아직 dist·exports 없는 프로토타입이라 vite가 옆 저장소 TS 소스를 직접 문다.
@@ -27,7 +27,8 @@ const NABI_CSS = existsSync(NABI_CSS_LOCAL)
 
 const SITE_HOST = 'https://nabi.saro.me'
 const SITE_NAME = 'NABI NOTE'
-const SITE_DESC = 'NABI NOTE — an open-source WYSIWYG editor.'
+const SITE_TITLE = messages[DEFAULT_LOCALE].title
+const SITE_DESC = messages[DEFAULT_LOCALE].description
 
 // 아이콘 글꼴은 안 쓴다 — 크롬 아이콘이 전부 인라인 SVG라(ui/Icon.vue) 받을 이유가 없다.
 // No icon font: every chrome icon is inline SVG now (ui/Icon.vue), so nothing is left to load.
@@ -47,17 +48,17 @@ function asyncStylesheet(href: string): HeadConfig[] {
 
 // `/ko/intro` → `{ locale: 'ko', path: '/intro' }`, 접두사가 없으면 둘 다 빈 문자열이다.
 // `/ko/intro` → `{ locale: 'ko', path: '/intro' }`; empty strings when there is no locale prefix.
-function splitLocale(relativePath: string): { locale: string; path: string } {
+function splitLocale(relativePath: string): { locale: LocaleCode | ''; path: string } {
   const [first, ...rest] = relativePath.replace(/\.md$/, '').split('/')
   if (!localeCodes.includes(first as never)) {
     return { locale: '', path: '' }
   }
-  return { locale: first, path: rest.length ? `/${rest.join('/')}` : '' }
+  return { locale: first as LocaleCode, path: rest.length ? `/${rest.join('/')}` : '' }
 }
 
 export default defineConfig({
-  title: SITE_NAME,
-  titleTemplate: `:title | ${SITE_NAME}`,
+  title: SITE_TITLE,
+  titleTemplate: false,
   description: SITE_DESC,
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/nabi-note.svg' }],
@@ -70,7 +71,6 @@ export default defineConfig({
     ['script', { async: '', src: `https://www.googletagmanager.com/gtag/js?id=${GA_ID}` }],
     ['meta', { name: 'viewport', content: 'width=device-width,initial-scale=1,interactive-widget=resizes-content' }],
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:site_name', content: SITE_NAME }],
     ['meta', { property: 'og:image', content: `${SITE_HOST}/og.png` }],
     ['meta', { property: 'og:image:type', content: 'image/png' }],
     ['meta', { property: 'og:image:width', content: '1200' }],
@@ -84,23 +84,25 @@ export default defineConfig({
   // 페이지마다 canonical · hreflang · OG · JSON-LD 를 만들어 붙인다.
   // Builds canonical, hreflang, OG and JSON-LD per page.
   transformPageData(pageData) {
-    if (pageData.relativePath === '404.md') {
-      pageData.title = SITE_NAME
-      pageData.titleTemplate = false
-    }
-
-    if (!pageData.title) {
-      pageData.titleTemplate = false
-    }
-
     const { locale, path } = splitLocale(pageData.relativePath)
+    const localized = messages[locale || DEFAULT_LOCALE]
+    const siteTitle = localized.title
+    const isSitePage = pageData.frontmatter.layout === 'home' || pageData.relativePath === '404.md'
     const url = locale ? `${SITE_HOST}/${locale}${path}` : SITE_HOST
-    const title = pageData.title ? `${pageData.title} | ${SITE_NAME}` : SITE_NAME
-    const description = pageData.description || SITE_DESC
+    const title = isSitePage || !pageData.title ? siteTitle : `${siteTitle} | ${pageData.title}`
+    const description = pageData.description || localized.description
+
+    pageData.title = title
+    pageData.titleTemplate = false
 
     const head: HeadConfig[] = [
       ['link', { rel: 'canonical', href: url }],
       ['meta', { property: 'og:url', content: url }],
+      ['meta', { property: 'og:site_name', content: siteTitle }],
+      ['meta', { property: 'og:title', content: title }],
+      ['meta', { name: 'twitter:title', content: title }],
+      ['meta', { property: 'og:description', content: description }],
+      ['meta', { name: 'twitter:description', content: description }],
     ]
 
     if (locale) {
@@ -110,19 +112,6 @@ export default defineConfig({
       }
       const defaultLocale = hasLocalePage(path, DEFAULT_LOCALE) ? DEFAULT_LOCALE : locale
       head.push(['link', { rel: 'alternate', hreflang: 'x-default', href: `${SITE_HOST}/${defaultLocale}${path}` }])
-    }
-
-    if (pageData.title) {
-      head.push(
-        ['meta', { property: 'og:title', content: title }],
-        ['meta', { name: 'twitter:title', content: title }],
-      )
-    }
-    if (pageData.description) {
-      head.push(
-        ['meta', { property: 'og:description', content: description }],
-        ['meta', { name: 'twitter:description', content: description }],
-      )
     }
 
     head.push([

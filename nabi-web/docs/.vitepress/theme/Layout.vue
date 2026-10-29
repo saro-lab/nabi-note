@@ -155,7 +155,7 @@ function onCopyClick(event: MouseEvent): void {
 onMounted(() => {
   watchEffect(() => {
     if (page.value.isNotFound) {
-      document.title = 'NABI NOTE'
+      document.title = t('title')
     }
   })
   applyLanguage()

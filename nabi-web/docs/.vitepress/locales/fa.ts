@@ -1,4 +1,5 @@
 export const fa = {
+  title: "NABI NOTE - Nabi Note، یک ویرایشگر WYSIWYG متن‌باز",
   menu_compare: "مقایسه",
   menu_merge: "ادغام",
   menu_inline_footnote: "پانویس",

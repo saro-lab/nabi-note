@@ -1,4 +1,5 @@
 export const it = {
+  title: "NABI NOTE - Nabi Note, un editor WYSIWYG open source",
   menu_getting_started: "Utilizzo di base",
   menu_cdn: "Usare CDN",
   menu_style_guide: "Temi CSS",

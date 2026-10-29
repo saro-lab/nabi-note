@@ -1,6 +1,7 @@
 import { withLocaleTypefaceSample } from './typeface-lines.ts'
 
 export const sw = {
+  title: "NABI NOTE - Nabi Note, kihariri huria cha WYSIWYG",
   menu_compare: "Ulinganisho",
   menu_merge: "Kuunganisha",
   menu_inline_footnote: "Tanbihi",

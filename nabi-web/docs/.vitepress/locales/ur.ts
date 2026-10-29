@@ -140,6 +140,7 @@ const urBase = {
 }
 
 export const ur = {
+  title: "NABI NOTE - Nabi Note، ایک اوپن سورس WYSIWYG ایڈیٹر",
   ...urBase,
   cdn_code_minheight: "اس مثال میں ایڈیٹر براؤزر کی پوری اونچائی لیتا ہے۔ اپنی سائٹ کی ترتیب کے مطابق اونچائی بدلیں۔",
   cdn_code_wings: "اس مثال میں استعمال ہونے والے تدوین اور فائل کے ونگز منتخب کریں۔",
