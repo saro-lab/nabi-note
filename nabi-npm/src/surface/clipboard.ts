@@ -7,6 +7,7 @@ import {
   holderLength,
   holderRuns,
   isHolder,
+  nodeAt,
   sliceRuns,
   terminalOf,
   type EditEnv,
@@ -29,6 +30,10 @@ export function clipboardBodyOf(doc: NabiDoc, selection: Selection, env: EditEnv
   if (table) return table.body;
   const [start, end] = ordered(selection);
   if (comparePositions(start, end) === 0) return [];
+  if (samePath(start.path, end.path) && start.offset === 0 && end.offset === 1) {
+    const selected = nodeAt(doc, start.path);
+    if (selected && isWrapper(selected, env)) return [copyElement(selected, selected.ch)];
+  }
   const terminal = terminalOf(env);
 
   const walk = (node: ElementNode, path: readonly number[]): ElementNode | null => {

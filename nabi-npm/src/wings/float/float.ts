@@ -242,8 +242,9 @@ const FLOAT_CSS = `
 .nabi-content [data-nabi-float] table { display: block; max-inline-size: 100%; overflow-x: auto; }
 .nabi-content.nabi-editing [data-nabi-float] { outline: 1px dashed var(--nabi-muted); outline-offset: -1px; }
 .nabi-content.nabi-editing [data-nabi-float] > p:only-child { min-block-size: 1lh; }
-.nabi-content:has(> [data-nabi-p] > [data-nabi-float]) > :is(h1, h2, h3, h4, h5, h6),
-.nabi-content:has(> [data-nabi-p] > [data-nabi-float]) > [data-nabi-p]:has(> :is(table, pre, hr)) { clear: both; }
+.nabi-content:has(> [data-nabi-p] > [data-nabi-float]) > [data-nabi-p]:has(> :is(table, pre, hr), > .nabi-scroll > table) {
+  display: flow-root; overflow-x: auto;
+}
 .nabi-diff-block:has(> [data-nabi-p] > [data-nabi-float]) { display: flow-root; }
 @container nabi-floats (width < 36rem) {
   .nabi-content > [data-nabi-p]:has(> [data-nabi-float]) {

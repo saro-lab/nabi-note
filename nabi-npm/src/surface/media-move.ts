@@ -80,9 +80,14 @@ function moveOp(sourcePath: readonly number[], target: Position, mediaOnly: bool
 
     const targetNode = nodeAt(without, shiftedTarget);
     if (!targetNode) return null;
-    const next = replaceAt(without, shiftedTarget, after ? [targetNode, source] : [source, targetNode]);
+    const replaceEmptyCell = targetParent?.w === 'td' && targetParent.ch.length === 1 && destination.ch.length === 0;
+    const next = replaceAt(
+      without,
+      shiftedTarget,
+      replaceEmptyCell ? [source] : after ? [targetNode, source] : [source, targetNode],
+    );
     const movedPath = [...shiftedTarget];
-    if (after) movedPath[movedPath.length - 1] += 1;
+    if (after && !replaceEmptyCell) movedPath[movedPath.length - 1] += 1;
     return { doc: next, selection: selectObject(movedPath) };
   };
 }

@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
+## [1.6.1] - 026-10-31
+
+### Fixed
+
+- Headings (H1-H6), tables, code blocks, and dividers now continue beside floats instead of clearing them. Wide tables and code scroll within their own blocks. Narrow-screen and print stacking, and separate comparison rows, remain unchanged.
+- Fixed copying or cutting an exactly selected object, such as an image inside a float or table cell, including its enclosing containers. Only the selected object and its formatting are copied; whole-table, whole-container, and cell-range selections retain their behavior.
+- Fixed moving an object into an empty table cell leaving its default empty paragraph behind. A cell containing only one empty paragraph replaces that placeholder and keeps its background, spans, and header status. User-entered spaces, line breaks, and empty paragraphs alongside other content are preserved, and the move supports one-step undo.
+
 ## [1.6.0] - 2026-10-31
 
 ### Added
