@@ -99,6 +99,16 @@ Pasting or dropping content inside a table cell inserts into that cell, preservi
 
 Paragraphs and object wrappers inside floats, quotes, or list items preserve pasted blocks within their parent, including a single table or image. Empty inner paragraphs are replaced by the pasted fragment; text, formatting, and outer content are preserved. Inline-only holders such as code and details summaries instead flatten recoverable text with line breaks, following their existing content rules.
 
+## Media dragging
+
+`mountSurface()` supports native dragging of existing images and YouTube videos within the same editing surface. Drag the image itself or the grip above a YouTube video; the upper or lower half of a destination paragraph places it before or after that block. A horizontal line previews the insertion position. Paragraph text is not split. Both media types can move into and out of table cells, floats, quotes, and list items that accept paragraph blocks.
+
+The move preserves the image source or video ID, media width, and the wrapper's alignment. It selects the moved object and commits one undo step. The original wrapper is removed, while an emptied source container keeps an editable paragraph. Dropping on the object itself, its current gap, or an inline-only holder such as code does nothing. A document change or replacement during dragging cancels the move, including after undo restores equal content. Locked editors and active IME composition do not accept media moves. Drag cancellation or dropping outside the surface leaves the source unchanged.
+
+The YouTube grip remains available while the video is selected. The first click on an unselected video selects it; subsequent clicks inside the player can play it. Only editor HTML makes its wrapper draggable and shows the grip. Stored HTML and previews keep the ordinary player without the grip.
+
+This uses the browser's native drag gesture; touch behavior depends on browser support. Dropping media into another editor follows that editor's external content-drop path and does not remove the source. File uploads and external HTML/text drops retain their existing behavior. Drag markers are temporary UI and are not stored in JSON or published HTML.
+
 ## Custom IO filters
 
 ```ts

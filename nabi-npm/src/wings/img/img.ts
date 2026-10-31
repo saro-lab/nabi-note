@@ -101,9 +101,8 @@ const IMAGE_ICON = 'img-image';
 // 폭 표식 하나가 그림·유튜브의 생김새를 다 말한다 — 값은 퍼센트 문자열이다.
 const WIDTH_CSS = `
 .nabi-content img,.nabi-content iframe { max-inline-size: 100%; block-size: auto; }
-/* 그림은 누르는 것이다 — 캐럿이 못 서므로 텍스트 커서 대신 손가락 커서를 쓴다. */
-/* An image is clicked, not typed into — no caret can land inside it, so it gets a pointer cursor, not a text one. */
-.nabi-content.nabi-editing img { cursor: pointer; }
+.nabi-content.nabi-editing img { cursor: grab; }
+.nabi-content.nabi-editing img:active { cursor: grabbing; }
 .nabi-content [data-nabi-width="30"] { inline-size: 30%; }
 .nabi-content [data-nabi-width="40"] { inline-size: 40%; }
 .nabi-content [data-nabi-width="50"] { inline-size: 50%; }

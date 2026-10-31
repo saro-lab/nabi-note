@@ -11,12 +11,13 @@ Use this file as a router. Read only the document that owns your question.
 - CDN setup with the browser bundle: `llms/quickstart-cdn.md`
 - Public export and type index: `llms/api-reference.md`
 - Footnote storage, editing, numbering, and published output: `llms/wings.md#footnotes`
-- Table cell formatting, crosshair cursor during cell-range dragging, multi-block table examples, and editable float examples for 1.5.5: `llms/wings.md`
+- Table cell formatting, crosshair cursor during cell-range dragging, multi-block table examples, and editable float examples for 1.5.6: `llms/wings.md`
 
 ## Contracts by topic
 
 - NABI TREE, positions, normalization, loading, change events: `llms/document-model.md`
 - Paste, files, Markdown, URLs, HTML trust boundary, uploads: `llms/io-security.md`
+- Dragging existing images and YouTube videos between blocks, including table cells and float regions: `llms/io-security.md#media-dragging`
 - Built-in wing catalog and picker behavior: `llms/wings.md`
 - Custom wing contract and registry validation: `llms/custom-wing.md`
 - Server rendering, toolbar pre-rendering, hydration: `llms/ssr.md`
@@ -71,7 +72,7 @@ Use this file as a router. Read only the document that owns your question.
 
 ## Package facts
 
-- Package contract documented here: 1.5.5. Package and CDN publication are separate from this contract version.
+- Package contract documented here: 1.5.6. Package and CDN publication are separate from this contract version.
 - Runtime dependencies: zero.
 - Node.js for package tooling and SSR: 20 or newer.
 - Declared browser baseline: Chrome and Edge 120, Firefox 120, Safari 17.

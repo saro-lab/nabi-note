@@ -292,6 +292,8 @@ function renderParagraph(p: ElementNode, job: Job): string {
   if (wrapper) {
     tag = 'div';
     attrs['data-nabi-p'] = '';
+    const object = p.ch[0];
+    if (job.keys && isElement(object) && object.w === 'youtube') attrs['draggable'] = 'true';
   } else {
     const h = p.a?.['h'];
     if (typeof h === 'number' && Number.isInteger(h) && h >= 1 && h <= 6) {

@@ -16,6 +16,7 @@ import { domTextOf, fromDomPoint, holderElOf, pathOfId, toDomPoint, ZERO_WIDTH }
 import { clipboardBodyOf, clipHtmlOf, loadClipboard, NABI_CLIPBOARD_MIME } from './clipboard.js';
 import { ioFiltersOf } from './filters.js';
 import { makePasteFlow } from './paste.js';
+import { makeMediaDrag } from './media-drag.js';
 import { planRedraw } from './redraw.js';
 import type { EditSurfacePort, ReadCaret } from './port.js';
 import { claimMountRoot, DisposerStack, HostElementBaseline, HostElementLease } from '../lifecycle.js';
@@ -133,6 +134,20 @@ export function mountSurface(options: SurfaceOptions): Surface {
     let pendingTextInput: TextInputHint | null = null;
     let pendingChangedHolders: readonly string[] = [];
     let compositionSpan: CompositionSpan | null = null;
+    let pressedMedia: readonly number[] | null = null;
+    let tookLump = false;
+    const mediaDrag = makeMediaDrag({
+      nabi,
+      root,
+      htmlOptions,
+      canEdit: () => !composing && hostOf(nabi).lockedBy() === null && root.contentEditable !== 'false',
+      onEnd: () => {
+        pressedMedia = null;
+        tookLump = false;
+        if (owner.activeElement === root) writeCaret(nabi.getSelection());
+      },
+    });
+    lifecycle.add(() => mediaDrag.unmount());
 
     const isCaretSlot = (node: Text): boolean => node === caretSlot;
 
@@ -323,7 +338,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
 
     // --- 화면 선택 → 트리 (교정 포함) -----------------------------------------------------------
     const onSelectionChange = (): void => {
-      if (composing || reconciling) return;
+      if (composing || reconciling || pressedMedia || mediaDrag.active()) return;
       // 포커스가 편집기 밖이면 화면 선택은 정답이 아니다 — 트리가 정답이다(059)
       // If focus is outside the editor, the screen selection isn't authoritative -- the tree is (059)
       const active = owner.activeElement;
@@ -358,6 +373,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
 
     // --- 트리 → 화면 (단일 신호의 바뀐 문단 목록 = 재그리기 목록) --------------------------------
     const offChange = nabi.onChange((change) => {
+      if (change.doc) pressedMedia = null;
       // 조합·reconcile 중에는 DOM이 정답이다 — 그리지도 되쓰지도 않는다
       // While composing or reconciling, the DOM is authoritative; neither redraw nor caret write-back happens
       if (composing) {
@@ -471,6 +487,10 @@ export function mountSurface(options: SurfaceOptions): Surface {
     // --- beforeinput — 구조 입력은 전부 우리 것, 문단 안 타이핑만 브라우저에 맡긴다 ---------------
     const onBeforeInput = (ev: InputEvent): void => {
       const t = ev.inputType;
+      if (t === 'deleteByDrag' && mediaDrag.pending()) {
+        ev.preventDefault();
+        return;
+      }
       pendingChangedHolders = [];
       if (t !== 'insertText') pendingTextInput = null;
       if (t !== 'insertParagraph') actions.breakDouble();
@@ -1008,6 +1028,10 @@ export function mountSurface(options: SurfaceOptions): Surface {
     };
 
     const onDrop = (ev: DragEvent): void => {
+      if (mediaDrag.drop(ev)) {
+        pressedMedia = null;
+        return;
+      }
       const transfer = ev.dataTransfer;
       if (!transfer) return;
       let types: string[];
@@ -1045,6 +1069,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
       if (!node || !root.contains(node)) return;
       const mapped = fromDomPoint(root, doc(), env, node, offset, isCaretSlot);
       if (!mapped) return;
+      root.focus({ preventScroll: true });
       takePaste(
         {
           custom,
@@ -1059,6 +1084,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
     };
 
     const onDragOver = (ev: DragEvent): void => {
+      if (mediaDrag.over(ev)) return;
       const types = ev.dataTransfer ? Array.from(ev.dataTransfer.types) : [];
       if (['Files', NABI_CLIPBOARD_MIME, 'text/html', 'text/plain'].some((type) => types.includes(type))) {
         ev.preventDefault();
@@ -1086,19 +1112,19 @@ export function mountSurface(options: SurfaceOptions): Surface {
       return null;
     };
 
-    // 물건 고르기는 click이 아니라 누르는 순간(mousedown)에 한다 — click에서 하면 브라우저가 먼저 놓은 캐럿의 selectionchange가 우리 write 뒤에 도착해 트리를 되돌린다(눌러도 그림이 안 골라지던 버그). mousedown을 삼켜 브라우저가 캐럿을 놓을 일 자체를 없애고, 포커스는 우리가 직접 준다. 몸짓의 나머지(mouseup·click)도 함께 삼킨다
-    // Object selection happens on mousedown, not click; doing it on click let the browser's own caret placement fire a selectionchange that arrived after our write and reverted the tree (clicking an image sometimes failed to select it). Swallowing mousedown prevents the browser from placing a caret at all, and focus is given manually instead; the rest of the gesture (mouseup, click) is swallowed too
-    let tookLump = false;
-
+    // 미디어의 기본 누르기는 네이티브 드래그에 필요하다. 누르는 동안 브라우저 선택이 물건 선택을 덮지 않게 한다.
+    // Native media dragging needs the default press; browser selection cannot overwrite the object selection during it.
     const onMouseDown = (ev: MouseEvent): void => {
       tookLump = false;
+      pressedMedia = null;
       if (ev.button !== 0) return;
       const target = eventElement(ev.target);
       if (!target) return;
       const path = lumpUnder(target);
       if (!path) return;
       tookLump = true;
-      ev.preventDefault();
+      pressedMedia = mediaDrag.source(target);
+      if (!pressedMedia) ev.preventDefault();
       root.focus({ preventScroll: true });
       nabi.select(selectObject(path));
       writeCaret(nabi.getSelection());
@@ -1109,7 +1135,14 @@ export function mountSurface(options: SurfaceOptions): Surface {
     const onMouseUp = (ev: MouseEvent): void => {
       if (!tookLump) return;
       ev.preventDefault();
+      const media = pressedMedia;
+      pressedMedia = null;
+      if (media && !mediaDrag.active()) nabi.select(selectObject(media));
       writeCaret(nabi.getSelection());
+    };
+
+    const onDocumentMouseUp = (): void => {
+      pressedMedia = null;
     };
 
     const onClick = (ev: MouseEvent): void => {
@@ -1160,6 +1193,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
     root.addEventListener('cut', onCopyOrCut as EventListener);
     root.addEventListener('drop', onDrop as EventListener);
     root.addEventListener('dragover', onDragOver as EventListener);
+    root.addEventListener('dragstart', mediaDrag.start);
+    owner.addEventListener('mouseup', onDocumentMouseUp);
     root.addEventListener('mousedown', onMouseDown);
     root.addEventListener('mouseup', onMouseUp);
     root.addEventListener('click', onClick);
@@ -1181,6 +1216,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
       root.removeEventListener('cut', onCopyOrCut as EventListener);
       root.removeEventListener('drop', onDrop as EventListener);
       root.removeEventListener('dragover', onDragOver as EventListener);
+      root.removeEventListener('dragstart', mediaDrag.start);
+      owner.removeEventListener('mouseup', onDocumentMouseUp);
       root.removeEventListener('click', onClick);
       root.removeEventListener('mouseup', onMouseUp);
       root.removeEventListener('mousedown', onMouseDown);

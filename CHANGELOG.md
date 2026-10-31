@@ -5,7 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
-## [Unreleased]
+## [1.5.6] - Unreleased
+
+### Added
+
+- Images and YouTube videos can be dragged between blocks and into or out of table cells and float regions. YouTube videos have a grip above the player. An insertion line previews the destination; moves preserve width and alignment and can be reverted with one undo step.
 
 ### Fixed
 

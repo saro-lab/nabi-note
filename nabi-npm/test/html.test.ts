@@ -125,15 +125,16 @@ eq('보기 HTML 은 예시 전체를 고정된 한 모양으로 낸다', view, V
 ok('조립이 Node(러너)에서 실제로 돈다', view.length > 0);
 
 const editor = renderEditorHtml(EXAMPLE, OPT);
-// 편집기가 보기와 갈리는 곳은 셋뿐이다 — 재그리기 표식(data-key), 첨부의 봉인, 드롭캡의 첫 글자 상자. 넷째가 생기면 이 자물쇠가 먼저 운다.
-// The editor differs from the view in exactly three ways — the redraw key, the attachment seal, and the dropcap's letter box. A fourth divergence should trip this lock first.
+// 화면 전용 표식을 걷은 편집 HTML은 저장 HTML과 같아야 한다.
+// Removing editor-only markers must recover the stored HTML.
 const SEAL = ' contenteditable="false" draggable="false"';
 const bare = editor
   .replace(/ data-key="[^"]*"/g, '')
   .split(SEAL)
   .join('')
+  .replace(/ draggable="true"/g, '')
   .replace(/<span data-nabi-dropcap-letter>([^<]*)<\/span>/g, '$1');
-ok('편집기 HTML 은 화면 전용 세 가지를 걷으면 보기와 같다', bare === view, [bare.slice(0, 200)]);
+ok('편집기 HTML은 화면 전용 표식을 걷으면 보기와 같다', bare === view, [bare.slice(0, 200)]);
 ok(
   '편집 드롭캡은 가상 요소 대신 실제 첫 글자 상자를 가진다',
   editor.includes('<span data-nabi-dropcap-letter>맨</span>'),
@@ -147,6 +148,32 @@ ok('봉인은 보기(저장·발행)값에 안 나간다', !view.includes('conte
 ok('data-key 는 문단 급 이상에만 붙는다 (마크·라인에는 없다)', !/<(b|i|mark|span|a|br)\b[^>]*data-key/.test(editor));
 ok('문단에는 data-key 가 붙는다', editor.startsWith('<h1 data-key="n0"'));
 ok('물건·컨테이너에도 data-key 가 붙는다 (부분 재그리기의 자리)', editor.includes('<table data-key="n5.0">'));
+
+{
+  const source: NabiDoc = [{ w: 'p', a: { a: 'r' }, ch: [{ w: 'youtube', a: { v: '6j-gQmaZ9Zk', w: '80' }, ch: [] }] }];
+  const keyed = $fromJson(source, ENV) as NabiDoc;
+  const editing = renderEditorHtml(keyed, OPT);
+  const published = renderHtml(keyed, OPT);
+  const wrapper = tinyHtml(editing)[0];
+  ok('유튜브의 편집 래퍼는 드래그할 수 있다', wrapper?.kind === 'element' && wrapper.attrs['draggable'] === 'true');
+  ok(
+    '유튜브 편집 래퍼에는 iframe만 직접 들어 있고 별도 손잡이 콘텐츠가 없다',
+    wrapper?.kind === 'element' &&
+      wrapper.tag === 'div' &&
+      'data-nabi-p' in wrapper.attrs &&
+      wrapper.children.length === 1 &&
+      wrapper.children[0]?.kind === 'element' &&
+      wrapper.children[0].tag === 'iframe',
+  );
+  eq(
+    '유튜브 저장 HTML은 드래그 표식 없이 기존 iframe 구조와 크기·정렬을 유지한다',
+    published,
+    '<div data-nabi-p data-nabi-align="r"><iframe src="https://www.youtube-nocookie.com/embed/6j-gQmaZ9Zk" title="YouTube" allowfullscreen loading="lazy" data-nabi-width="80"></iframe></div>',
+  );
+  eq('유튜브 편집 HTML 왕복은 영상 ID·크기·정렬만 보존한다', json(read(editing)), json(source));
+  eq('유튜브 편집 HTML을 저장해도 드래그 표식은 남지 않는다', renderHtml(read(editing), OPT), published);
+  eq('유튜브 문단 부분 렌더링도 같은 편집 구조를 쓴다', renderParagraphHtml(keyed[0], OPT, true), editing);
+}
 
 // --- 조립 — 문단의 세 얼굴 -------------------------------------------------------------------
 

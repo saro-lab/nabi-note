@@ -5,7 +5,11 @@
 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/) 형식과 [시맨틱 버저닝](https://semver.org/lang/ko/)을 따릅니다.
 날짜는 한국 표준시(KST)를 기준으로 합니다.
 
-## [Unreleased]
+## [1.5.6] - Unreleased
+
+### Added
+
+- 편집기 안의 이미지와 유튜브 영상을 드래그해 문단 앞뒤와 표 셀·플로트 영역 안팎으로 옮길 수 있습니다. 유튜브 영상은 위쪽 손잡이로 옮깁니다. 삽입 위치를 선으로 표시하며, 크기와 정렬을 유지하고 한 번의 실행 취소로 이동을 되돌립니다.
 
 ### Fixed
 

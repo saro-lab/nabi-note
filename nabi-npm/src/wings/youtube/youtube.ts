@@ -70,9 +70,16 @@ const YOUTUBE_CSS = `
 .nabi-content iframe { aspect-ratio: 16 / 9; border: 0; border-radius: var(--nabi-radius, 6px); }
 /* pointer-events: none만으로는 실제 마우스 클릭이 여전히 새는 자리가 있어, DOM 방패(::after)로 통째로 덮는다. */
 /* pointer-events: none alone still let real mouse clicks leak through in some cases, so a DOM overlay (::after) covers the video entirely instead. */
-.nabi-content.nabi-editing [data-nabi-p]:has(> iframe) { position: relative; }
+.nabi-content.nabi-editing [data-nabi-p]:has(> iframe) { position: relative; padding-block-start: 16px; }
+.nabi-content.nabi-editing [data-nabi-p]:has(> iframe)::before {
+  content: ""; position: absolute; inset: 0 0 auto; block-size: 16px; cursor: grab;
+  background: radial-gradient(circle, currentColor 1px, transparent 1.5px) center / 6px 6px;
+  background-repeat: repeat-x; background-origin: content-box; background-clip: content-box;
+  padding-inline: calc(50% - 12px); padding-block: 5px; box-sizing: border-box; opacity: .45;
+}
+.nabi-content.nabi-editing [data-nabi-p]:has(> iframe):active::before { cursor: grabbing; }
 .nabi-content.nabi-editing [data-nabi-p]:has(> iframe)::after {
-  content: ""; position: absolute; inset: 0; cursor: pointer;
+  content: ""; position: absolute; inset: 16px 0 0; cursor: grab;
 }
 /* 고른 뒤에는 방패를 걷는다 — 그때부터의 클릭은 영상의 것이라 그 자리에서 재생된다. */
 /* The shield lifts once selected — clicks from then on belong to the video and play it in place. */
