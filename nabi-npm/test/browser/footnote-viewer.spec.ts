@@ -154,6 +154,36 @@ for (const width of [1280, 390]) {
       await expect(page.locator('.nabi-fn-tip')).toHaveCount(0);
     });
 
+    test('preview footnote links open a new page without leaving the editor', async ({ page, context }) => {
+      await setupEditor(page);
+      const href = new URL('/preview-note', page.url()).href;
+      await context.route(href, (route) =>
+        route.fulfill({ contentType: 'text/html', body: '<title>Note destination</title>' }),
+      );
+      await page.evaluate((href) => {
+        const { nabi } = (globalThis as unknown as { footnoteTest: EditorState }).footnoteTest;
+        nabi.setJson([{ w: 'p', ch: ['Body', { w: 'fn', a: { t: `Source ${href}` }, ch: [] }] }]);
+      }, href);
+      await page.locator('#preview').click();
+      const marker = page.locator('.nabi-preview-body sup[data-nabi-fn]');
+      if (width === 390) await marker.tap();
+      else await marker.click();
+      const link = page.locator('.nabi-preview-body .nabi-fn-tip a');
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      const before = await snapshot(page);
+      const opened = page.waitForEvent('popup');
+      if (width === 390) await link.tap();
+      else await link.click();
+      const popup = await opened;
+      await expect(popup).toHaveURL(href);
+      await expect(popup).toHaveTitle('Note destination');
+      expect(await popup.evaluate(() => window.opener)).toBeNull();
+      expect(await snapshot(page)).toEqual(before);
+      await expect(page.locator('.nabi-preview')).toBeVisible();
+      await popup.close();
+    });
+
     for (const mode of ['published', 'preview']) {
       test(`${mode} bubbles keep compact sans text, even padding, and stable document spacing`, async ({ page }) => {
         await setupEditor(page);
@@ -206,6 +236,13 @@ for (const width of [1280, 390]) {
         await expect(tip.locator('[data-nabi-fn-num]')).toHaveCSS('font-size', '15px');
         await expect(tip.locator('a')).toHaveCSS('font-size', '15px');
         await expect(tip.locator('a')).toHaveAttribute('href', 'https://example.com/a_(b)');
+        if (mode === 'preview') {
+          await expect(tip.locator('a')).toHaveAttribute('target', '_blank');
+          await expect(tip.locator('a')).toHaveAttribute('rel', 'noopener noreferrer');
+        } else {
+          await expect(tip.locator('a')).not.toHaveAttribute('target');
+          await expect(tip.locator('a')).not.toHaveAttribute('rel');
+        }
         await expect(root.locator('[data-nabi-footnotes] a')).toHaveAttribute('href', 'https://example.com/a_(b)');
         await expect(tip).toHaveText('[1] Source https://example.com/a_(b).');
         const padding = await tip.evaluate((element) => {

@@ -7,15 +7,31 @@ const startsWith = (path: readonly number[], prefix: readonly number[]): boolean
   path.length >= prefix.length && prefix.every((part, index) => path[index] === part);
 
 export function moveMediaOp(sourcePath: readonly number[], target: Position): Command {
+  return moveOp(sourcePath, target, true);
+}
+
+export function moveBlockOp(sourcePath: readonly number[], target: Position): Command {
+  return moveOp(sourcePath, target, false);
+}
+
+const hasHeading = (node: ElementNode): boolean =>
+  (node.w === P && node.a?.['h'] !== undefined) || node.ch.some((child) => isElement(child) && hasHeading(child));
+
+const hasWing = (node: ElementNode, wing: string): boolean =>
+  node.w === wing || node.ch.some((child) => isElement(child) && hasWing(child, wing));
+
+function moveOp(sourcePath: readonly number[], target: Position, mediaOnly: boolean): Command {
   return (doc, _selection, _args, env) => {
     const source = nodeAt(doc, sourcePath);
-    const media = source?.ch[0];
+    const object = source?.ch[0];
     const destination = nodeAt(doc, target.path);
     if (
       !source ||
       !isWrapper(source, env) ||
-      !isElement(media) ||
-      (media.w !== 'img' && media.w !== 'youtube') ||
+      !isElement(object) ||
+      (object.w !== 'img' &&
+        object.w !== 'youtube' &&
+        (mediaOnly || !['table', 'float', 'details', 'code', 'quote'].includes(object.w))) ||
       destination?.w !== P ||
       !Number.isInteger(target.offset) ||
       target.offset < 0 ||
@@ -24,6 +40,15 @@ export function moveMediaOp(sourcePath: readonly number[], target: Position): Co
       startsWith(target.path, sourcePath)
     )
       return null;
+
+    if (object.w === 'float' && target.path.length !== 1) return null;
+    for (let depth = 1; depth < target.path.length; depth += 1) {
+      const ancestor = nodeAt(doc, target.path.slice(0, depth));
+      if ((ancestor?.w === 'table' || ancestor?.w === 'td') && (hasWing(source, 'table') || hasWing(source, 'float')))
+        return null;
+      if (ancestor?.w === 'float' && hasWing(source, 'float')) return null;
+      if (ancestor?.w === 'details' && hasHeading(source)) return null;
+    }
 
     const sourceParentPath = sourcePath.slice(0, -1);
     const targetParentPath = target.path.slice(0, -1);

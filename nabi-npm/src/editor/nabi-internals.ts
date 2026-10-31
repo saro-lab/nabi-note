@@ -231,6 +231,7 @@ export function callbackEnv(env: EditEnv): EditEnv {
     ...(repairs ? { repair: repairs } : {}),
     ...(env.singleParagraph ? { singleParagraph: new ReadonlySetView(env.singleParagraph) } : {}),
     ...(env.isolating ? { isolating: new ReadonlySetView(env.isolating) } : {}),
+    ...(env.joinOnDelete ? { joinOnDelete: new ReadonlySetView(env.joinOnDelete) } : {}),
   };
   $copyKnownTypes(env, view);
   $copyParagraphTargets(env, view);

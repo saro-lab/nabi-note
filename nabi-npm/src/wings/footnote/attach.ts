@@ -2,11 +2,12 @@
 // Footnotes on the editing screen: numbering, the list below the body (outside contenteditable), opening the edit prompt on a number click, and selecting first on an adjacent delete.
 // 번호는 DOM 순서로 매긴다 — 화면은 트리를 그린 것이라 순서가 같고, 문단 단위 다시 그리기·조합 뒤 전체 다시 그리기처럼 change 알림 없이 DOM이 바뀌는 길도 관찰자가 잡는다.
 // Numbers follow DOM order, which matches the tree it was drawn from; an observer also catches DOM rewrites that arrive without a change event (per-paragraph redraws, full redraws after composition).
-import { isCollapsed, ordered, sameSelection } from '../../caret/index.js';
+import { sameSelection } from '../../caret/index.js';
 import { nodeAt } from '../../doc/index.js';
 import { hostOf } from '../../editor/index.js';
 import { renderAppendixHtml } from '../../html/index.js';
 import type { Attach } from '../../wing/index.js';
+import { $bindDeleteSelection } from '../../wing/delete-selection.js';
 import { FN, footnoteAt, footnoteList, footnoteOffsets, footnoteSpots } from './model.js';
 
 const MARKER = '[data-nabi-terminal][data-nabi-fn]';
@@ -172,22 +173,6 @@ export const attachFootnotes: Attach = ({ root, nabi, doc, env, onDispose }) => 
     if (select(index)) hostOf(nabi).requestContext(FN);
   };
 
-  // 붙은 Backspace/Delete는 먼저 각주를 고르고 다음 입력이 지운다 — 내용이 본문에 안 보이는 물건이라 한 번에 잃지 않게 한다.
-  // An adjacent Backspace/Delete first selects the footnote and the next press deletes it; its content isn't visible in the body, so it isn't lost in one stroke.
-  const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key !== 'Backspace' && event.key !== 'Delete') return;
-    if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return;
-    const sel = nabi.getSelection();
-    if (!isCollapsed(sel)) return;
-    const at = ordered(sel)[0];
-    const holder = nodeAt(doc(), at.path);
-    if (!holder) return;
-    const from = event.key === 'Backspace' ? at.offset - 1 : at.offset;
-    if (!footnoteOffsets(holder, env).includes(from)) return;
-    event.preventDefault();
-    nabi.select({ anchor: { path: at.path, offset: from }, focus: { path: at.path, offset: from + 1 } });
-  };
-
   const Observer = owner.defaultView?.MutationObserver;
   const observer = Observer
     ? new Observer(() => {
@@ -213,9 +198,6 @@ export const attachFootnotes: Attach = ({ root, nabi, doc, env, onDispose }) => 
   root.addEventListener('touchmove', onTouchMove, { passive: true });
   root.addEventListener('touchend', onTouchEnd, { passive: false });
   root.addEventListener('touchcancel', clearTouch);
-  // 캡처로 표면의 keydown보다 먼저 막는다 — 안 그러면 코어가 먼저 각주를 지운다.
-  // Captured ahead of the surface's own keydown, or the core would delete the footnote first.
-  root.addEventListener('keydown', onKeyDown, true);
   onDispose(() => {
     mouseStart = null;
     owner.removeEventListener('pointerdown', onPointerDown, true);
@@ -225,7 +207,6 @@ export const attachFootnotes: Attach = ({ root, nabi, doc, env, onDispose }) => 
     root.removeEventListener('touchmove', onTouchMove);
     root.removeEventListener('touchend', onTouchEnd);
     root.removeEventListener('touchcancel', clearTouch);
-    root.removeEventListener('keydown', onKeyDown, true);
     root.removeEventListener('click', onSwallow);
     root.removeEventListener('mouseup', onSwallow);
     root.removeEventListener('mousedown', onMouseDown);
@@ -240,3 +221,12 @@ export const attachFootnotes: Attach = ({ root, nabi, doc, env, onDispose }) => 
   refreshPicked();
   return () => {};
 };
+
+$bindDeleteSelection(attachFootnotes, (doc, selection, env, forward) => {
+  const at = selection.focus;
+  const holder = nodeAt(doc, at.path);
+  const from = forward ? at.offset : at.offset - 1;
+  return holder && footnoteOffsets(holder, env).includes(from)
+    ? { anchor: { path: at.path, offset: from }, focus: { path: at.path, offset: from + 1 } }
+    : null;
+});

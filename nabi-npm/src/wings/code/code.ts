@@ -199,7 +199,7 @@ function repairCode(node: ElementNode): ElementNode {
   const lang = language(node.a?.['lang']);
   const keys = Object.keys(node.a ?? {});
   const sameCh = ch.length === node.ch.length && ch.every((child, i) => child === node.ch[i]);
-  const sameAttrs = lang === node.a?.['lang'] ? keys.length === 1 : lang === undefined && keys.length === 0;
+  const sameAttrs = lang === undefined ? keys.length === 0 : lang === node.a?.['lang'] && keys.length === 1;
   if (sameCh && sameAttrs) return node;
   return {
     w: node.w,

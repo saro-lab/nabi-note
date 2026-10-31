@@ -180,6 +180,7 @@ export function listFamily(spec: ListFamilySpec): Wing {
     w: spec.w,
     place: 'container',
     holds: 'blocks',
+    joinOnDelete: true,
     attrs: [],
     parts: { [spec.item]: itemDecl },
     toHtml: builderOf(spec.w, spec.toHtml),

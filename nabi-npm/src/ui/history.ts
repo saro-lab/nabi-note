@@ -199,6 +199,10 @@ export function openHistoryPanel(options: HistoryPanelOptions): Overlay | null {
           dir: localeDirection(t.locale),
         });
         body.innerHTML = options.render(record);
+        for (const link of body.querySelectorAll<HTMLAnchorElement>('a[href]')) {
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+        }
         previewBody = body;
         if (disposed || generation !== previewGeneration || !scrim?.root.isConnected) return;
         // 이 판보다 위에 선다 — 어느 줄의 미리보기든 목록을 덮는다.

@@ -4,9 +4,10 @@
 // This uses `attach`, not `onKey`, because a mark has no path — `keyOwnerAt` never reaches this wing, so surface-level wings declare listeners here instead
 import { runsOf } from '../../schema/index.js';
 import { nodeAt, terminalOf, type EditEnv } from '../../doc/index.js';
-import { isCollapsed, ordered, type Selection } from '../../caret/index.js';
+import { ordered, type Selection } from '../../caret/index.js';
 import type { NabiDoc } from '../../schema/index.js';
 import type { Attach } from '../../wing/index.js';
+import { $bindDeleteSelection } from '../../wing/delete-selection.js';
 
 // ui/picked와 같은 이름이지만 층이 위라 값만 그대로 적는다
 // Same name ui/picked uses, but that layer sits above this one, so the value is just repeated here
@@ -173,36 +174,23 @@ export const attachFileLink: Attach = ({ root, nabi, doc, env, pathOfKey }) => {
     event.preventDefault();
   };
 
-  // 붙어 있는 백스페이스/Delete는 지우기 전에 먼저 통째로 고른다 — 두 번째 입력이 지운다
-  // A Backspace/Delete right against the attachment selects it whole first; the deletion happens on the next press
-  const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key !== 'Backspace' && event.key !== 'Delete') return;
-    const sel = nabi.getSelection();
-    if (!isCollapsed(sel)) return;
-    const at = sel.focus;
-    const hit = fileSpans(doc(), at.path, env).find((span) =>
-      event.key === 'Backspace' ? at.offset === span.to : at.offset === span.from,
-    );
-    if (!hit) return;
-    event.preventDefault();
-    nabi.select({ anchor: { path: at.path, offset: hit.from }, focus: { path: at.path, offset: hit.to } });
-  };
-
   const stop = nabi.onChange(fix);
   root.addEventListener('mousedown', onMouseDown);
   root.addEventListener('mouseup', onSwallow);
   root.addEventListener('click', onSwallow);
-  // 캡처로 잡아 표면의 keydown보다 앞서 preventDefault한다 — 안 그러면 코어가 먼저 한 글자를 지운다
-  // Captured ahead of the surface's own keydown so preventDefault runs first, or the core deletes a character before this fires
-  root.addEventListener('keydown', onKeyDown, true);
   fix();
 
   return () => {
     stop();
     clearPicked();
-    root.removeEventListener('keydown', onKeyDown, true);
     root.removeEventListener('click', onSwallow);
     root.removeEventListener('mouseup', onSwallow);
     root.removeEventListener('mousedown', onMouseDown);
   };
 };
+
+$bindDeleteSelection(attachFileLink, (doc, selection, env, forward) => {
+  const at = selection.focus;
+  const hit = fileSpans(doc, at.path, env).find((span) => at.offset === (forward ? span.from : span.to));
+  return hit ? { anchor: { path: at.path, offset: hit.from }, focus: { path: at.path, offset: hit.to } } : null;
+});

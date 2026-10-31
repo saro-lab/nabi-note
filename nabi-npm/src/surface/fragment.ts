@@ -34,8 +34,14 @@ import type { Command } from '../editor/index.js';
 
 // 끼운 조각 바로 뒤의 캐럿 자리 — 다음 홀더의 처음, 없으면 조각 안 마지막 홀더의 끝
 // The caret position right after the inserted fragment: the next holder's start, or the fragment's last holder's end if there is none
-function caretAfter(doc: NabiDoc, lastTop: number, env: SchemaEnv): Position {
+function caretAfter(doc: NabiDoc, lastTop: number, env: SchemaEnv, endAtFragment = false): Position {
   const all = holders(doc, env);
+  if (endAtFragment) {
+    for (let index = all.length - 1; index >= 0; index -= 1) {
+      const last = all[index]!;
+      if (last.path[0] === lastTop) return { path: last.path, offset: holderLength(last.node, env) };
+    }
+  }
   for (const holder of all) {
     if ((holder.path[0] as number) > lastTop) return { path: holder.path, offset: 0 };
   }
@@ -104,9 +110,13 @@ function spliceInline(
   const runs = runsOf(holder, terminal);
   const length = holderLength(holder, env);
   const at = Math.max(0, Math.min(focus.offset, length));
-  const middle = runsOf({ w: P, ch: inline }, terminal);
+  let middle = runsOf({ w: P, ch: inline }, terminal);
+  if (holder.w === 'code') {
+    middle = middle.filter((run) => run.kind === 'text' || run.node.w === BR).map((run) => ({ ...run, marks: [] }));
+  }
+  if (middle.length === 0) return null;
   const next = fromRuns([...sliceRuns(runs, 0, at), ...middle, ...sliceRuns(runs, at, length)]);
-  const grown = holderLength({ w: P, ch: inline }, env);
+  const grown = middle.reduce((total, run) => total + (run.kind === 'text' ? run.text.length : 1), 0);
   return {
     doc: replaceAt(doc, focus.path, [withChildren(holder, next)]),
     selection: caretAt({ path: focus.path, offset: at + grown }),
@@ -123,12 +133,13 @@ function inlineFragment(fragment: readonly ElementNode[], env: SchemaEnv): boole
 
 // 캐럿이 접힌 상태를 전제한다 — 범위였다면 부르는 쪽(mount)이 먼저 deleteRange를 한 group 안에서 돌린다
 // Assumes a collapsed caret; for a range, the caller (mount) runs deleteRange first, inside the same undo group
-export function insertFragmentOp(fragment: readonly ElementNode[]): Command {
+export function insertFragmentOp(fragment: readonly ElementNode[], endAtFragment = false): Command {
   const insert: Command = (doc, sel, _args, env) => {
     if (fragment.length === 0 || !isCollapsed(sel)) return null;
     const focus = sel.focus;
     const holder = nodeAt(doc, focus.path);
     if (!holder) return null;
+    if (holder.w === 'code') return spliceInline(doc, focus, holder, fragment, env);
 
     if (focus.path.length > 1 && holder.w === P) {
       const parentPath = focus.path.slice(0, -1);
@@ -167,7 +178,7 @@ export function insertFragmentOp(fragment: readonly ElementNode[]): Command {
     // If the caret's top-level node is an empty paragraph, the fragment takes its place
     if (topNode.w === P && topNode.ch.length === 0) {
       const next = [...doc.slice(0, top), ...fragment, ...doc.slice(top + 1)] as NabiDoc;
-      return { doc: next, selection: caretAt(caretAfter(next, top + fragment.length - 1, env)) };
+      return { doc: next, selection: caretAt(caretAfter(next, top + fragment.length - 1, env, endAtFragment)) };
     }
 
     // 인라인 조각 + 글 홀더는 문단을 안 가르고 캐럿 자리에 글줄로 잇는다(260823_008) — 최상위든 칸 속이든 조각의 생김새로 갈리지 캐럿 깊이로 안 갈린다
@@ -201,7 +212,7 @@ export function insertFragmentOp(fragment: readonly ElementNode[]): Command {
     const before = focus.path.length === 1 && focus.offset <= 0;
     const at = before ? top : top + 1;
     const next = [...doc.slice(0, at), ...fragment, ...doc.slice(at)] as NabiDoc;
-    return { doc: next, selection: caretAt(caretAfter(next, at + fragment.length - 1, env)) };
+    return { doc: next, selection: caretAt(caretAfter(next, at + fragment.length - 1, env, endAtFragment)) };
   };
   return (doc, selection, args, env) => {
     const path = isolationPath(doc, selection.focus.path, env);
@@ -211,7 +222,12 @@ export function insertFragmentOp(fragment: readonly ElementNode[]): Command {
     const repaired = cocoon([{ ...owner, ch: fragment }], env)[0];
     if (!repaired || repaired.w !== owner.w || !repaired.ch.every(isElement)) return null;
     const local = caretAt({ path: selection.focus.path.slice(path.length), offset: selection.focus.offset });
-    const result = insertFragmentOp(repaired.ch as readonly ElementNode[])(owner.ch as NabiDoc, local, args, env);
+    const result = insertFragmentOp(repaired.ch as readonly ElementNode[], endAtFragment)(
+      owner.ch as NabiDoc,
+      local,
+      args,
+      env,
+    );
     if (!result) return null;
     const global = (at: Position): Position => ({ path: [...path, ...at.path], offset: at.offset });
     return {

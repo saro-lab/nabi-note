@@ -5,14 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
-## [1.5.6] - Unreleased
+## [1.6.0] - 2026-10-31
 
 ### Added
 
-- Images and YouTube videos can be dragged between blocks and into or out of table cells and float regions. YouTube videos have a grip above the player. An insertion line previews the destination; moves preserve width and alignment and can be reverted with one undo step.
+- Added move handles for quotes, details, code boxes, float regions, tables, images, and YouTube videos. Handles appear when the caret is inside a block or an image or video is selected, and support moving the whole object with a mouse or mobile touch. Images can also be dragged directly, and images and videos can move between blocks and into or out of table cells and float regions. Moves preserve content, formatting, size, alignment, details open state, and code language, support one-step undo, and reject destinations that would lose nested structure or formatting.
+- Dragging shows an insertion line and a translucent copy that follows the mouse or finger, retaining the displayed size and initial grab offset. Videos use a static play symbol without starting another player. Dragging near an edge scrolls the document, and the preview disappears on drop or cancellation.
+- Focused move handles support Alt+Up/Down to move one block at a time. Escape or touch cancellation cancels a drag.
+- Pasting content consisting entirely of an HTTP(S) URL now inserts a link immediately. The `mountSurface()` callback `onPasteUrl(url, isSameOrigin, path)` receives the complete URL, same-origin status, and the path including query and fragment to choose display text. It supports synchronous and asynchronous results; pending responses show the URL, and valid text later updates only that link's label. Empty results or errors retain the URL.
+- Added `joinOnDelete` for container wings. It defaults to off; enabling it allows boundary Delete/Backspace to join a neighboring paragraph with text inside the container. `listFamily()` and the built-in quote enable it. Joining never skips a protected nested block or crosses an editing boundary such as a table cell.
+
+### Changed
+
+- Changed comparison gutter apply buttons to bold arrow icons without a background or border, keeping connector lines visible. Their background appears on hover or keyboard focus.
+- Opening preview now scrolls to the current caret line, including documents with footnotes, long paragraphs, and nested table or list content. Closed details ancestors open in preview to reveal the caret.
+- Delete or Backspace toward an image adjacent to an empty paragraph now removes only the paragraph and selects the preserved image. At a nonempty paragraph boundary, the paragraph remains and the object is selected first; another deletion removes it. The same rule applies to videos, rules, tables, code, details, floats, and custom blocks that have not enabled text joining. Paragraphs, headings, lists, and quotes retain text joining, while deleting an empty paragraph before them preserves their formatting and structure. Cell boundaries and select-first deletion for footnotes and file attachments remain intact, and mobile input follows the same boundary policy.
 
 ### Fixed
 
+- Move handles in the editor are hidden while dragging an object by its handle, so scrolling no longer leaves an icon at its previous position. After dropping or canceling, handles return at the object's current position.
+- Fixed same-site links in the documentation editor triggering the router to navigate or scroll to the top. Links in preview footnote bubbles and history previews now open in a new window, matching preview body links.
+- Fixed code boxes splitting when cutting and pasting part of their source. Pasting inside code always inserts plain text, preserves line breaks and indentation, and leaves the caret after the inserted text for continued typing.
+- Fixed move handles staying at their previous position when selecting an image expands the context toolbar. Handles now follow the object's current position when the toolbar or surrounding editor layout changes size.
+- Fixed the comparison fold button appearing the same when on and off. The on state now has a solid accent background and a bold white icon; the button is dimmed when no changes are available.
 - Fixed image upload progress appearing outside the starting float region. Drops, pasted files, and file-picker uploads now keep progress and completed images inside the same float, or inside the starting table cell when it is nested in a float.
 
 ## [1.5.5] - 2026-10-26

@@ -238,6 +238,9 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     if (wing.singleParagraph === true && wing.holds !== 'blocks') {
       fail(`"${wing.w}" 의 singleParagraph 는 blocks holder에만 사용할 수 있습니다`);
     }
+    if (wing.joinOnDelete !== undefined && (typeof wing.joinOnDelete !== 'boolean' || wing.place !== 'container')) {
+      fail(`"${wing.w}" 의 joinOnDelete는 container에서 true/false로 지정해야 합니다`);
+    }
     if (
       wing.isolating !== undefined &&
       (typeof wing.isolating !== 'boolean' || wing.place !== 'container' || wing.holds !== 'blocks')
@@ -378,6 +381,7 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
   const mdAppendices = Object.create(null) as Record<string, MdAppendix>;
   const singleParagraph: string[] = [];
   const isolating: string[] = [];
+  const joinOnDelete: string[] = [];
   const noAlign: string[] = [];
   const boolAttrs = new Set<string>();
   const attrSchemas = new Map<string, ReadonlySet<string>>();
@@ -432,6 +436,7 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
       (wing.holds === 'inline' ? inlineHolders : blockHolders).push(wing.w);
       if (wing.singleParagraph) singleParagraph.push(wing.w);
       if (wing.isolating) isolating.push(wing.w);
+      if (wing.joinOnDelete) joinOnDelete.push(wing.w);
     }
     for (const [part, decl] of Object.entries(wing.parts ?? {})) {
       if (!builtinTypes.has(part)) {
@@ -537,6 +542,7 @@ export function makeRegistry(wings: readonly Wing[], extra?: RegistryExtra): Reg
     ...(Object.keys(repair).length > 0 ? { repair } : {}),
     ...(singleParagraph.length > 0 ? { singleParagraph: new Set(singleParagraph) } : {}),
     ...(isolating.length > 0 ? { isolating: new Set(isolating) } : {}),
+    ...(joinOnDelete.length > 0 ? { joinOnDelete: new Set(joinOnDelete) } : {}),
   };
   $closeKnownTypes(env, [P, BR, ...byType.keys()]);
   $closeBuiltinAttrs(env, closedAttrs);

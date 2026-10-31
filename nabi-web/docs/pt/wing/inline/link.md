@@ -19,6 +19,34 @@ Links guardam apenas `http:`, `https:` e caminhos do mesmo site que começam com
 const selected = wings().use('a').build()
 ```
 
+## Colar URLs
+
+Se todo o conteúdo colado, sem os espaços em branco no início e no fim, for uma URL `http://` ou `https://` válida, ele será inserido imediatamente como link. URLs dentro de frases, textos com várias URLs e caminhos relativos seguem o comportamento de colagem existente. Em blocos de código e editores sem o wing de links, o conteúdo continua como texto. Dados internos válidos da área de transferência copiados do editor têm prioridade para preservar a formatação original.
+
+Use o callback `onPasteUrl` de `mountSurface()` para escolher o texto exibido do link.
+
+| Argumento | Valor |
+| --- | --- |
+| `url` | A URL completa sem os espaços em branco no início e no fim |
+| `isSameOrigin` | Se o protocolo, o host e a porta da URL correspondem à origem do documento que contém o editor |
+| `path` | O caminho que começa com `/`, incluindo a consulta e o fragmento. Exemplo: `/posts/1?a=2#top` |
+
+```ts
+const surface = mountSurface({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#editor')!,
+  onPasteUrl(url, isSameOrigin, path) {
+    if (isSameOrigin && path === '/guide') return 'NABI NOTE'
+    return url
+  },
+})
+```
+
+Uma string retornada que não contenha apenas espaços em branco passa a ser o texto exibido. Se o callback estiver ausente, retornar um valor vazio ou que não seja uma string, ou falhar, a URL colada permanece como texto exibido. As strings retornadas nunca são interpretadas como HTML e não alteram o endereço do link.
+
+O callback também aceita funções `async` e promises. O link com a URL é inserido imediatamente enquanto a resposta está pendente; um resultado válido recebido depois altera apenas o texto exibido desse link. Um resultado tardio é ignorado se o link tiver sido editado ou excluído, um novo documento tiver sido carregado ou a superfície tiver sido desmontada.
+
 ## Estilos CSS
 
 Estilize links comuns com `.nabi-content a`, e links de anexo separadamente com `.nabi-content a[data-nabi-file]`.

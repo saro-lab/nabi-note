@@ -51,6 +51,10 @@ export const ICON_ASSETS: Readonly<Record<string, readonly [string, string]>> = 
     new URL('./icons/diff-fold.svg?no-inline', import.meta.url).href,
     new URL('./icons/diff-fold-dark.svg?no-inline', import.meta.url).href,
   ],
+  'diff-fold-active': [
+    new URL('./icons/diff-fold-active.svg?no-inline', import.meta.url).href,
+    new URL('./icons/diff-fold-active.svg?no-inline', import.meta.url).href,
+  ],
   'diff-next': [
     new URL('./icons/diff-next.svg?no-inline', import.meta.url).href,
     new URL('./icons/diff-next-dark.svg?no-inline', import.meta.url).href,

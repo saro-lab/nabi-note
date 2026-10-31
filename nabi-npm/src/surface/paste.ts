@@ -1,10 +1,11 @@
 // 붙여넣기 정책만 산다(DOM은 mount 몫이라 테스트가 그대로 잡는다). 규칙: 후보 0=파일 처리, 1=안 묻고 바로, 2+=판을 띄운다(ui의 $ask.choose를 문 하나로 지난다). 판이 뜬 사이 문서가 바뀌면 아무것도 안 붙인다(엉뚱한 자리보다 낫다). custom MIME(v1)을 먼저 검증하고, 실패하면 HTML→평문 순으로 fallback한다
 // Holds only paste policy (DOM handling is mount's job, so this stays testable without one). Rules: 0 candidates means files; 1 skips the prompt; 2+ opens a menu (calling ui's $ask.choose through one door). If the document changes while the menu is open, nothing gets pasted (safer than landing in the wrong place). The custom MIME (v1) is validated and tried first, falling back to HTML then plain text
 import { $fromJson, cocoon, isElement, type NabiNode } from '../schema/index.js';
+import { $isKnownType } from '../schema/env.js';
 import { $guarded, $ownDataArray, $ownDataObject, $snapshotNodes } from '../schema/json.js';
 import { caretAt, isCollapsed, marksAt, ordered, selectionExists, type Selection } from '../caret/index.js';
-import { deleteRange, isolationPath } from '../doc/index.js';
-import { fragmentOf } from '../html/index.js';
+import { deleteRange, isolationPath, nodeAt } from '../doc/index.js';
+import { fragmentOf, safeUrl } from '../html/index.js';
 import {
   $isBuiltinHtmlFilter,
   TEXT_ICON,
@@ -18,6 +19,7 @@ import {
 import { localeOf, translate, type LocaleText } from '../locale/index.js';
 import { coreCommands, hostOf, type ChooseOption, type Nabi } from '../editor/index.js';
 import { insertFragmentOp } from './fragment.js';
+import { resolvePastedUrl, type PasteUrlHandler } from './paste-url.js';
 
 export interface PasteFlowOptions {
   readonly nabi: Nabi;
@@ -30,6 +32,9 @@ export interface PasteFlowOptions {
   // 글자가 하나도 없는 붙여넣기의 마지막 처리기(업로드)
   // The last-resort handler (upload) for a paste with no text candidates at all
   readonly fileSink?: (files: readonly File[]) => void;
+  readonly onPasteUrl?: PasteUrlHandler;
+  readonly origin?: string;
+  readonly signal?: AbortSignal;
 }
 
 // 이름 하나 고르기 — 사전 키(내장)든 다국어 레코드(호스트·wing)든 같은 문을 지난다. 사전에 없는 키는 그대로 나온다(폴백) — 호스트가 준 맨 글자도 그래서 산다
@@ -55,7 +60,7 @@ export function makePasteFlow(
 
   // 후보 하나를 실제로 붙인다
   // Actually pastes one candidate
-  const put = (candidate: PasteCandidate, target?: Selection): boolean => {
+  const put = (candidate: PasteCandidate, target?: Selection, endAtFragment = false): boolean => {
     const built = $guarded(`paste candidate ${candidate.id}`, null, () => $snapshotNodes(candidate.build()));
     if (!built) return false;
     const chosen = target ?? nabi.getSelection();
@@ -81,7 +86,7 @@ export function makePasteFlow(
     // The fragment must also satisfy the document's invariants; wrapping and splitting are cocoon's job
     const fragment = $guarded(`paste candidate ${candidate.id} normalize`, null, () => fragmentOf(cocoon(built, env)));
     if (!fragment || fragment.length === 0) return false;
-    const insert = insertFragmentOp(fragment);
+    const insert = insertFragmentOp(fragment, endAtFragment);
     return hostOf(nabi).applyRaw((doc, _selection, args, editEnv) => {
       const selection = chosen;
       if (isCollapsed(selection)) return insert(doc, selection, args, editEnv);
@@ -111,8 +116,36 @@ export function makePasteFlow(
   };
 
   return (data, files, target) => {
+    const chosen = target ?? nabi.getSelection();
+    const [start, end] = ordered(chosen);
+    const inCode =
+      nodeAt(hostOf(nabi).doc(), start.path)?.w === 'code' &&
+      start.path.length === end.path.length &&
+      start.path.every((value, index) => value === end.path[index]);
+    if (inCode && data.plain !== '') return put(textCandidate(data.plain, TEXT_LABEL, TEXT_ICON), chosen);
+
     const internal = customCandidate(data.custom);
     if (internal && put(internal, target)) return true;
+
+    const url = data.plain.trim();
+    if (/^https?:\/\/\S+$/i.test(url) && $isKnownType(env, 'a')) {
+      const href = safeUrl(url);
+      const chosen = target ?? nabi.getSelection();
+      const [start] = ordered(chosen);
+      if (href !== null && nodeAt(hostOf(nabi).doc(), start.path)?.w !== 'code') {
+        let inserted = false;
+        nabi.group(() => {
+          inserted = put(
+            { id: 'url', label: 'url', build: () => [{ w: 'p', ch: [{ w: 'a', a: { href }, ch: [url] }] }] },
+            chosen,
+            true,
+          );
+          if (inserted && options.onPasteUrl)
+            resolvePastedUrl(nabi, url, href, options.onPasteUrl, options.origin, options.signal);
+        });
+        return inserted;
+      }
+    }
 
     if (data.html !== '') {
       const filter = options.filters.find($isBuiltinHtmlFilter);
@@ -121,6 +154,7 @@ export function makePasteFlow(
       if (data.plain !== '') return put(textCandidate(data.plain, TEXT_LABEL, TEXT_ICON), target);
       return false;
     }
+    if (inCode) return false;
 
     if (data.custom !== '' && data.plain !== '') {
       return put(textCandidate(data.plain, TEXT_LABEL, TEXT_ICON), target);

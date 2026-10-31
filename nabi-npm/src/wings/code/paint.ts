@@ -8,6 +8,8 @@
 // The actual highlighting logic lives in `code/` (shared with the viewer) — this file only handles the editor-side scheduling.
 import { attachCodeCopy } from '../../code/controls.js';
 import { hostOf } from '../../editor/index.js';
+import { isObjectSelection, sameSelection } from '../../caret/index.js';
+import { nodeAt } from '../../doc/index.js';
 import { isElement, type ElementNode, type NabiNode } from '../../schema/index.js';
 import type { Attach } from '../../wing/index.js';
 import { applyTokens, tokensFor, type CodeHighlighter } from '../../code/index.js';
@@ -94,7 +96,7 @@ export interface PaintOptions {
 }
 
 export function makeCodeAttach(options: PaintOptions = {}): Attach {
-  return ({ root, nabi, doc, pathOfKey, onDispose }) => {
+  return ({ root, nabi, doc, env, pathOfKey, onDispose }) => {
     const view = root.ownerDocument.defaultView;
     let frame = 0;
     let composing = false;
@@ -109,6 +111,19 @@ export function makeCodeAttach(options: PaintOptions = {}): Attach {
     const sweep = (): void => {
       frame = 0;
       if (composing) return;
+      const selection = nabi.getSelection();
+      const selectedHolder = isObjectSelection(doc(), selection, env) ? nodeAt(doc(), selection.anchor.path) : null;
+      const selectedWrapper = selectedHolder?._id
+        ? root.querySelector(`[data-key="${selectedHolder._id.replace(/["\\]/g, '\\$&')}"]`)
+        : null;
+      const domSelection = root.ownerDocument.getSelection();
+      const active = root.ownerDocument.activeElement;
+      const ownsSelection =
+        (active === root || root.contains(active)) &&
+        domSelection !== null &&
+        selectedWrapper?.contains(domSelection.anchorNode) &&
+        selectedWrapper.contains(domSelection.focusNode);
+      let repainted = false;
       for (const [el, control] of controls) {
         if (!root.contains(el) || !el.querySelector(':scope > .nabi-code-copy')) {
           control.dispose();
@@ -157,8 +172,24 @@ export function makeCodeAttach(options: PaintOptions = {}): Attach {
         const path = pathOfKey(box._id);
         const inBox = path !== null && samePath(sel.focus.path, path) && samePath(sel.anchor.path, path);
         applyTokens(code, tokens);
+        repainted = true;
         if (inBox) restoreCaretIn(code, { start: sel.anchor.offset, end: sel.focus.offset });
         painted.set(el, signature);
+      }
+      // WebKit은 색칠 DOM이 바뀌면 바깥 물체 선택도 안쪽 캐럿으로 접을 수 있다.
+      // WebKit can collapse an enclosing object selection into the code when highlighting changes its DOM.
+      if (repainted && ownsSelection && selectedWrapper?.isConnected && sameSelection(selection, nabi.getSelection())) {
+        try {
+          domSelection.setBaseAndExtent(
+            selectedWrapper,
+            selection.anchor.offset === 0 ? 0 : selectedWrapper.childNodes.length,
+            selectedWrapper,
+            selection.focus.offset === 0 ? 0 : selectedWrapper.childNodes.length,
+          );
+        } catch {
+          // 칠하는 동안 선택 대상이 바뀌면 복원을 생략한다.
+          // Skip restoration if the selection target changed during painting.
+        }
       }
     };
 

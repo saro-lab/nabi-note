@@ -390,7 +390,8 @@ export function mountDiff(options: DiffMountOptions): DiffMount {
         button.type = 'button';
         button.className = 'nabi-diff-btn nabi-diff-merge-action';
         button.dataset['mergeChange'] = change.id;
-        button.textContent = '>>';
+        button.innerHTML =
+          '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 3 5 5-5 5m5-10 5 5-5 5"/></svg>';
         button.title = `${t('diff.mergePrevious')} ${at + 1}`;
         button.setAttribute('aria-label', button.title);
         button.addEventListener('click', () => {

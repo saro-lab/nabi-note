@@ -20,6 +20,8 @@ The official catalog lists wings in a stable order. `defaultWings` and `wings().
 
 Native typing and IME composition at a link end preserve the actual DOM side: text inserted outside the anchor stays outside its stored link range, including after display-name changes and subsequent deletion or undo/redo. Typing inside the anchor still extends the link.
 
+Pasting a complete HTTP(S) URL creates a link immediately when the `a` wing is registered. `mountSurface()` accepts `onPasteUrl(url, isSameOrigin, path)` to choose plain display text synchronously or asynchronously; pending or invalid results keep the original URL. Code blocks retain plain text. See `io-security.md#pasted-url-links` for recognition, callback arguments, and late-update behavior.
+
 Value factories are `makeTypefaceWing`, `makeFontSizeWing`, `makeTextColorWing`, and `makeHighlightWing`, each with `{ values }`.
 
 With a collapsed caret, font size and typeface target the paragraph's current text. Color/highlight target the current mark span or arm future text. A selected range always remains the target.
@@ -81,6 +83,10 @@ Headings and drop caps target inner text paragraphs. Header cells (`td.a.th === 
 
 Code boxes use the monospace stack at 0.75rem. They show `a.lang` in their upper-right corner using the UI sans font. With the editor attachment or published-page viewer, a copy button replaces the label in the same position on hover or button keyboard focus and stays visible on touch devices. Neither label nor button reserves a header row or pushes the first source line downward. It copies only the current source text, preserving line breaks and whitespace. The language label, copy control, and copy feedback never become stored text, HTML, or undo entries. Clearing the language removes the label while retaining the copy action. Published HTML keeps the language label with CSS alone; copying requires `attachViewer()` or `attachCodePaint()` from `nabi-note/viewer`.
 
+Pasting within a code box always inserts plain text, with clipboard plain text taking priority over internal fragments or HTML. Cut-and-paste preserves the single code box, its language, line breaks, and indentation, and leaves the caret after the inserted text. Without plain text, supported internal or HTML fragments contribute only recoverable text and line breaks. Code paste never opens a format chooser, creates links, or uploads files. See `io-security.md#paste`.
+
+Code boxes, details blocks, and quotes show an editor-only move handle while the caret is inside. Details also expose it from the summary while closed. Mouse, touch, and Alt+ArrowUp/Down handle movement preserve all contents and attributes and support one-step undo. Destinations that would unwrap nested tables or floats, or remove heading formatting, are rejected. Handles hide during dragging and return at their updated positions after dropping or canceling. See `io-security.md#media-dragging`.
+
 Leaving a container with double-Enter uses a 180 ms window by default. Double-Escape and double-Shift retain their 350 ms defaults. An explicit `mountSurface({ doubleEnterMs })` also sets the double-Escape window.
 
 Details never contain H1-H6 headings, whether open or closed. Heading commands and toolbar availability exclude every paragraph below details, including nested containers and table cells. JSON/HTML/paste repair strips heading attributes recursively while preserving text, inline formatting, and other paragraph attributes. Wrapping headings in details removes heading formatting; undo restores the prior headings.
@@ -94,6 +100,8 @@ Dragging across table cells shows a crosshair cursor inside the editor until mou
 Copying a cell range uses its highlighted rectangle, including merged-cell expansion, in every clipboard format. Internal data and HTML preserve the cropped table structure and formatting; plain text contains only the selected cell contents. Cutting the range clears only those cells and supports one-step undo. A text selection inside a single cell keeps ordinary text-copy behavior. See `io-security.md`.
 
 ### Table cell editing
+
+A caret inside a table exposes an editor-only move handle above the table. Mouse or touch dragging moves the whole table with its cell contents, formatting, width, and alignment intact. Tables may move into and out of floats, but not into table cells. A table containing headings cannot move into details because that would remove heading formatting. The insertion line previews the target and one undo restores the move. See `io-security.md#media-dragging`.
 
 Cells contain multiple paragraphs and built-in blocks, including images, lists, quotes, code, details, dividers, and video. Nested tables and floats are not allowed. JSON, HTML, and paste normalization unwrap those prohibited descendants while preserving their content in order. Ordinary cells permit headings; header cells remove heading attributes recursively while preserving text and other formatting.
 
@@ -190,6 +198,7 @@ Stored shape:
 - `unwrapFloat()` replaces the wrapper with its child blocks, preserving content. Each command is undoable.
 - Normalization repairs missing/invalid stored attributes to right/40, provides an empty paragraph when necessary, and unwraps nested float descendants without losing their content.
 - Internal image/video/table/divider insertion, upload commits, and list/quote/details/code conversion operate within the float using `Wing.scopedCommands`. A selection crossing that scope boundary is rejected for these commands. Pasting text, rich fragments, or a single table/image into an inner paragraph also stays inside the float and supports undo. Existing operations outside floats retain their behavior.
+- A caret inside the region exposes an editor-only move handle above it. Mouse or touch dragging moves the whole region, preserving its contents, side, width, and wrapper alignment. Floats move only between root-level blocks; nested destinations are rejected. See `io-security.md#media-dragging`.
 - The context toolbar shows left/right controls, a four-step maximum-width range, and a float-with-X unwrap icon directly beside the width readout. The icon retains the localized unwrap label for tooltips and accessibility; its theme key is `context-float-unwrap`. A range gesture commits on change, not every intermediate input event.
 - HTML uses `div[data-nabi-float="left|right"][data-nabi-float-width]` inside the standard object paragraph wrapper. The importer recognizes only this marker, not arbitrary external float styles. Markdown uses the HTML fallback.
 - Load the same registry and wing CSS for editor, stored rendering, SSR, preview, and diff. Older/missing-wing importers can unwrap the unknown region and discard its attributes; update readers before storing the new word.
@@ -235,6 +244,8 @@ The partial text selection wraps the whole touched paragraph. The caret moves in
 | `youtube` | `youtubeWing` | Stores an 11-character video ID and width 50..100 |
 
 New images default to width 60 and centered wrapper alignment. New YouTube objects default to width 70 and centered wrapper alignment. Object alignment belongs to the wrapper paragraph, not the object.
+
+Selected images and YouTube videos expose an editor-only move handle with mouse and touch dragging, including mobile browsers. Native image dragging and the YouTube grip remain available on desktop. Moves preserve size and wrapper alignment and support one-step undo; see `io-security.md#media-dragging`.
 
 The image button's default URL prompt can be replaced with host UI through `mountToolbar({ panels: { img: { mode: 'inline', render: renderer } } })`. This is a toolbar mount option, not an image-wing option. Choose `modal` for a window on a full-page translucent backdrop, or `inline` for an anchored desktop panel that fills the screen on mobile. Both provide an empty root for host UI. Function-only entries keep their previous behavior. Use `close()` for a custom close button and the renderer context's `insertImage(url)` to insert the selected URL at the opening selection. URL policy remains unchanged, and the hook does not upload files. See `quickstart-npm.md` and `api-reference.md`.
 

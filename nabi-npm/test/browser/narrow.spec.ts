@@ -90,7 +90,7 @@ test('viewport, open table picker, and context controls share the breakpoint', a
   const root = page.locator('#mobile-a');
   const row = root.locator('.nabi-toolbar-row');
   await root.locator('.nabi-strip [data-name="table"]').click();
-  const panel = root.locator('.nabi-panel');
+  const panel = page.locator('.nabi-grid-panel');
   await expect(panel).not.toHaveClass(/nabi-hosted-panel/);
   await expect(panel).toHaveCSS('position', 'absolute');
   await expect(panel.locator('.nabi-cell:visible')).toHaveCount(64);
@@ -111,8 +111,8 @@ test('viewport, open table picker, and context controls share the breakpoint', a
   await expect(panel).toHaveCount(0);
   await root.locator('.nabi-compact-bar > [data-name="tools"]').click();
   await root.locator('.nabi-toolbox [data-name="table"]').click();
-  await expect(panel).toHaveClass(/nabi-hosted-panel/);
-  await expect(panel).toHaveCSS('position', 'static');
+  await expect(panel).toHaveAttribute('aria-modal', 'true');
+  await expect(panel).toHaveAttribute('role', 'dialog');
   await expect(panel.locator('.nabi-cell:visible')).toHaveCount(25);
   await page.setViewportSize({ width: 576, height: 800 });
   await expect(row).not.toHaveClass(/nabi-narrow/);

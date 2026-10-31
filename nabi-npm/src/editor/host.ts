@@ -15,10 +15,12 @@ export interface HistoryExtension {
 
 export interface NabiHost {
   doc(): NabiDoc;
+  previewHtml(): string;
   readonly env: EditEnv;
   readonly armed: ArmedState;
   readonly ask: Ask;
   readonly toast: Toast;
+  reportError(error: unknown): void;
   bindToast(sink: Toast): () => void;
   bindChoose(sink: Choose): () => void;
   // 표면 attach가 상황 줄에 "이 wing의 입력 판을 열어 달라"고 부탁하는 문 — 표면은 ui를 모르므로 ui가 받을 자리를 건다.

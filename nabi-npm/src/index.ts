@@ -50,7 +50,7 @@ export type {
 
 // --- 편집 표면 ---------------------------------------------------------------------------------
 export { mountSurface } from './surface/index.js';
-export type { EditSurfacePort, Surface, SurfaceActions, SurfaceOptions } from './surface/index.js';
+export type { EditSurfacePort, PasteUrlHandler, Surface, SurfaceActions, SurfaceOptions } from './surface/index.js';
 // mount 부속 — 호스트 배선(전송 훅·저장소)이 있어야 사는 것들.
 export {
   browserFileStore,

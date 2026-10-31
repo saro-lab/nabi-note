@@ -301,7 +301,16 @@ const IMG = { w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] };
   ]);
   nabi.select(at([1], 1));
   actions.backspace();
-  eq('래퍼 1 백스페이스 = 물건 통째 삭제', nabi.getJson(), [{ w: 'p', ch: ['ab'] }]);
+  eq('래퍼 1 백스페이스 = 물건 선택', nabi.getSelection(), {
+    anchor: { path: [1], offset: 0 },
+    focus: { path: [1], offset: 1 },
+  });
+  eq('선택할 때 물건 유지', nabi.getJson(), [
+    { w: 'p', ch: ['ab'] },
+    { w: 'p', ch: [IMG] },
+  ]);
+  actions.backspace();
+  eq('선택한 물건은 다음 백스페이스로 삭제', nabi.getJson(), [{ w: 'p', ch: ['ab'] }]);
 }
 
 // ─── 목록 첫 항목의 백스페이스 — 겨누기가 아니라 목록의 제 규칙 ────────────────

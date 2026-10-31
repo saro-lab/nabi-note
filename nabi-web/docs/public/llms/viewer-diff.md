@@ -1,6 +1,6 @@
 # Viewer and diff
 
-The 1.5.6 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
+The 1.6.0 contract includes click merge and the standalone comparison guide in every documentation locale. Its demo messages and sample documents follow the page language.
 
 These features live in separate package entry points so a published page does not pay for the editor.
 
@@ -119,6 +119,8 @@ Footnote navigation is disabled inside `.nabi-editing`, `.nabi-footnote-area`, a
 
 There is no close button. The bubble reads plain text from the `data-nabi-fn` attribute, never parses it as HTML, and turns valid explicit HTTP(S) URLs into native links using the shared URL validator. Displayed text remains unchanged. On published pages its numbered control is a native button; the bubble uses `role="group"`. The bubble is appended inside the nearest `.nabi-content`, inherits its tokens, and uses the base sans stack at 0.75 of the body size (`fs` `xs`, two steps below the default). Padding is `.6em` on all sides, and the bubble is excluded from content block spacing so opening it leaves the endnote list and document height unchanged. Long text scrolls inside the bubble, which stays within the viewport. Each attachment is scoped to its root, so several documents on one page do not open each other's footnotes. `refresh()` and `unmount()` remove the bubble and listeners and restore the marker attributes. `openPreview()` does not attach the viewer by itself; call `attachViewer()` from its `onBody` hook.
 
+Inside a preview, bubble links use `target="_blank"` and `rel="noopener noreferrer"`, matching preview body and endnote links. Published-page bubble links retain native same-window behavior.
+
 Standalone exports include `FOOTNOTE_ATTR` and `attachFootnotes`.
 
 ## Diff entry
@@ -173,11 +175,15 @@ diff.unmount();
 
 The mount creates a read-only two-pane view, previous/next navigation, change count, unchanged-region folding, scroll mapping, and connector graphics. Only-changes mode is enabled by default and keeps one context block around each change. With no changes, both complete documents remain visible and the fold toggle is disabled. Updates preserve the user's fold preference, applying it only when changes exist. Folded regions also hide float blocks. The mount injects `DIFF_CSS` with exact-string reference counting per document, so it can stand alone; load `nabi.css` too when rendered document content uses wing styles.
 
+The fold toggle keeps its "Only changes" accessible name and exposes the mode through `aria-pressed`. The on state has a solid accent background and a bold white default icon. The off state has a neutral icon and no selected background, while the unavailable state is disabled and dimmed. The `diff-fold` icon theme key stays the same in every state; custom images retain their colors.
+
 `unmount()` removes generated content and the `.nabi-diff` class. The final reference also removes the package-owned injected diff style; a matching style supplied by the host is never removed.
 
 ### Previous-to-current click merge
 
 Add `onMerge` to expose `>>` controls for changed paragraph/line groups. Omitting it keeps the existing read-only behavior. Structural blocks are replaced atomically; character highlights do not define independent merge actions. Applying an added group removes the current-only addition; applying a removed group restores the previous content. A detected move groups its removal and insertion so the content is not duplicated.
+
+Gutter apply controls use bold double-chevron icons with no resting background or border, keeping connector lines visible. Hover and keyboard focus add a background; keyboard focus also has an inset outline.
 
 The standalone documentation demo also opens read-only by default. Its optional `merge` prop explicitly enables the apply controls and callback result preview.
 

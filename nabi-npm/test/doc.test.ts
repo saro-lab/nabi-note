@@ -30,6 +30,7 @@ const ENV: EditEnv = {
     boolAttrs: ['dc', 'o', 'ck'],
   }),
   singleParagraph: new Set(['td']),
+  joinOnDelete: new Set(['ul', 'ol', 'tl', 'quote']),
 };
 
 // --- 재료 ------------------------------------------------------------------------------------
@@ -192,10 +193,10 @@ function checked(name: string, result: EditResult): EditResult {
   eq('BS: 아무 일 없음', r3.doc, [p(['ab'])]);
 }
 {
-  // 문단 첫머리 — 앞이 **속 없는 물건**이면 통째 삭제 (예).
-  const r = checked('BS: 앞 래퍼 통삭제', deleteBackward([wrap(img()), p(['ab'])], at([1], 0), ENV));
-  eq('BS: 래퍼가 사라진다', r.doc, [p(['ab'])]);
-  eq('BS: 캐럿 유지', r.caret, at([0], 0));
+  const r = checked('BS: 앞 물건 선택', deleteBackward([wrap(img()), p(['ab'])], at([1], 0), ENV));
+  eq('BS: 문단과 물건 유지', r.doc, [wrap(img()), p(['ab'])]);
+  eq('BS: 물건 선택 시작', r.anchor, at([0], 0));
+  eq('BS: 물건 선택 끝', r.caret, at([0], 1));
 }
 {
   // 앞이 글을 품은 그릇이면 통째 삭제가 아니라 그 속 마지막 글자리에 이어 붙는다.
@@ -227,18 +228,26 @@ function checked(name: string, result: EditResult): EditResult {
   eq('BS: 뒤 목록은 그대로 남는다', mixed.doc.length, 2);
 }
 {
-  // 래퍼 안 — 1(물건 뒤) 백스페이스 = 물건 통째.
   const r = checked('BS: 래퍼 1', deleteBackward([p(['ab']), wrap(img())], at([1], 1), ENV));
-  eq('BS: 래퍼 1 — 물건 삭제', r.doc, [p(['ab'])]);
-  eq('BS: 래퍼 1 — 앞 문단 끝', r.caret, at([0], 2));
+  eq('BS: 래퍼 1 — 물건 유지', r.doc, [p(['ab']), wrap(img())]);
+  eq('BS: 래퍼 1 — 선택 시작', r.anchor, at([1], 0));
+  eq('BS: 래퍼 1 — 선택 끝', r.caret, at([1], 1));
 
-  const solo = checked('BS: 마지막 물건', deleteBackward([wrap(img())], at([0], 1), ENV));
-  eq('BS: 문서가 비면 빈 문단', solo.doc, [p([])]);
-  eq('BS: 빈 문단 캐럿', solo.caret, at([0], 0));
-
-  const nextOnly = checked('BS: 래퍼 1, 뒤만 있음', deleteBackward([wrap(img()), p(['x'])], at([0], 1), ENV));
-  eq('BS: 다음 처음으로', nextOnly.caret, at([0], 0));
-  eq('BS: 다음만 남는다', nextOnly.doc, [p(['x'])]);
+  const solo = checked('BS: 마지막 물건 선택', deleteBackward([wrap(img())], at([0], 1), ENV));
+  eq('BS: 마지막 물건도 먼저 선택', solo.doc, [wrap(img())]);
+  const removed = checked(
+    'BS: 선택한 마지막 물건 삭제',
+    deleteRange(
+      solo.doc,
+      {
+        anchor: solo.anchor!,
+        focus: solo.caret,
+      },
+      ENV,
+    ),
+  );
+  eq('BS: 문서가 비면 빈 문단', removed.doc, [p([])]);
+  eq('BS: 빈 문단 캐럿', removed.caret, at([0], 0));
 }
 {
   // 래퍼 안 — 0(물건 앞) 백스페이스 = 앞 이웃에 작용.
@@ -251,8 +260,9 @@ function checked(name: string, result: EditResult): EditResult {
   eq('BS: 캐럿 래퍼 0 유지', empty.caret, at([0], 0));
 
   const lump = checked('BS: 래퍼 0 앞이 래퍼', deleteBackward([wrap(img()), wrap(el('table'))], at([1], 0), ENV));
-  eq('BS: 앞 래퍼 통삭제', lump.doc, [wrap(el('table'))]);
-  eq('BS: 캐럿 유지(당겨진 인덱스)', lump.caret, at([0], 0));
+  eq('BS: 앞 래퍼 유지', lump.doc, [wrap(img()), wrap(el('table'))]);
+  eq('BS: 앞 래퍼 선택 시작', lump.anchor, at([0], 0));
+  eq('BS: 앞 래퍼 선택 끝', lump.caret, at([0], 1));
 
   const none = checked('BS: 래퍼 0 앞 없음', deleteBackward([wrap(img())], at([0], 0), ENV));
   eq('BS: 아무 일 없음', none.doc, [wrap(img())]);
@@ -263,12 +273,15 @@ function checked(name: string, result: EditResult): EditResult {
   eq('Del: 병합 — 지금(윗) 속성', merge.doc, [p(['abcd'], { h: 1 })]);
   eq('Del: 캐럿 제자리', merge.caret, at([0], 2));
 
-  const lump = checked('Del: 뒤 래퍼 통삭제', deleteForward([p(['ab']), wrap(img())], at([0], 2), ENV));
-  eq('Del: 래퍼가 사라진다', lump.doc, [p(['ab'])]);
+  const lump = checked('Del: 뒤 래퍼 선택', deleteForward([p(['ab']), wrap(img())], at([0], 2), ENV));
+  eq('Del: 래퍼 유지', lump.doc, [p(['ab']), wrap(img())]);
+  eq('Del: 래퍼 선택 시작', lump.anchor, at([1], 0));
+  eq('Del: 래퍼 선택 끝', lump.caret, at([1], 1));
 
   const w0 = checked('Del: 래퍼 0 = 물건', deleteForward([p(['ab']), wrap(img()), p(['cd'])], at([1], 0), ENV));
-  eq('Del: 물건 통째', w0.doc, [p(['ab']), p(['cd'])]);
-  eq('Del: 앞 문단 끝으로', w0.caret, at([0], 2));
+  eq('Del: 물건 유지', w0.doc, [p(['ab']), wrap(img()), p(['cd'])]);
+  eq('Del: 물건 선택 시작', w0.anchor, at([1], 0));
+  eq('Del: 물건 선택 끝', w0.caret, at([1], 1));
 
   const w1 = checked('Del: 래퍼 1 → 뒤 이웃', deleteForward([wrap(img()), p(['xy'])], at([0], 1), ENV));
   eq('Del: 뒤 문단 첫 글자 삭제', w1.doc, [wrap(img()), p(['y'])]);
@@ -379,7 +392,9 @@ function checked(name: string, result: EditResult): EditResult {
 
   // 속이 없는 물건은 예전대로 통째 삭제다 — 끌어올릴 글이 없다.
   const rule = deleteForward([p(['head']), p([{ w: 'hr', ch: [] }])], at([0], 4), ENV);
-  eq('Delete: 구분선은 통째로 걷힌다', rule.doc, [p(['head'])]);
+  eq('Delete: 구분선은 먼저 선택한다', rule.doc, [p(['head']), p([{ w: 'hr', ch: [] }])]);
+  eq('Delete: 구분선 선택 시작', rule.anchor, at([1], 0));
+  eq('Delete: 구분선 선택 끝', rule.caret, at([1], 1));
 }
 
 // --- 범위 삭제 — 지운 뒤 두 끝이 만난다 ------------------------------------

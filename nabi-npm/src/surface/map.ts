@@ -124,11 +124,12 @@ export function toDomPoint(
     }
     // 봉해진 섬은 통째로 한 칸처럼 건너뛴다(속으로 안 내려간다) — 안 건너뛰면 섬 왼쪽 경계가 첫 글자 앞으로 풀려 캐럿이 안 보이는 자리가 되고 자판도 안 열려 첨부 앞에 이어 쓸 수 없다(attach.ts 규칙 ①). 경계 둘 다 섬 밖(부모의 자식 자리)으로 주고, 속의 자리도 섬 앞으로 접는다
     // A sealed island is skipped whole, like a single unit, never descended into; without this, its left boundary would resolve inside it (counting starts at 0 there), landing the caret somewhere the browser shows no caret or keyboard, blocking typing right before the attachment (attach.ts rule 1). Both boundaries resolve outside the island (as a child position of its parent), and any position inside collapses to the island's front
-    if (node !== el && isSealed(node)) {
+    if (node !== el && (isSealed(node) || isTerminal(node))) {
       const parent = node.parentNode;
       if (!parent) return null;
       const index = Array.prototype.indexOf.call(parent.childNodes, node);
       const size = countAll(node, caretSlot);
+      if (size === 0) return null;
       if (remain < size) return { node: parent, offset: index };
       remain -= size;
       last = { node: parent, offset: index + 1 };

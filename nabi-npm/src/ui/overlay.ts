@@ -9,6 +9,9 @@ import { setPressed, wireIconButton } from './parts/button.js';
 import { openScrim, type Scrim } from './parts/scrim.js';
 import { acquireGestureRoot, HostElementBaseline, HostElementLease, ownsGestureRoot } from '../lifecycle.js';
 import { refreshCompactViewTools, registerCompactViewTools } from './compact.js';
+import { nodeAt, type Position } from '../doc/index.js';
+import { holderElOf, toDomPoint, type DomPoint } from '../surface/map.js';
+import type { NabiHost } from '../editor/index.js';
 
 export const FULLSCREEN_CLASS = 'is-fullscreen';
 
@@ -170,6 +173,8 @@ export interface Overlay {
 
 export function openPreview(options: PreviewOptions): Overlay {
   const owner = options.surface.ownerDocument;
+  const host = hostOf(options.nabi);
+  const focus = options.nabi.getSelection().focus;
   const t = options.translator ?? makeTranslator(options.locale);
   const copy = new Translations(t);
   const direction =
@@ -189,9 +194,10 @@ export function openPreview(options: PreviewOptions): Overlay {
   close.innerHTML = iconHtml('panel-preview-close', 'close');
 
   const body = make(owner, 'div', 'nabi-content nabi-preview-body');
-  // 보기 HTML 그대로다 — 태그를 다루는 render 쪽 함수 하나가 이미 값을 안전하게 처리했다.
-  // This is the raw view HTML as-is — the single tag-building function inside render already sanitized the values.
-  body.innerHTML = options.nabi.getHtml();
+  // 위치 표식만 잠시 붙이고, 편집 전용 부속 없이 발행 HTML을 그린다.
+  // Temporarily retain position markers in published HTML without editor-only elements.
+  body.innerHTML = host.previewHtml();
+  const resolveCaret = previewCaretResolver(body, host, focus);
   for (const link of body.querySelectorAll<HTMLAnchorElement>('a[href]')) {
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
@@ -262,7 +268,8 @@ export function openPreview(options: PreviewOptions): Overlay {
   try {
     // 카드가 문서에 붙은 뒤에 부른다 — 붙기 전에는 offset도 높이도 0이라 잴 것이 없다.
     // Called only after the card is attached — before that, offsets and height are all 0, so there's nothing to measure.
-    revealCaretBlock(card, body, options.nabi);
+    const { target, point } = resolveCaret();
+    if (target) revealPreviewCaret(card, body, target, point);
 
     close.addEventListener('click', onCloseButton);
 
@@ -279,20 +286,69 @@ export function openPreview(options: PreviewOptions): Overlay {
   }
 }
 
-// 미리보기는 쓰던 자리 근처에서 열린다 — 캐럿 내부 주소(data-key)가 없는 밖으로 나가는 HTML이라, 두 문서를 id가 아니라 블록 순서(index)로 맞춘다.
-// The preview opens near where you were writing — since the exported HTML has no internal caret address (data-key), the two documents are aligned by block index, not id.
-function revealCaretBlock(scroller: HTMLElement, body: HTMLElement, nabi: Nabi): void {
-  const index = nabi.getSelection().focus.path[0];
-  if (typeof index !== 'number' || index <= 0) return;
-  // 수가 어긋나면 손을 뗀다 — 안 그려진 블록이나 껍데기를 잃은 블록이 있으면 자리가 밀리는데, 그때는 엉뚱한 데로 데려가느니 맨 위가 낫다.
-  // Bails if the counts don't match — a skipped or shell-less block would throw off the index, and landing at the top beats landing somewhere wrong.
-  if (body.children.length !== hostOf(nabi).doc().length) return;
-  const target = body.children[index];
-  if (!target) return;
-  // "위치 정도"가 핵심이다 — 3분의 1 지점에 둔다. 맨 위에 딱 붙이면 문서의 처음을 보는 것과 구별이 안 된다.
-  // "Roughly where you were" is the point — landing a third of the way down, since pinning it to the very top would look identical to opening at the start of the document.
-  const delta = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
-  scroller.scrollTop += delta - scroller.clientHeight / 3;
+function previewCaretResolver(
+  body: HTMLElement,
+  host: NabiHost,
+  focus: Position,
+): () => { target: HTMLElement | null; point: DomPoint | null } {
+  const doc = host.doc();
+  const holder = nodeAt(doc, focus.path);
+  const markers = Array.from(body.querySelectorAll('[data-key], [data-nabi-terminal]'), (element) => ({
+    element,
+    key: element.getAttribute('data-key'),
+    terminal: element.hasAttribute('data-nabi-terminal'),
+  }));
+  const clear = (): void => {
+    for (const { element } of markers) {
+      element.removeAttribute('data-key');
+      element.removeAttribute('data-nabi-terminal');
+    }
+  };
+  clear();
+  return () => {
+    try {
+      for (const { element, key, terminal } of markers) {
+        if (!body.contains(element)) continue;
+        if (key !== null) element.setAttribute('data-key', key);
+        if (terminal) element.setAttribute('data-nabi-terminal', '');
+      }
+      return {
+        target: holder?._id ? holderElOf(body, holder._id) : null,
+        point: toDomPoint(body, doc, host.env, focus),
+      };
+    } finally {
+      clear();
+    }
+  };
+}
+
+function revealPreviewCaret(
+  scroller: HTMLElement,
+  body: HTMLElement,
+  target: HTMLElement,
+  point: DomPoint | null,
+): void {
+  for (let parent = target.parentElement; parent && parent !== body; parent = parent.parentElement) {
+    if (parent.tagName === 'DETAILS' && !parent.querySelector(':scope > summary')?.contains(target))
+      (parent as HTMLDetailsElement).open = true;
+  }
+  let top = target.getBoundingClientRect().top;
+  if (point) {
+    const range = body.ownerDocument.createRange();
+    range.setStart(point.node, point.offset);
+    range.collapse(true);
+    let rect = range.getBoundingClientRect?.();
+    if (rect && (rect.width > 0 || rect.height > 0)) top = rect.top;
+    else if (point.node.nodeType === 1) {
+      const adjacent = point.node.childNodes[point.offset > 0 ? point.offset - 1 : 0];
+      if (adjacent) {
+        range.selectNode(adjacent);
+        rect = range.getBoundingClientRect?.();
+        if (rect && (rect.width > 0 || rect.height > 0)) top = point.offset > 0 ? rect.bottom : rect.top;
+      }
+    }
+  }
+  scroller.scrollTop += top - scroller.getBoundingClientRect().top - scroller.clientHeight / 3;
 }
 
 // --- 라이트박스 -------------------------------------------------------------------------------

@@ -109,6 +109,12 @@ type Toast = (level: ToastLevel, message: string, ms?: number) => void;
 ## Surface
 
 ```ts
+type PasteUrlHandler = (
+  url: string,
+  isSameOrigin: boolean,
+  path: string,
+) => string | null | void | Promise<string | null | void>;
+
 interface SurfaceOptions {
   readonly nabi: Nabi;
   readonly registry: Registry;
@@ -118,6 +124,7 @@ interface SurfaceOptions {
   readonly locale?: LocaleInput;
   readonly placeholder?: string;
   readonly ioFilters?: readonly IoFilter[];
+  readonly onPasteUrl?: PasteUrlHandler;
   readonly fileSink?: (files: readonly File[]) => void;
   readonly doubleEnterMs?: number;      // default 180; explicit value also sets double-Esc
   readonly correctionDeferMs?: number; // default 80
@@ -133,6 +140,10 @@ interface Surface {
 
 function mountSurface(options: SurfaceOptions): Surface;
 ```
+
+`onPasteUrl` chooses the display text when the complete trimmed plain clipboard text is a valid HTTP(S) URL. The arguments are the original trimmed URL, whether its origin matches `root.ownerDocument.defaultView.location.origin`, and `pathname + search + hash` (at least `/`). A non-whitespace string is used verbatim as plain text; no callback, blank/non-string results, throws, and rejected promises retain the original URL. The validated link address never changes. Errors are reported through `NabiOptions.onError`.
+
+Asynchronous callbacks insert the URL link immediately and update only its display text when a valid result arrives. Other typing can continue. Edited or deleted target links, document replacement, and surface unmounting invalidate late updates. Valid internal clipboard data takes priority; code blocks and editors without a registered link wing skip this callback. See `io-security.md#pasted-url-links`.
 
 Each active surface owns one root. Active mount roots must not be the same node or overlap as ancestors and descendants. An overlapping mount throws immediately; separate, non-overlapping roots in the same document are supported. After the owning mount unmounts, a previously overlapping root can be mounted. Root attributes, classes, and style properties use compare-and-restore teardown, so a host change made while mounted is not overwritten. `unmount()` leaves the latest canonical read-only HTML body and removes editor-only DOM.
 
@@ -282,6 +293,10 @@ Overlay/panel functions:
 
 `openPanel()` and `openPrompt()` are tool layers without a page backdrop. Prompts retain input validation, submission, Escape/outside dismissal, and focus restoration; they do not make the rest of the page inert. Preview, lightbox, save, history, and choice dialogs use a separate full-page modal layer.
 
+`openPreview()` and the preview button scroll the preview card to the current selection's focus, including its character offset inside long paragraphs and nested holders such as table cells and list items. Footnote appendices do not affect position mapping. Closed details ancestors open only in the preview when needed to expose that position. Opening and closing preview preserve the editor document and selection; temporary position markers are removed from the preview and never enter stored HTML.
+
+Links in preview bodies, preview footnote bubbles, and history previews use `target="_blank"` and `rel="noopener noreferrer"`, so they open in a new tab or window without navigating the editor page. These attributes are preview-only and do not change stored links.
+
 `PanelOptions.onOutside` runs after closing for an outside pointer press, after `onClose`; it does not run for Escape or programmatic closure. `PromptOptions.submitOnOutside: true` hides the confirmation button and submits valid values on outside dismissal. Enter also submits; Escape, programmatic closure, and invalid outside submissions leave the document unchanged. Built-in footnote prompts use this option. Textarea prompts align below the whole toolbar, including the property row, and fit within its width and the viewport.
 
 Fullscreen exports: `FULLSCREEN_CLASS`, `isFullscreen`, and `setFullscreen`. UI constants: `TOOLBAR_GROUPS`.
@@ -387,6 +402,8 @@ Tree values: `P`, `BR`, `isElement`, `isText`.
 
 `Wing.scopedCommands?: readonly string[]` and `StructureDecl.scopedCommands?: readonly string[]` opt a block container or block-holding part into relative child-document execution for selected wing commands. `isolating?: boolean` protects such a holder's editing boundary without limiting it to one paragraph. See `custom-wing.md`. Float and table commands and stored attributes are documented in `wings.md`.
 
+`Wing.joinOnDelete?: boolean` is valid only on a container and defaults to `false`. Enabling it allows boundary Delete/Backspace to join neighboring paragraph text with its first or last text holder, without crossing isolation or a protected nested block. `listFamily()` and the built-in quote enable it. Other block objects are selected before deletion by default. See `custom-wing.md` and `document-model.md#deletion-at-block-boundaries`.
+
 `KeyIntent.shift?: boolean` distinguishes Shift+Enter from Enter. Unhandled keys visit ancestor wings up to the nearest isolating holder, allowing list/code handlers inside cells to process indentation before table navigation.
 
 Root-exported wing types include:
@@ -462,7 +479,7 @@ The root entry exports these public type names. Earlier sections and the topic d
 - Factory and built-in options: `SimpleMarkSpec`, `ValueMarkSpec`, `BoxObjectSpec`, `ListFamilySpec`, `ValueWingOptions`, `ImageWingOptions`, `CommitOptions`, `PaintOptions`, `ApplyOptions`.
 - Tree and editor: `AttrValue`, `Attrs`, `ElementNode`, `NabiNode`, `NabiDoc`, `Position`, `Selection`, `EditEnv`, `Command`, `CommandArgs`, `CommandHand`, `CommandOutcome`, `Nabi`, `NabiOptions`, `NabiChange`, `Ask`, `ChooseOption`, `Toast`, `ToastLevel`.
 - HTML and IO: `HtmlAttrs`, `HtmlBuilder`, `HtmlBuilders`, `HtmlContext`, `StoredHtmlOptions`, `ClipFile`, `PasteData`, `PasteCandidate`, `DocSource`, `IoFilter`, `MdContext`, `MdBuilder`, `MdBuilders`, `FileStore`, `NabiFileBody`, `NabiFileText`.
-- Surface and persistence mounts: `EditSurfacePort`, `Surface`, `SurfaceActions`, `SurfaceOptions`, `FileMount`, `FileMountOptions`, `SaveFormat`, `UploadMount`, `UploadOptions`, `UploadTask`, `Uploader`, `HistoryMount`, `HistoryMountOptions`, `HistoryRecord`, `HistoryStorage`, `HistoryView`.
+- Surface and persistence mounts: `EditSurfacePort`, `Surface`, `SurfaceActions`, `SurfaceOptions`, `PasteUrlHandler`, `FileMount`, `FileMountOptions`, `SaveFormat`, `UploadMount`, `UploadOptions`, `UploadTask`, `Uploader`, `HistoryMount`, `HistoryMountOptions`, `HistoryRecord`, `HistoryStorage`, `HistoryView`.
 - UI: `Toolbar`, `ToolbarButton`, `ToolbarOptions`, `ToolbarPanelContext`, `ToolbarPanelOptions`, `ToolbarPanelRenderer`, `ContextGroupView`, `ContextToolbar`, `ContextToolbarOptions`, `HintOptions`, `Hints`, `PickedMark`, `PickedMarkOptions`, `Sticky`, `StickyOptions`, `ViewTools`, `ViewToolsOptions`, `PreviewOptions`, `LightboxOptions`, `Overlay`, `UploadView`, `UploadViewOptions`, `ChoosePanelOptions`, `HistoryPanelOptions`, `SavePanelOptions`, `Panel`, `PanelOptions`, `PromptField`, `PromptOptions`, `Settle`, `SettleOptions`, `ToolbarHtmlOptions`, `ToolbarSlot`, `ViewToolsVisibility`, `ViewToolsHtmlOptions`.
 - Upload and code data: `UploadFile`, `UploadItem`, `UploadLimits`, `UploadReject`, `CodeDialect`, `CodeHighlighter`, `CodeToken`.
 - Locale: `Dictionary`, `LocaleText`, `Translator`, `LocaleInput`, `LocaleSource`, `LocaleController`.

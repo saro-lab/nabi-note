@@ -50,7 +50,7 @@ for (const blocks of [[p(['inside'])], [image()], [image(), p(['inside'])], [lis
     if (direction === 'before') actions.deleteForward();
     else actions.backspace();
     assert.deepEqual(nabi.getJson(), before, `${direction} paragraph preserves table with ${blocks[0]!.ch[0]}`);
-    assert.deepEqual(nabi.getSelection(), selection);
+    assert.deepEqual(nabi.getSelection(), { anchor: { path: [1], offset: 0 }, focus: { path: [1], offset: 1 } });
   }
 }
 
@@ -62,7 +62,7 @@ for (const direction of ['before', 'after'] as const) {
   if (direction === 'before') actions.deleteForward();
   else actions.backspace();
   assert.deepEqual(nabi.getJson(), before, 'adjacent object boundaries preserve isolated contents');
-  assert.deepEqual(nabi.getSelection(), selection);
+  assert.deepEqual(nabi.getSelection(), { anchor: { path: [1], offset: 0 }, focus: { path: [1], offset: 1 } });
 }
 
 {
@@ -77,7 +77,11 @@ for (const direction of ['before', 'after'] as const) {
   nabi.select(caretAt(direction === 'before' ? { path: [0], offset: 6 } : { path: [2], offset: 0 }));
   if (direction === 'before') actions.deleteForward();
   else actions.backspace();
-  assert.deepEqual(nabi.getJson(), [p(['before']), p(['after'])], 'ordinary image deletion remains unchanged');
+  assert.deepEqual(nabi.getJson(), [p(['before']), image(), p(['after'])], 'adjacent image is preserved');
+  assert.deepEqual(nabi.getSelection(), { anchor: { path: [1], offset: 0 }, focus: { path: [1], offset: 1 } });
+  if (direction === 'before') actions.deleteForward();
+  else actions.backspace();
+  assert.deepEqual(nabi.getJson(), [p(['before']), p(['after'])], 'selected image is deleted');
 }
 
 for (const direction of ['backward', 'forward'] as const) {

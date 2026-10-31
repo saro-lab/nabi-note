@@ -103,6 +103,7 @@ interface Job {
   readonly env: SchemaEnv;
   readonly builders: HtmlBuilders;
   readonly keys: boolean;
+  readonly positions?: boolean;
   readonly allowLocal: boolean;
   readonly ordinals?: ReadonlyMap<ElementNode, number>;
 }
@@ -161,11 +162,13 @@ function contextFor(
   preserveEnd: boolean,
 ): HtmlContext {
   const key: HtmlAttrs =
-    job.keys && block && typeof node._id === 'string'
+    (job.keys || job.positions) && block && typeof node._id === 'string'
       ? { 'data-key': node._id }
       : job.keys && isInlineTerminal(node.w, job.env)
         ? { [TERMINAL_ATTR]: '', contenteditable: 'false', draggable: 'false' }
-        : {};
+        : job.positions && isInlineTerminal(node.w, job.env)
+          ? { [TERMINAL_ATTR]: '' }
+          : {};
   return {
     element: (tag, inner, attrs) => tagOf(tag, inner, { ...key, ...attrs }),
     wrap: (tag, inner, attrs) => tagOf(tag, inner, attrs ?? {}),
@@ -286,7 +289,7 @@ function renderChildren(
 function renderParagraph(p: ElementNode, job: Job): string {
   const wrapper = isWrapper(p, job.env);
   const attrs: Record<string, string | undefined> = {};
-  if (job.keys && typeof p._id === 'string') attrs['data-key'] = p._id;
+  if ((job.keys || job.positions) && typeof p._id === 'string') attrs['data-key'] = p._id;
 
   let tag = 'p';
   if (wrapper) {
@@ -328,9 +331,17 @@ function headingTextOf(nodes: readonly NabiNode[], env: SchemaEnv): string {
 // 보기 HTML — 저장·발행되는 값. `nabi.css` 를 건 `.nabi-content` 안에서 그려진다.
 // Display HTML — the stored/published value, meant to render inside a `.nabi-content` with `nabi.css` loaded.
 export function renderHtml(doc: NabiDoc, options: HtmlOptions): string {
+  return renderPublishedHtml(doc, options, false);
+}
+
+export function renderPreviewHtml(doc: NabiDoc, options: HtmlOptions): string {
+  return renderPublishedHtml(doc, options, true);
+}
+
+function renderPublishedHtml(doc: NabiDoc, options: HtmlOptions, positions: boolean): string {
   const found = inlineTerminalsOf(doc, options.env);
   const ordinals = ordinalsOf(found);
-  const job: Job = { ...jobOf(options, false), ...(ordinals ? { ordinals } : {}) };
+  const job: Job = { ...jobOf(options, false), positions, ...(ordinals ? { ordinals } : {}) };
   return renderChildren(doc, job) + appendixOf(found, options.appendices, job);
 }
 

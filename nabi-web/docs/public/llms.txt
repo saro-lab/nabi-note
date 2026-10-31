@@ -11,15 +11,18 @@ Use this file as a router. Read only the document that owns your question.
 - CDN setup with the browser bundle: `llms/quickstart-cdn.md`
 - Public export and type index: `llms/api-reference.md`
 - Footnote storage, editing, numbering, and published output: `llms/wings.md#footnotes`
-- Table cell formatting, crosshair cursor during cell-range dragging, multi-block table examples, and editable float examples for 1.5.6: `llms/wings.md`
+- Table cell formatting, crosshair cursor during cell-range dragging, multi-block table examples, and editable float examples for 1.6.0: `llms/wings.md`
 
 ## Contracts by topic
 
 - NABI TREE, positions, normalization, loading, change events: `llms/document-model.md`
+- Delete/Backspace at empty paragraphs, protected blocks, and text-container boundaries: `llms/document-model.md#deletion-at-block-boundaries`
 - Paste, files, Markdown, URLs, HTML trust boundary, uploads: `llms/io-security.md`
-- Dragging existing images and YouTube videos between blocks, including table cells and float regions: `llms/io-security.md#media-dragging`
+- Whole-URL paste and synchronous/asynchronous link text callbacks: `llms/io-security.md#pasted-url-links`
+- Dragging floats, tables, details, code boxes, quotes, images, and YouTube videos with mouse or touch handles: `llms/io-security.md#media-dragging`
 - Built-in wing catalog and picker behavior: `llms/wings.md`
 - Custom wing contract and registry validation: `llms/custom-wing.md`
+- Custom container text joining on boundary deletion (`Wing.joinOnDelete`): `llms/custom-wing.md#structure-rules`
 - Server rendering, toolbar pre-rendering, hydration: `llms/ssr.md`
 - Heading-derived floating outline, availability callbacks (including no headings), published-page viewer and document diff: `llms/viewer-diff.md`
 - Three-way automatic merge, editable conflict resolution, and confirmation: `llms/merge.md`
@@ -29,8 +32,10 @@ Use this file as a router. Read only the document that owns your question.
 ## Fast decisions
 
 - Container escape requires a second Enter within 180 ms by default. Esc and Shift double-tap defaults remain 350 ms. An explicit `doubleEnterMs` also overrides the Esc window.
+- Boundary Delete/Backspace first selects images, videos, rules, tables, code, details, floats, and other protected block objects. If the current text paragraph is empty, that same action removes only the paragraph and preserves the selected block. Another deletion removes the selected block. Text paragraphs, headings, lists, and quotes retain text joining; removing an empty paragraph before them preserves their formatting and structure. Cell isolation remains intact. See `llms/document-model.md#deletion-at-block-boundaries`.
 
 - Use `nabi-note` for editor assembly and browser UI.
+- Pasting a complete HTTP(S) URL inserts a link immediately. `mountSurface({ onPasteUrl(url, isSameOrigin, path) })` can return display text or a promise; while pending, the original URL remains visible. The path includes query and fragment. Empty, invalid, or failed results retain the URL. See `llms/io-security.md#pasted-url-links`.
 - Use `nabi-note/ssr` in a DOM-free server process.
 - Use `nabi-note/viewer` for optional behavior on published HTML.
 - Use `mountOutline()` from `nabi-note/viewer` on editable or published bodies for the draggable H1/H2 outline. Initial and last-heading-removal callbacks report empty items and `available: false`. H1 numbering is also supplied by the common heading CSS. Details reject H1-H6 at every depth. See `llms/viewer-diff.md#heading-outline`.
@@ -40,9 +45,11 @@ Use this file as a router. Read only the document that owns your question.
 - Footnote insert/edit prompts use a toolbar-width wrapping textarea below the toolbar, four visible lines on desktop and six on mobile, shrinking to fit the visible space above the keyboard. Actual line breaks become spaces. Clicking outside applies valid content without a confirmation button; Escape cancels. Editing and preview disable footnote navigation: editor list numbers do not select or scroll the body, and preview bubbles use plain number labels. Published viewer bubbles retain numbered buttons that scroll to the corresponding endnotes.
 - Use `nabi-note/diff` for comparing two stored documents. Standalone `mountDiff()` is read-only by default; optional `onMerge` exposes apply controls and the host accepts proposals with revision-checked `update()`. Editor `mountDiffWing()` enables apply controls by default; pass `merge: false` to disable them. See `llms/viewer-diff.md`.
 - Use `nabi-note/merge` for three-way merging. The left pane is the editing-start base, the middle is the editable local/merged result, and the right is the incoming version. Automatic merge runs first; per-line gutter arrows apply individual source changes, and confirmation requires zero unresolved conflicts. See `llms/merge.md`.
-- Diff opens in only-changes mode by default. With zero changes, it shows both complete documents and disables folding. See `llms/viewer-diff.md`.
+- Diff opens in only-changes mode by default. The fold toggle shows a solid accent background and a bold white default icon while on. Gutter apply arrows have transparent backgrounds until hovered or keyboard-focused. With zero changes, it shows both complete documents and disables folding. See `llms/viewer-diff.md`.
 - Load `nabi-note/nabi.css` on editor and published pages unless all required sheets are injected.
 - UI labels, tooltips, and panel inputs use the sans stack independently of the body typeface. Tables also default to sans, while explicit typeface marks inside cells still apply. See `llms/styling.md#typeface-defaults`.
+- The editing surface shows a move handle above a float, table, details block, code box, or quote when the caret is inside it and above selected images and YouTube videos. Drag the handle with a mouse or touch to reposition the whole object, with a translucent copy following the pointer, an insertion line, and one-step undo. Handles and drag previews are editing UI and are not stored. See `llms/io-security.md#media-dragging`.
+- All move handles in that editor hide during a handle drag, including while scrolling. After dropping or canceling, eligible handles return at their updated positions. A short press without dragging keeps the handles visible.
 - The `float` wing adds editable left/right float regions with maximum widths 20, 30, 40, or 50 percent (default: right, 40). Pasted text, tables, images, and rich fragments stay inside the region. Upload progress and completed images share the starting float or nested table-cell scope for drops, pasted files, and the file picker. Editor-only dotted outlines disappear in stored HTML and preview; diff keeps placement but isolates each block. See `llms/wings.md` and `llms/io-security.md`.
 - Use `mountToolbar({ panels: { img: { mode: 'inline', render: renderImagePicker } } })` to replace the default image URL prompt with host UI. Choose `modal` for a window on a full-page translucent backdrop, or `inline` for an anchored desktop panel that fills the screen on mobile. Both start empty. The renderer receives a dedicated root, abort signal, cleanup registration, `close()`, `insertImage(src)`, and `run()` for one command at the opening selection; function-only renderers keep their previous placement; omitted slots keep their default behavior. See `llms/api-reference.md` and `llms/quickstart-npm.md`.
 - The default `layout: 'compact'` shows all main-toolbar commands on desktop, wrapping like fullscreen, and uses a compact single row on mobile. Available object properties appear automatically in a wrapping row below it; both rows take up space and move together. Fullscreen expands the complete main toolbar at every width. Exiting restores the viewport-appropriate layout. Use `layout: 'wrap'` for the explicit wrapping layout; see `llms/styling.md`.
@@ -57,7 +64,7 @@ Use this file as a router. Read only the document that owns your question.
 - Updating an already focused property control preserves its focus after refresh instead of returning to the document, avoiding unwanted keyboard reopening and caret scrolling.
 - On iOS, icon buttons handle a completed short, single-touch tap directly and cancel its compatibility click. The touchend handler does not turn scrolling, multitouch, or long presses into command taps; native document selection menus remain available. See `llms/styling.md`.
 - Typing or composing outside a link at its end keeps that text outside the stored link, including after a display-name change and later boundary deletion. See `llms/wings.md`.
-- Code boxes use monospace at 0.75rem and show their selected language at the upper right without an extra header row. Editor attachments and the published viewer replace that label with a copy button on hover or button keyboard focus; touch devices keep the button visible. Tables and details use sans by default and reduce body text by 0.25rem without repeated reduction in nested tables/details. Copy feedback also supports Punjabi (`pa`), Pashto (`ps`), and Yoruba (`yo`), including regional locale tags. These controls are not document content. See `llms/wings.md` and `llms/viewer-diff.md`.
+- Code boxes use monospace at 0.75rem and show their selected language at the upper right without an extra header row. Pasting inside one code box always inserts plain text into that box, preserving line breaks and indentation without splitting it; clipboard plain text takes priority over internal or HTML fragments. Editor attachments and the published viewer replace that label with a copy button on hover or button keyboard focus; touch devices keep the button visible. Tables and details use sans by default and reduce body text by 0.25rem without repeated reduction in nested tables/details. Copy feedback also supports Punjabi (`pa`), Pashto (`ps`), and Yoruba (`yo`), including regional locale tags. These controls are not document content. See `llms/wings.md` and `llms/viewer-diff.md`.
 - Store `nabi.getJson()` or `nabi.getHtml()`. Never store `getEditorHtml()`. HTML output and clipboard fragments protect leading spaces, including partial selections; see `llms/document-model.md`.
 - Table cell-range copy/cut uses the highlighted rectangle, including its final cell, instead of the linear DOM range. Internal clipboard data and HTML retain empty cells, spans, and inline formatting; plain text contains only the selected cells, separated by tabs and newlines. Cut clears only those cells and is one undo step. See `llms/io-security.md`.
 - The table property row offers Full width (`toggleTableFullWidth`). It defaults to off; enabling stores `table.a.full: 1` and gives the table a 100% minimum width while retaining overflow scrolling. Alignment remains available. JSON, HTML, and Markdown HTML fallback preserve the setting. See `llms/wings.md#table-full-width`.
@@ -65,6 +72,8 @@ Use this file as a router. Read only the document that owns your question.
 - Treat HTML, JSON, paste data, command args, and custom filter output as untrusted input.
 - Use `NabiOptions.onError` for isolated command and callback failure reporting.
 - Default tool input prompts (image, YouTube, link, and object properties such as code language) use plain nonmodal panels, without a full-page scrim, blur, or inert background. Preview, lightbox, and full dialogs keep their separate modal layer.
+- Opening preview scrolls to the current selection focus and character offset, including nested table/list content and documents with footnotes. Closed details ancestors open only in preview as needed; the editor document and selection stay unchanged. See `llms/api-reference.md`.
+- Links in preview bodies, preview footnote bubbles, and history previews open in a new tab or window with `target="_blank"` and `rel="noopener noreferrer"`. Stored links remain unchanged.
 - Built-in notices and input prompts use polite localized wording; see `llms/quickstart-npm.md` for locale configuration.
 - For live language switching, share `createLocale()` across the editor and mounts, then call `locale.setLocale(code)`; see `llms/quickstart-npm.md`.
 - Configure bounded undo with `undoLimit`; set `typingMergeMs` to 0 to disable typing coalescing.
@@ -72,7 +81,7 @@ Use this file as a router. Read only the document that owns your question.
 
 ## Package facts
 
-- Package contract documented here: 1.5.6. Package and CDN publication are separate from this contract version.
+- Package contract documented here: 1.6.0. Package and CDN publication are separate from this contract version.
 - Runtime dependencies: zero.
 - Node.js for package tooling and SSR: 20 or newer.
 - Declared browser baseline: Chrome and Edge 120, Firefox 120, Safari 17.

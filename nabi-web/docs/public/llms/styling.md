@@ -101,6 +101,12 @@ When the keyboard opens, an already visible caret below a pinned toolbar keeps i
 
 Never put `.nabi-editing` on published content.
 
+## Object move handles
+
+All move handles in the active editor are hidden during a handle drag, including while scrolling. They reappear at their current positions after dropping or canceling, when the corresponding objects remain eligible and visible. A short press without dragging keeps them visible.
+
+The editing surface displays a move handle above the active float, table, details block, code box, or quote, and above a selected image or YouTube video. Handles track layout changes from context toolbar expansion and resizing around the editor, even when the content surface keeps the same size. During mouse or touch dragging, a half-opacity copy follows the pointer at the object's displayed size and initial grab offset. It preserves the object's colors and typefaces; video copies use a static play symbol. Handles, drag previews, and insertion markers are temporary UI outside the stored document tree. Their mouse and touch gestures move complete objects; ordinary content editing and scrolling remain available away from the handles. The localized accessible label includes Alt+Up/Down, which moves the object by one sibling block while the handle is focused. Preview and published content have no handles or drag previews. See `io-security.md#media-dragging`.
+
 ## Toolbar layouts
 
 `mountToolbar()` and `renderToolbarHtml()` accept the same layout options:

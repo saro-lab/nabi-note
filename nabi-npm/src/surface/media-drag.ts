@@ -4,8 +4,10 @@ import { hostOf, type Nabi } from '../editor/index.js';
 import { renderHtml, type HtmlOptions } from '../html/index.js';
 import { $toJson, isElement, isWrapper, type NabiDoc } from '../schema/index.js';
 import { loadClipboard } from './clipboard.js';
-import { moveMediaOp } from './media-move.js';
+import { moveBlockOp } from './media-move.js';
 import { fromDomPoint, holderElOf, pathOfId } from './map.js';
+
+type DragPoint = Pick<DragEvent, 'target' | 'clientX' | 'clientY'>;
 
 const MEDIA_MOVE_MIME = 'application/x-nabi-media-move';
 
@@ -56,7 +58,7 @@ export function makeMediaDrag(options: {
       : null;
   };
 
-  const targetAt = (event: DragEvent): { position: Position; rect: DOMRect; after: boolean } | null => {
+  const targetAt = (event: DragPoint): { position: Position; rect: DOMRect; after: boolean } | null => {
     let element = (event.target as Element | null)?.closest?.('[data-key]') ?? null;
     let path: readonly number[] | null = null;
     while (element && root.contains(element)) {
@@ -66,7 +68,7 @@ export function makeMediaDrag(options: {
         path = candidate;
         break;
       }
-      if (node && env.inlineHolders.has(node.w)) return null;
+      if (node && env.inlineHolders.has(node.w) && node.w !== 'code') return null;
       if (node && env.blockHolders.has(node.w)) {
         const mapped = fromDomPoint(root, host.doc(), env, element, 0);
         if (mapped) path = mapped.pos.path;
@@ -95,11 +97,26 @@ export function makeMediaDrag(options: {
     return { position: { path, offset: after ? 1 : 0 }, rect, after };
   };
 
-  const validTarget = (event: DragEvent): ReturnType<typeof targetAt> => {
+  const validTarget = (event: DragPoint): ReturnType<typeof targetAt> => {
     if (!drag || drag.invalid || !canEdit() || host.doc() !== drag.doc) return null;
     const target = targetAt(event);
-    if (!target || !moveMediaOp(drag.path, target.position)(host.doc(), nabi.getSelection(), {}, env)) return null;
-    return target;
+    if (!target) return null;
+    if (moveBlockOp(drag.path, target.position)(host.doc(), nabi.getSelection(), {}, env)) return target;
+    const object = nodeAt(host.doc(), drag.path)?.ch[0];
+    if (!isElement(object) || !['table', 'float', 'details', 'code', 'quote'].includes(object.w)) return null;
+    for (let depth = target.position.path.length - 1; depth > 0; depth -= 1) {
+      const path = target.position.path.slice(0, depth);
+      const wrapper = nodeAt(host.doc(), path);
+      const element = wrapper?.w === 'p' && wrapper._id ? holderElOf(root, wrapper._id) : null;
+      if (!element) continue;
+      const rect = element.getBoundingClientRect();
+      const after = event.clientY >= rect.top + rect.height / 2;
+      const position = { path, offset: after ? 1 : 0 };
+      if (moveBlockOp(drag.path, position)(host.doc(), nabi.getSelection(), {}, env)) {
+        return { position, rect, after };
+      }
+    }
+    return null;
   };
 
   const start = (event: DragEvent): void => {
@@ -134,14 +151,10 @@ export function makeMediaDrag(options: {
     nabi.select(selectObject(path));
   };
 
-  const over = (event: DragEvent): boolean => {
-    if (!drag) return false;
-    event.preventDefault();
-    const target = validTarget(event);
-    if (event.dataTransfer) event.dataTransfer.dropEffect = target ? 'move' : 'none';
+  const showTarget = (target: ReturnType<typeof targetAt>): void => {
     if (!target) {
       hide();
-      return true;
+      return;
     }
     if (!marker) {
       marker = owner.createElement('div');
@@ -155,7 +168,43 @@ export function makeMediaDrag(options: {
     marker.style.left = `${target.rect.left}px`;
     marker.style.top = `${(target.after ? target.rect.bottom : target.rect.top) - 1}px`;
     marker.style.width = `${target.rect.width}px`;
+  };
+
+  const over = (event: DragEvent): boolean => {
+    if (!drag) return false;
+    event.preventDefault();
+    const target = validTarget(event);
+    if (event.dataTransfer) event.dataTransfer.dropEffect = target ? 'move' : 'none';
+    showTarget(target);
     return true;
+  };
+
+  const pointerTarget = (clientX: number, clientY: number): ReturnType<typeof targetAt> => {
+    const target = owner.elementFromPoint(clientX, clientY);
+    return target && root.contains(target) ? validTarget({ target, clientX, clientY }) : null;
+  };
+
+  const beginPointer = (path: readonly number[]): boolean => {
+    end();
+    if (!canEdit()) return false;
+    const wrapper = nodeAt(host.doc(), path);
+    const child = wrapper?.ch[0];
+    if (
+      !wrapper ||
+      !isWrapper(wrapper, env) ||
+      !isElement(child) ||
+      !['float', 'table', 'details', 'code', 'quote', 'img', 'youtube'].includes(child.w)
+    )
+      return false;
+    drag = { path, doc: host.doc(), token: '', invalid: false };
+    return true;
+  };
+
+  const dropPointer = (clientX: number, clientY: number): void => {
+    const current = drag;
+    const target = pointerTarget(clientX, clientY);
+    end();
+    if (current && target) host.applyRaw(moveBlockOp(current.path, target.position), 'moveBlock');
   };
 
   const drop = (event: DragEvent): boolean => {
@@ -176,7 +225,7 @@ export function makeMediaDrag(options: {
     end();
     if (target) {
       root.focus({ preventScroll: true });
-      host.applyRaw(moveMediaOp(current.path, target.position), 'moveMedia');
+      host.applyRaw(moveBlockOp(current.path, target.position), 'moveMedia');
     }
     return true;
   };
@@ -190,6 +239,9 @@ export function makeMediaDrag(options: {
 
   return {
     source,
+    beginPointer,
+    overPointer: (x: number, y: number) => showTarget(pointerTarget(x, y)),
+    dropPointer,
     start,
     over,
     drop,

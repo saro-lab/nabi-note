@@ -1,5 +1,3 @@
-// 백스페이스는 캐럿 앞 한 덩어리를, Delete는 뒤 한 덩어리를 지운다 — 글 있는 문단끼리 만나면 병합하고, 래퍼문단 경계(offset 0/1)에서는 경계 너머 이웃에 작용한다. 2단계(선택 후 삭제)는 없다.
-// Backspace removes one unit before the caret, Delete removes one after; text paragraphs merge on contact, and a wrapper boundary (offset 0/1) acts on the neighbor across it. No two-step (select-then-delete) path exists.
 import { P, isElement, isWrapper, type ElementNode, type NabiDoc, type NabiNode } from '../schema/index.js';
 import {
   holderLength,
@@ -47,41 +45,26 @@ function spliceSiblings(
   return walk(doc, 0) as NabiDoc;
 }
 
-// 그릇 속 문서 순서상 마지막 글자리(래퍼문단은 건너뛴다) — 속이 없으면 null(부르는 쪽은 통째 삭제로 돌아간다).
-// The last holder inside a container, in document order (wrappers skipped) — null when there's none, so the caller falls back to a whole-block delete.
-function lastHolderIn(root: ElementNode, env: EditEnv): readonly number[] | null {
-  let found: readonly number[] | null = null;
-  const walk = (node: ElementNode, at: readonly number[]): void => {
-    node.ch.forEach((child, i) => {
-      if (!isElement(child)) return;
-      const path = [...at, i];
-      if (isHolder(child, env) && !isWrapper(child, env)) found = path;
-      walk(child, path);
-    });
-  };
-  walk(root, []);
-  return found;
+function joinsOnDelete(wrapper: ElementNode, env: EditEnv): boolean {
+  const block = wrapper.ch[0];
+  return isElement(block) && env.joinOnDelete?.has(block.w) === true && !env.isolating?.has(block.w);
 }
 
-// lastHolderIn의 거울 — 그릇 속 문서 순서상 첫 글자리.
-// The mirror of lastHolderIn — the first holder inside a container, in document order.
-function firstHolderIn(root: ElementNode, env: EditEnv): readonly number[] | null {
-  let found: readonly number[] | null = null;
-  const walk = (node: ElementNode, at: readonly number[]): void => {
-    if (found) return;
-    for (const [i, child] of node.ch.entries()) {
-      if (found) return;
+function edgeHolderIn(root: ElementNode, env: EditEnv, dir: -1 | 1): readonly number[] | null {
+  const walk = (node: ElementNode, at: readonly number[]): readonly number[] | null => {
+    if (env.isolating?.has(node.w) || env.singleParagraph?.has(node.w)) return null;
+    for (let i = dir === 1 ? 0 : node.ch.length - 1; i >= 0 && i < node.ch.length; i += dir) {
+      const child = node.ch[i];
       if (!isElement(child)) continue;
       const path = [...at, i];
-      if (isHolder(child, env) && !isWrapper(child, env)) {
-        found = path;
-        return;
+      if (isHolder(child, env) && (!isWrapper(child, env) || !joinsOnDelete(child, env))) {
+        return path;
       }
-      walk(child, path);
+      return walk(child, path);
     }
+    return null;
   };
-  walk(root, []);
-  return found;
+  return walk(root, []);
 }
 
 function containsIsolation(node: ElementNode, env: EditEnv): boolean {
@@ -92,9 +75,6 @@ function containsIsolation(node: ElementNode, env: EditEnv): boolean {
   );
 }
 
-// 뒤 그릇의 첫 글자리를 이 문단 끝으로 끌어올린다 — joinIntoVessel의 거울(§9). 이게 없으면 `head|` 뒤의 목록이
-// 통째로(항목째) 사라졌다 — 속 없는 물건용 규칙이 그릇에도 새서, 백스페이스 쪽만 있던 보호가 Delete엔 없었다.
-// Pulls the following container's first holder up to the end of this paragraph — the mirror of joinIntoVessel (§9). Without it, Delete at `head|` erased the whole following list at once, since the empty-object rule leaked onto containers too; only Backspace had this guard.
 function joinFromVessel(
   doc: NabiDoc,
   parentPath: readonly number[],
@@ -103,7 +83,7 @@ function joinFromVessel(
   cur: ElementNode,
   env: EditEnv,
 ): EditResult | null {
-  const inner = firstHolderIn(next, env);
+  const inner = edgeHolderIn(next, env, 1);
   if (!inner) {
     return containsIsolation(next, env)
       ? { doc, caret: { path: [...parentPath, index], offset: holderLength(cur, env) } }
@@ -119,6 +99,7 @@ function joinFromVessel(
   ) {
     return { doc, caret: { path: [...parentPath, index], offset: holderLength(cur, env) } };
   }
+  if (isWrapper(source, env)) return selectBlock(doc, [...wrapperPath, ...inner]);
 
   const terminal = terminalOf(env);
   const junction = holderLength(cur, env);
@@ -164,7 +145,7 @@ function joinIntoVessel(
 ): EditResult | null {
   const lump = prev.ch[0];
   if (!isElement(lump)) return null;
-  const inner = lastHolderIn(prev, env);
+  const inner = edgeHolderIn(prev, env, -1);
   if (!inner) {
     return containsIsolation(prev, env) ? { doc, caret: { path: [...parentPath, index], offset: 0 } } : null;
   }
@@ -178,6 +159,7 @@ function joinIntoVessel(
   ) {
     return { doc, caret: { path: [...parentPath, index], offset: 0 } };
   }
+  if (isWrapper(target, env)) return selectBlock(doc, [...parentPath, index - 1, ...inner]);
   const junction = holderLength(target, env);
   const filled = withChildren(target, fromRuns([...holderRuns(target, terminal), ...holderRuns(cur, terminal)]));
 
@@ -215,31 +197,32 @@ function mergeParagraphs(
   return { doc: next, caret: { path: [...parentPath, index], offset: junction } };
 }
 
-// 걷어낸 뒤 캐럿은 앞 홀더의 끝, 없으면 다음 홀더의 처음, 그마저 없으면 세운 빈 문단으로 간다.
-// After removal the caret lands at the previous holder's end, else the next holder's start, else a freshly planted empty paragraph.
-function removeBlock(
+function selectBlock(doc: NabiDoc, path: readonly number[]): EditResult {
+  return { doc, anchor: { path, offset: 0 }, caret: { path, offset: 1 } };
+}
+
+function removeEmptyAtBlock(
   doc: NabiDoc,
   parentPath: readonly number[],
-  siblings: readonly NabiNode[],
   index: number,
+  block: ElementNode,
+  dir: -1 | 1,
   env: EditEnv,
 ): EditResult {
-  const removed = spliceSiblings(doc, parentPath, index, 1, []);
-  const before = siblings[index - 1];
-  if (before !== undefined && isHolder(before, env)) {
-    return {
-      doc: removed,
-      caret: { path: [...parentPath, index - 1], offset: holderLength(before, env) },
-    };
+  const next = spliceSiblings(doc, parentPath, index, 1, []);
+  const blockPath = [...parentPath, dir === 1 ? index : index - 1];
+  if (joinsOnDelete(block, env)) {
+    const inner = edgeHolderIn(block, env, dir);
+    if (inner) {
+      const path = [...blockPath, ...inner];
+      const holder = nodeAt(next, path);
+      if (holder && !isWrapper(holder, env)) {
+        return { doc: next, caret: { path, offset: dir === 1 ? 0 : holderLength(holder, env) } };
+      }
+      return selectBlock(next, path);
+    }
   }
-  const after = siblings[index + 1];
-  if (after !== undefined && isHolder(after, env)) {
-    return { doc: removed, caret: { path: [...parentPath, index], offset: 0 } };
-  }
-  // 설 자리가 없다 — 빈 문단을 세운다.
-  const empty: ElementNode = { w: P, ch: [] };
-  const next = spliceSiblings(doc, parentPath, index, 1, [empty]);
-  return { doc: next, caret: { path: [...parentPath, index], offset: 0 } };
+  return selectBlock(next, blockPath);
 }
 
 // [at-step, at)이면 백스페이스, [at, at+step)이면 Delete.
@@ -269,10 +252,8 @@ export function deleteBackward(doc: NabiDoc, pos: Position, env: EditEnv): EditR
   const index = pos.path[pos.path.length - 1] as number;
   const siblings = parentPath.length === 0 ? doc : (nodeAt(doc, parentPath)?.ch ?? []);
 
-  // offset 1(물건 뒤)은 물건 통째, 0(물건 앞)은 앞 이웃에 작용한다.
-  // Offset 1 (after the object) removes it whole; offset 0 (before it) acts on the previous neighbor.
   if (isWrapper(holder, env)) {
-    if (pos.offset >= 1) return removeBlock(doc, parentPath, siblings, index, env);
+    if (pos.offset >= 1) return selectBlock(doc, pos.path);
     return actOnNeighbour(doc, parentPath, siblings, index, -1, pos, env);
   }
 
@@ -282,17 +263,15 @@ export function deleteBackward(doc: NabiDoc, pos: Position, env: EditEnv): EditR
     return removeSlot(doc, pos.path, holder, pos.offset - step, pos.offset, pos.offset - step, env);
   }
 
-  // 문단 첫머리 — 앞이 글 있는 문단이면 병합, 빈 문단이면 그것만 삭제, 래퍼문단이면 통째 삭제.
-  // At a paragraph's start: merge with a text-bearing previous paragraph, delete an empty one outright, or remove a wrapper whole.
   const prev = siblings[index - 1];
   if (prev === undefined || !isElement(prev)) return unchanged(doc, pos);
-  if (isWrapper(prev, env)) {
-    // 글을 품은 그릇(목록·인용·접기·코드·표)이면 통째로 안 지우고 그 속 마지막 글자리에 이어 붙는다.
-    // A text-bearing container (list/quote/details/code/table) isn't deleted whole; it joins at its last holder instead.
-    const joined = joinIntoVessel(doc, parentPath, siblings, index, prev, holder, env);
-    if (joined) return joined;
-    const next = spliceSiblings(doc, parentPath, index - 1, 1, []);
-    return { doc: next, caret: { path: [...parentPath, index - 1], offset: 0 } };
+  if (holder.w === P && isWrapper(prev, env)) {
+    if (holderLength(holder, env) === 0) return removeEmptyAtBlock(doc, parentPath, index, prev, -1, env);
+    if (joinsOnDelete(prev, env)) {
+      const joined = joinIntoVessel(doc, parentPath, siblings, index, prev, holder, env);
+      if (joined) return joined;
+    }
+    return selectBlock(doc, [...parentPath, index - 1]);
   }
   if (prev.w === P && holder.w === P) {
     if (prev.ch.length === 0) {
@@ -313,10 +292,8 @@ export function deleteForward(doc: NabiDoc, pos: Position, env: EditEnv): EditRe
   const index = pos.path[pos.path.length - 1] as number;
   const siblings = parentPath.length === 0 ? doc : (nodeAt(doc, parentPath)?.ch ?? []);
 
-  // offset 0(물건 앞)은 물건 통째, 1(물건 뒤)은 뒤 이웃에 작용한다.
-  // Offset 0 (before the object) removes it whole; offset 1 (after it) acts on the next neighbor.
   if (isWrapper(holder, env)) {
-    if (pos.offset <= 0) return removeBlock(doc, parentPath, siblings, index, env);
+    if (pos.offset <= 0) return selectBlock(doc, pos.path);
     return actOnNeighbour(doc, parentPath, siblings, index, +1, pos, env);
   }
 
@@ -328,27 +305,26 @@ export function deleteForward(doc: NabiDoc, pos: Position, env: EditEnv): EditRe
     return removeSlot(doc, pos.path, holder, pos.offset, pos.offset + step, pos.offset, env);
   }
 
-  // 문단 끝 — 뒤가 문단이면 병합, 래퍼문단이면 통째 삭제, 없으면 없음.
-  // At a paragraph's end: merge with a following paragraph, remove a wrapper whole, or do nothing.
   const next = siblings[index + 1];
   if (next === undefined || !isElement(next)) return unchanged(doc, pos);
-  if (isWrapper(next, env)) {
-    // 글을 품은 그릇이면 그 속 첫 글자리를 끌어올린다(§9, §7의 거울).
-    // A text-bearing container pulls its first holder up instead (§9, mirroring §7).
-    const joined = joinFromVessel(doc, parentPath, index, next, holder, env);
-    if (joined) return joined;
-    const removed = spliceSiblings(doc, parentPath, index + 1, 1, []);
-    return { doc: removed, caret: pos };
+  if (holder.w === P && isWrapper(next, env)) {
+    if (length === 0) return removeEmptyAtBlock(doc, parentPath, index, next, 1, env);
+    if (joinsOnDelete(next, env)) {
+      const joined = joinFromVessel(doc, parentPath, index, next, holder, env);
+      if (joined) return joined;
+    }
+    return selectBlock(doc, [...parentPath, index + 1]);
   }
   if (next.w === P && holder.w === P) {
+    if (length === 0) {
+      return { doc: spliceSiblings(doc, parentPath, index, 1, []), caret: pos };
+    }
     const merged = mergeParagraphs(doc, parentPath, index, holder, next, env);
     return { doc: merged.doc, caret: pos };
   }
   return unchanged(doc, pos);
 }
 
-// 래퍼문단 경계 너머 이웃에 작용한다(dir -1=앞/+1=뒤) — 글 있는 이웃은 끝/첫 한 칸을 지우고, 빈 문단은 통째로, 래퍼면 그 물건째 지운다.
-// Acts on the neighbor across a wrapper boundary (dir -1 before / +1 after) — trims one slot off a text neighbor, removes an empty paragraph whole, or deletes a wrapper's object entirely.
 function actOnNeighbour(
   doc: NabiDoc,
   parentPath: readonly number[],
@@ -362,12 +338,7 @@ function actOnNeighbour(
   const neighbour = siblings[at];
   if (neighbour === undefined || !isElement(neighbour)) return unchanged(doc, pos);
 
-  if (isWrapper(neighbour, env)) {
-    if (containsIsolation(neighbour, env)) return unchanged(doc, pos);
-    const next = spliceSiblings(doc, parentPath, at, 1, []);
-    const shifted = dir === -1 ? index - 1 : index;
-    return { doc: next, caret: { path: [...parentPath, shifted], offset: pos.offset } };
-  }
+  if (isWrapper(neighbour, env)) return selectBlock(doc, [...parentPath, at]);
 
   if (!isHolder(neighbour, env)) return unchanged(doc, pos);
   const length = holderLength(neighbour, env);

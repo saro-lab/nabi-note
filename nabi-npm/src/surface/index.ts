@@ -27,6 +27,7 @@ export {
 export type { ClipTarget } from './clipboard.js';
 export { makePasteFlow, pickLabel } from './paste.js';
 export type { PasteFlowOptions } from './paste.js';
+export type { PasteUrlHandler } from './paste-url.js';
 export { planRedraw } from './redraw.js';
 export type { RedrawOp } from './redraw.js';
 export type { EditSurfacePort, ReadCaret } from './port.js';

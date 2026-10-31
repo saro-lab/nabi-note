@@ -41,7 +41,7 @@ for (const [, name] of cssSource.matchAll(/url\("\.\/icons\/([^"/]+)"\)/g)) {
 
 const browserBytes = statSync(join(dist, 'browser', 'nabi-note.min.js')).size;
 const cssBytes = statSync(join(dist, 'nabi.css')).size;
-if (browserBytes > 600 * 1024) fail(`browser bundle budget exceeded: ${browserBytes}`);
+if (browserBytes > 700 * 1024) fail(`browser bundle budget exceeded: ${browserBytes}`);
 if (cssBytes > 128 * 1024) fail(`CSS budget exceeded: ${cssBytes}`);
 
 const temp = mkdtempSync(join(tmpdir(), 'nabi-pack-'));

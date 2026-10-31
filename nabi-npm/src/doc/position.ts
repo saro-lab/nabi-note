@@ -25,8 +25,6 @@ export interface Position {
 export interface EditResult {
   readonly doc: NabiDoc;
   readonly caret: Position;
-  // 범위를 남기는 연산(마크)만 싣는다 — 없으면 접힌 캐럿이다.
-  // Only range-preserving operations (marks) carry this; absent means a collapsed caret.
   readonly anchor?: Position;
 }
 
@@ -35,6 +33,7 @@ export interface EditEnv extends SchemaEnv {
   // A container fixed to one paragraph (a table cell); Enter inside it becomes a line, not a split.
   readonly singleParagraph?: ReadonlySet<string>;
   readonly isolating?: ReadonlySet<string>;
+  readonly joinOnDelete?: ReadonlySet<string>;
 }
 
 export function isolationPath(doc: NabiDoc, path: readonly number[], env: EditEnv): readonly number[] | null {

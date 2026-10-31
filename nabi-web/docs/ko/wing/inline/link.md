@@ -19,6 +19,34 @@ import WingDemo from '../../../.vitepress/ui/WingDemo.vue'
 const selected = wings().use('a').build()
 ```
 
+## URL 붙여넣기
+
+앞뒤 공백을 제외한 붙여넣기 내용 전체가 올바른 `http://` 또는 `https://` URL이면 즉시 링크로 들어갑니다. 문장 속 URL, 여러 URL이 섞인 글, 상대 경로는 기존 붙여넣기 방식으로 처리합니다. 코드 블록이나 링크 wing이 없는 편집기에서는 텍스트로 유지합니다. 편집기에서 복사한 내부 클립보드 데이터가 있으면 원래 서식을 먼저 보존합니다.
+
+`mountSurface()`의 `onPasteUrl` 콜백으로 링크의 표시 문구를 정할 수 있습니다.
+
+| 인자 | 값 |
+| --- | --- |
+| `url` | 앞뒤 공백을 제거한 전체 URL |
+| `isSameOrigin` | URL의 프로토콜·호스트·포트가 편집기가 있는 문서의 오리진과 같은지 여부 |
+| `path` | `/`로 시작하는 경로와 쿼리·해시. 예: `/posts/1?a=2#top` |
+
+```ts
+const surface = mountSurface({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#editor')!,
+  onPasteUrl(url, isSameOrigin, path) {
+    if (isSameOrigin && path === '/guide') return 'NABI NOTE'
+    return url
+  },
+})
+```
+
+공백뿐이 아닌 문자열을 반환하면 그 문자열을 표시하고, 콜백이 없거나 빈 값·문자열이 아닌 값·오류가 오면 붙여넣은 URL을 그대로 표시합니다. 반환한 문자열은 HTML로 해석하지 않으며 링크 주소는 바꾸지 않습니다.
+
+콜백은 `async` 함수나 Promise도 지원합니다. 응답을 기다리는 동안에는 URL 링크가 바로 들어가며, 나중에 유효한 문구가 도착하면 해당 링크의 표시 문구만 바뀝니다. 그 사이에 링크를 수정하거나 지웠거나, 문서를 새로 불러오거나, surface를 해제했다면 늦게 도착한 결과를 적용하지 않습니다.
+
 ## CSS 스타일
 
 일반 링크는 `.nabi-content a`, 첨부 링크는 `.nabi-content a[data-nabi-file]`로 따로 꾸밀 수 있습니다.

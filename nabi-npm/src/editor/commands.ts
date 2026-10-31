@@ -31,8 +31,6 @@ export interface CommandOutcome {
 
 export type Command = (doc: NabiDoc, sel: Selection, args: CommandArgs, env: EditEnv) => CommandOutcome | null;
 
-// EditResult → 선택. anchor 가 실리면 범위를 남기는 연산(마크)이다.
-// Converts an EditResult to a selection; a carried anchor marks a range-preserving operation.
 function outcome(r: EditResult): CommandOutcome {
   return {
     doc: r.doc,

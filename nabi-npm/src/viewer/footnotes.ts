@@ -120,6 +120,10 @@ export function attachFootnotes(root: HTMLElement): () => void {
       const link = owner.createElement('a');
       link.href = part.href;
       link.textContent = part.text;
+      if (marker.closest('.nabi-preview-body')) {
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+      }
       return link;
     });
     tip.replaceChildren(number, ...content);

@@ -19,6 +19,34 @@ Links only store `http:`, `https:`, and same-site paths that begin with `.` or `
 const selected = wings().use('a').build()
 ```
 
+## Pasting URLs
+
+If the entire pasted content, excluding surrounding whitespace, is a valid `http://` or `https://` URL, it is inserted as a link immediately. URLs within sentences, text containing multiple URLs, and relative paths follow the existing paste behavior. Code blocks and editors without the link wing keep the content as text. Valid internal clipboard data copied from the editor takes priority to preserve its original formatting.
+
+Use the `onPasteUrl` callback in `mountSurface()` to choose the link's display text.
+
+| Argument | Value |
+| --- | --- |
+| `url` | The complete URL with surrounding whitespace removed |
+| `isSameOrigin` | Whether the URL's protocol, host, and port match the origin of the document containing the editor |
+| `path` | The path starting with `/`, including the query and fragment. Example: `/posts/1?a=2#top` |
+
+```ts
+const surface = mountSurface({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#editor')!,
+  onPasteUrl(url, isSameOrigin, path) {
+    if (isSameOrigin && path === '/guide') return 'NABI NOTE'
+    return url
+  },
+})
+```
+
+A returned string containing non-whitespace text becomes the display text. If the callback is absent, returns an empty or non-string value, or fails, the pasted URL remains the display text. Returned strings are never interpreted as HTML and do not change the link address.
+
+The callback also supports `async` functions and promises. The URL link is inserted immediately while the response is pending; a valid result later changes only that link's display text. A late result is ignored if the link has been edited or deleted, a new document has been loaded, or the surface has been unmounted.
+
 ## CSS Styles
 
 Style ordinary links with `.nabi-content a`, and attachment links separately with `.nabi-content a[data-nabi-file]`.

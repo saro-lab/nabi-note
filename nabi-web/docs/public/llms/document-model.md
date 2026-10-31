@@ -137,6 +137,20 @@ Commands are pure. Return a new `{ doc, selection, arm? }` or `null` for no chan
 
 `nabi.group(fn)` groups successful mutations into one undo entry. Consecutive typing coalesces only while the previous insertion is within `typingMergeMs`; 0 disables coalescing. The undo stack keeps at most `undoLimit` snapshots.
 
+## Deletion at block boundaries
+
+`deleteForward` and `deleteBackward` distinguish text joining from whole-object deletion. These rules apply to a collapsed caret; an existing selection is deleted normally.
+
+- At the end of a text paragraph, Delete first selects an adjacent protected block. Backspace at the start of a text paragraph does the same for the preceding protected block. The paragraph and block contents remain unchanged until another deletion removes the selected block.
+- If that text paragraph is empty, the first deletion removes only the empty paragraph and selects the adjacent protected block. For example, Delete in an empty paragraph above an image moves the preserved image into the removed paragraph's document position. The image is deleted only by a later deletion while selected.
+- Block objects are protected by default, including `img`, `youtube`, `hr`, `table`, `code`, `details`, `float`, and custom blocks. A container can opt into text joining with `Wing.joinOnDelete: true`; built-in lists (`ul`, `ol`, `tl`), quotes, and containers created by `listFamily()` do so. Code, details, and float contents are not pulled into a neighboring text paragraph by boundary deletion.
+- A collapsed caret at an object wrapper's offset 0 with Delete, or offset 1 with Backspace, first selects a protected object. Adjacent protected objects also require selection before deletion.
+- Text paragraphs and headings retain text joining. Lists and quotes retain their text-joining and internal editing rules. Joining never crosses a protected nested block or an isolating scope. Deleting an empty paragraph before a heading, list, or quote preserves the destination's formatting and structure and places the caret inside it.
+- An empty paragraph has no text or content units. Spaces, real `br` line breaks, and footnote markers count as content; the editor-only filler does not.
+- Cell isolation remains intact. Editing inside a cell does not join it with another cell or remove a neighboring table. Explicit whole-table selection can still be deleted.
+
+The editing surface applies the same boundary policy to keyboard deletion and mobile `beforeinput` deletion. Adjacent footnotes and file attachments retain their select-first behavior; ordinary linked text remains editable as text.
+
 ## Change events
 
 ```ts

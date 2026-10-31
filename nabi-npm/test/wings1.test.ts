@@ -20,6 +20,7 @@ import {
   textColorWing,
 } from '../src/wings/index.js';
 import { attachFileLink } from '../src/wings/link/attach.js';
+import { makeSurfaceActions } from '../src/surface/index.js';
 import { reachAt, visibleAt } from '../src/ui/visible.js';
 import { tinyHtml } from './tiny-html.js';
 import { done, eq, ok } from './net.js';
@@ -651,11 +652,8 @@ for (const fam of FAMILIES) {
   // 앞(1) + 첨부 "첨부파일"(4) + 뒤(1) — 첨부가 덮은 자리는 [1, 5) 다.
   // Leading(1) + attachment "첨부파일"(4) + trailing(1) — the attachment covers [1, 5).
   const n = make([{ w: 'p', ch: ['앞', { w: 'a', a: { href: '/f/x.txt', file: 'txt' }, ch: ['첨부파일'] }, '뒤'] }]);
-  let onKey: ((event: KeyboardEvent) => void) | null = null;
   const root = {
-    addEventListener: (_type: string, handler: unknown) => {
-      onKey = handler as (event: KeyboardEvent) => void;
-    },
+    addEventListener: () => undefined,
     removeEventListener: () => undefined,
   } as unknown as HTMLElement;
   const stop = attachFileLink({
@@ -681,25 +679,21 @@ for (const fam of FAMILIES) {
   n.select(range(at([0], 0), at([0], 2)));
   eq('스치기만 한 범위도 첨부 끝까지 넓어진다', span(), [0, 5]);
 
-  // 붙어 있는 지우기 — 첫 번은 겨눈다(코어가 한 글자를 갉지 못하게 preventDefault 한다).
-  // A delete right next to it — the first press only selects (preventDefault stops the core from nibbling one character).
-  let stopped = 0;
-  const press = (key: string): void =>
-    onKey?.({ key, preventDefault: () => (stopped += 1) } as unknown as KeyboardEvent);
+  const actions = makeSurfaceActions({ nabi: n, registry });
 
   caret(5);
-  press('Backspace');
+  actions.backspace();
   eq('첨부 뒤 백스페이스는 먼저 통째로 겨눈다', span(), [1, 5]);
   caret(1);
-  press('Delete');
+  actions.deleteForward();
   eq('첨부 앞 Delete 도 먼저 통째로 겨눈다', span(), [1, 5]);
-  eq('두 번 다 코어의 한 글자 지우기를 막았다', stopped, 2);
+  eq('겨누기는 첨부 내용을 바꾸지 않는다', n.getJson(), [
+    { w: 'p', ch: ['앞', { w: 'a', a: { href: '/f/x.txt', file: 'txt' }, ch: ['첨부파일'] }, '뒤'] },
+  ]);
 
   // 겨눠진 채로 지우면 코어의 범위 삭제가 통째로 걷는다 — 반쪽 링크가 안 남는다.
   // Deleting while already selected lets the core's range-delete take the whole thing — no half-link survives.
-  press('Backspace');
-  eq('이미 골라져 있으면 그 키는 코어의 것이다 (막지 않는다)', stopped, 2);
-  n.applyCommand('deleteBackward');
+  actions.backspace();
   eq('겨눈 뒤 한 번 더 누르면 첨부가 통째로 사라진다', n.getJson(), [{ w: 'p', ch: ['앞뒤'] }]);
   stop();
 }

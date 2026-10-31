@@ -7,6 +7,7 @@ import { caretAt, isCollapsed, ordered, sameSelection, selectObject, type Select
 import { localeDirection, localeValue, makeTranslator } from '../locale/index.js';
 import { hostOf, type Nabi, type NabiChange } from '../editor/index.js';
 import { markSpanAt, type Registry } from '../wing/index.js';
+import { $deleteSelectionAt } from '../wing/delete-selection.js';
 import { FILLER_ATTR, renderEditorHtml, renderHtml, renderParagraphHtml, type HtmlOptions } from '../html/index.js';
 import { cutTableSelection, tableClipboardOf } from '../wings/table/clipboard.js';
 import type { IoFilter } from '../io/index.js';
@@ -16,7 +17,9 @@ import { domTextOf, fromDomPoint, holderElOf, pathOfId, toDomPoint, ZERO_WIDTH }
 import { clipboardBodyOf, clipHtmlOf, loadClipboard, NABI_CLIPBOARD_MIME } from './clipboard.js';
 import { ioFiltersOf } from './filters.js';
 import { makePasteFlow } from './paste.js';
+import type { PasteUrlHandler } from './paste-url.js';
 import { makeMediaDrag } from './media-drag.js';
+import { mountMoveHandles } from './move-handles.js';
 import { planRedraw } from './redraw.js';
 import type { EditSurfacePort, ReadCaret } from './port.js';
 import { claimMountRoot, DisposerStack, HostElementBaseline, HostElementLease } from '../lifecycle.js';
@@ -47,6 +50,7 @@ export interface SurfaceOptions {
   // 이 표면에만 끼우는 IO 필터 — 맨 앞에 선다. 최종 순서: 여기 것 → 레지스트리 것(makeRegistry의 ioFilters, wing 필터 앞) → 내장 셋(html·md, 늘 마지막)
   // IO filters scoped to this surface, placed first. Final order: these -> registry filters (makeRegistry's ioFilters, already ahead of wing filters) -> built-ins (html/md, always last)
   readonly ioFilters?: readonly IoFilter[];
+  readonly onPasteUrl?: PasteUrlHandler;
   // 드롭·붙여넣기로 온 파일이 흘러가는 곳(업로드 wing이 11에서 잇는다) — 없으면 그냥 버린다
   // Where dropped/pasted files flow to (the upload wing connects this at mount extra 11); without it, files are simply discarded
   readonly fileSink?: (files: readonly File[]) => void;
@@ -97,6 +101,8 @@ export function mountSurface(options: SurfaceOptions): Surface {
 
     // 붙여넣기가 지나는 필터 목록 — 짓는 법은 filters.ts 하나다(저장 판도 같은 목록을 본다)
     // The filter list paste flows through; built in one place (filters.ts), which the save panel also shares
+    const pasteLifetime = new AbortController();
+    lifecycle.add(() => pasteLifetime.abort());
     const takePaste = makePasteFlow({
       nabi,
       filters: ioFiltersOf({
@@ -106,6 +112,9 @@ export function mountSurface(options: SurfaceOptions): Surface {
       }),
       locale: () => (options.locale === undefined ? hostOf(nabi).locale() : localeValue(options.locale)),
       ...(options.fileSink ? { fileSink: options.fileSink } : {}),
+      ...(options.onPasteUrl ? { onPasteUrl: options.onPasteUrl } : {}),
+      ...(view ? { origin: view.location.origin } : {}),
+      signal: pasteLifetime.signal,
     });
 
     // --- 상태 (전부 이 mount 의 것) ------------------------------------------------------
@@ -304,10 +313,20 @@ export function mountSurface(options: SurfaceOptions): Surface {
       const live = readCaret();
       const target = targetSelectionOf(ev);
       if (target) {
-        // 접힌 캐럿의 문단 경계 Backspace는 목록·인용 같은 구조 규칙이 먼저다 — 브라우저가 제안한 문단 간 삭제 범위를 그대로 쓰면 그 규칙을 건너뛰므로, 그때만 실제 접힌 캐럿을 쓴다
-        // A collapsed-caret Backspace at a paragraph boundary must run structural rules (list/quote) first; using the browser's suggested cross-paragraph deletion range would skip those rules, so the actual collapsed caret is used instead in that case
+        // 경계 삭제는 실제 캐럿으로 처리해야 브라우저의 삭제 범위가 물체 선택과 빈 문단 제거를 건너뛰지 않는다.
+        // Boundary deletion uses the live caret so a browser target range cannot bypass object selection or empty-paragraph removal.
         const crosses = !samePath(target.anchor.path, target.focus.path);
-        if (!(live && isCollapsed(live.selection) && crosses)) {
+        const backward = ev.inputType === 'deleteContentBackward';
+        const deleting = backward || ev.inputType === 'deleteContentForward';
+        const at = live?.selection.focus;
+        const holder = at ? nodeAt(doc(), at.path) : null;
+        const boundary =
+          deleting &&
+          at &&
+          holder &&
+          (isWrapper(holder, env) || (backward ? at.offset === 0 : at.offset === holderLength(holder, env)));
+        const inline = deleting && live && $deleteSelectionAt(registry.attaches, doc(), live.selection, env, !backward);
+        if (!(live && isCollapsed(live.selection) && (crosses || boundary || inline))) {
           adoptSelection(target);
           return;
         }
@@ -1175,6 +1194,16 @@ export function mountSurface(options: SurfaceOptions): Surface {
       const placeholder = options.placeholder ?? translator.t('placeholder');
       if (placeholder !== '') attributes.style('--nabi-placeholder', cssQuoted(placeholder));
     };
+    lifecycle.add(
+      mountMoveHandles({
+        nabi,
+        registry,
+        root,
+        translator,
+        drag: mediaDrag,
+        canEdit: () => !composing && hostOf(nabi).lockedBy() === null && root.contentEditable !== 'false',
+      }),
+    );
     localize();
     if (translator.onChange) lifecycle.add(translator.onChange(localize));
     // hydrate — 서버가 그린 편집기 DOM이 문서와 맞으면 다시 그리지 않고 입양한다

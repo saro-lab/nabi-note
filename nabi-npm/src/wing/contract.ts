@@ -298,6 +298,7 @@ export interface Wing {
   readonly holds?: 'blocks' | 'inline';
   readonly singleParagraph?: boolean;
   readonly isolating?: boolean;
+  readonly joinOnDelete?: boolean;
   readonly boolAttrs?: readonly string[];
   readonly attrs?: readonly string[];
   readonly clearable?: boolean;

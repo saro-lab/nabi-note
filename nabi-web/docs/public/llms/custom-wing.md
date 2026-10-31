@@ -48,6 +48,7 @@ interface Wing {
   readonly holds?: 'blocks' | 'inline';
   readonly singleParagraph?: boolean;
   readonly isolating?: boolean;
+  readonly joinOnDelete?: boolean;
   readonly attrs?: readonly string[];
   readonly boolAttrs?: readonly string[];
   readonly clearable?: boolean;
@@ -101,6 +102,7 @@ Prompt actions, prompt context controls, and `PromptOptions` accept `submitOnOut
 - `parts` belongs only to a container. Every part needs a matching `partHtml`.
 - `singleParagraph` makes Enter insert a line rather than split structure.
 - `isolating` protects a block holder's editing boundary while allowing multiple paragraphs. It is available on a block container or a block-holding `StructureDecl` part. Backspace/Delete do not join its content with a neighboring scope.
+- `joinOnDelete` is valid only on a `container` wing and defaults to `false`. Setting it to `true` allows boundary Delete/Backspace to join the container's first or last text holder with a neighboring paragraph. Joining never crosses an isolating scope or skips a protected nested block. The `listFamily()` factory and built-in quote enable it; other block objects are selected before deletion by default. The registry exposes enabled container words through `EditEnv.joinOnDelete`. See `document-model.md#deletion-at-block-boundaries`.
 - `boolAttrs` retain numeric `1` only.
 - `allows` names the only child types. Disallowed wrappers are peeled while recoverable text remains.
 - `noAlign` is valid only on `void` or `container` objects.

@@ -932,6 +932,27 @@ export const CORE_CSS = `${ICON_CSS}
 
 /* 브라우저는 그림·iframe에 선택 하이라이트를 안 그리므로, 골랐다는 표시는 점선 테두리 하나로 우리가 대신한다(화면 전용, 출력에는 안 나간다)
    Browsers don't draw a selection highlight on images/iframes, so a dashed outline stands in for "selected" here (screen-only, never in output) */
+.nabi-move-handle {
+  position: fixed; z-index: 1100; box-sizing: border-box; width: 44px; height: 28px;
+  display: flex; align-items: center; justify-content: center; padding: 0; margin: 0;
+  border: 1px solid var(--nabi-line, #e2e2e8); border-radius: 7px;
+  color: var(--nabi-accent, #3b6fe0); background: var(--nabi-bg, #fff);
+  box-shadow: 0 2px 6px #0002; cursor: grab;
+  font: 400 .875rem/1 var(--nabi-font, var(--nabi-font-fallback, sans-serif));
+  touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.nabi-move-handle * { pointer-events: none; -webkit-user-drag: none; }
+.nabi-move-handle.is-moving { cursor: grabbing; pointer-events: none; opacity: .6; }
+.nabi-move-handle:focus-visible { outline: 2px solid var(--nabi-accent, #3b6fe0); outline-offset: 2px; }
+.nabi-content.nabi-move-preview {
+  position: fixed; inset: 0 auto auto 0; z-index: 1150; margin: 0; padding: 0;
+  min-block-size: 0; overflow: hidden; contain: layout paint; opacity: .5;
+  background: var(--nabi-bg, #fff); pointer-events: none; user-select: none;
+}
+.nabi-move-preview * { pointer-events: none !important; }
+@media (pointer: coarse) { .nabi-move-handle { height: 44px; } }
+@media print { .nabi-move-handle, .nabi-media-drop, .nabi-move-preview { display: none !important; } }
+
 .nabi-content [data-nabi-picked] {
   outline: 2px dashed var(--nabi-accent);
   outline-offset: 2px;

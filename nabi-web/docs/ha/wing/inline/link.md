@@ -19,6 +19,34 @@ Mahaɗi yana adana `http:`, `https:`, da hanyar shafi iri ɗaya da ta fara da `.
 const selected = wings().use('a').build()
 ```
 
+## Manna URL
+
+Idan duk abin da aka manna, bayan cire fararen sarari a farko da ƙarshe, ingantaccen URL ne na `http://` ko `https://`, ana saka shi nan take a matsayin mahaɗi. URL da ke cikin jimloli, rubutu mai URL fiye da ɗaya, da hanyoyin dangi suna bin tsarin manna da ake amfani da shi. A cikin tubalan lamba da editocin da ba su da wing na mahaɗi, abin da aka manna yana nan a matsayin rubutu. Ana ba ingantattun bayanan allo na cikin gida da aka kwafa daga edita fifiko don kiyaye tsarin su na asali.
+
+Yi amfani da callback na `onPasteUrl` a cikin `mountSurface()` don zaɓar rubutun da mahaɗin zai nuna.
+
+| Argument | Ƙima |
+| --- | --- |
+| `url` | Cikakken URL bayan cire fararen sarari a farko da ƙarshe |
+| `isSameOrigin` | Ko protocol, host da port na URL sun yi daidai da origin na takardar da ke ɗauke da edita |
+| `path` | Hanyar da ta fara da `/`, tare da query da fragment. Misali: `/posts/1?a=2#top` |
+
+```ts
+const surface = mountSurface({
+  nabi,
+  registry,
+  root: document.querySelector<HTMLElement>('#editor')!,
+  onPasteUrl(url, isSameOrigin, path) {
+    if (isSameOrigin && path === '/guide') return 'NABI NOTE'
+    return url
+  },
+})
+```
+
+Idan string ɗin da aka dawo da shi yana da haruffa waɗanda ba fararen sarari kawai ba ne, shi ne zai zama rubutun da ake nunawa. Idan callback babu shi, ya dawo da ƙima marar komai ko wadda ba string ba, ko ya gaza, URL ɗin da aka manna zai ci gaba da zama rubutun da ake nunawa. Ba a taɓa fassara string ɗin da aka dawo da shi a matsayin HTML ba, kuma ba ya canza adireshin mahaɗin.
+
+Callback yana kuma goyon bayan ayyukan `async` da Promise. Ana saka mahaɗin URL nan take yayin jiran amsa; ingantaccen sakamakon da ya zo daga baya yana canza rubutun wannan mahaɗin kawai. Ana yin watsi da sakamakon da ya makara idan an gyara ko an goge mahaɗin, an loda sabuwar takarda, ko an cire surface.
+
 ## Salon CSS
 
 Ana iya yi wa mahaɗin yau da kullum salo da `.nabi-content a`, sannan a yi wa mahaɗin fayil da aka haɗa salo dabam da `.nabi-content a[data-nabi-file]`.

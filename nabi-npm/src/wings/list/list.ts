@@ -128,20 +128,41 @@ function outdent(doc: NabiDoc, itemPath: readonly number[], focus: Position, env
 // 백스페이스와 Delete는 서로의 거울 — 둘 다 "이 두 항목이 하나가 된다"를 반대쪽에서 부른다. 셈은 joinItems 하나뿐이다.
 // Backspace and Delete are mirrors of each other — both merge two items, just called from opposite ends; joinItems does the one calculation both share.
 
-// 항목 속 마지막 글자리 — 래퍼문단은 건너뛴다(중첩 목록을 든 항목이면 그 앞 문단이 답이다).
-// The last text-holding spot in an item — skips wrapper paragraphs (a nested list's owning item answers with the paragraph before it).
-function lastHolderIn(root: ElementNode, env: EditEnv): readonly number[] | null {
-  let found: readonly number[] | null = null;
-  const walk = (node: ElementNode, at: readonly number[]): void => {
-    node.ch.forEach((child, i) => {
-      if (!isElement(child)) return;
-      const path = [...at, i];
-      if (isHolder(child, env) && !isWrapper(child, env)) found = path;
-      walk(child, path);
-    });
+interface ItemEdge {
+  readonly path: readonly number[];
+  readonly blocked: boolean;
+}
+
+function joinsOnDelete(wrapper: ElementNode, env: EditEnv): boolean {
+  const block = wrapper.ch[0];
+  return isElement(block) && env.joinOnDelete?.has(block.w) === true && !env.isolating?.has(block.w);
+}
+
+function edgeHolderIn(root: ElementNode, env: EditEnv, dir: -1 | 1): ItemEdge | null {
+  const walk = (node: ElementNode, path: readonly number[]): ItemEdge | null => {
+    if (env.isolating?.has(node.w) || env.singleParagraph?.has(node.w)) return { path, blocked: true };
+    if (isHolder(node, env) && (!isWrapper(node, env) || !joinsOnDelete(node, env))) {
+      return { path, blocked: false };
+    }
+    for (let i = dir === 1 ? 0 : node.ch.length - 1; i >= 0 && i < node.ch.length; i += dir) {
+      const child = node.ch[i];
+      if (!isElement(child)) continue;
+      const edge = walk(child, [...path, i]);
+      if (edge) return edge;
+    }
+    return null;
   };
-  walk(root, []);
-  return found;
+  return walk(root, []);
+}
+
+function selectBoundaryBlock(doc: NabiDoc, path: readonly number[], focus: Position, env: EditEnv): CommandOutcome {
+  const current = nodeAt(doc, focus.path);
+  const item = nodeAt(doc, focus.path.slice(0, -1));
+  const next =
+    current?.w === P && !isWrapper(current, env) && holderLength(current, env) === 0 && item && item.ch.length > 1
+      ? replaceAt(doc, focus.path, [])
+      : doc;
+  return { doc: next, selection: { anchor: { path, offset: 0 }, focus: { path, offset: 1 } } };
 }
 
 // 항목 `index`를 앞 항목에 잇는다 — 마지막 글자리에 첫 문단이 붙고 나머지 블록은 뒤로 따라간다.
@@ -149,7 +170,13 @@ function lastHolderIn(root: ElementNode, env: EditEnv): readonly number[] | null
 //
 // 앞 항목이 없으면 null — 부르는 쪽이 벗기기·내어쓰기로 대신 간다.
 // Returns null with no previous item — the caller falls back to unwrap or outdent instead.
-function joinItems(doc: NabiDoc, listPath: readonly number[], index: number, env: EditEnv): CommandOutcome | null {
+function joinItems(
+  doc: NabiDoc,
+  listPath: readonly number[],
+  index: number,
+  focus: Position,
+  env: EditEnv,
+): CommandOutcome | null {
   const list = nodeAt(doc, listPath);
   if (!list || index <= 0) return null;
   const items = list.ch.filter(isElement);
@@ -157,10 +184,16 @@ function joinItems(doc: NabiDoc, listPath: readonly number[], index: number, env
   const prev = items[index - 1];
   if (!item || !prev) return null;
 
-  const inner = lastHolderIn(prev, env);
-  if (!inner) return null;
+  const edge = edgeHolderIn(prev, env, -1);
+  const nextEdge = edgeHolderIn(item, env, 1);
+  if (!edge || !nextEdge || edge.blocked || nextEdge.blocked) return { doc, selection: caretAt(focus) };
+  const inner = edge.path;
   const target = nodeAt(doc, [...listPath, index - 1, ...inner]);
   if (!target) return null;
+  if (isWrapper(target, env)) return selectBoundaryBlock(doc, [...listPath, index - 1, ...inner], focus, env);
+  const sourcePath = [...listPath, index, ...nextEdge.path];
+  const source = nodeAt(doc, sourcePath);
+  if (source && isWrapper(source, env)) return selectBoundaryBlock(doc, sourcePath, focus, env);
 
   const terminal = terminalOf(env);
   const junction = holderLength(target, env);
@@ -189,6 +222,7 @@ function pullAfterList(
   doc: NabiDoc,
   listPath: readonly number[],
   itemPath: readonly number[],
+  focus: Position,
   env: EditEnv,
 ): CommandOutcome | null {
   // 목록을 감싼 래퍼문단의 자리 — 그다음 형제가 끌어올릴 대상이다.
@@ -203,10 +237,22 @@ function pullAfterList(
 
   const item = nodeAt(doc, itemPath);
   if (!item) return null;
-  const inner = lastHolderIn(item, env);
-  if (!inner) return null;
+  const edge = edgeHolderIn(item, env, -1);
+  if (!edge || edge.blocked) return { doc, selection: caretAt(focus) };
+  const inner = edge.path;
   const target = nodeAt(doc, [...itemPath, ...inner]);
   if (!target) return null;
+  if (isWrapper(target, env)) return selectBoundaryBlock(doc, [...itemPath, ...inner], focus, env);
+
+  if (isWrapper(after, env)) {
+    const afterPath = [...parentPath, at + 1];
+    if (!joinsOnDelete(after, env)) return selectBoundaryBlock(doc, afterPath, focus, env);
+    const nextEdge = edgeHolderIn(after, env, 1);
+    if (!nextEdge || nextEdge.blocked) return { doc, selection: caretAt(focus) };
+    const sourcePath = [...afterPath, ...nextEdge.path];
+    const source = nodeAt(doc, sourcePath);
+    if (source && isWrapper(source, env)) return selectBoundaryBlock(doc, sourcePath, focus, env);
+  }
 
   const terminal = terminalOf(env);
   const junction = holderLength(target, env);
@@ -388,6 +434,8 @@ function listKeys(family: Family): OnKey {
     // 캐럿은 항목 바로 속 블록에 있어야 한다 — 더 깊으면 그 속을 품은 wing 의 일이다.
     if (focus.path.length !== itemPath.length + 1) return null;
     if (!itemPath.every((v, i) => v === focus.path[i])) return null;
+    const current = nodeAt(doc, focus.path);
+    if ((intent.key === 'backspace' || intent.key === 'delete') && current && isWrapper(current, env)) return null;
 
     switch (intent.key) {
       case 'backspace': {
@@ -398,14 +446,16 @@ function listKeys(family: Family): OnKey {
         // Join with the previous item if there is one; otherwise pop one level — outdent decides nested-vs-top-level from there.
         const listPath = itemPath.slice(0, -1);
         const index = itemPath[itemPath.length - 1] as number;
-        return joinItems(doc, listPath, index, env) ?? outdent(doc, itemPath, focus, env);
+        return joinItems(doc, listPath, index, focus, env) ?? outdent(doc, itemPath, focus, env);
       }
       case 'delete': {
         // 항목 끝이면 뒤를 끌어올린다(백스페이스의 거울) — 끝이 아니면 코어의 것이다.
         // At the item's end, pull up what follows (delete mirrors backspace); anywhere else, this is core's to handle.
         const item = nodeAt(doc, itemPath);
         if (!item) return null;
-        const inner = lastHolderIn(item, env);
+        const edge = edgeHolderIn(item, env, -1);
+        if (edge?.blocked) return null;
+        const inner = edge?.path;
         const here = focus.path.slice(itemPath.length);
         if (!inner || inner.length !== here.length || !inner.every((v, i) => v === here[i])) return null;
         const holder = nodeAt(doc, focus.path);
@@ -416,8 +466,9 @@ function listKeys(family: Family): OnKey {
         const list = nodeAt(doc, listPath);
         // 뒤 항목이 있으면 끌어올려 합치고, 마지막 항목이면 목록 뒤의 블록을 끌어올린다.
         // If there's a following item, merge it in; at the last item, pull up whatever follows the list instead.
-        if (list && index + 1 < list.ch.filter(isElement).length) return joinItems(doc, listPath, index + 1, env);
-        return pullAfterList(doc, listPath, itemPath, env);
+        if (list && index + 1 < list.ch.filter(isElement).length)
+          return joinItems(doc, listPath, index + 1, focus, env);
+        return pullAfterList(doc, listPath, itemPath, focus, env);
       }
       case 'tab':
         // 들어갈 앞 항목이 없으면 아무 일도 안 하지만 키는 삼킨다 — 탭이 스페이스로 새면 안 된다.

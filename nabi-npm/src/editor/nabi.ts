@@ -27,6 +27,7 @@ import {
   type ParseNode,
 } from '../html/index.js';
 import { $importDoc } from '../html/import.js';
+import { renderPreviewHtml } from '../html/render.js';
 import { attrsArg, coreCommands, markArg, type Command, type CommandArgs, type CommandOutcome } from './commands.js';
 import { diffParagraphs, type NabiChange } from './signal.js';
 import { toastAsk, type Ask, type Choose } from './ask.js';
@@ -645,6 +646,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
 
   const host: NabiHost = {
     doc: () => doc,
+    previewHtml: () => renderPreviewHtml(doc, htmlOptions),
     env,
     armed,
     // 기본은 toastAsk("message는 toast(info)·confirm은 아니오")다 — 호스트는 끼운 칸만 이긴다. 스프레드로 안 섞는 까닭: 호스트 상자의 this가 끊기면 안 되고, undefined인 칸이 기본을 밀어내면 안 된다.
@@ -681,6 +683,7 @@ export function createNabi(options: NabiCoreOptions): Nabi {
       },
     },
     toast,
+    reportError: report,
     bindToast(sink) {
       return bindSink(toastSinks, sink);
     },

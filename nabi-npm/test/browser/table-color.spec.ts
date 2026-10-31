@@ -60,13 +60,13 @@ test('theme changes and selection keep pale cell backgrounds visible', async ({ 
     nabi.select({ anchor: { path: [0, 0, 0, 0, 0], offset: 0 }, focus: { path: [0, 0, 0, 1, 0], offset: 0 } });
     nabi.applyCommand('setCellColor', { bg: 'yellow' });
   });
-  for (const [theme, alpha] of [
-    ['light', '0.14'],
-    ['dark', '0.12'],
+  for (const [theme, background] of [
+    ['light', 'rgba(250, 204, 21, 0.14)'],
+    ['dark', 'rgba(245, 214, 115, 0.2)'],
   ] as const) {
     await page.locator('#app').evaluate((root, theme) => root.setAttribute('data-nabi-theme', theme), theme);
     for (const cell of await page.locator('#content th, #content td').all()) {
-      await expect(cell).toHaveCSS('background-color', `rgba(250, 204, 21, ${alpha})`);
+      await expect(cell).toHaveCSS('background-color', background);
       await expect(cell).toHaveCSS('outline-style', 'solid');
       await expect(cell).toHaveCSS('outline-width', '2px');
     }

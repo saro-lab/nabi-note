@@ -209,9 +209,11 @@
       </div>
       <!-- 미리 그려 둔 문서를 그대로 심는다 — 서버·브라우저 첫 그림이 같아야 hydrate가 맞는다. -->
       <!-- The pre-rendered document is planted as-is; server and browser must match on first paint to hydrate. -->
+      <!-- VitePress의 캡처 리스너가 편집 링크를 먼저 탐색하지 못하게 한다. -->
+      <!-- Keep VitePress's capture listener from navigating editable links first. -->
       <div
         ref="editorEl"
-        class="nabi-content"
+        class="nabi-content vp-raw"
         contenteditable="true"
         spellcheck="false"
         v-html="props.ssrHtml ?? ''"

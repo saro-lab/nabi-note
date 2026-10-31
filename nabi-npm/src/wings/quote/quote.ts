@@ -40,6 +40,7 @@ export const quoteWing: Wing = {
   place: 'container',
   basic: true,
   holds: 'blocks',
+  joinOnDelete: true,
   onKey,
   toHtml: DEFAULT_BUILDERS['quote'],
   // 속의 **모든 줄**에 `> ` 를 단다 — 빈 줄에는 `>` 하나가 붙는다(그것이 인용 속의 문단 경계다).

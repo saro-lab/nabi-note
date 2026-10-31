@@ -14,6 +14,7 @@ import {
 } from '../caret/index.js';
 import { hostOf, type Nabi } from '../editor/index.js';
 import { routeKey, type KeyIntent, type Registry } from '../wing/index.js';
+import { $deleteSelectionAt } from '../wing/delete-selection.js';
 import { tryInputRule } from './autoformat.js';
 import { canEscape, escapeVesselOp, vesselAt } from './vessel.js';
 
@@ -73,9 +74,13 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
   // wing에게 먼저 묻는다 — null이면 pass, 응답했으면 그 키는 wing 것이다. 문서 변화 여부로 판단하지 않는다: 침묵의 응답(false)도 "처리했다"로 읽어야 한다(안 그러면 목록 첫 항목 탭이 코어의 스페이스 넷까지 흘러갔다)
   // Asks the owning wing first: null means pass, any other response means the wing owns this key. Ownership isn't inferred from doc changes -- a silent (no-op) response still counts as "handled", or a list's first-item Tab would fall through to core's four-space rule
   const route = (intent: KeyIntent): boolean => {
-    const outcome = routeKey(intent, hostOf(nabi).doc(), nabi.getSelection(), hostOf(nabi).env, registry);
+    const host = hostOf(nabi);
+    const doc = host.doc();
+    const outcome = routeKey(intent, doc, nabi.getSelection(), host.env, registry);
     if (outcome === null) return false;
-    hostOf(nabi).applyRaw(() => outcome, `key:${intent.key}`);
+    // 문서가 같은 응답은 콜백의 복제본을 돌려줘야 선택 이동이 문서 수정으로 기록되지 않는다.
+    // Return the callback's clone for an unchanged document so selection movement is not recorded as a document edit.
+    host.applyRaw((given) => (outcome.doc === doc ? { ...outcome, doc: given } : outcome), `key:${intent.key}`);
     return true;
   };
 
@@ -177,6 +182,12 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
     return nabi.select({ anchor: { path: wrapPath, offset: 0 }, focus: { path: wrapPath, offset: 1 } });
   };
 
+  const aimInline = (forward: boolean): boolean => {
+    const host = hostOf(nabi);
+    const selected = $deleteSelectionAt(registry.attaches, host.doc(), nabi.getSelection(), host.env, forward);
+    return selected ? nabi.select(selected) : false;
+  };
+
   return {
     enter,
     shiftEnter() {
@@ -199,6 +210,7 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
     },
     backspace() {
       lastEnterAt = 0;
+      if (aimInline(false)) return true;
       // wing의 규칙이 겨누기(aimVessel)보다 먼저다 — 목록 첫 항목의 백스페이스는 표식만 벗겨야지, 겨누기가 먼저 서면 목록 전체가 한 번에 사라졌다. 겨누기는 제 규칙이 없는 그릇(인용·접기·코드·표)에만 남는 답이다
       // The wing's own rule wins over aimVessel; a list's first-item Backspace should only strip its marker, and letting aimVessel go first made the whole list disappear in one press. aimVessel only answers for vessels without their own rule (quote/details/code/table)
       if (route({ key: 'backspace' })) return true;
@@ -210,6 +222,7 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
     },
     deleteForward() {
       lastEnterAt = 0;
+      if (aimInline(true)) return true;
       if (route({ key: 'delete' })) return true;
       nabi.applyCommand('deleteForward');
       return true;
