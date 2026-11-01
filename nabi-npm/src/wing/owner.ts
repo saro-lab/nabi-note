@@ -1,11 +1,12 @@
 // 키 소유 판정 — 캐럿 자리를 품는 가장 안쪽 노드의 wing을 찾는다(문단이면 코어 = null).
 // Resolves key ownership by finding the innermost node's wing at the caret; a paragraph means the core owns it (null).
-import { P, type NabiDoc } from '../schema/index.js';
+import { P, isWrapper, type NabiDoc } from '../schema/index.js';
 import { documentIndex, isolationPath, nodeAt, type EditEnv } from '../doc/index.js';
-import type { Selection } from '../caret/index.js';
+import { isCollapsed, isObjectSelection, type Selection } from '../caret/index.js';
 import type { CommandOutcome } from '../editor/index.js';
 import type { KeyIntent, OwnerAt, Wing } from './contract.js';
 import type { Registry } from './registry.js';
+import { blocksBoundaryEscape, exitWrapper } from './ops.js';
 
 export interface KeyOwner {
   readonly wing: Wing;
@@ -27,8 +28,6 @@ export function keyOwnerAt(doc: NabiDoc, sel: Selection, registry: Registry): Ke
   return null;
 }
 
-// 키 하나를 소유자에게 라우팅한다 — 소유자가 없거나 onKey가 없거나 null(pass)이면 null.
-// Routes one key to its owner; returns null if there's no owner, no onKey, or the owner passes.
 export function routeKey(
   intent: KeyIntent,
   doc: NabiDoc,
@@ -37,6 +36,23 @@ export function routeKey(
   registry: Registry,
 ): CommandOutcome | null {
   const found = keyOwnerAt(doc, sel, registry);
+  if (intent.key === 'arrow' && (intent.dir === 'up' || intent.dir === 'down') && !intent.shift) {
+    const path = sel.focus.path;
+    const holder = nodeAt(doc, path);
+    if (holder && isWrapper(holder, env) && (isCollapsed(sel) || isObjectSelection(doc, sel, env))) {
+      return exitWrapper(doc, [...path, 0], intent.dir, env);
+    }
+    const handled = found?.wing.onKey?.(intent, doc, sel, env, found.owner);
+    if (handled) return handled;
+    for (let depth = path.length; depth > 1; depth--) {
+      const at = path.slice(0, depth);
+      const node = nodeAt(doc, at);
+      if (node && env.lumps.has(node.w)) {
+        return blocksBoundaryEscape(intent, doc, sel, env, { path: at, node });
+      }
+    }
+    return null;
+  }
   const boundary = isolationPath(doc, sel.focus.path, env);
   if (!boundary) return found?.wing.onKey?.(intent, doc, sel, env, found.owner) ?? null;
   const visited = new Set<Wing>();

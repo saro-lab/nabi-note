@@ -542,8 +542,10 @@ function arrowStep(
   const dir = intent.dir;
   const back = dir === 'left' || dir === 'up';
   const edge = cellBoundary(ctx.tablePath, ctx.cell, env, !back);
+  const visualEdge = dir === 'up' || dir === 'down' ? intent.atVisualEdge : undefined;
+  const atEdge = visualEdge ?? sel.focus.offset === edge.offset;
   if (
-    sel.focus.offset !== edge.offset ||
+    !atEdge ||
     sel.focus.path.length !== edge.path.length ||
     !sel.focus.path.every((value, index) => value === edge.path[index])
   )
@@ -555,7 +557,7 @@ function arrowStep(
     return { doc, selection: caretAt(cellBoundary(ctx.tablePath, next, env, back)) };
   }
   const row = back ? ctx.cell.row - 1 : ctx.cell.row + ctx.cell.rowSpan;
-  if (row < 0 || row >= ctx.grid.rows) return exitWrapper(doc, ctx.tablePath, back ? 'up' : 'down');
+  if (row < 0 || row >= ctx.grid.rows) return exitWrapper(doc, ctx.tablePath, back ? 'up' : 'down', env);
   const next = cellCovering(ctx.grid, row, ctx.cell.column);
   return next ? { doc, selection: caretAt(cellBoundary(ctx.tablePath, next, env)) } : null;
 }

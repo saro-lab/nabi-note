@@ -2,8 +2,32 @@
 // Every branch of Enter routes through here: a text paragraph splits, a wrapper plants an empty paragraph, and inline holders/table cells get a line break instead.
 import { P, isWrapper, type Attrs, type AttrValue, type ElementNode, type NabiDoc } from '../schema/index.js';
 import { insertLine } from './insert.js';
-import { nodeAt, replaceAt, terminalOf, type EditEnv, type EditResult, type Position } from './position.js';
+import {
+  holderLength,
+  nodeAt,
+  replaceAt,
+  terminalOf,
+  type EditEnv,
+  type EditResult,
+  type Position,
+} from './position.js';
 import { fromRuns, holderRuns, sliceRuns } from './runs-edit.js';
+
+export function paragraphBeside(doc: NabiDoc, edge: Position, env: EditEnv): EditResult | null {
+  const wrapper = nodeAt(doc, edge.path);
+  if (!wrapper || !isWrapper(wrapper, env)) return null;
+  const parent = edge.path.slice(0, -1);
+  const index = edge.path[edge.path.length - 1] as number;
+  const before = edge.offset === 0;
+  const path = [...parent, index + (before ? -1 : 1)];
+  const adjacent = nodeAt(doc, path);
+  if (adjacent?.w === P && !isWrapper(adjacent, env)) {
+    return { doc, caret: { path, offset: before ? holderLength(adjacent, env) : 0 } };
+  }
+  const container = nodeAt(doc, parent);
+  if (container && env.singleParagraph?.has(container.w)) return null;
+  return splitParagraph(doc, edge, env);
+}
 
 // a(정렬)는 양쪽 다, dc(드롭캡)는 첫 글자를 가진 쪽만, h(제목)는 글이 있는 쪽만 — 빈 문단에 제목을 안 물려야 엔터마다 제목이 안 불어난다.
 // Alignment carries to both halves, drop cap follows whichever side keeps the first character, heading only survives on a side with text — otherwise every Enter at a heading's end would spawn another heading.

@@ -42,7 +42,7 @@ export interface SurfaceActions {
   tab(shift: boolean): boolean;
   backspace(): boolean;
   deleteForward(): boolean;
-  arrow(dir: ArrowDir): boolean;
+  arrow(dir: ArrowDir, atVisualEdge?: boolean): boolean;
   selectAll(): boolean;
   // 마크 탈출용 키(음수 예약)와 Escape(예약 해제)를 가른다 — true면 키를 소비했다는 뜻이다. repeat는 눌러 둔 반복 이벤트라 연타로 안 센다
   // Distinguishes mark-escape keys (negative pending) from Escape (clears pending); true means consumed. `repeat` marks a held-key repeat, which never counts as a tap
@@ -121,9 +121,9 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
     return true;
   };
 
-  const arrow = (dir: ArrowDir): boolean => {
+  const arrow = (dir: ArrowDir, atVisualEdge?: boolean): boolean => {
     lastEnterAt = 0;
-    if (route({ key: 'arrow', dir })) return true;
+    if (route({ key: 'arrow', dir, ...(atVisualEdge !== undefined ? { atVisualEdge } : {}) })) return true;
     const sel = nabi.getSelection();
     // 범위 걸음(Shift 등)은 브라우저의 것
     // Stepping over a range (e.g. with Shift) is left to the browser
@@ -135,14 +135,7 @@ export function makeSurfaceActions(options: SurfaceActionsOptions): SurfaceActio
     const wrapped = isWrapper(holder, env);
     const back = dir === 'left' || dir === 'up';
 
-    // 상하 이동은 화면 줄 단위라 브라우저 몫이다 — 래퍼문단(0/1)만 논리 걸음으로 대신한다
-    // Up/down movement is visual-line based and left to the browser; only wrapper paragraphs (0/1) use logical stepping instead
-    if (dir === 'up' || dir === 'down') {
-      if (!wrapped) return false;
-      const target = back ? stepBackward(doc, sel.focus, env) : stepForward(doc, sel.focus, env);
-      if (!samePosition(target, sel.focus)) nabi.select(caretAt(target));
-      return true;
-    }
+    if (dir === 'up' || dir === 'down') return false;
 
     // 좌우 이동은 문단 안에서는 브라우저가, 경계(홀더 끝·래퍼)는 트리가 건넨다(③)
     // Left/right movement stays with the browser inside a paragraph; the tree steps across boundaries (holder edges, wrappers) (③)

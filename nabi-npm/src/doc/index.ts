@@ -26,7 +26,7 @@ export {
   withChildren,
 } from './runs-edit.js';
 export { insertLine, insertTerminal, insertText } from './insert.js';
-export { splitParagraph } from './split.js';
+export { paragraphBeside, splitParagraph } from './split.js';
 export { deleteBackward, deleteForward } from './remove.js';
 export { deleteRange } from './range.js';
 export type { DocRange } from './range.js';

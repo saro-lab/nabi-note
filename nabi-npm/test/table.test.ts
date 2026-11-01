@@ -639,8 +639,8 @@ const caretExists = (name: string, nabi: ReturnType<typeof make>): void => {
     '마지막 줄 첫 칸에서 ↓ 는 옆 칸이 아니라 표 뒤에 선다',
     arrow('down', caretAt(at([0, 0, 1, 0, 0], 1)))?.selection.focus,
     {
-      path: [0],
-      offset: 1,
+      path: [1],
+      offset: 0,
     },
   );
   eq('칸 안에 갈 자리가 남았으면 pass — 글자 걸음이다', arrow('right', caretAt(at([0, 0, 0, 0, 0], 0))), null);

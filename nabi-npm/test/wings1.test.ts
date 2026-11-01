@@ -934,22 +934,18 @@ for (const fam of FAMILIES) {
   eq('코드 wing 의 currentValue — 언어', codeWing.currentValue?.({ w: 'code', a: { lang: 'ts' }, ch: [] }), 'ts');
 }
 
-// --- onKey — 위/아래 방향키로 그릇 밖으로 (표와 같은 자리: 래퍼문단 앞/뒤) ----------------------
-// 문서 전체가 이 그릇 하나뿐이어도 탈출 자리는 항상 실재한다(래퍼문단의 offset 0/1) — 이웃 문단이 미리 있어야 하는 게 아니다.
-// The escape position always exists even when the vessel is the entire document (the wrapper paragraph's offset 0/1) — it doesn't require a neighboring paragraph to already be there.
-
 {
   const n = make([el('quote', [p(['하나']), p(['둘'])])]);
   const doc = hostOf(n).doc();
   const arrow = (dir: 'up' | 'down', sel: Selection) => routeKey({ key: 'arrow', dir }, doc, sel, env, registry);
 
-  eq('인용 첫 문단 맨 앞에서 ↑ 는 래퍼문단 앞에 선다', arrow('up', caretAt(at([0, 0, 0], 0)))?.selection.focus, {
+  eq('인용 첫 문단 맨 앞에서 ↑ 는 앞 문단으로 나간다', arrow('up', caretAt(at([0, 0, 0], 0)))?.selection.focus, {
     path: [0],
     offset: 0,
   });
-  eq('인용 마지막 문단 맨 끝에서 ↓ 는 래퍼문단 뒤에 선다', arrow('down', caretAt(at([0, 0, 1], 1)))?.selection.focus, {
-    path: [0],
-    offset: 1,
+  eq('인용 마지막 문단 맨 끝에서 ↓ 는 뒤 문단으로 나간다', arrow('down', caretAt(at([0, 0, 1], 1)))?.selection.focus, {
+    path: [1],
+    offset: 0,
   });
   eq('첫 문단 안쪽(맨 앞이 아니면)의 ↑ 는 pass — 코어의 글자 걸음', arrow('up', caretAt(at([0, 0, 0], 1))), null);
   eq('마지막 아닌 문단의 ↓ 는 pass — 문단 사이 이동은 코어 몫', arrow('down', caretAt(at([0, 0, 0], 0))), null);
@@ -959,16 +955,16 @@ for (const fam of FAMILIES) {
   const doc = hostOf(n).doc();
   const arrow = (dir: 'up' | 'down', sel: Selection) => routeKey({ key: 'arrow', dir }, doc, sel, env, registry);
 
-  eq('접기 제목 맨 앞에서 ↑ 는 래퍼문단 앞에 선다', arrow('up', caretAt(at([0, 0, 0], 0)))?.selection.focus, {
+  eq('접기 제목 맨 앞에서 ↑ 는 앞 문단으로 나간다', arrow('up', caretAt(at([0, 0, 0], 0)))?.selection.focus, {
     path: [0],
     offset: 0,
   });
   eq(
-    '접기 속 마지막 문단 맨 끝에서 ↓ 는 래퍼문단 뒤에 선다',
+    '접기 속 마지막 문단 맨 끝에서 ↓ 는 뒤 문단으로 나간다',
     arrow('down', caretAt(at([0, 0, 1], 2)))?.selection.focus,
     {
-      path: [0],
-      offset: 1,
+      path: [1],
+      offset: 0,
     },
   );
   eq('제목 안쪽의 ↑ 는 pass', arrow('up', caretAt(at([0, 0, 0], 1))), null);
@@ -980,7 +976,7 @@ for (const fam of FAMILIES) {
   const doc = hostOf(n).doc();
   const arrow = (dir: 'up' | 'down', sel: Selection) => routeKey({ key: 'arrow', dir }, doc, sel, env, registry);
 
-  eq('첫 줄 맨 앞에서 ↑ 는 래퍼문단 앞에 선다', arrow('up', caretAt(at([0, 0], 0)))?.selection.focus, {
+  eq('첫 줄 맨 앞에서 ↑ 는 앞 문단으로 나간다', arrow('up', caretAt(at([0, 0], 0)))?.selection.focus, {
     path: [0],
     offset: 0,
   });
@@ -988,13 +984,13 @@ for (const fam of FAMILIES) {
     path: [0],
     offset: 0,
   });
-  eq('마지막 줄 맨 끝에서 ↓ 는 래퍼문단 뒤에 선다', arrow('down', caretAt(at([0, 0], 8)))?.selection.focus, {
-    path: [0],
-    offset: 1,
+  eq('마지막 줄 맨 끝에서 ↓ 는 뒤 문단으로 나간다', arrow('down', caretAt(at([0, 0], 8)))?.selection.focus, {
+    path: [1],
+    offset: 0,
   });
   eq('마지막 줄 시작에서도 ↓ 는 탈출', arrow('down', caretAt(at([0, 0], 6)))?.selection.focus, {
-    path: [0],
-    offset: 1,
+    path: [1],
+    offset: 0,
   });
   eq(
     '가운데 줄에서는 ↑/↓ 둘 다 pass — 코어의 글자 걸음',

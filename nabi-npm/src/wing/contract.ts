@@ -36,6 +36,7 @@ export interface KeyIntent {
   // arrow일 때만 온다.
   // Only present when key is 'arrow'.
   readonly dir?: ArrowDir;
+  readonly atVisualEdge?: boolean;
 }
 
 // 캐럿 자리를 품는, 이 wing 소유의 가장 안쪽 노드.

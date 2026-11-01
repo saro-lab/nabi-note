@@ -321,11 +321,9 @@ function trimWidth(cells: readonly string[], at: number): number {
 const sameArray = (a: readonly number[], b: readonly number[]): boolean =>
   a.length === b.length && a.every((v, i) => v === b[i]);
 
-const onKey: OnKey = (intent, doc, sel, _env, owner) => {
+const onKey: OnKey = (intent, doc, sel, env, owner) => {
   if (owner.node.w !== 'code') return null;
 
-  // 첫/마지막 구조적 줄(개행 기준)에 있으면 래퍼문단 밖으로 탈출 — 표처럼 화면 자동 줄바꿈은 안 본다.
-  // Exits past the wrapper when the caret sits on the first/last structural (newline-based) line — ignores visual wrap, like table does.
   if (intent.key === 'arrow') {
     if (!isCollapsed(sel) || (intent.dir !== 'up' && intent.dir !== 'down')) return null;
     const cells = codeCells(owner.node);
@@ -333,7 +331,7 @@ const onKey: OnKey = (intent, doc, sel, _env, owner) => {
     const [line] = touchedLines(cells, sel.focus.offset, sel.focus.offset);
     const boundary = intent.dir === 'up' ? starts[0] : starts[starts.length - 1];
     if (line === undefined || line !== boundary) return null;
-    return exitWrapper(doc, owner.path, intent.dir);
+    return intent.atVisualEdge === false ? null : exitWrapper(doc, owner.path, intent.dir, env);
   }
 
   if (intent.key !== 'tab' && intent.key !== 'shiftTab') return null;

@@ -5,7 +5,7 @@ import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import { DEFAULT_BUILDERS } from '../../html/index.js';
 import { caretAt, isCollapsed, ordered } from '../../caret/index.js';
 import type { Command } from '../../editor/index.js';
-import { nodeAt, replaceAt } from '../../doc/index.js';
+import { holderLength, nodeAt, replaceAt } from '../../doc/index.js';
 import { $setParagraphTargetFilter } from '../../wing/paragraph-target.js';
 import { blockOwnerAt, blocksBoundaryEscape, exitWrapper } from '../../wing/ops.js';
 import { type OnKey, type Wing } from '../../wing/index.js';
@@ -138,18 +138,15 @@ const setDetailsOpen: Command = (doc, sel, args) => {
   return { doc: replaceAt(doc, owner.path, [next]), selection: sel };
 };
 
-// summary는 details의 부품(parts)이라 캐럿이 제목 속일 때 `owner`는 details가 아니라 summary 자신이다.
-// summary is registered as details' part, so `owner` is summary itself when the caret sits in the title, not details.
-//
-// 제목은 늘 details의 첫 자식이라 offset 0의 위쪽 방향키만 탈출 대상 — 아래는 몸 첫 문단으로 가는 보통 걸음이다.
-// Only up-arrow at offset 0 escapes (the title is always child 0); down-arrow is an ordinary step into the body.
 const onKey: OnKey = (intent, doc, sel, env, owner) => {
-  if (owner.node.w === 'summary') {
-    if (intent.key !== 'arrow' || intent.dir !== 'up') return null;
-    if (!isCollapsed(sel) || sel.focus.offset !== 0) return null;
-    return exitWrapper(doc, owner.path.slice(0, -1), 'up');
-  }
-  return blocksBoundaryEscape(intent, doc, sel, env, owner);
+  if (owner.node.w !== SUMMARY) return blocksBoundaryEscape(intent, doc, sel, env, owner);
+  if (intent.key !== 'arrow' || !isCollapsed(sel)) return null;
+  const dir = intent.dir;
+  if (dir !== 'up' && dir !== 'down') return null;
+  const path = owner.path.slice(0, -1);
+  if (dir === 'down' && nodeAt(doc, path)?.a?.['o'] === 1) return null;
+  const offset = dir === 'up' ? 0 : holderLength(owner.node, env);
+  return (intent.atVisualEdge ?? sel.focus.offset === offset) ? exitWrapper(doc, path, dir, env) : null;
 };
 
 export const detailsWing: Wing = {

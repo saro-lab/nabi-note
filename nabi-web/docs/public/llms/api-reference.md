@@ -404,7 +404,7 @@ Tree values: `P`, `BR`, `isElement`, `isText`.
 
 `Wing.joinOnDelete?: boolean` is valid only on a container and defaults to `false`. Enabling it allows boundary Delete/Backspace to join neighboring paragraph text with its first or last text holder, without crossing isolation or a protected nested block. `listFamily()` and the built-in quote enable it. Other block objects are selected before deletion by default. See `custom-wing.md` and `document-model.md#deletion-at-block-boundaries`.
 
-`KeyIntent.shift?: boolean` distinguishes Shift+Enter from Enter. Unhandled keys visit ancestor wings up to the nearest isolating holder, allowing list/code handlers inside cells to process indentation before table navigation.
+`KeyIntent.shift?: boolean` distinguishes Shift+Enter from Enter. For vertical arrows, `KeyIntent.atVisualEdge?: boolean` identifies the first or last displayed line in the requested direction. The nearest block handles navigation and escape. Other unhandled keys visit ancestor wings up to the nearest isolating holder, allowing list/code handlers inside cells to process indentation before table navigation.
 
 Root-exported wing types include:
 

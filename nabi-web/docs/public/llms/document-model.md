@@ -137,6 +137,14 @@ Commands are pure. Return a new `{ doc, selection, arm? }` or `null` for no chan
 
 `nabi.group(fn)` groups successful mutations into one undo entry. Consecutive typing coalesces only while the previous insertion is within `typingMergeMs`; 0 disables coalescing. The undo stack keeps at most `undoLimit` snapshots.
 
+## Leaving a block object
+
+In the mounted editor, plain Up or Down exits a selected block object or a caret at its outer boundary in the pressed direction. From inside a block, arrows move through its visible lines and contents first. A table moves within the same column until there is no row in that direction. The summary is the only visible content of closed details.
+
+On exit, Up moves to the end of the immediately preceding text paragraph and Down to the start of the immediately following one. Headings and empty text paragraphs count. At a document edge or between two objects, the editor inserts one ordinary paragraph on the requested side. Nested objects exit one level at a time, within the same parent. For a float, before and after follow document order. A move into an existing paragraph adds no undo step. Creating a paragraph and moving the caret there take one undo step together.
+
+Typing at a wrapper's offset 0 or 1 uses this same destination. When exactly one wrapper is selected, the focus end determines the side. This includes IME input: committed characters enter the document once, cancellation preserves the object, and Backspace after typing edits the new text. An explicit Backspace or Delete on a whole-object selection still deletes that object.
+
 ## Deletion at block boundaries
 
 `deleteForward` and `deleteBackward` distinguish text joining from whole-object deletion. These rules apply to a collapsed caret; an existing selection is deleted normally.

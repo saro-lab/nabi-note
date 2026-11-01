@@ -442,6 +442,53 @@ const IMG = { w: 'img', a: { src: 'https://x.com/a.png' }, ch: [] };
   eq('문서 처음 캐럿 유지', nabi.getSelection().focus, { path: [0], offset: 0 });
 }
 
+{
+  const text = { w: 'p', ch: ['a'] };
+  const empty = { w: 'p', ch: [] };
+  for (const [w, item] of [
+    ['ul', 'li'],
+    ['ol', 'oli'],
+    ['tl', 'tli'],
+  ] as const) {
+    const block = {
+      w: 'p',
+      ch: [
+        {
+          w,
+          ch: [
+            { w: item, ch: [text] },
+            { w: item, ch: [text] },
+          ],
+        },
+      ],
+    };
+    const { nabi, actions } = rig([block]);
+    nabi.select(at([0, 0, 0, 0], 1));
+    ok('목록 항목 사이의 이동', !actions.arrow('down'));
+    for (const dir of ['up', 'down'] as const) {
+      const up = dir === 'up';
+      nabi.select(at([0, 0, up ? 0 : 1, 0], up ? 0 : 1));
+      ok(`${w} ${dir} 탈출`, actions.arrow(dir));
+      eq('목록 경계의 빈 문단', nabi.getJson(), up ? [empty, block] : [block, empty]);
+      ok('탈출 되돌리기', nabi.undo());
+    }
+  }
+  for (const object of [IMG, { w: 'hr', ch: [] }, { w: 'youtube', a: { v: '6j-gQmaZ9Zk' }, ch: [] }]) {
+    const { nabi, actions } = rig([{ w: 'p', ch: [object] }]);
+    const original = nabi.getJson();
+    for (const dir of ['up', 'down'] as const) {
+      nabi.select({ anchor: { path: [0], offset: 0 }, focus: { path: [0], offset: 1 } });
+      ok(`${object.w} ${dir} 탈출`, actions.arrow(dir));
+      eq(
+        '선택한 객체의 위아래에 문단이 생긴다',
+        nabi.getJson(),
+        dir === 'up' ? [empty, ...original] : [...original, empty],
+      );
+      ok('탈출 되돌리기', nabi.undo());
+    }
+  }
+}
+
 // ─── 전체 선택 ──────────────────────────────────────────────────────────────────
 
 {

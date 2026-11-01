@@ -184,7 +184,9 @@ When `toMd` is absent, Markdown export falls back to the wing's generated HTML. 
 
 `onKey` runs when the selection is owned by the wing. Return a command outcome or `null`.
 
-Inside an isolating holder, a `null` result passes to the next ancestor wing up to that holder. Each wing is visited once. This lets list/code indentation handle Tab before the cell's navigation handler. `KeyIntent.shift` distinguishes Shift+Enter from Enter.
+For plain vertical arrows, the innermost wing can handle movement within the block. When it passes, the editor checks the boundary of that block. `KeyIntent.atVisualEdge?: boolean` reports whether the caret is on the first or last displayed line in the requested direction when layout is available. DOM-free callers can omit it.
+
+For other keys inside an isolating holder, a `null` result passes to the next ancestor wing up to that holder. Each wing is visited once. This lets list/code indentation handle Tab before the cell's navigation handler. `KeyIntent.shift` distinguishes Shift+Enter from Enter.
 
 `attach(host)` is the only wing-level DOM lifecycle hook. It receives the surface root, editor, `pathOfKey()`, and the cleanup registration hook `onDispose()`; return a detach function. Use it for behavior that cannot be expressed as a pure command, such as table drag selection or code paint. Avoid changing composing DOM.
 

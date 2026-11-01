@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
+## [1.6.2] - Unreleased
+
+### Changed
+
+- When leaving a block object such as a table, float, details block, or image, Up moves to the end of the preceding paragraph and Down to the start of the following paragraph. At a document edge or between two objects, the editor creates one empty paragraph on that side. The caret exits nested objects one level at a time. When an exit creates a paragraph, one undo restores the previous state.
+
+### Fixed
+
+- Typing with the caret at either edge of an object, or with one object selected, places text in the paragraph on the focus side. Fixed an issue where Korean text typed after a table appeared on screen without being saved, and Backspace could delete the table or its cell content.
+
 ## [1.6.1] - 026-10-31
 
 ### Fixed

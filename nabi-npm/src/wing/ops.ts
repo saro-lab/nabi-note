@@ -5,6 +5,7 @@ import {
   holderLength,
   holders,
   nodeAt,
+  paragraphBeside,
   positionExists,
   sameMark,
   terminalOf,
@@ -194,15 +195,16 @@ export function blockOwnerAt(
   return null;
 }
 
-// 컨테이너(표·인용·접기·코드…) 밖으로 — 래퍼문단을 가리키는 자리에 캐럿을 세운다(0=앞, 1=뒤).
-// 이웃 문단이 미리 있을 필요는 없다 — 거기서 타이핑하면 `doc/insert.ts` 가 새 문단을 즉석에서 만든다.
-// Exits a container (table, quote, details, code...) by placing the caret next to its wrapper paragraph (offset 0 = before, 1 = after). No neighboring paragraph needs to exist yet — typing there makes `doc/insert.ts` create one on the spot.
-export function exitWrapper(doc: NabiDoc, ownerPath: readonly number[], dir: 'up' | 'down'): CommandOutcome {
-  return { doc, selection: caretAt({ path: ownerPath.slice(0, -1), offset: dir === 'up' ? 0 : 1 }) };
+export function exitWrapper(
+  doc: NabiDoc,
+  ownerPath: readonly number[],
+  dir: 'up' | 'down',
+  env: EditEnv,
+): CommandOutcome | null {
+  const at = paragraphBeside(doc, { path: ownerPath.slice(0, -1), offset: dir === 'up' ? 0 : 1 }, env);
+  return at && { doc: at.doc, selection: caretAt(at.caret) };
 }
 
-// `holds: 'blocks'` 컨테이너(인용·접기)의 위/아래 탈출 판정 — 첫/마지막 자식의 끝단일 때만 `exitWrapper` 로 넘긴다.
-// Escape check for `holds: 'blocks'` containers (quote, details) — only hands off to `exitWrapper` at the very start of the first child or end of the last; movement between children stays the core's job.
 export function blocksBoundaryEscape(
   intent: KeyIntent,
   doc: NabiDoc,
@@ -210,18 +212,16 @@ export function blocksBoundaryEscape(
   env: EditEnv,
   owner: OwnerAt,
 ): CommandOutcome | null {
-  if (intent.key !== 'arrow' || (intent.dir !== 'up' && intent.dir !== 'down')) return null;
-  if (!isCollapsed(sel)) return null;
-  const index = sel.focus.path[owner.path.length];
-  if (index === undefined) return null;
-
-  if (intent.dir === 'up') {
-    if (index !== 0 || sel.focus.offset !== 0) return null;
-    return exitWrapper(doc, owner.path, 'up');
+  if (intent.key !== 'arrow' || (intent.dir !== 'up' && intent.dir !== 'down') || !isCollapsed(sel)) return null;
+  const { path, offset } = sel.focus;
+  const up = intent.dir === 'up';
+  let node = owner.node;
+  for (const index of path.slice(owner.path.length)) {
+    if (index !== (up ? 0 : node.ch.length - 1)) return null;
+    const child = node.ch[index];
+    if (!isElement(child)) return null;
+    node = child;
   }
-  const last = owner.node.ch.length - 1;
-  if (index !== last) return null;
-  const holder = nodeAt(doc, [...owner.path, last]);
-  if (!holder || sel.focus.offset !== holderLength(holder, env)) return null;
-  return exitWrapper(doc, owner.path, 'down');
+  if (!(intent.atVisualEdge ?? offset === (up ? 0 : holderLength(node, env)))) return null;
+  return exitWrapper(doc, owner.path, intent.dir, env);
 }

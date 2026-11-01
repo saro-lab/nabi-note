@@ -2,7 +2,17 @@ import type { LocaleInput } from '../locale/index.js';
 // contenteditable 표면 — 정책(actions·autoformat·vessel·redraw)은 순수부에 있고 이 파일은 브라우저 이벤트 배선만 한다(EditContext가 서는 날 포트 뒤에서 교체될 파일). 원칙: 트리가 정본, 화면 캐럿은 파생이라 어긋나면 트리로 교정한다. 예외는 IME 조합 중뿐 — 그동안은 DOM이 정답이고 끝나는 순간 한 번에 따라잡는다
 // The contenteditable surface; policy (actions/autoformat/vessel/redraw) lives in the pure layer, this file only wires it to browser events (and is what a future EditContext implementation would replace, behind the port). Principle: the tree is authoritative, the screen caret is derived and gets corrected back to it when they diverge -- except during IME composition, when the DOM is authoritative and gets reconciled back in one shot at the end
 import { $toJson, isElement, isWrapper, type NabiDoc } from '../schema/index.js';
-import { comparePositions, holderLength, holders, isHolder, nodeAt, terminalOf } from '../doc/index.js';
+import {
+  comparePositions,
+  holderLength,
+  holders,
+  insertText,
+  isHolder,
+  nodeAt,
+  paragraphBeside,
+  terminalOf,
+  type Position,
+} from '../doc/index.js';
 import { caretAt, isCollapsed, ordered, sameSelection, selectObject, type Selection } from '../caret/index.js';
 import { localeDirection, localeValue, makeTranslator } from '../locale/index.js';
 import { hostOf, type Nabi, type NabiChange } from '../editor/index.js';
@@ -142,6 +152,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
     let caretSlot: Text | null = null;
     let pendingTextInput: TextInputHint | null = null;
     let pendingChangedHolders: readonly string[] = [];
+    let compositionParagraph: HTMLElement | null = null;
     let compositionSpan: CompositionSpan | null = null;
     let pressedMedia: readonly number[] | null = null;
     let tookLump = false;
@@ -309,8 +320,18 @@ export function mountSurface(options: SurfaceOptions): Surface {
       return { anchor: anchor.pos, focus: focus.pos };
     };
 
+    const objectEdge = (selection: Selection): Position | null => {
+      if (!samePath(selection.anchor.path, selection.focus.path)) return null;
+      const holder = nodeAt(doc(), selection.focus.path);
+      return holder && isWrapper(holder, env) ? selection.focus : null;
+    };
+
     const syncSelectionForInput = (ev: InputEvent): void => {
       const live = readCaret();
+      if (live && ev.inputType === 'insertText' && objectEdge(live.selection)) {
+        adoptSelection(live.selection);
+        return;
+      }
       const target = targetSelectionOf(ev);
       if (target) {
         // 경계 삭제는 실제 캐럿으로 처리해야 브라우저의 삭제 범위가 물체 선택과 빈 문단 제거를 건너뛰지 않는다.
@@ -332,6 +353,35 @@ export function mountSurface(options: SurfaceOptions): Surface {
         }
       }
       if (live) adoptSelection(live.selection);
+    };
+
+    const typeBesideObject = (edge: Position, text: string): void => {
+      hostOf(nabi).applyRaw((given, _selection, _args, editEnv) => {
+        const at = paragraphBeside(given, edge, editEnv);
+        if (!at) return null;
+        const typed = insertText(at.doc, at.caret, text, editEnv);
+        return { doc: typed.doc, selection: caretAt(typed.caret) };
+      }, 'typeBesideObject');
+    };
+
+    const visualEdge = (dir: 'up' | 'down'): boolean | undefined => {
+      const selection = nabi.getSelection();
+      const focus = selection.focus;
+      if (focus.path.length < 2 || !isCollapsed(selection)) return undefined;
+      const holder = nodeAt(doc(), focus.path);
+      if (!holder || isWrapper(holder, env)) return undefined;
+      const offset = dir === 'up' ? 0 : holderLength(holder, env);
+      if (focus.offset === offset) return true;
+      const point = toDomPoint(root, doc(), env, { path: focus.path, offset }, isCaretSlot);
+      const live = domSelection();
+      if (!point || !live?.rangeCount) return undefined;
+      const range = owner.createRange();
+      range.setStart(point.node, point.offset);
+      range.collapse(true);
+      const edge = range.getBoundingClientRect?.();
+      const caret = live.getRangeAt(0).getBoundingClientRect?.();
+      if (!edge?.height || !caret?.height) return undefined;
+      return caret.top < edge.bottom && edge.top < caret.bottom;
     };
 
     const caretRect = (): { top: number; bottom: number; left: number; right: number } | null => {
@@ -423,7 +473,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
       // 이미 가져간 키는 두 번 안 먹는다 — ui/hints가 문서에 캡처로 먼저 붙어 Tab·방향키를 제 걸음으로 쓰는데, 그 걸음이 여기까지 흘러오면 상황 줄 겨눔 이동과 코드 상자 들여쓰기가 동시에 일어났다. defaultPrevented가 그 표식이다
       // A key already claimed isn't consumed twice; ui/hints attaches at the document's capture phase and uses Tab/arrows for its own navigation, and letting that fall through here made context-row focus move and a code block indent happen from one gesture. defaultPrevented is the marker for "someone already took this"
       if (ev.defaultPrevented) return;
-      if (ev.isComposing || ev.keyCode === 229) {
+      if (composing || ev.isComposing || ev.keyCode === 229) {
         // 조합이 지나면 연타 셈이 끊긴다 — 조합 직후의 Esc가 조합 앞의 Esc와 이어져 세어지면 안 된다(힌트와 같은 IME 철칙: 조합 중엔 아무것도 안 센다)
         // A composition passing through resets the tap count, or an Esc right after composition would chain with one from before it (same IME rule as hints: nothing counts during composition)
         actions.breakDouble();
@@ -493,7 +543,9 @@ export function mountSurface(options: SurfaceOptions): Surface {
                 : null;
       if (dir && !mod && !ev.shiftKey && !ev.altKey) {
         syncSelectionNow();
-        if (actions.arrow(dir)) {
+        const vertical = dir === 'up' || dir === 'down';
+        if (vertical && root.contentEditable === 'false') return;
+        if (actions.arrow(dir, vertical ? visualEdge(dir) : undefined)) {
           ev.preventDefault();
           return;
         }
@@ -566,6 +618,12 @@ export function mountSurface(options: SurfaceOptions): Surface {
       if (t === 'insertText') {
         syncSelectionForInput(ev);
         const sel = nabi.getSelection();
+        const edge = objectEdge(sel);
+        if (edge) {
+          ev.preventDefault();
+          if (ev.data) typeBesideObject(edge, ev.data);
+          return;
+        }
         const holder = nodeAt(doc(), sel.focus.path);
         const crosses = !samePath(sel.anchor.path, sel.focus.path);
         const [start, end] = ordered(sel);
@@ -819,6 +877,22 @@ export function mountSurface(options: SurfaceOptions): Surface {
       }
       redrawAfterComposition = false;
       compositionConflict = false;
+      if (holder && compositionHolderId && objectEdge(compositionSelection)) {
+        const wrapper = holderElOf(root, compositionHolderId);
+        if (wrapper) {
+          // 조합 범위가 객체를 덮지 않게 임시 문단에서 입력받고 확정할 때만 문서에 반영한다.
+          // Stage composition beside the object so the native range cannot overwrite it before commit.
+          compositionParagraph = owner.createElement('p');
+          const slot = owner.createTextNode(ZERO_WIDTH);
+          compositionParagraph.append(slot);
+          wrapper.insertAdjacentElement(
+            compositionSelection.focus.offset === 0 ? 'beforebegin' : 'afterend',
+            compositionParagraph,
+          );
+          domSelection()?.collapse(slot, 1);
+          return;
+        }
+      }
       ensureCaretSlot(compositionPath);
     };
 
@@ -921,6 +995,10 @@ export function mountSurface(options: SurfaceOptions): Surface {
               focus: { path: endPath, offset: span.endOffset },
             }
           : null;
+      const staged = compositionParagraph;
+      compositionParagraph = null;
+      const typed = data || staged?.textContent?.replace(/^\u200b/, '') || '';
+      staged?.remove();
       const crosses = span !== null;
       const conflict = compositionConflict;
       const redraw = redrawAfterComposition;
@@ -935,7 +1013,13 @@ export function mountSurface(options: SurfaceOptions): Surface {
       compositionTopRefs = new Map();
       redrawAfterComposition = false;
       compositionConflict = false;
-      if (!conflict && crosses) {
+      if (staged) {
+        if (!conflict && fallbackRange) {
+          nabi.select(fallbackRange);
+          if (typed) typeBesideObject(fallbackRange.focus, typed);
+        }
+        writeCaret(nabi.getSelection());
+      } else if (!conflict && crosses) {
         const range = replacement !== null ? orderedRange : fallbackRange;
         if (range) {
           reconciling = true;
@@ -1236,6 +1320,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
       root.removeEventListener('keydown', onKeyDown);
       root.removeEventListener('beforeinput', onBeforeInput as EventListener);
       root.removeEventListener('input', onInput);
+      compositionParagraph?.remove();
       root.removeEventListener('compositionstart', onCompositionStart);
       root.removeEventListener('compositionend', onCompositionEnd);
       root.removeEventListener('focus', onFocus);
