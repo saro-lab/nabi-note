@@ -17,19 +17,19 @@
     "check:locales": "node --import ../nabi-npm/node_modules/tsx/dist/loader.mjs scripts/check-locales.ts"
   },
   "dependencies": {
-    "@shikijs/langs": "^4.5.0",
-    "@shikijs/themes": "^4.5.0",
+    "@shikijs/langs": "^4.6.0",
+    "@shikijs/themes": "^4.6.0",
     "minisearch": "^7.2.0",
-    "nabi-note": "file:nabi-note-1.6.1.tgz",
-    "shiki": "^4.5.0"
+    "nabi-note": "file:nabi-note-1.6.2.tgz",
+    "shiki": "^4.6.0"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^26.6.5",
-    "tailwindcss": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.4",
+    "@types/node": "^26.6.6",
+    "tailwindcss": "^4.3.4",
     "typescript": "^7.0.2",
     "vitepress": "^2.0.0-alpha.21",
     "vue": "^3.5.44",
-    "wrangler": "^4.152.0"
+    "wrangler": "^4.157.0"
   }
 }

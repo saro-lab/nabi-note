@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { ElementNode, Nabi, Selection } from '../../src/index.js';
+import { pasteHtml } from './paste-html.js';
 
 const paragraph = (text = ''): ElementNode => ({ w: 'p', ch: text ? [text] : [] });
 const cell = (children: readonly ElementNode[], header = false): ElementNode => ({
@@ -148,15 +149,10 @@ test('pasting a nested table and float keeps their contents in the current cell 
   page,
 }) => {
   await load(page, documentOf([paragraph()]));
-  await page.locator('#content').evaluate((root) => {
-    const transfer = new DataTransfer();
-    transfer.setData(
-      'text/html',
-      '<table><tbody><tr><td><p>Nested A</p></td><td><p>Nested B</p></td></tr></tbody></table>' +
-        '<div data-nabi-float="right" data-nabi-float-width="40"><p>Float content</p></div>',
-    );
-    root.dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }));
-  });
+  const html =
+    '<table><tbody><tr><td><p>Nested A</p></td><td><p>Nested B</p></td></tr></tbody></table>' +
+    '<div data-nabi-float="right" data-nabi-float-width="40"><p>Float content</p></div>';
+  await page.locator('#content').evaluate(pasteHtml, html);
   await expect(page.locator('#content table')).toHaveCount(1);
   await expect(page.locator('#content td')).toHaveCount(2);
   await expect(page.locator('#content [data-nabi-float]')).toHaveCount(0);

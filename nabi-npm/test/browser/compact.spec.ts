@@ -648,6 +648,12 @@ test.describe('mobile touch panels', () => {
         page,
       }) => {
         await page.setViewportSize({ width: 390, height: 844 });
+        await page.route('**/compact-image.svg', (route) =>
+          route.fulfill({
+            contentType: 'image/svg+xml',
+            body: '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="128"/>',
+          }),
+        );
         await setup(page, { width: 354, mockViewport: true });
         await page.evaluate(
           async ({ entry, properties, offset }) => {
@@ -661,7 +667,7 @@ test.describe('mobile touch panels', () => {
             row.append(document.getElementById('compact-tools')!, document.getElementById('compact-toolbar')!);
             chrome.prepend(row);
             state.nabi.setJson([
-              ...(properties ? [{ w: 'img', a: { src: '/nabi-note.svg', alt: 'sample' } }] : []),
+              ...(properties ? [{ w: 'img', a: { src: '/compact-image.svg', alt: 'sample' } }] : []),
               ...Array.from({ length: 60 }, (_, i) => ({ w: 'p', ch: [`paragraph ${i}`] })),
             ]);
             state.viewport!.offsetTop = offset;
@@ -674,6 +680,7 @@ test.describe('mobile touch panels', () => {
               dispose();
             };
             surface.focus({ preventScroll: true });
+            if (properties) await surface.querySelector('img')!.decode();
           },
           { entry, properties, offset },
         );

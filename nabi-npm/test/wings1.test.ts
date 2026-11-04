@@ -1085,6 +1085,33 @@ throws(
 }
 
 {
+  const divider = p([el('hr')]);
+  const source = p([el('b', ['ABCD'])], { a: 'c' });
+  for (const [offset, expected] of [
+    [0, [divider, source]],
+    [2, [p([el('b', ['AB'])], { a: 'c' }), divider, p([el('b', ['CD'])], { a: 'c' })]],
+    [4, [source, divider]],
+  ] as const) {
+    const n = make([source]);
+    const selected = range(at([0], 4), at([0], offset));
+    n.select(selected);
+    ok('선택 시작에 구분선 삽입', n.applyCommand('insertDivider'));
+    eq('구분선 양옆 글과 서식 보존', n.getJson(), expected);
+    eq('삽입 직후 구분선 뒤에 캐럿', n.getSelection(), caretAt(at([offset ? 1 : 0], 1)));
+    n.undo();
+    eq('실행 취소로 원문 복원', n.getJson(), [source]);
+    eq('실행 취소로 선택 복원', n.getSelection(), selected);
+  }
+  const nested = (blocks: readonly ElementNode[]) => [
+    p([el('details', [el('summary', ['title']), p([el('quote', blocks)])], { o: 1 })]),
+  ];
+  const n = make(nested([p(['ABCD'])]));
+  n.select(caretAt(at([0, 0, 1, 0, 0], 2)));
+  ok('접기 안 인용에 구분선 삽입', n.applyCommand('insertDivider'));
+  eq('인용 문단만 분할', n.getJson(), nested([p(['AB']), divider, p(['CD'])]));
+}
+
+{
   // 인라인 홀더 선언(holds: 'inline')의 결과 — 코드와 접기 제목 속의 엔터는 분할이 아니라 라인이다.
   // A consequence of the inline-holder declaration (holds: 'inline') — Enter inside code or a details title inserts a line, not a split.
   const n = make([el('code', ['ab'], { lang: 'ts' })]);

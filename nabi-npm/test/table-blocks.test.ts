@@ -93,6 +93,7 @@ for (const [command, args, expected] of [
   const doc = hostOf(nabi).doc();
   assert.equal(doc.length, 1, `${command} stays inside table`);
   assert.ok(types(children(doc)).includes(expected), `${command} inside current cell`);
+  if (command === 'insertDivider') assert.deepEqual($toJson(children(doc)), [p(['te']), p([el('hr')]), p(['xt'])]);
   assert.deepEqual($toJson(children(doc, 1)), [p(['untouched'])]);
   assert.equal(positionExists(doc, nabi.getSelection().focus, registry.env), true);
 }

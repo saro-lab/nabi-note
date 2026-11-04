@@ -30,6 +30,7 @@ import { makePasteFlow } from './paste.js';
 import type { PasteUrlHandler } from './paste-url.js';
 import { makeMediaDrag } from './media-drag.js';
 import { mountMoveHandles } from './move-handles.js';
+import { NARROW_CLASS, watchNarrow } from './narrow.js';
 import { planRedraw } from './redraw.js';
 import type { EditSurfacePort, ReadCaret } from './port.js';
 import { claimMountRoot, DisposerStack, HostElementBaseline, HostElementLease } from '../lifecycle.js';
@@ -156,11 +157,13 @@ export function mountSurface(options: SurfaceOptions): Surface {
     let compositionSpan: CompositionSpan | null = null;
     let pressedMedia: readonly number[] | null = null;
     let tookLump = false;
+    let pressedTrailingSpace = false;
+    const canEdit = (): boolean => !composing && hostOf(nabi).lockedBy() === null && root.contentEditable !== 'false';
     const mediaDrag = makeMediaDrag({
       nabi,
       root,
       htmlOptions,
-      canEdit: () => !composing && hostOf(nabi).lockedBy() === null && root.contentEditable !== 'false',
+      canEdit,
       onEnd: () => {
         pressedMedia = null;
         tookLump = false;
@@ -328,7 +331,9 @@ export function mountSurface(options: SurfaceOptions): Surface {
 
     const syncSelectionForInput = (ev: InputEvent): void => {
       const live = readCaret();
-      if (live && ev.inputType === 'insertText' && objectEdge(live.selection)) {
+      const entering =
+        ev.inputType === 'insertText' || ev.inputType === 'insertParagraph' || ev.inputType === 'insertLineBreak';
+      if (live && entering && objectEdge(live.selection)) {
         adoptSelection(live.selection);
         return;
       }
@@ -378,8 +383,20 @@ export function mountSurface(options: SurfaceOptions): Surface {
       const range = owner.createRange();
       range.setStart(point.node, point.offset);
       range.collapse(true);
-      const edge = range.getBoundingClientRect?.();
-      const caret = live.getRangeAt(0).getBoundingClientRect?.();
+      let edge: DOMRect | undefined = range.getBoundingClientRect?.();
+      const liveRange = live.getRangeAt(0);
+      let caret: DOMRect | undefined = liveRange.getBoundingClientRect?.();
+      if ((!edge?.height || !caret?.height) && holder._id) {
+        const element = holderElOf(root, holder._id);
+        if (!element) return undefined;
+        range.selectNodeContents(element);
+        const lines = range.getClientRects?.();
+        if (!edge?.height) edge = lines?.[dir === 'up' ? 0 : lines.length - 1];
+        if (!caret?.height) {
+          range.setStart(liveRange.startContainer, liveRange.startOffset);
+          caret = range.getClientRects?.()[0] ?? lines?.[lines.length - 1];
+        }
+      }
       if (!edge?.height || !caret?.height) return undefined;
       return caret.top < edge.bottom && edge.top < caret.bottom;
     };
@@ -1215,12 +1232,33 @@ export function mountSurface(options: SurfaceOptions): Surface {
       return null;
     };
 
+    const inTrailingSpace = (ev: MouseEvent): boolean => {
+      const last = root.lastElementChild;
+      return (
+        ev.button === 0 &&
+        !ev.shiftKey &&
+        !ev.altKey &&
+        !ev.ctrlKey &&
+        !ev.metaKey &&
+        ev.target === root &&
+        root.classList.contains(NARROW_CLASS) &&
+        canEdit() &&
+        last?.hasAttribute('data-nabi-p') === true &&
+        ev.clientY >= last.getBoundingClientRect().bottom
+      );
+    };
+
     // 미디어의 기본 누르기는 네이티브 드래그에 필요하다. 누르는 동안 브라우저 선택이 물건 선택을 덮지 않게 한다.
     // Native media dragging needs the default press; browser selection cannot overwrite the object selection during it.
     const onMouseDown = (ev: MouseEvent): void => {
       tookLump = false;
       pressedMedia = null;
+      pressedTrailingSpace = inTrailingSpace(ev);
       if (ev.button !== 0) return;
+      if (pressedTrailingSpace) {
+        ev.preventDefault();
+        return;
+      }
       const target = eventElement(ev.target);
       if (!target) return;
       const path = lumpUnder(target);
@@ -1249,6 +1287,21 @@ export function mountSurface(options: SurfaceOptions): Surface {
     };
 
     const onClick = (ev: MouseEvent): void => {
+      const fromTrailingSpace = pressedTrailingSpace;
+      pressedTrailingSpace = false;
+      if (fromTrailingSpace && inTrailingSpace(ev)) {
+        ev.preventDefault();
+        if (
+          hostOf(nabi).applyRaw((given, _selection, _args, editEnv) => {
+            const next = paragraphBeside(given, { path: [given.length - 1], offset: 1 }, editEnv);
+            return next && { doc: next.doc, selection: caretAt(next.caret) };
+          }, 'appendParagraph')
+        ) {
+          port.focus();
+          writeCaret(nabi.getSelection());
+        }
+        return;
+      }
       if (tookLump) {
         tookLump = false;
         ev.preventDefault();
@@ -1270,6 +1323,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
     lifecycle.add(() => attributes.dispose());
     attributes.attribute('contenteditable', 'true');
     attributes.className('nabi-editing', true);
+    lifecycle.add(watchNarrow(root, root.parentElement ?? owner.body, 'viewport'));
     // 빈 편집기의 안내글은 말만 여기서 정한다 — 언제·어떻게 뜨는지는 시트의 몫이고(빈 문단 하나라는 모양만 겨눈다), 여기는 CSS 변수 한 칸에 그 말을 적을 뿐이라 트리·DOM에 안 들어가 저장값·캐럿 셈이 흔들릴 일이 없다. 안 받았으면 코어 사전이 로케일대로 낸다
     // The empty-editor placeholder text is set here only; when/how it appears is the stylesheet's job (targeting the single "one empty paragraph" shape), and this just writes the text into a CSS variable, so it never enters the tree or DOM and can't disturb saved values or caret counting. If none is given, the core dictionary supplies a localized one
     const translator = makeTranslator(options.locale ?? hostOf(nabi).locale());
@@ -1285,7 +1339,7 @@ export function mountSurface(options: SurfaceOptions): Surface {
         root,
         translator,
         drag: mediaDrag,
-        canEdit: () => !composing && hostOf(nabi).lockedBy() === null && root.contentEditable !== 'false',
+        canEdit,
       }),
     );
     localize();

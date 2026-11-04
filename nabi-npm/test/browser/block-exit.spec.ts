@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { ElementNode, Nabi, Selection } from '../../src/index.js';
+import { pasteHtml } from './paste-html.js';
 
 const paragraph = (text = ''): ElementNode => ({ w: 'p', ch: text ? [text] : [] });
 const wrap = (block: ElementNode): ElementNode => ({ w: 'p', ch: [block] });
@@ -48,6 +49,32 @@ test('a table exits one level inside a float, with one undo step per new paragra
   expect(await state(page)).toEqual([region([table])]);
 });
 
+test('Down from the last visible line of a final table or open details creates a writable paragraph', async ({
+  page,
+}) => {
+  const tail: ElementNode = { w: 'p', ch: ['last line', { w: 'fn', a: { t: 'note' }, ch: [] }] };
+  const row: ElementNode = {
+    w: 'tr',
+    ch: [
+      { w: 'td', ch: [tail] },
+      { w: 'td', ch: [paragraph('other')] },
+    ],
+  };
+  const blocks = [
+    { block: wrap({ w: 'table', ch: [row] }), path: [0, 0, 0, 0, 0] },
+    { block: wrap({ w: 'details', a: { o: 1 }, ch: [{ w: 'summary', ch: ['Title'] }, tail] }), path: [0, 0, 1] },
+  ];
+  for (const { block, path } of blocks) {
+    for (const offset of [2, 'last line'.length]) {
+      await load(page, [block], caret(path, offset));
+      await page.keyboard.press('ArrowDown');
+      expect(await state(page)).toEqual([block, paragraph()]);
+      await page.keyboard.type('outside');
+      expect(await state(page)).toEqual([block, paragraph('outside')]);
+    }
+  }
+});
+
 test('blocked sides, an existing neighbor, and a closed summary use the same direction', async ({ page }) => {
   const closed = wrap({ w: 'details', ch: [{ w: 'summary', ch: ['Title'] }, paragraph('Hidden')] });
   await load(page, [table, closed], caret([1, 0, 0], 3));
@@ -70,9 +97,9 @@ test('visual lines inside a multi-line block take priority over exiting the bloc
   await load(page, [quote], caret([0, 0, 0], 5));
   await page.keyboard.press('ArrowDown');
   expect(await state(page)).toEqual([quote]);
-  const selection = await page.evaluate(() => (window as unknown as { nabi: Nabi }).nabi.getSelection());
-  expect(selection.focus.path).toEqual([0, 0, 0]);
-  expect(selection.focus.offset).toBeGreaterThan(5);
+  const focus = () => page.evaluate(() => (window as unknown as { nabi: Nabi }).nabi.getSelection().focus);
+  await expect.poll(async () => (await focus()).offset).toBeGreaterThan(5);
+  expect((await focus()).path).toEqual([0, 0, 0]);
   await load(page, [quote], caret([0, 0, 0], text.length - 2));
   await page.keyboard.press('ArrowDown');
   expect(await state(page)).toEqual([quote, paragraph()]);
@@ -85,6 +112,54 @@ test('typing beside a selected object respects the focus side and reuses adjacen
   await load(page, [image, paragraph('after')], caret([0], 1, 0));
   await page.keyboard.type('B');
   expect(await state(page)).toEqual([image, paragraph('Bafter')]);
+});
+
+test('the divider toolbar button splits the text at the caret', async ({ page }) => {
+  await load(page, [paragraph('ABCD')], caret([0], 2));
+  await page.locator('#toolbar [data-name="hr"]:visible').click();
+  const divider = wrap({ w: 'hr', ch: [] });
+  expect(await state(page)).toEqual([paragraph('AB'), divider, paragraph('CD')]);
+  await page.keyboard.type('x');
+  expect(await state(page)).toEqual([paragraph('AB'), divider, paragraph('xCD')]);
+});
+
+test('Enter and Shift+Enter open a paragraph beside a clicked divider', async ({ page }) => {
+  const divider = wrap({ w: 'hr', ch: [] });
+  const initial = [paragraph('before'), divider, paragraph('after')];
+  for (const key of ['Enter', 'Shift+Enter']) {
+    await load(page, initial, caret([0], 0));
+    await page.locator('#content hr').click();
+    await page.keyboard.press(key);
+    expect(await state(page)).toEqual([initial[0], divider, paragraph(), initial[2]]);
+    await page.keyboard.type('new');
+    expect(await state(page)).toEqual([initial[0], divider, paragraph('new'), initial[2]]);
+  }
+});
+
+test('pasting formatted HTML keeps an image between two independently editable paragraphs', async ({ page }) => {
+  const bold = (text: string) => wrap({ w: 'b', ch: [text] });
+  await load(page, [paragraph()], caret([0], 0));
+  await page.locator('#content').evaluate(pasteHtml, '<p><strong>앞<img src="/test.svg">뒤</strong></p>');
+  expect(await state(page)).toEqual([bold('앞'), image, bold('뒤')]);
+  await page.keyboard.press('Control+z');
+  expect(await state(page)).toEqual([paragraph()]);
+});
+
+test('a virtual keyboard line break preserves the focus side of a backward object selection', async ({ page }) => {
+  for (const inputType of ['insertParagraph', 'insertLineBreak']) {
+    await load(page, [image, table], caret([1], 0, 1));
+    await page.evaluate((inputType) => {
+      const root = document.getElementById('content')!;
+      const wrapper = root.children[1]!;
+      const range = new StaticRange({ startContainer: wrapper, startOffset: 0, endContainer: wrapper, endOffset: 1 });
+      root.dispatchEvent(
+        new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType, targetRanges: [range] }),
+      );
+    }, inputType);
+    expect(await state(page)).toEqual([image, paragraph(), table]);
+    await page.keyboard.press('Control+z');
+    expect(await state(page)).toEqual([image, table]);
+  }
 });
 
 test('composition with empty end data commits the staged text into the adjacent paragraph', async ({ page }) => {

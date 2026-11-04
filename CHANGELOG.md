@@ -5,7 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Dates use Korea Standard Time (KST).
 
-## [1.6.2] - Unreleased
+## [1.6.2] - 2026-11-04
+
+### Added
+
+- On mobile, a blank area appears below a table, details block, image, or other block object at the end of the document. Tap it to create an empty paragraph and start typing. Until then, the saved document has no extra paragraph.
 
 ### Changed
 
@@ -14,8 +18,12 @@ Dates use Korea Standard Time (KST).
 ### Fixed
 
 - Typing with the caret at either edge of an object, or with one object selected, places text in the paragraph on the focus side. Fixed an issue where Korean text typed after a table appeared on screen without being saved, and Backspace could delete the table or its cell content.
+- Fixed Down failing to leave the last row of a table or the last line of open details when the line ends with a footnote. The caret moves to the start of the following text paragraph, creating one if needed.
+- Fixed Enter and Shift+Enter deleting a clicked divider. When a single object such as a divider, image, or table is selected, either key opens an empty paragraph on the focus side of the selection.
+- Inserting a divider in the middle of a sentence now splits the paragraph at the caret and keeps the formatting on both sides. This also works within a table cell or the body of a details block.
+- Fixed images, dividers, and tables disappearing from pasted HTML or imported HTML and JSON when enclosed in bold, links, or other text formatting. Each object gets its own paragraph in the original position, and the surrounding text keeps its formatting.
 
-## [1.6.1] - 026-10-31
+## [1.6.1] - 2026-10-31
 
 ### Fixed
 

@@ -465,6 +465,23 @@ eq(
   json(read('<p>앞뒤</p>')),
 );
 eq('낯선 속성(onerror)은 들어오지 않는다', json(read('<p onclick="x()">글</p>')), '[{"w":"p","ch":["글"]}]');
+const linkedTable = '<table><tr><td>칸</td></tr></table>';
+eq(
+  '링크 안의 표는 별도 문단이 되고 양옆 글에는 링크가 남는다',
+  json(read(`<a href="/x">앞${linkedTable}뒤</a>`)),
+  json(read(`<p><a href="/x">앞</a></p>${linkedTable}<p><a href="/x">뒤</a></p>`)),
+);
+eq(
+  '서식 있는 문단 안의 이미지는 글 서식을 분리하고 문단 정렬을 유지한다',
+  json(read('<p data-nabi-align="r" data-nabi-typeface="serif"><b>앞<img src="/x.png">뒤</b></p>')),
+  json(
+    read(
+      '<p data-nabi-align="r" data-nabi-typeface="serif"><b>앞</b></p>' +
+        '<div data-nabi-p data-nabi-align="r"><img src="/x.png"></div>' +
+        '<p data-nabi-align="r" data-nabi-typeface="serif"><b>뒤</b></p>',
+    ),
+  ),
+);
 
 // 이사 온 서식 — 서체·글자 크기는 한때 문단 속성이었고 지금은 마크다. 옛 문서의 그 표식은 지금 규칙으로 읽으면 화이트리스트에 없어 조용히 사라지므로, 속 전체를 덮는 마크 하나로 옮겨 뜻을 지킨다.
 // Migrated formatting — typeface and font size used to be paragraph attributes, now they're marks. Reading an old document's attribute under today's rules would silently drop it (not on the paragraph-attribute whitelist), so it's migrated into a mark wrapping the whole content instead.

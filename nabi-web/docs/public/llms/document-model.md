@@ -36,6 +36,7 @@ Every load and every successful command passes through the same normalization la
 - Loose inline content is gathered into paragraphs.
 - A block object is wrapped by one paragraph.
 - A paragraph mixing text and block objects is split.
+- When text formatting encloses a block object in imported HTML or JSON, the object gets its own paragraph at that position. Text on either side keeps its formatting. For example, `<strong>A<img src="/a.png">B</strong>` produces a bold A, a standalone image, and a bold B in separate paragraphs. Inline-only content such as a details summary still excludes block objects.
 - Adjacent text nodes merge; empty strings disappear.
 - Void objects lose children.
 - Inline terminals (the official `fn` footnote) stay between characters, lose children, and run their wing repair; a rejected one is removed. At the root they are wrapped in a paragraph like other inline content.
@@ -137,6 +138,8 @@ Commands are pure. Return a new `{ doc, selection, arm? }` or `null` for no chan
 
 `nabi.group(fn)` groups successful mutations into one undo entry. Consecutive typing coalesces only while the previous insertion is within `typingMergeMs`; 0 disables coalescing. The undo stack keeps at most `undoLimit` snapshots.
 
+Inserting a divider inside a text paragraph splits it at the caret. A caret at the start or end places the divider before or after that paragraph. An empty paragraph becomes the divider's wrapper. A text selection places the divider at the earlier endpoint and preserves the selected text.
+
 ## Leaving a block object
 
 In the mounted editor, plain Up or Down exits a selected block object or a caret at its outer boundary in the pressed direction. From inside a block, arrows move through its visible lines and contents first. A table moves within the same column until there is no row in that direction. The summary is the only visible content of closed details.
@@ -144,6 +147,10 @@ In the mounted editor, plain Up or Down exits a selected block object or a caret
 On exit, Up moves to the end of the immediately preceding text paragraph and Down to the start of the immediately following one. Headings and empty text paragraphs count. At a document edge or between two objects, the editor inserts one ordinary paragraph on the requested side. Nested objects exit one level at a time, within the same parent. For a float, before and after follow document order. A move into an existing paragraph adds no undo step. Creating a paragraph and moving the caret there take one undo step together.
 
 Typing at a wrapper's offset 0 or 1 uses this same destination. When exactly one wrapper is selected, the focus end determines the side. This includes IME input: committed characters enter the document once, cancellation preserves the object, and Backspace after typing edits the new text. An explicit Backspace or Delete on a whole-object selection still deletes that object.
+
+Enter or Shift+Enter with exactly one block object selected opens a new, empty paragraph on the focus side. For example, clicking a divider and pressing Enter opens a paragraph immediately below the divider.
+
+On mobile, a document that ends with a top-level block object has a blank tap area below it. Tapping there creates an ordinary paragraph after the object and places the caret in it. Until tapped, the area is editing UI only and contributes nothing to stored JSON or HTML. A final text paragraph, including an empty paragraph or heading, already provides a place to type.
 
 ## Deletion at block boundaries
 

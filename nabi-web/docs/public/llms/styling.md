@@ -97,7 +97,7 @@ Keep each toolbar and its content inside their own `.nabi` wrapper. Native CSS s
 
 With `mountSticky()`, losing editing focus stops caret scroll correction, while viewport offsets remain tracked until the keyboard inset disappears. Opening a panel from a scrolled sticky toolbar keeps the toolbar visible throughout that transition. Panel placement is measured after viewport offset updates.
 
-When the keyboard opens, an already visible caret below a pinned toolbar keeps its position. Correction reveals a covered caret and closes only the remaining gap above an unpinned toolbar, respecting `--nabi-sticky-top`. The initial viewport establishes the baseline, so unchanged events and small address-bar changes do not count as keyboard jumps. After a user scroll, viewport position changes alone do not restart caret correction.
+When the keyboard opens, an already visible caret below a pinned toolbar keeps its position. Correction reveals a covered caret and closes only the remaining gap above an unpinned toolbar, respecting `--nabi-sticky-top`. The initial viewport establishes the baseline, so unchanged events and small address-bar changes do not count as keyboard jumps. After a user scroll, viewport position changes alone do not restart caret correction. When Backspace leaves the caret beside a line break in a long paragraph, scroll correction uses the line at the caret. A line already clear of the toolbar stays in place as it does during typing.
 
 Never put `.nabi-editing` on published content.
 

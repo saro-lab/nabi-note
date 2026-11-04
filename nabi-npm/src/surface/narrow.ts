@@ -2,32 +2,39 @@
 // Not measured via container queries — container-type turns the box into a containing block for position:fixed, so a fixed panel inside it would center on the toolbar, not the viewport. Width is measured in JS instead, and CSS only reacts to a class.
 
 import { NARROW_REM } from '../style/tokens.js';
+import { HostElementLease } from '../lifecycle.js';
 
 export const NARROW_CLASS = 'nabi-narrow';
-export { NARROW_REM };
 
 type Watcher = { observe(el: Element): void; disconnect(): void };
 
 // 측정 요소가 CSS 길이와 상속을 그대로 따른다. source는 body로 옮겨진 패널도 원래 편집기를 재게 한다.
 // The probe follows CSS lengths and inheritance; source keeps portaled panels tied to their original editor.
-export function watchNarrow(el: HTMLElement, source: HTMLElement = el): () => void {
+export function watchNarrow(
+  el: HTMLElement,
+  source: HTMLElement = el,
+  scope: 'container' | 'viewport' = 'container',
+): () => void {
   const owner = el.ownerDocument;
   const view = owner.defaultView;
   const Observer = (view as unknown as { ResizeObserver?: new (fn: () => void) => Watcher } | null)?.ResizeObserver;
   if (!view || !Observer) return () => {};
   const probe = owner.createElement('span');
+  const lease = new HostElementLease(el);
   probe.setAttribute('aria-hidden', 'true');
   probe.style.cssText = `all: initial; position: fixed; left: 0; top: 0; width: var(--nabi-mobile-breakpoint, ${NARROW_REM}rem); height: 0; font-size: inherit; overflow: hidden; visibility: hidden; pointer-events: none;`;
-  const apply = (): void => {
+  const containerWidth = (): number => {
     const style = view.getComputedStyle(source);
     const width = parseFloat(style.width);
     const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
     const border = (parseFloat(style.borderLeftWidth) || 0) + (parseFloat(style.borderRightWidth) || 0);
-    const room = Number.isFinite(width)
-      ? width + (style.boxSizing === 'border-box' ? -border : padding)
-      : source.clientWidth;
+    return Number.isFinite(width) ? width + (style.boxSizing === 'border-box' ? -border : padding) : source.clientWidth;
+  };
+  const apply = (): void => {
     const threshold = parseFloat(view.getComputedStyle(probe).width);
-    el.classList.toggle(NARROW_CLASS, Math.min(room, owner.documentElement.clientWidth) < threshold);
+    const viewport = owner.documentElement.clientWidth || view.innerWidth;
+    const width = scope === 'viewport' ? viewport : Math.min(containerWidth(), viewport);
+    lease.className(NARROW_CLASS, width < threshold);
   };
   let frame = 0;
   const schedule = (): void => {
@@ -43,11 +50,11 @@ export function watchNarrow(el: HTMLElement, source: HTMLElement = el): () => vo
     view.cancelAnimationFrame(frame);
     view.removeEventListener('resize', schedule);
     probe.remove();
-    el.classList.remove(NARROW_CLASS);
+    lease.dispose();
   };
   try {
     source.append(probe);
-    watcher.observe(source);
+    if (scope === 'container') watcher.observe(source);
     watcher.observe(probe);
     view.addEventListener('resize', schedule);
     apply();

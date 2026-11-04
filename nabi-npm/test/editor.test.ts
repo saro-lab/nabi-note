@@ -61,6 +61,29 @@ function watch(nabi: Nabi): NabiChange[] {
   ]);
 }
 
+for (const command of ['splitParagraph', 'insertLine']) {
+  const image = p([{ w: 'img', a: { src: '/test.png' }, ch: [] }]);
+  const doc = [p(['ab']), image, p(['cd'])];
+  const nabi = createNabi({ env: ENV, doc });
+  for (const side of [0, 1]) {
+    const selected = sel(at([1], 1 - side), at([1], side));
+    nabi.select(selected);
+    ok(`${command} — 선택한 이미지 곁에 문단 생성`, nabi.applyCommand(command));
+    eq(`${command} — 이미지 보존`, nabi.getJson(), [
+      p(['ab']),
+      ...(side === 0 ? [p([]), image] : [image, p([])]),
+      p(['cd']),
+    ]);
+    eq(`${command} — 새 문단에 캐럿`, nabi.getSelection(), caretAt(at([1 + side], 0)));
+    nabi.undo();
+    eq(`${command} — 선택 방향 복구`, nabi.getSelection(), selected);
+  }
+  nabi.select(sel(at([0], 1), at([2], 1)));
+  nabi.applyCommand(command);
+  const expected = command === 'splitParagraph' ? [p(['a']), p(['d'])] : [p(['a', { w: 'br', ch: [] }, 'd'])];
+  eq(`${command} — 여러 문단에 걸친 선택은 교체`, nabi.getJson(), expected);
+}
+
 // --- insertText 와 신호 -----------------------------------------------------------------------
 {
   const nabi = createNabi({ env: ENV });

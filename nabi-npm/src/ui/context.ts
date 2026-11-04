@@ -16,7 +16,7 @@ import type { Panel } from './parts/panel.js';
 import { watchSettle, type Settle } from './parts/settle.js';
 import { openLightbox } from './overlay.js';
 import type { Overlay } from './overlay.js';
-import { watchNarrow } from './narrow.js';
+import { watchNarrow } from '../surface/narrow.js';
 import { compactKeepsFocus, refreshCompactContext, registerCompactContext } from './compact.js';
 import { visibleViewportRect } from './dock.js';
 import { claimMountRoot, DisposerStack, HostElementBaseline, HostElementLease } from '../lifecycle.js';

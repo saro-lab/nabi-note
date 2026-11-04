@@ -977,6 +977,9 @@ export const CORE_CSS = `${ICON_CSS}
 /* .nabi-editing에만 최소 높이를 준다 — 전체선택 삭제 뒤 상자가 한 줄로 접히면 그 아래 페이지가 통째로 딸려 올라온다(2026-08-23). 발행·미리보기는 글 길이가 그대로 높이다
    Only .nabi-editing gets a min-height; without it, an emptied box collapsing to one line drags the whole page up (2026-08-23). Published/preview content stays sized to its own text */
 .nabi-content.nabi-editing { min-block-size: var(--nabi-content-min-height, 12.5rem); }
+.nabi-editing.nabi-narrow[contenteditable="true"]:has(> [data-nabi-p]:last-child)::after {
+  content: ""; display: block; clear: both; min-block-size: 44px; cursor: text; user-select: none;
+}
 /* 블록 사이 간격은 margin이 아니라 padding-block-end다 — margin이면 그 띠를 브라우저가 다음 블록의 0번 오프셋으로 셈해 클릭·드래그 위치가 어긋난다
    Spacing between blocks is padding-block-end, not margin; a margin gap gets counted by the browser as offset 0 of the next block, throwing off click/drag targeting there */
 .nabi-content > :where(:not(.nabi-fn-tip)) { margin: 0; padding-block-end: .6em; }

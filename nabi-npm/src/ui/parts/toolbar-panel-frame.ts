@@ -1,5 +1,5 @@
 import { DisposerStack } from '../../lifecycle.js';
-import { NARROW_REM } from '../narrow.js';
+import { NARROW_REM } from '../../style/tokens.js';
 import { make } from './dom.js';
 import { openPanel, type Panel, type PanelOptions } from './panel.js';
 import { openScrim } from './scrim.js';

@@ -68,6 +68,68 @@ async function setup(page: Page): Promise<void> {
 test.describe('mobile long document focus', () => {
   test.use({ hasTouch: true });
 
+  test('backspacing before a line break keeps the typed line in view', async ({ page }) => {
+    await setup(page);
+    const surface = page.locator('#mobile-surface');
+    const text = '긴 문단에서 글자를 입력하고 지우는 중입니다. '.repeat(150).trimEnd();
+    await surface.evaluate(async (root, text) => {
+      const { nabi, viewport } = (globalThis as unknown as { mobileFocusTest: BrowserState }).mobileFocusTest;
+      nabi.setJson([{ w: 'p', ch: [text, { w: 'br', ch: [] }, '다음 줄'] }]);
+      document.body.style.paddingBottom = '100vh';
+      root.focus({ preventScroll: true });
+      const node = root.querySelector('p')!.firstChild!;
+      document.getSelection()!.collapse(node, text.length);
+      window.scrollBy(0, root.querySelector('br')!.getBoundingClientRect().top - 300);
+      viewport.height = 444;
+      viewport.dispatchEvent(new Event('resize'));
+      await new Promise((resolve) => window.setTimeout(resolve, 450));
+    }, text);
+    const position = () =>
+      surface.evaluate(async (root) => {
+        await new Promise(requestAnimationFrame);
+        await new Promise(requestAnimationFrame);
+        return {
+          scroll: window.scrollY,
+          top: root.querySelector('br')!.getBoundingClientRect().top,
+          offset: (globalThis as unknown as { mobileFocusTest: BrowserState }).mobileFocusTest.nabi.getSelection().focus
+            .offset,
+        };
+      });
+    const before = await position();
+    expect(before.scroll).toBeGreaterThan(844);
+    expect(before.top).toBeGreaterThan(48);
+    expect(before.top).toBeLessThan(444);
+    await page.keyboard.insertText('가나');
+    const typed = await position();
+    expect(typed.offset).toBe(text.length + 2);
+    expect(Math.abs(typed.scroll - before.scroll)).toBeLessThanOrEqual(2);
+    await surface.evaluate((root) => {
+      const node = root.querySelector('p')!.firstChild as Text;
+      const range = new StaticRange({
+        startContainer: node,
+        startOffset: node.length - 1,
+        endContainer: node,
+        endOffset: node.length,
+      });
+      root.dispatchEvent(
+        new InputEvent('beforeinput', {
+          bubbles: true,
+          cancelable: true,
+          inputType: 'deleteContentBackward',
+          targetRanges: [range],
+        }),
+      );
+    });
+    const first = await position();
+    expect(first.offset).toBe(text.length + 1);
+    expect(Math.abs(first.scroll - before.scroll)).toBeLessThanOrEqual(2);
+    await page.keyboard.press('Backspace');
+    const last = await position();
+    expect(last.offset).toBe(text.length);
+    expect(Math.abs(last.scroll - before.scroll)).toBeLessThanOrEqual(2);
+    expect(Math.abs(last.top - before.top)).toBeLessThanOrEqual(2);
+  });
+
   test('a small viewport resize after tapping does not move a visible caret', async ({ page }) => {
     await setup(page);
     const target = page.locator('#mobile-surface > p').filter({ hasText: 'Paragraph 35:' });

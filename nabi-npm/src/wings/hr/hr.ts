@@ -1,6 +1,6 @@
-// 구분선 hr — 속도 속성도 없는 블록 단말이라 팩토리 선언 한 줄이 전부다. 빈 `attrs`가 곧 화이트리스트다.
-// A divider — a leaf block with no attrs at all, so one factory declaration suffices; an empty `attrs` is the whitelist itself.
 import { caretAt, ordered } from '../../caret/index.js';
+import { holderLength, nodeAt, replaceAt, splitParagraph } from '../../doc/index.js';
+import { P, type ElementNode } from '../../schema/index.js';
 import { $markBuiltinAttrOwner } from '../../schema/env.js';
 import type { Command } from '../../editor/index.js';
 import { boxObject, insertLump, type Wing } from '../../wing/index.js';
@@ -29,8 +29,24 @@ const DIVIDER_CSS = `
 
 const insertDivider: Command = (doc, sel, _args, env) => {
   const [start] = ordered(sel);
-  const r = insertLump(doc, start, { w: 'hr', ch: [] }, env);
-  return { doc: r.doc, selection: caretAt(r.caret) };
+  const rule: ElementNode = { w: 'hr', ch: [] };
+  const holder = nodeAt(doc, start.path);
+  const parentPath = start.path.slice(0, -1);
+  const parent = nodeAt(doc, parentPath);
+  if (holder?.w !== P || (parent && env.singleParagraph?.has(parent.w))) {
+    const result = insertLump(doc, start, rule, env);
+    return { doc: result.doc, selection: caretAt(result.caret) };
+  }
+  const length = holderLength(holder, env);
+  const blocks =
+    start.offset > 0 && start.offset < length
+      ? [...splitParagraph([holder], { path: [0], offset: start.offset }, env).doc]
+      : [holder];
+  const index = start.offset === 0 ? 0 : 1;
+  const wrapper = length === 0 ? { ...holder, ch: [rule] } : { w: P, ch: [rule] };
+  blocks.splice(index, length === 0 ? 1 : 0, wrapper);
+  const path = [...parentPath, start.path[start.path.length - 1]! + index];
+  return { doc: replaceAt(doc, start.path, blocks), selection: caretAt({ path, offset: 1 }) };
 };
 
 export const dividerWing: Wing = {

@@ -216,14 +216,20 @@ export function mountSticky(options: StickyOptions): Sticky {
     if (!selection || selection.rangeCount === 0) return null;
     const range = selection.getRangeAt(0);
     const box = range.getBoundingClientRect();
-    // 접힌 캐럿이 0×0을 답할 때는 담은 요소의 사각형으로 갈음한다
-    // A collapsed caret can report 0x0; fall back to the containing element's rect
-    if (box.height > 0) return { top: box.top, bottom: box.bottom };
+    if (box.height > 0) return box;
+    if (!range.collapsed) return null;
+
+    // 줄바꿈 앞의 캐럿은 높이가 0일 수 있다. 긴 문단 전체를 재면 문단 첫 줄로 스크롤된다.
+    // A caret before a line break can have zero height. Measuring the whole paragraph would scroll to its first line.
     const node = range.startContainer;
-    const el = node.nodeType === 1 ? (node as Element) : node.parentElement;
-    if (!el) return null;
-    const fallback = el.getBoundingClientRect();
-    return { top: fallback.top, bottom: fallback.bottom };
+    const offset = range.startOffset;
+    const length = node.nodeType === 3 ? (node as Text).length : node.childNodes.length;
+    if (length === 0) return null;
+    const probe = range.cloneRange();
+    if (offset === length) probe.setStart(node, offset - 1);
+    else probe.setEnd(node, offset + 1);
+    const rects = Array.from(probe.getClientRects()).filter((rect) => rect.height > 0);
+    return (offset === length ? rects.at(-1) : rects[0]) ?? null;
   };
 
   // 선택을 뺐다 도로 넣으면 WebKit이 자기 방식으로 캐럿을 보여준다 — 자리는 우리가 안 정한다

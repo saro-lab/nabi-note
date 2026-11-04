@@ -194,9 +194,23 @@ ok(
   isElement(detailsNode.ch[1] as NabiNode) && isWrapper(detailsNode.ch[1] as NabiNode, ENV),
 );
 
-const inMark =
-  $fromJson([{ w: 'p', ch: [{ w: 'b', ch: ['글', { w: 'img', a: { src: '/x.png' }, ch: [] }] }] }], ENV) ?? [];
-eq('마크 속에 잘못 선 물건은 걷힌다', $toJson(inMark), [{ w: 'p', ch: [{ w: 'b', ch: ['글'] }] }]);
+const image = { w: 'img', a: { src: '/x.png' }, ch: [] };
+const marked = { w: 'b', ch: [{ w: 'i', ch: ['앞', image, { w: 'hr', ch: [] }, '뒤'] }] };
+const split = [
+  { w: 'p', ch: [{ w: 'b', ch: [{ w: 'i', ch: ['앞'] }] }] },
+  { w: 'p', ch: [image] },
+  { w: 'p', ch: [{ w: 'hr', ch: [] }] },
+  { w: 'p', ch: [{ w: 'b', ch: [{ w: 'i', ch: ['뒤'] }] }] },
+];
+for (const input of [[marked], [{ w: 'p', ch: [marked] }]]) {
+  const result = $fromJson(input, ENV) ?? [];
+  eq('중첩 마크를 텍스트에 유지하고 각 물건은 문단 하나로 분리한다', $toJson(result), split);
+  ok('분리된 문서는 다시 정규화해도 그대로다', cocoon(result, ENV) === result);
+}
+const code = $fromJson([{ w: 'code', ch: [{ w: 'b', ch: ['코드', image] }] }], ENV) ?? [];
+eq('인라인만 받는 홀더 안에서는 물건을 밖으로 옮기지 않는다', $toJson(code), [
+  { w: 'p', ch: [{ w: 'code', ch: [{ w: 'b', ch: ['코드'] }] }] },
+]);
 
 // --- 빈 문단·문단 규칙 ----------------------------------------------------------------------
 

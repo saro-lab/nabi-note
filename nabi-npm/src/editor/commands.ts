@@ -16,7 +16,7 @@ import {
   type EditResult,
   type Position,
 } from '../doc/index.js';
-import { caretAt, isCollapsed, ordered, type Selection } from '../caret/index.js';
+import { caretAt, isCollapsed, isObjectSelection, ordered, type Selection } from '../caret/index.js';
 import type { Attrs, AttrValue, ElementNode, NabiDoc } from '../schema/index.js';
 
 export type CommandArgs = Readonly<Record<string, unknown>>;
@@ -45,6 +45,10 @@ function collapsedAt(doc: NabiDoc, sel: Selection, env: EditEnv): { readonly doc
   const [start, end] = ordered(sel);
   const r = docDeleteRange(doc, { anchor: start, focus: end }, env);
   return { doc: r.doc, caret: r.caret };
+}
+
+function breakAt(doc: NabiDoc, sel: Selection, env: EditEnv): { readonly doc: NabiDoc; readonly caret: Position } {
+  return isObjectSelection(doc, sel, env) ? { doc, caret: sel.focus } : collapsedAt(doc, sel, env);
 }
 
 // args 에서 마크 노드 하나를 꺼낸다 — 모양이 아니면 null.
@@ -81,14 +85,14 @@ export function coreCommands(): Readonly<Record<string, Command>> {
     // 라인 삽입 (Shift+Enter) — 마크는 앞 글자를 잇는다.
     // Insert a line break (Shift+Enter); its mark inherits from the preceding character.
     insertLine(doc, sel, _args, env) {
-      const base = collapsedAt(doc, sel, env);
+      const base = breakAt(doc, sel, env);
       return outcome(docInsertLine(base.doc, base.caret, env));
     },
 
     // 문단 분할 (엔터)
     // Split the paragraph (Enter).
     splitParagraph(doc, sel, _args, env) {
-      const base = collapsedAt(doc, sel, env);
+      const base = breakAt(doc, sel, env);
       return outcome(docSplitParagraph(base.doc, base.caret, env));
     },
 

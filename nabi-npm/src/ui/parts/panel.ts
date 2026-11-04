@@ -2,7 +2,7 @@
 // The panel is placed inside its trigger button's positioned parent, so it follows a moving sticky toolbar with no JS tracking. Small screens are centered by a CSS breakpoint; this file only supplies where "center" is (from the visual viewport), since CSS can't know that on its own.
 import { focusQuiet, make } from './dom.js';
 import { closeOnOutside } from './outside.js';
-import { watchNarrow } from '../narrow.js';
+import { watchNarrow } from '../../surface/narrow.js';
 import { hostedPanel } from './panel-host.js';
 import { visibleViewportRect } from '../dock.js';
 

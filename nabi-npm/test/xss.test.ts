@@ -93,6 +93,11 @@ const PAIRS: readonly (readonly [string, string, unknown[]])[] = [
     '<p><img src="//evil.com/x.png"/></p>',
     [{ w: 'p', ch: [{ w: 'img', a: { src: '//evil.com/x.png' }, ch: [] }] }],
   ],
+  [
+    '서식 속의 위험한 이미지 주소',
+    '<b>앞<img src="javascript:alert(1)">뒤</b>',
+    [{ w: 'b', ch: ['앞', { w: 'img', a: { src: 'javascript:alert(1)' }, ch: [] }, '뒤'] }],
+  ],
 ];
 
 for (const [name, html, json] of PAIRS) {

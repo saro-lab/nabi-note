@@ -9,7 +9,7 @@ import { localeDirection, makeTranslator, type Translator } from '../locale/inde
 import { markNode, pressedOf, pressedValue, type PressEnv } from './press.js';
 import { reachAt, visibleAt } from './visible.js';
 import { focusQuiet, make } from './parts/dom.js';
-import { watchNarrow } from './narrow.js';
+import { watchNarrow } from '../surface/narrow.js';
 import { iconButton, setPressed, suppressMousedownTap, wireIconButton } from './parts/button.js';
 import { TOOLBAR_GROUPS as GROUP_ORDER, renderToolbarHtml, toolbarSlots } from '../wing/toolbar-html.js';
 import { openPanel, type Panel } from './parts/panel.js';
